@@ -48,7 +48,17 @@ like docker has (i.e. docker doesn't always remove containers even when
 using ``--rm``).
 
 Docker also shares some daemon configuration between different containers
-even run with
+even run by different users. There is no such sharing in vagga.
+
+
+Children Processes
+------------------
+
+Running processes as children of current shell has following advantages:
+
+* You can monitor process and restart when dead (needs polling in docker)
+* File descriptors may be passed to process
+* Processes/containers may be socket-activated (e.g. using ``systemd --user``)
 
 
 Filesystems
@@ -95,7 +105,6 @@ Vagga creates each container in ``.vagga`` as a separate directory. So
 theoretically it uses more space than layered containers in docker. But if you
 put that dir on ``btrfs`` filesystem you can use bedup_ to achieve much
 better redundancy than what docker provides.
-
 
 
 
@@ -152,9 +161,9 @@ Memory and CPU usage limits can be enforced on vagga programs using cgroups,
 just like on any other process in linux. Vagga runs only on quite recent
 linux kernels, which has much more limit capabilities than previous ones.
 
-Also while vagrant allows to forward selected network ports, vagga allows you
-to share network interface with the host system if you need to. Forwarding
-option is also there of course.
+Also while vagrant allows to forward selected network ports, vagga by default
+shares network interface with the host system. Isolating anf forwarding
+ports will be implemented soon.
 
 
 .. _vagrant: http://vagrantup.com
