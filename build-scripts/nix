@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh -ex
 
 : ${container_name:=work}
 : ${container_dir:=.vagga/$container_name}

@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/sh -ex
 
 : ${container_dir:=.vagga/work}
 : ${workdir:=/work}
@@ -8,9 +8,7 @@ type newuidmap newgidmap        # shadow >= 4.2
 type mount pivot_root           # util-linux
 type chroot                     # util-linux
 
-root=$(readlink -f "${container_dir}/root")
-
-if test '!' -d "$root"; then
+if ! root=$(readlink -f "${container_dir}/root"); then
     echo "Dir $container_dir/root does not exists" 2>&1
     exit 1
 fi
@@ -23,4 +21,4 @@ export container_dir root workdir
 
 exec lxc-usernsexec -- \
     unshare --fork --mount --ipc --pid -- \
-    /bin/sh -e $(dirname $0)/vagga-chroot-inner "$@"
+    /bin/sh -ex $(dirname $0)/vagga-chroot-inner "$@"
