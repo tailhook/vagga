@@ -13,11 +13,12 @@ if ! root=$(readlink -f "${container_dir}/root"); then
     exit 1
 fi
 
-for dir in proc sys dev mnt work; do
+for dir in proc sys dev work tmp; do
     test -d $root/$dir || mkdir $root/$dir
 done
 
-export container_dir root workdir
+export container_dir root workdir mount_dir=.vagga/mnt
+test -d $mount_dir || mkdir -p $mount_dir
 
 exec lxc-usernsexec -- \
     unshare --fork --mount --ipc --pid -- \
