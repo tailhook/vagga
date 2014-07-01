@@ -25,6 +25,11 @@ rsync --recursive --links --perms --times --hard-links \
 rsync --recursive --links --perms --times \
     $profile/ $container_dir/.newroot
 
+# few nix fixups
+chmod u+w $container_dir/.newroot
+mkdir -p $container_dir/.newroot/usr/bin
+ln -sfn /bin/env $container_dir/.newroot/usr/bin/env
+
 test -d $container_dir/root && mv $container_dir/root $container_dir/.oldroot
 mv $container_dir/.newroot $container_dir/root
 test -d $container_dir/.oldroot \

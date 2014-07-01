@@ -1,0 +1,26 @@
+#!/bin/sh -e
+
+: ${container_dir:=.vagga/work}
+: ${workdir:=/work}
+
+type lxc-usernsexec             # lxc, maybe get rid of it
+type newuidmap newgidmap        # shadow >= 4.2
+type mount pivot_root           # util-linux
+type chroot                     # util-linux
+
+root=$(readlink -f "${container_dir}/root")
+
+if test '!' -d "$root"; then
+    echo "Dir $container_dir/root does not exists" 2>&1
+    exit 1
+fi
+
+for dir in proc sys dev mnt work; do
+    test -d $root/$dir || mkdir $root/$dir
+done
+
+export container_dir root workdir
+
+exec lxc-usernsexec -- \
+    unshare --fork --mount --ipc --pid -- \
+    /bin/sh -e $(dirname $0)/vagga-chroot-inner "$@"

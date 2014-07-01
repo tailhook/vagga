@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+mount -t proc proc $root/proc
+mount --rbind /sys $root/sys
+mount --rbind /dev $root/dev
+mount --rbind . $root/work
+
+#export PATH=/bin:$PATH
+
+cd $root$workdir
+echo WORKDIR $root$workdir
+echo exec chroot $root sh -c "cd $workdir; exec $@"
+exec chroot $root /bin/sh -c "cd $workdir; exec $@"
