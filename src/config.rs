@@ -4,7 +4,6 @@ use collections::treemap::TreeMap;
 use serialize::json::ToJson;
 
 use quire::parse;
-use N = quire::parser;
 use J = serialize::json;
 
 
@@ -20,7 +19,8 @@ pub struct Variant {
 }
 
 pub struct Container {
-    pub default_command: String,
+    pub default_command: Option<String>,
+    pub builder: String,
     pub settings: TreeMap<String, String>,
 }
 
@@ -53,8 +53,30 @@ fn get_string(json: &J::Json, key: &'static str) -> Option<String> {
     }
 }
 
-pub fn find_config(workdir: Path) -> Result<(Config, Path), String>{
-    let cfg_dir = match find_config_path(&workdir) {
+fn get_dict(json: &J::Json, key: &'static str) -> TreeMap<String, String> {
+    let mut res = TreeMap::new();
+    let dict = match json {
+        &J::Object(ref dict) => match dict.find(&key.to_string()) {
+            Some(&J::Object(ref val)) => val,
+            _ => return res,
+        },
+        _ => return res,
+    };
+
+    for (k, v) in dict.iter() {
+        match v {
+            &J::String(ref val) => {
+                res.insert(k.clone(), val.clone());
+            }
+            _ => continue,  // TODO(tailhook) assert maybe?
+        }
+    }
+
+    return res;
+}
+
+pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
+    let cfg_dir = match find_config_path(workdir) {
         Some(path) => path,
         None => return Err(format!(
             "Config not found in path {}", workdir.display())),
@@ -84,25 +106,36 @@ pub fn find_config(workdir: Path) -> Result<(Config, Path), String>{
     };
 
     match root.find(&"commands".to_string()) {
-    Some(&J::Object(ref commands)) => {
-        for (name, cmd) in commands.iter() {
-            let run = match cmd.find(&"run".to_string()) {
-                Some(&J::String(ref val)) => Some(val),
-                Some(_) => return Err(format!(
-                    "{}: The \"run\" value must be string", fname)),
-                None => None,
-            };
-            let cmd = Command {
-                run: get_string(cmd, "run"),
-                container: get_string(cmd, "container"),
-                accepts_arguments: true,
-            };
-            config.commands.insert(name.clone(), cmd);
+        Some(&J::Object(ref commands)) => {
+            for (name, jcmd) in commands.iter() {
+                let cmd = Command {
+                    run: get_string(jcmd, "run"),
+                    container: get_string(jcmd, "container"),
+                    accepts_arguments: true,  // TODO(tailhook)
+                };
+                config.commands.insert(name.clone(), cmd);
+            }
         }
+        Some(_) => return Err(format!(
+            "{}: commands key must be mapping", fname)),
+        None => {}
     }
-    Some(_) => return Err(format!(
-        "{}: commands key must be mapping", fname)),
-    None => {}
+
+    match root.find(&"containers".to_string()) {
+        Some(&J::Object(ref containers)) => {
+            for (name, jcont) in containers.iter() {
+                let cont = Container {
+                    default_command: get_string(jcont, "default-command"),
+                    builder: get_string(jcont, "builder")
+                             .unwrap_or("nix".to_string()),
+                    settings: get_dict(jcont, "settings"),
+                };
+                config.containers.insert(name.clone(), cont);
+            }
+        }
+        Some(_) => return Err(format!(
+            "{}: containers key must be mapping", fname)),
+        None => {}
     }
 
     return Ok((config, cfg_dir));

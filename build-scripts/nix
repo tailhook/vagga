@@ -2,14 +2,13 @@
 
 : ${container_name:=work}
 : ${container_dir:=.vagga/$container_name}
+: ${container_root:=.vagga/$container_name/root}
 : ${nix_config:=default.nix}
 : ${nix_attribute:=""}
 
 type mkdir mv dirname readlink  # coreutils
 type nix-instantiate nix-env    # nix
 type rsync                      # rsync
-
-mkdir -p $container_dir/root
 
 profile=$container_dir/nix-profile
 
@@ -18,20 +17,14 @@ nix-env --profile $profile --install \
     --file "${nix_config}" --attr "${nix_attribute}"
 closure=$(nix-store --query --requisites $profile)
 
-mkdir -p $container_dir/.newroot/nix/store
+mkdir -p $container_root/nix/store
 rsync --recursive --links --perms --times --hard-links \
     --link-dest=$container_dir/root/nix/store \
-    $closure $container_dir/.newroot/nix/store
+    $closure $container_root/nix/store
 rsync --recursive --links --perms --times \
-    $profile/ $container_dir/.newroot
+    $profile/ $container_root
 
 # few nix fixups
-chmod u+w $container_dir/.newroot
-mkdir -p $container_dir/.newroot/usr/bin
-ln -sfn /bin/env $container_dir/.newroot/usr/bin/env
-
-test -d $container_dir/root && mv $container_dir/root $container_dir/.oldroot
-mv $container_dir/.newroot $container_dir/root
-test -d $container_dir/.oldroot \
-    && chmod -R u+w $container_dir/.oldroot \
-    && rm -rf $container_dir/.oldroot
+chmod -R u+w $container_root
+mkdir -p $container_root/usr/bin
+ln -sfn /bin/env $container_root/usr/bin/env
