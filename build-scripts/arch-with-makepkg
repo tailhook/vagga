@@ -1,0 +1,36 @@
+#!/bin/sh -ex
+
+: ${container_name:=work}
+: ${container_dir:=.vagga/$container_name}
+: ${cache_dir:=.vagga/.cache/arch}
+: ${pacman_conf:=vagga/pacman.conf}
+: ${makepkg_dir:=vagga}
+: ${packages:=base base-devel}
+: ${makepkg:=}
+
+type mkdir mv dirname readlink install # coreutils
+type nix-instantiate nix-env           # nix
+type rsync                             # rsync
+type lxc-usernsexec                    # lxc (get rid of it?)
+type wget                              # wget (for packages), or use curl?
+type pacman                            # arch package manager
+
+tmproot=$(readlink -f $container_dir/.newroot)
+
+mkdir -p $tmproot
+mkdir -m 0755 -p $tmproot/var/lib/pacman
+mkdir -m 0755 -p $tmproot/var/log
+
+mkdir -p $cache_dir
+
+lxc-usernsexec -- \
+    pacman --root "$tmproot" -Sy --noconfirm \
+    --cachedir="$(readlink -f $cache_dir)" \
+    --config="$pacman_conf" \
+    $packages
+
+test -d $container_dir/root && mv $container_dir/root $container_dir/.oldroot
+mv $container_dir/.newroot $container_dir/root
+test -d $container_dir/.oldroot \
+    && chmod -R u+w $container_dir/.oldroot \
+    && rm -rf $container_dir/.oldroot

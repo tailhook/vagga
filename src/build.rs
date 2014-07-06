@@ -67,6 +67,8 @@ pub fn build_container(task: BuildTask) -> Result<(),String>
     env.push(("NIX_PATH".to_string(), getenv("NIX_PATH").unwrap()));
     // End of nix hacks
     env.push(("container_name".to_string(), task.name.clone()));
+    env.push(("project_root".to_string(),
+        format!("{}", task.project_root.display())));
     env.push(("container_dir".to_string(),
         format!("{}", container_dir.display())));
     env.push(("container_root".to_string(),
@@ -75,7 +77,7 @@ pub fn build_container(task: BuildTask) -> Result<(),String>
         env.push((builder + "_" + *k, v.clone()));
     }
     match Command::new(bexe).env(env.as_slice())
-        .stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
+        .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
         .status() {
         Ok(ExitStatus(0)) => {}
         Ok(x) => return Err(format!("Builder exited with status {}", x)),
