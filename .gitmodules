@@ -1,0 +1,3 @@
+[submodule "rust-quire"]
+	path = rust-quire
+	url = git://github.com:tailhook/rust-quire
