@@ -59,6 +59,8 @@ Running processes as children of current shell has following advantages:
 * You can monitor process and restart when dead (needs polling in docker)
 * File descriptors may be passed to process
 * Processes/containers may be socket-activated (e.g. using ``systemd --user``)
+* Stdout and stderr streams are just inherited file descriptors, and they are
+  separate (docker mixes the two, and also copies real stream to client one)
 
 
 Filesystems
