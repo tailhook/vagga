@@ -6,10 +6,12 @@ use std::c_str::CString;
 use std::to_str::ToStr;
 use std::ptr::null;
 use std::os::pipe;
+use std::io::{Open, Write};
 use std::io::fs::{mkdir, rmdir_recursive, rename, File};
 use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
+use std::io::pipe::PipeStream;
 use libc::{c_int, c_char, c_ulong, c_void, pid_t};
-use libc::funcs::posix88::unistd::{fork, usleep, write};
+use libc::funcs::posix88::unistd::{fork, usleep, write, getuid};
 
 use super::env::Environ;
 use super::config::Config;
@@ -211,15 +213,37 @@ pub fn run_container(task: RunTask) -> Result<int,String>
     try!(ensure_dir(&mount_dir));
     try!(make_namespace());
 
-    let pipe = match unsafe { pipe() } {
+    let mut pipe = match PipeStream::pair() {
         Ok(pipe) => pipe,
-        Err(e) => return Err(format!("Error creating pipe: {}", e)),
+        Err(x) => return Err(format!("Can't create pipe: {}", x)),
     };
 
     let mut pid = unsafe { fork() };
     if(pid == 0) {
+        let mut buf: [u8,..1] = [0];
+        match pipe.reader.read(buf) {
+            Ok(_) => {}
+            Err(x) => return Err(format!("Can't read from pipe: {}", x)),
+        }
+        drop(pipe);
         return run_chroot(task);
     } else {
+        match File::open_mode(&Path::new("/proc")
+                          .join(pid.to_str())
+                          .join("uid_map"), Open, Write)
+                .write_str("0 1000 1") {
+            Ok(()) => {}
+            Err(e) => return Err(format!(
+                "Error writing uid mapping: {}", e)),
+        }
+
+        match pipe.writer.write_char('x') {
+            Ok(_) => {}
+            Err(e) => return Err(format!(
+                "Error writing to pipe: {}", e)),
+        }
+        drop(pipe);
+
         loop {
             let status = 0;
             let rc = unsafe { waitpid(pid, &status, 0) };
@@ -233,37 +257,5 @@ pub fn run_container(task: RunTask) -> Result<int,String>
             }
             return Ok(status as int);
         }
-    }
-
-    let mut process = match Command::new(task.environ.vagga_command.clone())
-            .arg("__chroot_and_run")
-            .arg(task.container.clone())
-            .args(task.command)
-            .stdin(InheritFd(0))
-            .stdout(InheritFd(1))
-            .stderr(InheritFd(2))
-            .extra_io(InheritFd(pipe.reader))
-            .spawn() {
-        Ok(process) => process,
-        Err(e) => return Err(format!("Error spawning process: {}", e)),
-    };
-
-    match File::open(&Path::new("/proc/self/uid_map"))
-            .write_str("0 1000 1") {
-        Ok(()) => {}
-        Err(e) => return Err(format!(
-            "Error writing uid mapping: {}", e)),
-    }
-
-    let rc = unsafe { write(pipe.writer, (*&'1') as *c_void, 1) };
-    if rc != 1 {
-        return Err(format!(
-            "Can't write to pipe: {}", error_string(errno() as uint)));
-    }
-
-    match process.wait() {
-        Ok(ExitStatus(x)) => return Ok(x),
-        Ok(ExitSignal(x)) => return Ok(x | 0x7f),
-        Err(x) => return Err(format!("Error waiting for process: {}", x)),
     }
 }
