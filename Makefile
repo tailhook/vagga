@@ -1,9 +1,12 @@
 all: vagga
 
-vagga: rust-quire src/*.rs
-	rustc src/mod.rs -L rust-quire -L rust-quire/rust-argparse -o $@
+vagga: quire argparse src/*.rs
+	rustc src/mod.rs -L rust-quire -L rust-argparse -o $@
 
-rust-quire:
-	make -C rust-quire
+quire:
+	make -C rust-quire quire-lib
 
-.PHONE: all rust-quire
+argparse:
+	make -C rust-argparse argparse-lib
+
+.PHONE: all quire argparse

@@ -54,6 +54,7 @@ fn _main() -> int {
         ap.refer(&mut args)
           .add_argument("args", box List::<String>,
                 "Arguments for the command");
+        ap.stop_on_first_argument(true);
         match ap.parse_args() {
             Ok(()) => {}
             Err(x) => return x,
