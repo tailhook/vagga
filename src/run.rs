@@ -10,8 +10,11 @@ use std::io::{Open, Write};
 use std::io::fs::{mkdir, rmdir_recursive, rename, File};
 use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
 use std::io::pipe::PipeStream;
+use std::io::stdio::{stdout, stderr};
 use libc::{c_int, c_char, c_ulong, c_void, pid_t};
 use libc::funcs::posix88::unistd::{fork, usleep, write, getuid};
+
+use argparse::{ArgumentParser, Store, List};
 
 use super::env::Environ;
 use super::config::Config;
@@ -95,9 +98,10 @@ fn change_root(root: &Path) -> Result<(), String> {
     return Ok(());
 }
 
-fn mount_all(root: &Path, mount_dir: &Path, task: &RunTask)
+fn mount_all(root: &Path, mount_dir: &Path, project_root: &Path)
     -> Result<(), String>
 {
+    let vagga_marker = mount_dir.join_many(["tmp", ".vagga"]);
     unsafe {
         if mount(root.to_c_str().unwrap(), mount_dir.to_c_str().unwrap(),
             null(), MS_BIND|MS_REC|MS_RDONLY, null()) != 0 {
@@ -117,7 +121,7 @@ fn mount_all(root: &Path, mount_dir: &Path, task: &RunTask)
             return Err(format!("Error mounting /dev: {}",
                 error_string(errno() as uint)));
         }
-        if mount(task.project_root.to_c_str().unwrap(),
+        if mount(project_root.to_c_str().unwrap(),
                  mount_dir.join("work").to_c_str().unwrap(),
                  null(), MS_BIND|MS_REC, null()) != 0 {
             return Err(format!("Error mounting /work: {}",
@@ -137,18 +141,20 @@ fn mount_all(root: &Path, mount_dir: &Path, task: &RunTask)
             return Err(format!("Error mounting /proc: {}",
                 error_string(errno() as uint)));
         }
+        try!(ensure_dir(&vagga_marker));
+        if mount(vagga_marker.to_c_str().unwrap(),
+                 mount_dir.join_many(["work", ".vagga"]).to_c_str().unwrap(),
+                 null(), MS_BIND|MS_REC, null()) != 0 {
+            return Err(format!("Error mounting /work/.vagga: {}",
+                error_string(errno() as uint)));
+        }
+    }
+    match File::open_mode(&vagga_marker.join("CONTAINED.txt"), Open, Write)
+        .write_line("You are running in vagga container.") {
+        Ok(()) => {}
+        Err(e) => return Err(format!("Can't write CONTAINED.txt: {}", e)),
     }
     return Ok(());
-}
-
-pub struct RunTask<'a> {
-    pub environ: &'a Environ,
-    pub config: &'a Config,
-    pub container: &'a String,
-    pub command: &'a [String],
-    pub work_dir: &'a Path,
-    pub project_root: &'a Path,
-    pub stderr: &'a mut Writer,
 }
 
 fn ensure_dir(p: &Path) -> Result<(),String> {
@@ -159,57 +165,79 @@ fn ensure_dir(p: &Path) -> Result<(),String> {
 }
 
 
-pub fn run_chroot(task: RunTask) -> Result<int,String>
+pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
+    command: &String, args: &Vec<String>)
+    -> Result<int,String>
 {
-    let container_dir = task.project_root
-        .join_many([".vagga", task.container.as_slice()]);
-    let container_root = container_dir.join("root");
-    let mount_dir = task.project_root.join_many([".vagga", "mnt"]);
+    try!(mount_all(container_root, mount_dir, &env.project_root));
+    try!(change_root(mount_dir));
 
-    try!(mount_all(&container_root, &mount_dir, &task));
-    try!(change_root(&mount_dir));
-
-    // TODO(tailhook) chdir
-    let args:Vec<CString> = task.command.iter().map(
-        |s| { s.to_c_str() }).collect();
+    let mut args: Vec<CString> = args.iter()
+        .map(|s| { s.to_c_str() }).collect();
+    args.insert(0, command.to_c_str());
     unsafe {
         let mut argv: Vec<*c_char> =
             args.move_iter().map(|s| { s.unwrap() }).collect();
         argv.push(null());
+        // TODO(tailhook) set environment from config
         let envp = vec!(
             "PATH=/bin:/usr/bin:/usr/local/bin".to_c_str().unwrap(),
             null());
+        // TODO(tailhook) chdir
         execve(
-            task.command[0].to_c_str().unwrap(),
+            command.to_c_str().unwrap(),
             argv.as_ptr(),
             envp.as_ptr(),
             );
     }
-    return Err(format!("Error executing command [{}]: {}",
-        task.command, error_string(errno() as uint)));
+    return Err(format!("Error executing command {}: {}",
+        command, error_string(errno() as uint)));
 }
 
-pub fn run_container(task: RunTask) -> Result<int,String>
+pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
+    -> Result<int, String>
 {
-    let container = match task.config.containers.find(task.container) {
+    let mut cname = "devel".to_string();
+    let mut command = "".to_string();
+    let mut cmdargs = Vec::new();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.refer(&mut cname)
+            .add_argument("container", box Store::<String>,
+                "A name of the container to build")
+            .required();
+        ap.refer(&mut command)
+            .add_argument("command", box Store::<String>,
+                "A command to run inside container")
+            .required();
+        ap.refer(&mut cmdargs)
+            .add_argument("arguments", box List::<String>,
+                "Arguments for the command")
+            .required();
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => return Ok(122),
+        }
+    }
+    let container = match config.containers.find(&cname) {
         Some(c) => c,
         None => {
             return Err(format!("Can't find container {} in config",
-                               task.container));
+                               cname));
         }
     };
-    task.stderr.write_line(format!(
-        "Running {}: {}", task.container, task.command).as_slice()).ok();
+    info!("Running {}: {} {}", cname, command, cmdargs);
 
-    let container_dir = task.project_root
-        .join_many([".vagga", task.container.as_slice()]);
+    let container_dir = env.project_root.join_many(
+        [".vagga", cname.as_slice()]);
     let container_root = container_dir.join("root");
 
     for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
         try!(ensure_dir(&container_root.join(*dir)));
     }
 
-    let mount_dir = task.project_root.join_many([".vagga", "mnt"]);
+    let mount_dir = env.project_root.join_many([".vagga", "mnt"]);
     try!(ensure_dir(&mount_dir));
     try!(make_namespace());
 
@@ -226,7 +254,7 @@ pub fn run_container(task: RunTask) -> Result<int,String>
             Err(x) => return Err(format!("Can't read from pipe: {}", x)),
         }
         drop(pipe);
-        return run_chroot(task);
+        return run_chroot(env, &container_root, &mount_dir, &command, &cmdargs);
     } else {
         match File::open_mode(&Path::new("/proc")
                           .join(pid.to_str())
