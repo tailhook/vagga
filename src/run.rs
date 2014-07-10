@@ -62,8 +62,32 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
 
 pub fn run_user_command(env: &Environ, config: &Config,
     cmdname: &String, args: Vec<String>)
-    -> Result<int, String> {
-    unimplemented!();
+    -> Result<int, String>
+{
+    let command = match config.commands.find(cmdname) {
+        Some(c) => c,
+        None => {
+            return Err(format!("Can't find command {} in config",
+                               cmdname));
+        }
+    };
+    let cname = match command.container {
+        Some(ref name) => name.clone(),
+        None => unimplemented!(),
+    };
+    match config.containers.find(&cname) {
+        Some(c) => c,
+        None => {
+            return Err(format!("Can't find container {} for command {}",
+                               command.container, cmdname));
+        }
+    };
+    return match command.run {
+        Some(ref cmdline) => _run(env, config, &cname,
+            &"/bin/sh".to_string(),
+            &(vec!("-c".to_string(), cmdline.clone()) + args.slice_from(1))),
+        None => unimplemented!()
+    }
 }
 
 pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
@@ -99,10 +123,16 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
                                cname));
         }
     };
-    info!("Running {}: {} {}", cname, command, cmdargs);
+    _run(env, config, &cname, &command, &cmdargs)
+}
 
+pub fn _run(env: &Environ, config: &Config, container: &String,
+    command: &String, cmdargs: &Vec<String>)
+    -> Result<int, String>
+{
+    info!("Running {}: {} {}", container, command, cmdargs);
     let container_dir = env.project_root.join_many(
-        [".vagga", cname.as_slice()]);
+        [".vagga", container.as_slice()]);
     let container_root = container_dir.join("root");
     let uid = unsafe { getuid() };
 
@@ -127,7 +157,7 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
             Err(x) => return Err(format!("Can't read from pipe: {}", x)),
         }
         drop(pipe);
-        try!(run_chroot(env, &container_root, &mount_dir, &command, &cmdargs));
+        try!(run_chroot(env, &container_root, &mount_dir, command, cmdargs));
         unreachable!();
     } else {
         // TODO(tailhook) set uid map from config
