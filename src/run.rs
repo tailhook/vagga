@@ -1,6 +1,6 @@
 use std::io;
 use std::to_str::ToStr;
-use std::os::pipe;
+use std::os::{pipe, change_dir};
 use std::io::{Open, Write};
 use std::io::fs::{mkdir, File};
 use std::io::pipe::PipeStream;
@@ -53,7 +53,17 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     -> Result<(),String>
 {
     try!(mount_all(container_root, mount_dir, &env.project_root));
+    debug!("Changing directory to {}", mount_dir.display());
+    change_dir(mount_dir);
     try!(change_root(mount_dir));
+    let reldir = match env.work_dir.path_relative_from(&env.project_root) {
+        Some(path) => path,
+        None => Path::new(""),
+    };
+    let path = Path::new("/work").join(reldir);
+    debug!("Changing directory to {}", path.display());
+    change_dir(&path);
+
     // TODO(tailhook) set environment from config
     let environ = vec!(
         "PATH=/bin:/usr/bin:/usr/local/bin".to_string(),
