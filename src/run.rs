@@ -1,6 +1,6 @@
 use std::io;
 use std::to_str::ToStr;
-use std::os::{pipe, change_dir};
+use std::os::{pipe, change_dir, getenv};
 use std::io::{Open, Write};
 use std::io::fs::{mkdir, File};
 use std::io::pipe::PipeStream;
@@ -68,6 +68,7 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     let environ = vec!(
         "PATH=/bin:/usr/bin:/usr/local/bin".to_string(),
         "HOME=/non-existent".to_string(),
+        "TERM=".to_string() + getenv("TERM").unwrap_or("linux".to_string()),
         );
     try!(execute(command, args, &environ));
     unreachable!();
