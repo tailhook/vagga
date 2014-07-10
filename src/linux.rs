@@ -91,18 +91,26 @@ pub fn bind_mount(source: &Path, target: &Path, read_write: bool)
 {
     debug!("Mounting {} into {}{}",
         source.display(), target.display(), if read_write {""} else {" (ro)"});
-    let mut flags = MS_BIND|MS_REC;
-    if !read_write {
-        flags |= MS_RDONLY;
-    }
     let rc = unsafe {
         source.with_c_str(|source|
         target.with_c_str(|target|
-            mount(source, target, null(), flags, null())
+            mount(source, target, null(), MS_BIND|MS_REC, null())
         ))};
     if rc != 0 {
         return Err(format!("Error mounting {}: {}",
             target.display(), error_string(errno() as uint)));
+    }
+    if !read_write {
+        let rc = unsafe {
+            source.with_c_str(|source|
+            target.with_c_str(|target|
+                mount(source, target, null(),
+                      MS_BIND|MS_REMOUNT|MS_RDONLY, null())
+            ))};
+        if rc != 0 {
+            return Err(format!("Error remounting ro {}: {}",
+                target.display(), error_string(errno() as uint)));
+        }
     }
     Ok(())
 }
