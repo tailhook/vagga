@@ -1,10 +1,10 @@
 use std::io;
 use std::os::getenv;
 use std::io::fs::{mkdir, rmdir_recursive, rename};
-use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
+use std::io::process::{ExitStatus, Command, InheritFd};
 use std::io::stdio::{stdout, stderr};
 
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store};
 
 use super::env::Environ;
 use super::config::Config;

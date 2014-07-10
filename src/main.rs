@@ -4,7 +4,7 @@ use std::io::stdio::stderr;
 
 use super::config::find_config;
 use super::build::build_command;
-use super::run::run_command;
+use super::run::{run_command, run_user_command};
 use super::env::Environ;
 
 pub fn run() -> int {
@@ -61,10 +61,16 @@ pub fn run() -> int {
     let result = match cmd.as_slice() {
         "_build" => build_command(&env, &config, args),
         "_run" => run_command(&env, &config, args),
-        x => {
+        _ => {
             // TODO(tailhook) look for commands in config
-            err.write_line(format!("Unknown command {}", x).as_slice()).ok();
-            return 127;  // Like shell exit code
+            match config.commands.find(&cmd) {
+                Some(_) => run_user_command(&env, &config, &cmd, args),
+                None => {
+                    err.write_line(
+                        format!("Unknown command {}", cmd).as_slice()).ok();
+                    return 127;
+                }
+            }
         }
     };
     match result {
