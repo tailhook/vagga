@@ -135,13 +135,13 @@ pub fn execute(command: &String, args: &Vec<String>, environ: &Vec<String>)
         .map(|s| { s.to_c_str() }).collect();
     cargs.insert(0, command.to_c_str());
     let cenviron: Vec<CString> = environ.iter()
-        .map(|s| { s.to_c_str() }).collect();
+        .map(|s| s.to_c_str()).collect();
     unsafe {
         let mut argv: Vec<*c_char> =
-            cargs.move_iter().map(|s| s.with_ref(|p| p)).collect();
+            cargs.iter().map(|s| s.with_ref(|p| p)).collect();
         argv.push(null());
         let mut envp: Vec<*c_char> =
-            cenviron.move_iter().map(|s| s.with_ref(|p| p)).collect();
+            cenviron.iter().map(|s| s.with_ref(|p| p)).collect();
         envp.push(null());
         // TODO(tailhook) chdir
         command.with_c_str(|command|
