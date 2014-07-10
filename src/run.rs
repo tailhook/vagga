@@ -12,6 +12,7 @@ use super::env::Environ;
 use super::config::Config;
 use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
 use super::linux::{execute, forkme, wait_process};
+use libc::funcs::posix88::unistd::getuid;
 
 
 fn mount_all(root: &Path, mount_dir: &Path, project_root: &Path)
@@ -103,6 +104,7 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
     let container_dir = env.project_root.join_many(
         [".vagga", cname.as_slice()]);
     let container_root = container_dir.join("root");
+    let uid = unsafe { getuid() };
 
     for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
         try!(ensure_dir(&container_root.join(*dir)));
@@ -128,10 +130,13 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
         try!(run_chroot(env, &container_root, &mount_dir, &command, &cmdargs));
         unreachable!();
     } else {
+        // TODO(tailhook) set uid map from config
+        let uid_map = format!("0 {} 1", uid);
+        debug!("Writing uid_map: {}", uid_map);
         match File::open_mode(&Path::new("/proc")
                           .join(pid.to_str())
                           .join("uid_map"), Open, Write)
-                .write_str("0 1000 1") {
+                .write_str(uid_map.as_slice()) {
             Ok(()) => {}
             Err(e) => return Err(format!(
                 "Error writing uid mapping: {}", e)),
