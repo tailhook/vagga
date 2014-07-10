@@ -55,7 +55,10 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     try!(mount_all(container_root, mount_dir, &env.project_root));
     try!(change_root(mount_dir));
     // TODO(tailhook) set environment from config
-    let environ = vec!("PATH=/bin:/usr/bin:/usr/local/bin".to_string());
+    let environ = vec!(
+        "PATH=/bin:/usr/bin:/usr/local/bin".to_string(),
+        "HOME=/non-existent".to_string(),
+        );
     try!(execute(command, args, &environ));
     unreachable!();
 }
