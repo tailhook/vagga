@@ -123,6 +123,7 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
             .add_argument("arguments", box List::<String>,
                 "Arguments for the command")
             .required();
+        ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
