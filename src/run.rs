@@ -70,7 +70,8 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
         "HOME=/non-existent".to_string(),
         "TERM=".to_string() + getenv("TERM").unwrap_or("linux".to_string()),
         );
-    try!(execute(command, args, &environ));
+    try!(execute(command, ["/bin", "/usr/bin", "/usr/local/bin"],
+        args, &environ));
     unreachable!();
 }
 

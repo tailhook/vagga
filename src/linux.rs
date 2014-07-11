@@ -8,6 +8,7 @@ use libc::funcs::posix88::unistd::fork;
 
 // errno.h
 static EINTR: int = 4;
+static ENOENT: int = 2;
 
 // sched.h
 static CLONE_NEWNS: c_int = 0x00020000;   /* Set to create new namespace.  */
@@ -134,7 +135,8 @@ pub fn mount_pseudofs(fstype: &str, target: &Path, fsoptions: &str)
     Ok(())
 }
 
-pub fn execute(command: &String, args: &Vec<String>, environ: &Vec<String>)
+pub fn execute(command: &String, path: &[&str],
+               args: &Vec<String>, environ: &Vec<String>)
     -> Result <(), String>
 {
     debug!("Executing {} with args: {} with environ: {}",
@@ -158,6 +160,16 @@ pub fn execute(command: &String, args: &Vec<String>, environ: &Vec<String>)
                 argv.as_ptr(),
                 envp.as_ptr(),
                 ));
+        if !command.as_slice().contains_char('/') && errno() == ENOENT {
+            for prefix in path.iter() {
+                (prefix.to_string() + "/" + *command).with_c_str(|command|
+                    execve(
+                        command,
+                        argv.as_ptr(),
+                        envp.as_ptr(),
+                        ));
+            }
+        }
     }
     return Err(format!("Error executing command {}: {}",
         command, error_string(errno() as uint)));
