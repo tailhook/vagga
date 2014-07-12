@@ -20,6 +20,7 @@ pub struct Variant {
 
 pub struct Container {
     pub default_command: Option<String>,
+    pub wrapper_script: Option<String>,
     pub builder: String,
     pub settings: TreeMap<String, String>,
 }
@@ -126,6 +127,7 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
             for (name, jcont) in containers.iter() {
                 let cont = Container {
                     default_command: get_string(jcont, "default-command"),
+                    wrapper_script: get_string(jcont, "wrapper-script"),
                     builder: get_string(jcont, "builder")
                              .unwrap_or("nix".to_string()),
                     settings: get_dict(jcont, "settings"),

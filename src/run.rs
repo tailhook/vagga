@@ -6,7 +6,7 @@ use std::io::fs::{mkdir, File};
 use std::io::pipe::PipeStream;
 use std::io::stdio::{stdout, stderr};
 
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store, StoreOption, List};
 
 use super::env::Environ;
 use super::config::Config;
@@ -90,18 +90,22 @@ pub fn run_user_command(env: &Environ, config: &Config,
         Some(ref name) => name.clone(),
         None => unimplemented!(),
     };
-    match config.containers.find(&cname) {
+    let container = match config.containers.find(&cname) {
         Some(c) => c,
         None => {
             return Err(format!("Can't find container {} for command {}",
                                command.container, cmdname));
         }
     };
-    return match command.run {
-        Some(ref cmdline) => _run(env, config, &cname,
-            &"/bin/sh".to_string(),
-            &(vec!("-c".to_string(), cmdline.clone()) + args.slice_from(1))),
-        None => unimplemented!()
+    match (&container.wrapper_script, &command.run) {
+        (&Some(ref wrapper), &Some(ref cmdline)) =>
+            return _run(env, &cname, wrapper,
+                &(vec!("/bin/sh".to_string(), "-c".to_string(),
+                       cmdline.clone()) + args.slice_from(1))),
+        (&None, &Some(ref cmdline)) =>
+            return _run(env, &cname, &"/bin/sh".to_string(),
+                &(vec!("-c".to_string(), cmdline.clone()) + args.slice_from(1))),
+        (_, &None) => unimplemented!(),
     }
 }
 
@@ -109,8 +113,8 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cname = "devel".to_string();
-    let mut command = "".to_string();
-    let mut cmdargs = Vec::new();
+    let mut command: Option<String> = None;
+    let mut cmdargs: Vec<String> = Vec::new();
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut cname)
@@ -118,9 +122,8 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
                 "A name of the container to build")
             .required();
         ap.refer(&mut command)
-            .add_argument("command", box Store::<String>,
-                "A command to run inside container")
-            .required();
+            .add_argument("command", box StoreOption::<String>,
+                "A command to run inside container");
         ap.refer(&mut cmdargs)
             .add_argument("arguments", box List::<String>,
                 "Arguments for the command")
@@ -132,17 +135,32 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
             Err(_) => return Ok(122),
         }
     }
-    match config.containers.find(&cname) {
+    let container = match config.containers.find(&cname) {
         Some(c) => c,
         None => {
             return Err(format!("Can't find container {} in config",
                                cname));
         }
     };
-    _run(env, config, &cname, &command, &cmdargs)
+    match (&command, &container.default_command, &container.wrapper_script) {
+        (&None, &None, _) =>
+            return Err(format!("No command specified and no default command")),
+        (&None, &Some(ref cmd), &Some(ref wrapper)) => {
+            cmdargs.insert(0, cmd.clone());
+            return _run(env, &cname, wrapper, &cmdargs);
+        }
+        (&Some(ref cmd), _, &Some(ref wrapper)) => {
+            cmdargs.insert(0, cmd.clone());
+            return _run(env, &cname, wrapper, &cmdargs);
+        }
+        (&None, &Some(ref cmd), &None) =>
+            return _run(env, &cname, cmd, &cmdargs),
+        (&Some(ref cmd), _, &None) =>
+            return _run(env, &cname, cmd, &cmdargs),
+    }
 }
 
-pub fn _run(env: &Environ, config: &Config, container: &String,
+pub fn _run(env: &Environ, container: &String,
     command: &String, cmdargs: &Vec<String>)
     -> Result<int, String>
 {
