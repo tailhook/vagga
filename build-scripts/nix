@@ -6,9 +6,9 @@
 : ${nix_config:=default.nix}
 : ${nix_attribute:=""}
 
-type mkdir mv dirname readlink  # coreutils
-type nix-instantiate nix-env    # nix
-type rsync                      # rsync
+type mkdir mv dirname readlink            # coreutils
+type nix-instantiate nix-env nix-store    # nix
+type rsync                                # rsync
 
 profile=$container_dir/nix-profile
 
