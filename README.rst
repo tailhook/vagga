@@ -50,6 +50,9 @@ using ``--rm``).
 Docker also shares some daemon configuration between different containers
 even run by different users. There is no such sharing in vagga.
 
+Also not having central daemon shared between users allows us to have a
+user-defined settings file in ``$HOME/.config/vagga``.
+
 
 Children Processes
 ------------------
