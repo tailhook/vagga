@@ -6,7 +6,9 @@ extern crate debug;
 extern crate libc;
 extern crate green;
 extern crate rustuv;
+extern crate regex;
 #[phase(plugin, link)] extern crate log;
+#[phase(plugin)] extern crate regex_macros;
 
 extern crate quire;
 extern crate argparse;
@@ -23,6 +25,7 @@ mod run;
 mod env;
 mod main;
 mod linux;
+mod options;
 
 
 fn main() {

@@ -9,9 +9,9 @@ use std::io::stdio::{stdout, stderr};
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
 use super::env::Environ;
-use super::config::Config;
 use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
 use super::linux::{execute, forkme, wait_process};
+use super::options::env_options;
 use libc::funcs::posix88::unistd::getuid;
 
 
@@ -75,11 +75,10 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     unreachable!();
 }
 
-pub fn run_user_command(env: &Environ, config: &Config,
-    cmdname: &String, args: Vec<String>)
+pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
     -> Result<int, String>
 {
-    let command = match config.commands.find(cmdname) {
+    let command = match env.config.commands.find(cmdname) {
         Some(c) => c,
         None => {
             return Err(format!("Can't find command {} in config",
@@ -90,13 +89,7 @@ pub fn run_user_command(env: &Environ, config: &Config,
         Some(ref name) => name.clone(),
         None => unimplemented!(),
     };
-    let container = match config.containers.find(&cname) {
-        Some(c) => c,
-        None => {
-            return Err(format!("Can't find container {} for command {}",
-                               command.container, cmdname));
-        }
-    };
+    let container = try!(env.get_container(&cname));
     match (&container.wrapper_script, &command.run) {
         (&Some(ref wrapper), &Some(ref cmdline)) =>
             return _run(env, &cname, wrapper,
@@ -109,7 +102,7 @@ pub fn run_user_command(env: &Environ, config: &Config,
     }
 }
 
-pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
+pub fn run_command(env: &mut Environ, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cname = "devel".to_string();
@@ -128,6 +121,7 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
             .add_argument("arguments", box List::<String>,
                 "Arguments for the command")
             .required();
+        env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -135,13 +129,7 @@ pub fn run_command(env: &Environ, config: &Config, args: Vec<String>)
             Err(_) => return Ok(122),
         }
     }
-    let container = match config.containers.find(&cname) {
-        Some(c) => c,
-        None => {
-            return Err(format!("Can't find container {} in config",
-                               cname));
-        }
-    };
+    let container = try!(env.get_container(&cname));
     match (&command, &container.default_command, &container.wrapper_script) {
         (&None, &None, _) =>
             return Err(format!("No command specified and no default command")),

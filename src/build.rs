@@ -7,7 +7,7 @@ use std::io::stdio::{stdout, stderr};
 use argparse::{ArgumentParser, Store};
 
 use super::env::Environ;
-use super::config::Config;
+use super::options::env_options;
 
 
 fn makedirs(path: &Path) -> Result<(),String> {
@@ -21,7 +21,7 @@ fn makedirs(path: &Path) -> Result<(),String> {
     };
 }
 
-pub fn build_command(environ: &Environ, config: &Config, args: Vec<String>)
+pub fn build_command(environ: &mut Environ, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cname = "devel".to_string();
@@ -31,19 +31,15 @@ pub fn build_command(environ: &Environ, config: &Config, args: Vec<String>)
             .add_argument("container", box Store::<String>,
                 "A name of the container to build")
             .required();
+        env_options(environ, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
             Err(_) => return Ok(122),
         }
     }
+    let container = try!(environ.get_container(&cname));
 
-    let container = match config.containers.find(&cname) {
-        Some(c) => c,
-        None => {
-            return Err(format!("Can't find container {} in config", cname));
-        }
-    };
     info!("Building {}", cname);
 
     let builder = &container.builder;

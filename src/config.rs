@@ -14,7 +14,7 @@ pub struct Command {
 }
 
 pub struct Variant {
-    pub default_variant: String,
+    pub default: Option<String>,
     pub options: Vec<String>,
 }
 
@@ -48,6 +48,7 @@ fn get_string(json: &J::Json, key: &'static str) -> Option<String> {
     return match json {
         &J::Object(ref dict) => match dict.find(&key.to_string()) {
             Some(&J::String(ref val)) => Some(val.clone()),
+            Some(&J::Number(val)) => Some(val.to_str().to_string()),
             _ => None,
         },
         _ => None,
@@ -68,6 +69,31 @@ fn get_dict(json: &J::Json, key: &'static str) -> TreeMap<String, String> {
         match v {
             &J::String(ref val) => {
                 res.insert(k.clone(), val.clone());
+            }
+            &J::Number(val) => {
+                res.insert(k.clone(), val.to_str().to_string());
+            }
+            _ => continue,  // TODO(tailhook) assert maybe?
+        }
+    }
+
+    return res;
+}
+
+fn get_list(json: &J::Json, key: &'static str) -> Vec<String> {
+    let mut res = Vec::new();
+    let list = match json {
+        &J::Object(ref dict) => match dict.find(&key.to_string()) {
+            Some(&J::List(ref val)) => val,
+            _ => return res,
+        },
+        _ => return res,
+    };
+
+    for item in list.iter() {
+        match item {
+            &J::String(ref val) => {
+                res.push(val.clone());
             }
             _ => continue,  // TODO(tailhook) assert maybe?
         }
@@ -137,6 +163,21 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
         }
         Some(_) => return Err(format!(
             "{}: containers key must be mapping", fname)),
+        None => {}
+    }
+
+    match root.find(&"variants".to_string()) {
+        Some(&J::Object(ref variants)) => {
+            for (name, jvar) in variants.iter() {
+                let var = Variant {
+                    default: get_string(jvar, "default"),
+                    options: get_list(jvar, "options"),
+                };
+                config.variants.insert(name.clone(), var);
+            }
+        }
+        Some(_) => return Err(format!(
+            "{}: variants key must be mapping", fname)),
         None => {}
     }
 
