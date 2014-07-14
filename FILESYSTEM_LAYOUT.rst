@@ -25,3 +25,15 @@ Containers
   (generated files, configs, version files, whatever.. depends on backend)
 * ``.vagga/.cache/bbb`` -- the container-agnostic cache files
   for the backend ``bbb``, may be reused between containers
+
+
+Configuration
+=============
+
+* ``.vagga/vagga.yaml`` -- configuration file, overrides ``vagga.yaml``, may
+  also serve as config if you don't want to commit ``vagga.yaml`` into source
+  control
+* ``.vagga/settings.yaml`` -- settings that override something locally and are
+  manipulated by vagga itself
+
+

@@ -7,6 +7,7 @@ use super::build::build_command;
 use super::run::{run_command, run_user_command};
 use super::env::Environ;
 use super::options::env_options;
+use super::settings::{Settings, read_settings, set_variant};
 
 pub fn run() -> int {
     let mut err = stderr();
@@ -27,10 +28,13 @@ pub fn run() -> int {
         vagga_path: mypath,
         vagga_command: vcmd.clone(),
         work_dir: workdir,
+        local_vagga: project_root.join(".vagga"),
         project_root: project_root,
         variables: Vec::new(),
         config: config,
+        settings: Settings::new(),
     };
+    read_settings(&mut env);
 
     let mut cmd: Option<String> = None;
     let mut args: Vec<String> = Vec::new();
@@ -65,6 +69,7 @@ pub fn run() -> int {
     let result = match cmd.as_slice() {
         "_build" => build_command(&mut env, args),
         "_run" => run_command(&mut env, args),
+        "_setv" | "_setvariant" => set_variant(&mut env, args),
         _ => {
             // TODO(tailhook) look for commands in config
             match env.config.commands.find(&cmd) {

@@ -26,6 +26,8 @@ mod env;
 mod main;
 mod linux;
 mod options;
+mod settings;
+mod yamlutil;
 
 
 fn main() {

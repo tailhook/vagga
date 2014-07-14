@@ -1,6 +1,7 @@
 use collections::treemap::TreeMap;
 use collections::treemap::TreeSet;
 
+use super::settings::Settings;
 use cfg = super::config;
 
 pub struct Container {
@@ -18,8 +19,10 @@ pub struct Environ {
     pub vagga_dir: Path,
     pub work_dir: Path,
     pub project_root: Path,
+    pub local_vagga: Path,
     pub variables: Vec<String>,
     pub config: cfg::Config,
+    pub settings: Settings,
 }
 
 fn subst_vars<'x>(src: &'x String, vars: &TreeMap<&'x str, &str>,
@@ -52,6 +55,17 @@ impl Environ {
             None => return Err(format!("Can't find container {}", name)),
         };
         let mut vars = TreeMap::new();
+        for (k, v) in self.config.variants.iter() {
+            match v.default {
+                Some(ref val) => {
+                    vars.insert(k.as_slice(), val.as_slice());
+                }
+                None => {}
+            }
+        }
+        for (k, v) in self.settings.variants.iter() {
+            vars.insert(k.as_slice(), v.as_slice());
+        }
         for pairstr in self.variables.iter() {
             let mut pair = pairstr.as_slice().splitn('=', 1);
             let key = pair.next();
@@ -60,15 +74,6 @@ impl Environ {
                 return Err(format!("Wrong variant declaration {}", pairstr));
             };
             vars.insert(key.unwrap(), value.unwrap());
-        }
-        for (k, v) in self.config.variants.iter() {
-            println!("Variant {} {:?}", k, v);
-            match v.default {
-                Some(ref val) => {
-                    vars.insert(k.as_slice(), val.as_slice());
-                }
-                None => {}
-            }
         }
         let mut used = TreeSet::new();
         let mut settings: TreeMap<String, String> = TreeMap::new();
