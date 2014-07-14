@@ -34,11 +34,16 @@ pub struct Config {
 }
 
 
-fn find_config_path(workdir: &Path) -> Option<Path> {
+fn find_config_path(workdir: &Path) -> Option<(Path, Path)> {
     let mut dir = workdir.clone();
     loop {
-        if dir.join("vagga.yaml").exists() {
-            return Some(dir);
+        let fname = dir.join_many([".vagga", "vagga.yaml"]);
+        if fname.exists() {
+            return Some((dir, fname));
+        }
+        let fname = dir.join("vagga.yaml");
+        if fname.exists() {
+            return Some((dir, fname));
         }
         if !dir.pop() {
             return None;
@@ -47,12 +52,11 @@ fn find_config_path(workdir: &Path) -> Option<Path> {
 }
 
 pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
-    let cfg_dir = match find_config_path(workdir) {
-        Some(path) => path,
+    let (cfg_dir, filename) = match find_config_path(workdir) {
+        Some(pair) => pair,
         None => return Err(format!(
             "Config not found in path {}", workdir.display())),
     };
-    let filename = cfg_dir.join("vagga.yaml");
     let fname = filename.display();
     let data = match File::open(&filename).read_to_str() {
         Ok(data) => data,
