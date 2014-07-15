@@ -13,6 +13,22 @@ pub fn get_string(json: &J::Json, key: &'static str) -> Option<String> {
     }
 }
 
+pub fn get_bool(json: &J::Json, key: &'static str) -> Option<bool> {
+    return match json {
+        &J::Object(ref dict) => match dict.find(&key.to_string()) {
+            Some(&J::String(ref val)) => match val.as_slice() {
+                "true"|"TRUE"|"True"|"yes"|"YES"|"Yes"|"y"|"Y" => Some(true),
+                "false"|"FALSE"|"False"|"no"|"NO"|"No"|"n"|"N" => Some(false),
+                ""|"~"|"null" => Some(false),
+                _ => None,
+            },
+            Some(&J::Number(val)) => Some(val != 0.),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 pub fn get_dict(json: &J::Json, key: &'static str) -> TreeMap<String, String> {
     let mut res = TreeMap::new();
     let dict = match json {

@@ -12,6 +12,7 @@ use super::env::{Environ, Container};
 use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
 use super::linux::{execute, forkme, wait_process};
 use super::options::env_options;
+use super::build::{build_container, link_container};
 use libc::funcs::posix88::unistd::getuid;
 
 
@@ -90,16 +91,18 @@ pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
         None => unimplemented!(),
     };
     let container = try!(env.get_container(&cname));
-    match (&container.wrapper_script, &command.run) {
-        (&Some(ref wrapper), &Some(ref cmdline)) =>
-            return _run(env, &container, wrapper,
-                &(vec!("/bin/sh".to_string(), "-c".to_string(),
-                       cmdline.clone()) + args.slice_from(1))),
-        (&None, &Some(ref cmdline)) =>
-            return _run(env, &container, &"/bin/sh".to_string(),
-                &(vec!("-c".to_string(), cmdline.clone()) + args.slice_from(1))),
+    let (cmd, argprefix) = match (&container.wrapper_script, &command.run) {
+        (&Some(ref wrapper), &Some(ref cmdline)) => (
+            wrapper.clone(),
+            vec!("/bin/sh".to_string(), "-c".to_string(), cmdline.clone()),
+            ),
+        (&None, &Some(ref cmdline)) => (
+            "/bin/sh".to_string(),
+            vec!("-c".to_string(), cmdline.clone()),
+            ),
         (_, &None) => unimplemented!(),
-    }
+    };
+    return _run(env, container, &cmd, &(argprefix + args.slice_from(1)));
 }
 
 pub fn run_command(env: &mut Environ, args: Vec<String>)
@@ -130,34 +133,41 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
         }
     }
     let container = try!(env.get_container(&cname));
-    match (&command, &container.default_command, &container.wrapper_script) {
+    let cmd = match (&command, &container.default_command,
+                                          &container.wrapper_script) {
         (&None, &None, _) =>
             return Err(format!("No command specified and no default command")),
         (&None, &Some(ref cmd), &Some(ref wrapper)) => {
             cmdargs.insert(0, cmd.clone());
-            return _run(env, &container, wrapper, &cmdargs);
+            wrapper.clone()
         }
         (&Some(ref cmd), _, &Some(ref wrapper)) => {
             cmdargs.insert(0, cmd.clone());
-            return _run(env, &container, wrapper, &cmdargs);
+            wrapper.clone()
         }
-        (&None, &Some(ref cmd), &None) =>
-            return _run(env, &container, cmd, &cmdargs),
-        (&Some(ref cmd), _, &None) =>
-            return _run(env, &container, cmd, &cmdargs),
-    }
+        (&None, &Some(ref cmd), &None) => cmd.to_string(),
+        (&Some(ref cmd), _, &None) => cmd.to_string(),
+    };
+    return _run(env, container, &cmd, &cmdargs);
 }
 
-pub fn _run(env: &Environ, container: &Container,
+pub fn _run(env: &Environ, container_: Container,
     command: &String, cmdargs: &Vec<String>)
     -> Result<int, String>
 {
-    let lnk = env.local_vagga.join(container.fullname.as_slice());
-    let container_root = match readlink(&lnk) {
-        Ok(path) => lnk.dir_path().join(path),
-        Err(e) => return Err(format!("Container {} not found: {}",
-                                     container.fullname, e)),
+    let mut container = container_;
+    if env.settings.version_check {
+        try!(build_container(env, &mut container, false));
+        try!(link_container(env, &container));
+    } else {
+        let lnk = env.local_vagga.join(container.fullname.as_slice());
+        container.container_root = match readlink(&lnk) {
+            Ok(path) => Some(lnk.dir_path().join(path)),
+            Err(e) => return Err(format!("Container {} not found: {}",
+                                         container.fullname, e)),
+        };
     };
+    let container_root = container.container_root.as_ref().unwrap();
     info!("Running {}: {} {}", container_root.display(), command, cmdargs);
 
     let uid = unsafe { getuid() };
@@ -183,7 +193,7 @@ pub fn _run(env: &Environ, container: &Container,
             Err(x) => return Err(format!("Can't read from pipe: {}", x)),
         }
         drop(pipe);
-        try!(run_chroot(env, &container_root, &mount_dir, command, cmdargs));
+        try!(run_chroot(env, container_root, &mount_dir, command, cmdargs));
         unreachable!();
     } else {
         // TODO(tailhook) set uid map from config

@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh -e
 
 : ${nix_config:=default.nix}
 : ${nix_attribute:=""}

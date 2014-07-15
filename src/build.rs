@@ -9,9 +9,9 @@ use std::io::stdio::{stdout, stderr};
 use rustc::util::sha2::Sha256;
 use rustc::util::sha2::Digest;
 
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, StoreTrue};
 
-use super::env::Environ;
+use super::env::{Environ, Container};
 use super::options::env_options;
 
 
@@ -30,12 +30,16 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cname = "devel".to_string();
+    let mut force = false;
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut cname)
             .add_argument("container", box Store::<String>,
                 "A name of the container to build")
             .required();
+        ap.refer(&mut force)
+            .add_option(["--force"], box StoreTrue,
+                "Force rebuild of container event if it already exists");
         env_options(environ, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -43,9 +47,51 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
             Err(_) => return Ok(122),
         }
     }
-    let container = try!(environ.get_container(&cname));
+    let mut container = try!(environ.get_container(&cname));
+    try!(build_container(environ, &mut container, force));
+    try!(link_container(environ, &container));
 
-    info!("Building {}", cname);
+    return Ok(0);
+}
+
+pub fn link_container(environ: &Environ, container: &Container)
+    -> Result<(), String>
+{
+    let container_root = container.container_root.as_ref().unwrap();
+    let cdir = container_root.filename().unwrap();
+    let tmptarget = environ.local_vagga.join(
+        (".lnk.".container_into_owned_bytes() + cdir).as_slice());
+    if tmptarget.exists() {
+        match unlink(&tmptarget) {
+            Ok(()) => {}
+            Err(x) => return Err(format!("Error removing file: {}", x)),
+        }
+    }
+    let target = environ.local_vagga.join(container.name.as_slice());
+    debug!("Linking {} -> {}", container_root.display(), target.display())
+    let relative_root = Path::new(".roots").join(cdir);
+    match symlink(&relative_root, &tmptarget)
+          .and(rename(&tmptarget, &target)) {
+        Ok(()) => {}
+        Err(x) => return Err(format!("Can't symlink new root: {}", x)),
+    }
+    if !container.name.eq(&container.fullname) {
+        let target = environ.local_vagga.join(container.fullname.as_slice());
+        debug!("Linking {} -> {}", container_root.display(), target.display())
+        match symlink(&relative_root, &tmptarget)
+              .and(rename(&tmptarget, &target)) {
+            Ok(()) => {}
+            Err(x) => return Err(format!("Can't symlink new root: {}", x)),
+        }
+    }
+    return Ok(());
+}
+
+pub fn build_container(environ: &Environ, container: &mut Container,
+                       force: bool)
+    -> Result <bool, String>
+{
+    info!("Checking {}", container.name);
 
     let builder = &container.builder;
     let cache_dir = environ.local_vagga.join_many(
@@ -59,7 +105,7 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
     let mut parameters: Vec<(String, String)> = Vec::new();
     env.push(("HOME".as_bytes(), "/homeless-shelter".as_bytes()));
     env.push(("PATH".as_bytes(), path.as_bytes()));
-    env.push(("container_name".as_bytes(), cname.as_bytes()));
+    env.push(("container_name".as_bytes(), container.name.as_bytes()));
     env.push(("container_fullname".as_bytes(), container.fullname.as_bytes()));
     env.push(("cache_dir".as_bytes(), cache_dir.as_vec()));
     env.push(("project_root".as_bytes(), environ.project_root.as_vec()));
@@ -123,6 +169,14 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
     let cdir = format!("{}.{}", container.fullname, hash);
     let container_root = environ.local_vagga.join_many(
         [".roots", cdir.as_slice()]);
+
+    if container_root.exists() && !force {
+        info!("Container {} already built as {}",
+            container.name, container_root.display());
+        container.container_root = Some(container_root);
+        return Ok(false);
+    }
+
     let artifacts_dir = environ.local_vagga.join_many(
         [".artifacts", cdir.as_slice()]);
     let container_tmp = environ.local_vagga.join_many(
@@ -179,34 +233,10 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
             Err(x) => return Err(format!("Can't remove old root: {}", x)),
         }
     }
+    info!("Done building {} as {}",
+        container.name, container_root.display());
 
-    let tmptarget = environ.local_vagga.join(
-        (".lnk.".to_string() + cdir).as_slice());
-    if tmptarget.exists() {
-        match unlink(&tmptarget) {
-            Ok(()) => {}
-            Err(x) => return Err(format!("Error removing file: {}", x)),
-        }
-    }
-    let target = environ.local_vagga.join(container.name.as_slice());
-    info!("Linking {} -> {}", container_root.display(), target.display())
-    let relative_root = Path::new(".roots").join(cdir);
-    match symlink(&relative_root, &tmptarget)
-          .and(rename(&tmptarget, &target)) {
-        Ok(()) => {}
-        Err(x) => return Err(format!("Can't symlink new root: {}", x)),
-    }
-    if !container.name.eq(&container.fullname) {
-        let target = environ.local_vagga.join(container.fullname.as_slice());
-        info!("Linking {} -> {}", container_root.display(), target.display())
-        match symlink(&relative_root, &tmptarget)
-              .and(rename(&tmptarget, &target)) {
-            Ok(()) => {}
-            Err(x) => return Err(format!("Can't symlink new root: {}", x)),
-        }
-    }
+    container.container_root = Some(container_root);
 
-    info!("Done building {}", cname);
-
-    return Ok(0);
+    return Ok(true);
 }

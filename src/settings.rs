@@ -12,17 +12,19 @@ use quire::parse;
 use Y = quire::emit;
 
 use super::env::Environ;
-use super::yamlutil::{get_dict};
+use super::yamlutil::{get_dict, get_bool};
 
 
 pub struct Settings {
     pub variants: TreeMap<String, String>,
+    pub version_check: bool,
 }
 
 impl Settings {
     pub fn new() -> Settings {
         return Settings {
             variants: TreeMap::new(),
+            version_check: true,
             };
     }
 }
@@ -63,6 +65,10 @@ pub fn read_settings(env: &mut Environ) {
         for (k, v) in dic.move_iter() {
             info!("{}: Setting {}={}", filename.display(), k, v);
             env.settings.variants.insert(k, v);
+        }
+        match get_bool(&json, "version-check") {
+            Some(val) => { env.settings.version_check = val; }
+            _ => {}
         }
     }
 }

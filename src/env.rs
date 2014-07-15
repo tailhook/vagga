@@ -11,6 +11,7 @@ pub struct Container {
     pub wrapper_script: Option<String>,
     pub builder: String,
     pub settings: TreeMap<String, String>,
+    pub container_root: Option<Path>,
 }
 
 pub struct Environ {
@@ -93,6 +94,7 @@ impl Environ {
                 },
             builder: src.builder.clone(),
             settings: settings,
+            container_root: None,
         };
         for item in used.iter() {
             container.fullname.push_str("--");
