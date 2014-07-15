@@ -2,13 +2,13 @@ use std::io;
 use std::to_str::ToStr;
 use std::os::{pipe, change_dir, getenv};
 use std::io::{Open, Write};
-use std::io::fs::{mkdir, File};
+use std::io::fs::{mkdir, File, readlink};
 use std::io::pipe::PipeStream;
 use std::io::stdio::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
-use super::env::Environ;
+use super::env::{Environ, Container};
 use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
 use super::linux::{execute, forkme, wait_process};
 use super::options::env_options;
@@ -92,11 +92,11 @@ pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
     let container = try!(env.get_container(&cname));
     match (&container.wrapper_script, &command.run) {
         (&Some(ref wrapper), &Some(ref cmdline)) =>
-            return _run(env, &cname, wrapper,
+            return _run(env, &container, wrapper,
                 &(vec!("/bin/sh".to_string(), "-c".to_string(),
                        cmdline.clone()) + args.slice_from(1))),
         (&None, &Some(ref cmdline)) =>
-            return _run(env, &cname, &"/bin/sh".to_string(),
+            return _run(env, &container, &"/bin/sh".to_string(),
                 &(vec!("-c".to_string(), cmdline.clone()) + args.slice_from(1))),
         (_, &None) => unimplemented!(),
     }
@@ -135,27 +135,31 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
             return Err(format!("No command specified and no default command")),
         (&None, &Some(ref cmd), &Some(ref wrapper)) => {
             cmdargs.insert(0, cmd.clone());
-            return _run(env, &cname, wrapper, &cmdargs);
+            return _run(env, &container, wrapper, &cmdargs);
         }
         (&Some(ref cmd), _, &Some(ref wrapper)) => {
             cmdargs.insert(0, cmd.clone());
-            return _run(env, &cname, wrapper, &cmdargs);
+            return _run(env, &container, wrapper, &cmdargs);
         }
         (&None, &Some(ref cmd), &None) =>
-            return _run(env, &cname, cmd, &cmdargs),
+            return _run(env, &container, cmd, &cmdargs),
         (&Some(ref cmd), _, &None) =>
-            return _run(env, &cname, cmd, &cmdargs),
+            return _run(env, &container, cmd, &cmdargs),
     }
 }
 
-pub fn _run(env: &Environ, container: &String,
+pub fn _run(env: &Environ, container: &Container,
     command: &String, cmdargs: &Vec<String>)
     -> Result<int, String>
 {
-    info!("Running {}: {} {}", container, command, cmdargs);
-    let container_dir = env.project_root.join_many(
-        [".vagga", container.as_slice()]);
-    let container_root = container_dir.join("root");
+    let lnk = env.local_vagga.join(container.fullname.as_slice());
+    let container_root = match readlink(&lnk) {
+        Ok(path) => lnk.dir_path().join(path),
+        Err(e) => return Err(format!("Container {} not found: {}",
+                                     container.fullname, e)),
+    };
+    info!("Running {}: {} {}", container_root.display(), command, cmdargs);
+
     let uid = unsafe { getuid() };
 
     for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {

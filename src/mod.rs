@@ -7,6 +7,7 @@ extern crate libc;
 extern crate green;
 extern crate rustuv;
 extern crate regex;
+extern crate rustc;  // For sha256, todo (tailhook) remove me
 #[phase(plugin, link)] extern crate log;
 #[phase(plugin)] extern crate regex_macros;
 

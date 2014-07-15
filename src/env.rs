@@ -14,9 +14,8 @@ pub struct Container {
 }
 
 pub struct Environ {
-    pub vagga_command: String,
     pub vagga_path: Path,
-    pub vagga_dir: Path,
+    pub vagga_exe: Path,
     pub work_dir: Path,
     pub project_root: Path,
     pub local_vagga: Path,
@@ -96,8 +95,10 @@ impl Environ {
             settings: settings,
         };
         for item in used.iter() {
-            container.fullname.push_char('-');
+            container.fullname.push_str("--");
             container.fullname.push_str(item.as_slice());
+            container.fullname.push_str("-");
+            container.fullname.push_str(vars.find(item).unwrap().as_slice());
         }
         return Ok(container);
     }

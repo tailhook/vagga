@@ -1,5 +1,5 @@
 use argparse::{ArgumentParser, StoreOption, List};
-use std::os::{getcwd, args};
+use std::os::{getcwd, args, self_exe_path, self_exe_name};
 use std::io::stdio::stderr;
 
 use super::config::find_config;
@@ -13,9 +13,6 @@ pub fn run() -> int {
     let mut err = stderr();
     let workdir = getcwd();
 
-    let vcmd = args().move_iter().next().unwrap();
-    let mypath = Path::new(vcmd.as_slice());
-
     let (config, project_root) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
@@ -24,9 +21,8 @@ pub fn run() -> int {
         }
     };
     let mut env = Environ {
-        vagga_dir: mypath.dir_path(),
-        vagga_path: mypath,
-        vagga_command: vcmd.clone(),
+        vagga_path: self_exe_path().unwrap(),
+        vagga_exe: self_exe_name().unwrap(),
         work_dir: workdir,
         local_vagga: project_root.join(".vagga"),
         project_root: project_root,

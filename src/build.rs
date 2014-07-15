@@ -1,8 +1,13 @@
 use std::io;
 use std::os::getenv;
-use std::io::fs::{mkdir, rmdir_recursive, rename};
-use std::io::process::{ExitStatus, Command, InheritFd};
+use std::path::BytesContainer;
+use get_environ = std::os::env;
+use std::io::fs::{mkdir, rmdir_recursive, rename, symlink, unlink};
+use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
 use std::io::stdio::{stdout, stderr};
+
+use rustc::util::sha2::Sha256;
+use rustc::util::sha2::Digest;
 
 use argparse::{ArgumentParser, Store};
 
@@ -43,45 +48,104 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
     info!("Building {}", cname);
 
     let builder = &container.builder;
-    let bexe = environ.vagga_dir.join_many(
-        ["build-scripts", builder.as_slice()]);
-    if !bexe.exists() {
+    let cache_dir = environ.local_vagga.join_many(
+        [".cache", builder.as_slice()]);
+    let path = getenv("PATH").unwrap_or(
+        "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin:/usr/local/sbin"
+        .to_string());
+
+    let mut env: Vec<(&[u8], &[u8])> = Vec::new();
+    let mut caller_env: Vec<(String, String)> = Vec::new();
+    let mut parameters: Vec<(String, String)> = Vec::new();
+    env.push(("HOME".as_bytes(), "/homeless-shelter".as_bytes()));
+    env.push(("PATH".as_bytes(), path.as_bytes()));
+    env.push(("container_name".as_bytes(), cname.as_bytes()));
+    env.push(("container_fullname".as_bytes(), container.fullname.as_bytes()));
+    env.push(("cache_dir".as_bytes(), cache_dir.as_vec()));
+    env.push(("project_root".as_bytes(), environ.project_root.as_vec()));
+    for (k, v) in get_environ().move_iter() {
+        let pk = "CALLER_".to_string() + k;
+        let pv = v;
+        caller_env.push((pk, pv));
+    }
+    for (k, v) in container.settings.iter() {
+        parameters.push((builder + "_" + *k, v.clone()));
+    }
+    for &(ref k, ref v) in caller_env.iter() {
+        env.push((k.container_as_bytes(), v.container_as_bytes()));
+    }
+    for &(ref k, ref v) in parameters.iter() {
+        env.push((k.container_as_bytes(), v.container_as_bytes()));
+    }
+
+    let version_sh = environ.vagga_path.join_many(
+        ["backends", builder.as_slice(), "version.sh"]);
+    let mut digest = Sha256::new();
+    if version_sh.exists() {
+        digest.input_str(builder.as_slice());
+        digest.input_str(":");
+        match Command::new(&version_sh).env(env.as_slice())
+            .stdin(Ignored).stderr(InheritFd(2)).output() {
+            Ok(out) => match out.status {
+                ExitStatus(0) => {
+                    digest.input(out.output.as_slice());
+                }
+                e => {
+                    return Err(format!("Error running {}: {}",
+                        version_sh.display(), e));
+                }
+            },
+            Err(e) => {
+                return Err(format!("Error running {}: {}",
+                    version_sh.display(), e));
+            }
+        }
+    } else {
+        digest.input_str(builder.as_slice());
+        digest.input_str(":");
+        for (k, v) in container.settings.iter() {
+            digest.input_str(k.as_slice());
+            digest.input_str("=");
+            digest.input_str(v.as_slice());
+            digest.input_str(";");
+        }
+    }
+    let fullhash = digest.result_str();
+    let hash = fullhash.as_slice().slice_to(7);
+
+    let build_sh = environ.vagga_path.join_many(
+        ["backends", builder.as_slice(), "build.sh"]);
+    if !build_sh.exists() {
         return Err(format!("Builder {} does not exist", builder));
     }
 
-    info!("Builder {}", bexe.display());
 
-    let mut env = Vec::new();
-    let container_dir = environ.project_root
-        .join_many([".vagga", cname.as_slice()]);
-    let container_root = container_dir.join("root");
-    let container_tmp = container_dir.join(".tmproot");
+    let cdir = format!("{}.{}", container.fullname, hash);
+    let container_root = environ.local_vagga.join_many(
+        [".roots", cdir.as_slice()]);
+    let artifacts_dir = environ.local_vagga.join_many(
+        [".artifacts", cdir.as_slice()]);
+    let container_tmp = environ.local_vagga.join_many(
+        [".roots", (cdir + ".tmp").as_slice()]);
+
+    info!("Building {} by {}", container_root.display(), build_sh.display());
 
     if container_tmp.exists() {
         match rmdir_recursive(&container_tmp) {
             Ok(()) => {}
-            Err(x) => return Err(format!("Can't clean temporary root: {}", x)),
+            Err(x) => {
+                // TODO(tailhook) join container and rm, because may have
+                // files of different owners (subuid's)
+                return Err(format!("Can't clean temporary root: {}", x));
+            }
         }
     }
     try!(makedirs(&container_tmp));
 
-    env.push(("PATH".to_string(), getenv("PATH").unwrap()));
-    // Only for nix
-    env.push(("HOME".to_string(), "/".to_string()));
-    env.push(("NIX_REMOTE".to_string(), getenv("NIX_REMOTE").unwrap()));
-    env.push(("NIX_PATH".to_string(), getenv("NIX_PATH").unwrap()));
-    // End of nix hacks
-    env.push(("container_name".to_string(), cname.clone()));
-    env.push(("project_root".to_string(),
-        format!("{}", environ.project_root.display())));
-    env.push(("container_dir".to_string(),
-        format!("{}", container_dir.display())));
-    env.push(("container_root".to_string(),
-        format!("{}", container_tmp.display())));
-    for (k, v) in container.settings.iter() {
-        env.push((builder + "_" + *k, v.clone()));
-    }
-    match Command::new(bexe).env(env.as_slice())
+    env.push(("artifacts_dir".as_bytes(), artifacts_dir.as_vec()));
+    env.push(("container_hash".as_bytes(), hash.as_bytes()));
+    env.push(("container_root".as_bytes(), container_tmp.as_vec()));
+    match Command::new(build_sh).env(env.as_slice())
         .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
         .status() {
         Ok(ExitStatus(0)) => {}
@@ -89,7 +153,8 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
         Err(x) => return Err(format!("Can't spawn: {}", x)),
     }
 
-    let container_old = container_dir.join(".oldroot");
+    let container_old = environ.local_vagga.join_many(
+        [".roots", (cdir + ".old").as_slice()]);
     if container_root.exists() {
         if container_old.exists() {
             match rmdir_recursive(&container_old) {
@@ -112,6 +177,32 @@ pub fn build_command(environ: &mut Environ, args: Vec<String>)
         match rmdir_recursive(&container_old) {
             Ok(()) => {}
             Err(x) => return Err(format!("Can't remove old root: {}", x)),
+        }
+    }
+
+    let tmptarget = environ.local_vagga.join(
+        (".lnk.".to_string() + cdir).as_slice());
+    if tmptarget.exists() {
+        match unlink(&tmptarget) {
+            Ok(()) => {}
+            Err(x) => return Err(format!("Error removing file: {}", x)),
+        }
+    }
+    let target = environ.local_vagga.join(container.name.as_slice());
+    info!("Linking {} -> {}", container_root.display(), target.display())
+    let relative_root = Path::new(".roots").join(cdir);
+    match symlink(&relative_root, &tmptarget)
+          .and(rename(&tmptarget, &target)) {
+        Ok(()) => {}
+        Err(x) => return Err(format!("Can't symlink new root: {}", x)),
+    }
+    if !container.name.eq(&container.fullname) {
+        let target = environ.local_vagga.join(container.fullname.as_slice());
+        info!("Linking {} -> {}", container_root.display(), target.display())
+        match symlink(&relative_root, &tmptarget)
+              .and(rename(&tmptarget, &target)) {
+            Ok(()) => {}
+            Err(x) => return Err(format!("Can't symlink new root: {}", x)),
         }
     }
 
