@@ -13,6 +13,7 @@ pub struct Command {
     pub run: Option<String>,
     pub container: Option<String>,
     pub accepts_arguments: bool,
+    pub environ: TreeMap<String, String>,
 }
 
 pub struct Variant {
@@ -25,6 +26,8 @@ pub struct Container {
     pub wrapper_script: Option<String>,
     pub builder: String,
     pub settings: TreeMap<String, String>,
+    pub environ_file: Option<String>,
+    pub environ: TreeMap<String, String>,
 }
 
 pub struct Config {
@@ -87,6 +90,7 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
                     run: get_string(jcmd, "run"),
                     container: get_string(jcmd, "container"),
                     accepts_arguments: true,  // TODO(tailhook)
+                    environ: get_dict(jcmd, "environ"),
                 };
                 config.commands.insert(name.clone(), cmd);
             }
@@ -105,6 +109,8 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
                     builder: get_string(jcont, "builder")
                              .unwrap_or("nix".to_string()),
                     settings: get_dict(jcont, "settings"),
+                    environ: get_dict(jcont, "environ"),
+                    environ_file: get_string(jcont, "environ-file"),
                 };
                 config.containers.insert(name.clone(), cont);
             }

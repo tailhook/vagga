@@ -1,6 +1,7 @@
 use std::io;
 use std::os::getenv;
 use std::path::BytesContainer;
+use std::str::from_utf8_lossy;
 use get_environ = std::os::env;
 use std::io::fs::{mkdir, rmdir_recursive, rename, symlink, unlink};
 use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
@@ -96,6 +97,8 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     let builder = &container.builder;
     let cache_dir = environ.local_vagga.join_many(
         [".cache", builder.as_slice()]);
+
+    // TODO(tailhook) which path should be here?
     let path = getenv("PATH").unwrap_or(
         "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin:/usr/local/sbin"
         .to_string());
@@ -134,6 +137,8 @@ pub fn build_container(environ: &Environ, container: &mut Container,
             .stdin(Ignored).stderr(InheritFd(2)).output() {
             Ok(out) => match out.status {
                 ExitStatus(0) => {
+                    debug!("Version data ```{}```",
+                           from_utf8_lossy(out.output.as_slice()));
                     digest.input(out.output.as_slice());
                 }
                 e => {
@@ -147,6 +152,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
             }
         }
     } else {
+        warn!("This backend has no versioning. Using primitive one.");
         digest.input_str(builder.as_slice());
         digest.input_str(":");
         for (k, v) in container.settings.iter() {

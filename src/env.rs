@@ -12,6 +12,8 @@ pub struct Container {
     pub builder: String,
     pub settings: TreeMap<String, String>,
     pub container_root: Option<Path>,
+    pub environ_file: Option<String>,
+    pub environ: TreeMap<String, String>,
 }
 
 pub struct Environ {
@@ -81,6 +83,11 @@ impl Environ {
             settings.insert(k.clone(),
                 try!(subst_vars(v, &vars, &mut used)));
         }
+        let mut environ: TreeMap<String, String> = TreeMap::new();
+        for (k, v) in src.environ.iter() {
+            environ.insert(k.clone(),
+                try!(subst_vars(v, &vars, &mut used)));
+        }
         let mut container = Container {
             name: name.clone(),
             fullname: name.clone(),
@@ -92,8 +99,13 @@ impl Environ {
                 None => None,
                 Some(ref val) => Some(try!(subst_vars(val, &vars, &mut used))),
                 },
+            environ_file: match src.environ_file {
+                None => None,
+                Some(ref val) => Some(try!(subst_vars(val, &vars, &mut used))),
+                },
             builder: src.builder.clone(),
             settings: settings,
+            environ: environ,
             container_root: None,
         };
         for item in used.iter() {

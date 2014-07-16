@@ -2,10 +2,12 @@ use std::io;
 use std::to_str::ToStr;
 use std::os::{pipe, change_dir, getenv};
 use std::io::{Open, Write};
+use std::io::{BufferedReader, IoResult};
 use std::io::fs::{mkdir, File, readlink};
 use std::io::pipe::PipeStream;
 use std::io::stdio::{stdout, stderr};
 
+use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
 use super::env::{Environ, Container};
@@ -14,6 +16,14 @@ use super::linux::{execute, forkme, wait_process};
 use super::options::env_options;
 use super::build::{build_container, link_container};
 use libc::funcs::posix88::unistd::getuid;
+
+static DEFAULT_PATH: &'static str =
+    "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin";
+static DEFAULT_SEARCH: &'static [&'static str] = &[
+    "/sbin", "/bin",
+    "/usr/sbin", "/usr/bin",
+    "/usr/local/sbin", "/usr/local/bin",
+    ];
 
 
 fn mount_all(root: &Path, mount_dir: &Path, project_root: &Path)
@@ -48,9 +58,56 @@ fn ensure_dir(p: &Path) -> Result<(),String> {
     return mkdir(p, io::UserRWX).map_err(|e| { e.to_str() });
 }
 
+fn read_env_file(path: &Path, env: &mut TreeMap<String, String>)
+    -> IoResult<()>
+{
+    let file = try!(File::open(path).map(|f| BufferedReader::new(f)));
+    let mut reader = BufferedReader::new(file);
+    for (n, line) in reader.lines().enumerate() {
+        let line = try!(line);
+        let pair: Vec<&str> = line.as_slice().splitn('=', 1).collect();
+        match pair.as_slice() {
+            [key, val] => {
+                let nkey = key.trim().to_string();
+                if !env.contains_key(&nkey) {
+                    env.insert(nkey, val.trim().to_string());
+                }
+            }
+            _ => {
+                warn!("Invalid line {} in {}",
+                    n+1, path.display());
+            }
+        }
+    }
+    return Ok(());
+}
+
+fn container_environ(container: &Container, env: &mut TreeMap<String, String>)
+    -> Result<(), String>
+{
+    for (k, v) in container.environ.iter() {
+        if !env.contains_key(k) {
+            env.insert(k.clone(), v.clone());
+        }
+    }
+    match container.environ_file {
+        None => {}
+        Some(ref suf) => {
+            let path = container.container_root.as_ref().unwrap()
+                       .join(suf.as_slice().trim_left_chars('/'));
+            if path.exists() {
+                try!(read_env_file(&path, env).map_err(|e| format!(
+                    "Error reading environment file: {}", e)));
+            }
+        }
+
+    }
+    return Ok(());
+}
+
 
 pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
-    command: &String, args: &Vec<String>)
+    command: String, args: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<(),String>
 {
     try!(mount_all(container_root, mount_dir, &env.project_root));
@@ -65,14 +122,31 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     debug!("Changing directory to {}", path.display());
     change_dir(&path);
 
-    // TODO(tailhook) set environment from config
-    let environ = vec!(
-        "PATH=/bin:/usr/bin:/usr/local/bin".to_string(),
-        "HOME=/non-existent".to_string(),
-        "TERM=".to_string() + getenv("TERM").unwrap_or("linux".to_string()),
-        );
-    try!(execute(command, ["/bin", "/usr/bin", "/usr/local/bin"],
-        args, &environ));
+    let mut runenv = runenv;
+    let home = "HOME".to_string();
+    if runenv.find(&home).is_none() {
+        // TODO(tailhook) set home to real home if /home is mounted
+        runenv.insert(home, "/homeless-shelter".to_string());
+    }
+    let term = "TERM".to_string();
+    if runenv.find(&term).is_none() {
+        runenv.insert(term, getenv("TERM").unwrap_or("linux".to_string()));
+    }
+    let path = "PATH".to_string();
+    let mut search: Vec<&str>;
+    if runenv.find(&path).is_none() {
+        runenv.insert(path, DEFAULT_PATH.to_string());
+        search = DEFAULT_SEARCH.to_owned();
+    } else {
+        search = runenv.find(&path).unwrap().as_slice().split(':').collect();
+    };
+    let mut environ = Vec::new();
+    for (k, v) in runenv.iter() {
+        environ.push(*k + "=" + *v);
+    }
+    try!(execute(&command,
+        search.as_slice(),
+        &args, &environ));
     unreachable!();
 }
 
@@ -91,6 +165,10 @@ pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
         None => unimplemented!(),
     };
     let container = try!(env.get_container(&cname));
+    let mut runenv = TreeMap::new();
+    for (k, v) in command.environ.iter() {
+        runenv.insert(k.clone(), v.clone());
+    }
     let (cmd, argprefix) = match (&container.wrapper_script, &command.run) {
         (&Some(ref wrapper), &Some(ref cmdline)) => (
             wrapper.clone(),
@@ -102,7 +180,8 @@ pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
             ),
         (_, &None) => unimplemented!(),
     };
-    return _run(env, container, &cmd, &(argprefix + args.slice_from(1)));
+    return _run(env, container,
+        cmd, (argprefix + args.slice_from(1)), runenv);
 }
 
 pub fn run_command(env: &mut Environ, args: Vec<String>)
@@ -148,11 +227,11 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
         (&None, &Some(ref cmd), &None) => cmd.to_string(),
         (&Some(ref cmd), _, &None) => cmd.to_string(),
     };
-    return _run(env, container, &cmd, &cmdargs);
+    return _run(env, container, cmd, cmdargs, TreeMap::new());
 }
 
 pub fn _run(env: &Environ, container_: Container,
-    command: &String, cmdargs: &Vec<String>)
+    command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<int, String>
 {
     let mut container = container_;
@@ -167,6 +246,8 @@ pub fn _run(env: &Environ, container_: Container,
                                          container.fullname, e)),
         };
     };
+    let mut runenv = runenv;
+    try!(container_environ(&container, &mut runenv));
     let container_root = container.container_root.as_ref().unwrap();
     info!("Running {}: {} {}", container_root.display(), command, cmdargs);
 
@@ -193,7 +274,8 @@ pub fn _run(env: &Environ, container_: Container,
             Err(x) => return Err(format!("Can't read from pipe: {}", x)),
         }
         drop(pipe);
-        try!(run_chroot(env, container_root, &mount_dir, command, cmdargs));
+        try!(run_chroot(env, container_root, &mount_dir,
+            command, cmdargs, runenv));
         unreachable!();
     } else {
         // TODO(tailhook) set uid map from config
