@@ -16,20 +16,18 @@ type mkdir mv dirname readlink            # coreutils
 type nix-instantiate nix-env nix-store    # nix
 type rsync                                # rsync
 
+test -d $cache_dir || mkdir -p $cache_dir
 
-profile=$artifacts_dir/nix-profile
-mkdir -p $artifacts_dir 2>/dev/null
-
-test -h $profile && unlink $profile
-nix-env --profile $profile --install \
-    --file "${nix_config}" --attr "${nix_attribute}"
-closure=$(nix-store --query --requisites $profile)
+root=$(nix-build "${nix_config}" --attr "${nix_attribute}" \
+    --out-link $cache_dir/$container_name/output \
+    --drv-link $cache_dir/$container_name/derivation)
+closure=$(nix-store --query --requisites $root)
 
 mkdir -p $container_root/nix/store
 rsync --recursive --links --perms --times --hard-links \
     $closure $container_root/nix/store
 rsync --recursive --links --perms --times \
-    $profile/ $container_root
+    $root/ $container_root
 
 # few nix fixups
 chmod -R u+w $container_root
