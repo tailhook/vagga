@@ -14,6 +14,7 @@ pub struct Command {
     pub container: Option<String>,
     pub accepts_arguments: bool,
     pub environ: TreeMap<String, String>,
+    pub description: Option<String>,
 }
 
 pub struct Variant {
@@ -91,6 +92,7 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
                     container: get_string(jcmd, "container"),
                     accepts_arguments: true,  // TODO(tailhook)
                     environ: get_dict(jcmd, "environ"),
+                    description: get_string(jcmd, "description"),
                 };
                 config.commands.insert(name.clone(), cmd);
             }

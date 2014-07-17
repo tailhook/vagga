@@ -53,9 +53,19 @@ pub fn run() -> int {
 
     if cmd.is_none() {
         err.write_line("Available commands:").ok();
-        for (k, _) in env.config.commands.iter() {
+        for (k, cmd) in env.config.commands.iter() {
             err.write_str("    ").ok();
-            err.write_line(k.as_slice()).ok();
+            err.write_str(k.as_slice()).ok();
+            match cmd.description {
+                Some(ref val) => {
+                    for _ in range(k.len(), 20) {
+                        err.write_char(' ').ok();
+                    }
+                    err.write_str(val.as_slice()).ok();
+                }
+                None => {}
+            }
+            err.write_char('\n').ok();
         }
         return 127;
     }
