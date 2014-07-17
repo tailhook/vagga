@@ -10,7 +10,7 @@ pub struct Container {
     pub default_command: Option<String>,
     pub wrapper_script: Option<String>,
     pub builder: String,
-    pub settings: TreeMap<String, String>,
+    pub parameters: TreeMap<String, String>,
     pub container_root: Option<Path>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
@@ -78,9 +78,9 @@ impl Environ {
             vars.insert(key.unwrap(), value.unwrap());
         }
         let mut used = TreeSet::new();
-        let mut settings: TreeMap<String, String> = TreeMap::new();
-        for (k, v) in src.settings.iter() {
-            settings.insert(k.clone(),
+        let mut parameters: TreeMap<String, String> = TreeMap::new();
+        for (k, v) in src.parameters.iter() {
+            parameters.insert(k.clone(),
                 try!(subst_vars(v, &vars, &mut used)));
         }
         let mut environ: TreeMap<String, String> = TreeMap::new();
@@ -104,7 +104,7 @@ impl Environ {
                 Some(ref val) => Some(try!(subst_vars(val, &vars, &mut used))),
                 },
             builder: src.builder.clone(),
-            settings: settings,
+            parameters: parameters,
             environ: environ,
             container_root: None,
         };

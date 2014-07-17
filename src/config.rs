@@ -26,7 +26,7 @@ pub struct Container {
     pub default_command: Option<String>,
     pub wrapper_script: Option<String>,
     pub builder: String,
-    pub settings: TreeMap<String, String>,
+    pub parameters: TreeMap<String, String>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
 }
@@ -110,7 +110,7 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
                     wrapper_script: get_string(jcont, "wrapper-script"),
                     builder: get_string(jcont, "builder")
                              .unwrap_or("nix".to_string()),
-                    settings: get_dict(jcont, "settings"),
+                    parameters: get_dict(jcont, "parameters"),
                     environ: get_dict(jcont, "environ"),
                     environ_file: get_string(jcont, "environ-file"),
                 };

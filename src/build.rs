@@ -117,7 +117,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         let pv = v;
         caller_env.push((pk, pv));
     }
-    for (k, v) in container.settings.iter() {
+    for (k, v) in container.parameters.iter() {
         parameters.push((builder + "_" + *k, v.clone()));
     }
     for &(ref k, ref v) in caller_env.iter() {
@@ -155,7 +155,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         warn!("This backend has no versioning. Using primitive one.");
         digest.input_str(builder.as_slice());
         digest.input_str(":");
-        for (k, v) in container.settings.iter() {
+        for (k, v) in container.parameters.iter() {
             digest.input_str(k.as_slice());
             digest.input_str("=");
             digest.input_str(v.as_slice());
