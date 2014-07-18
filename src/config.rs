@@ -6,11 +6,12 @@ use serialize::json::ToJson;
 use quire::parse;
 use J = serialize::json;
 
-use super::yamlutil::{get_string, get_dict, get_list};
+use super::yamlutil::{get_string, get_dict, get_list, get_command};
 
 
 pub struct Command {
     pub run: Option<String>,
+    pub command: Option<Vec<String>>,
     pub container: Option<String>,
     pub accepts_arguments: bool,
     pub environ: TreeMap<String, String>,
@@ -23,8 +24,9 @@ pub struct Variant {
 }
 
 pub struct Container {
-    pub default_command: Option<String>,
-    pub wrapper_script: Option<String>,
+    pub default_command: Option<Vec<String>>,
+    pub command_wrapper: Option<Vec<String>>,
+    pub shell: Vec<String>,
     pub builder: String,
     pub parameters: TreeMap<String, String>,
     pub environ_file: Option<String>,
@@ -89,11 +91,16 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
             for (name, jcmd) in commands.iter() {
                 let cmd = Command {
                     run: get_string(jcmd, "run"),
+                    command: get_command(jcmd, "command"),
                     container: get_string(jcmd, "container"),
                     accepts_arguments: true,  // TODO(tailhook)
                     environ: get_dict(jcmd, "environ"),
                     description: get_string(jcmd, "description"),
                 };
+                if cmd.run.is_some() == cmd.command.is_some() {
+                    return Err(format!("Should specify exactly one of \
+                        `command` or `run` for command {}", name));
+                }
                 config.commands.insert(name.clone(), cmd);
             }
         }
@@ -106,8 +113,10 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
         Some(&J::Object(ref containers)) => {
             for (name, jcont) in containers.iter() {
                 let cont = Container {
-                    default_command: get_string(jcont, "default-command"),
-                    wrapper_script: get_string(jcont, "wrapper-script"),
+                    default_command: get_command(jcont, "default-command"),
+                    command_wrapper: get_command(jcont, "command-wrapper"),
+                    shell: get_command(jcont, "shell").unwrap_or(
+                        vec!("/bin/sh".to_string(), "-c".to_string())),
                     builder: get_string(jcont, "builder")
                              .unwrap_or("nix".to_string()),
                     parameters: get_dict(jcont, "parameters"),

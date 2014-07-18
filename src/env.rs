@@ -7,8 +7,9 @@ use cfg = super::config;
 pub struct Container {
     pub name: String,
     pub fullname: String,
-    pub default_command: Option<String>,
-    pub wrapper_script: Option<String>,
+    pub default_command: Option<Vec<String>>,
+    pub command_wrapper: Option<Vec<String>>,
+    pub shell: Vec<String>,
     pub builder: String,
     pub parameters: TreeMap<String, String>,
     pub container_root: Option<Path>,
@@ -27,7 +28,7 @@ pub struct Environ {
     pub settings: Settings,
 }
 
-fn subst_vars<'x>(src: &'x String, vars: &TreeMap<&'x str, &str>,
+fn _subst<'x>(src: &'x String, vars: &TreeMap<&'x str, &str>,
     used: &mut TreeSet<&'x str>)
     -> Result<String, String>
 {
@@ -46,6 +47,37 @@ fn subst_vars<'x>(src: &'x String, vars: &TreeMap<&'x str, &str>,
     }
     res.push_str(src.as_slice().slice_from(off));
     return Ok(res);
+}
+
+fn _subst_opt<'x>(src: &'x Option<String>, vars: &TreeMap<&'x str, &str>,
+    used: &mut TreeSet<&'x str>)
+    -> Result<Option<String>, String>
+{
+    return match src {
+        &Some(ref src) => Ok(Some(try!(_subst(src, vars, used)))),
+        &None => Ok(None),
+    };
+}
+
+fn _subst_list<'x>(src: &'x Vec<String>, vars: &TreeMap<&'x str, &str>,
+    used: &mut TreeSet<&'x str>)
+    -> Result<Vec<String>, String>
+{
+    let mut lst = Vec::new();
+    for val in src.iter() {
+        lst.push(try!(_subst(val, vars, used)));
+    }
+    return Ok(lst);
+}
+
+fn _subst_list_opt<'x>(src: &'x Option<Vec<String>>,
+    vars: &TreeMap<&'x str, &str>, used: &mut TreeSet<&'x str>)
+    -> Result<Option<Vec<String>>, String>
+{
+    return match src {
+        &Some(ref src) => Ok(Some(try!(_subst_list(src, vars, used)))),
+        &None => Ok(None),
+    };
 }
 
 impl Environ {
@@ -81,28 +113,23 @@ impl Environ {
         let mut parameters: TreeMap<String, String> = TreeMap::new();
         for (k, v) in src.parameters.iter() {
             parameters.insert(k.clone(),
-                try!(subst_vars(v, &vars, &mut used)));
+                try!(_subst(v, &vars, &mut used)));
         }
         let mut environ: TreeMap<String, String> = TreeMap::new();
         for (k, v) in src.environ.iter() {
             environ.insert(k.clone(),
-                try!(subst_vars(v, &vars, &mut used)));
+                try!(_subst(v, &vars, &mut used)));
         }
         let mut container = Container {
             name: name.clone(),
             fullname: name.clone(),
-            default_command: match src.default_command {
-                None => None,
-                Some(ref cmd) => Some(try!(subst_vars(cmd, &vars, &mut used))),
-                },
-            wrapper_script: match src.wrapper_script {
-                None => None,
-                Some(ref val) => Some(try!(subst_vars(val, &vars, &mut used))),
-                },
-            environ_file: match src.environ_file {
-                None => None,
-                Some(ref val) => Some(try!(subst_vars(val, &vars, &mut used))),
-                },
+            shell: try!(_subst_list(&src.shell, &vars, &mut used)),
+            environ_file:
+                try!(_subst_opt(&src.environ_file, &vars, &mut used)),
+            command_wrapper:
+                try!(_subst_list_opt(&src.command_wrapper, &vars, &mut used)),
+            default_command:
+                try!(_subst_list_opt(&src.default_command, &vars, &mut used)),
             builder: src.builder.clone(),
             parameters: parameters,
             environ: environ,

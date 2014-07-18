@@ -75,3 +75,29 @@ pub fn get_list(json: &J::Json, key: &'static str) -> Vec<String> {
 
     return res;
 }
+
+pub fn get_command(json: &J::Json, key: &'static str) -> Option<Vec<String>> {
+    let mut res = Vec::new();
+    let list = match json {
+        &J::Object(ref dict) => match dict.find(&key.to_string()) {
+            Some(&J::List(ref val)) => val,
+            Some(&J::String(ref val)) =>
+                return Some(vec!(val.clone())),
+            Some(&J::Number(val)) =>
+                return Some(vec!(val.to_str().to_string())),
+            _ => return None,
+        },
+        _ => return None,
+    };
+
+    for item in list.iter() {
+        match item {
+            &J::String(ref val) => {
+                res.push(val.clone());
+            }
+            _ => continue,  // TODO(tailhook) assert maybe?
+        }
+    }
+
+    return Some(res);
+}

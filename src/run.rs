@@ -8,7 +8,7 @@ use std::io::pipe::PipeStream;
 use std::io::stdio::{stdout, stderr};
 
 use collections::treemap::TreeMap;
-use argparse::{ArgumentParser, Store, StoreOption, List};
+use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue};
 
 use super::env::{Environ, Container};
 use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
@@ -169,17 +169,21 @@ pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
     for (k, v) in command.environ.iter() {
         runenv.insert(k.clone(), v.clone());
     }
-    let (cmd, argprefix) = match (&container.wrapper_script, &command.run) {
-        (&Some(ref wrapper), &Some(ref cmdline)) => (
-            wrapper.clone(),
-            vec!("/bin/sh".to_string(), "-c".to_string(), cmdline.clone()),
-            ),
-        (&None, &Some(ref cmdline)) => (
-            "/bin/sh".to_string(),
-            vec!("-c".to_string(), cmdline.clone()),
-            ),
-        (_, &None) => unimplemented!(),
-    };
+    let mut argprefix: Vec<String> = Vec::new();
+    if command.run.is_some() {
+        argprefix.extend(container.shell.clone().move_iter());
+        argprefix.push(command.run.as_ref().unwrap().clone());
+    } else {
+        let command_seq = command.command.as_ref().unwrap();
+        match container.command_wrapper {
+            Some(ref wrapper) => {
+                argprefix.extend(wrapper.clone().move_iter());
+            }
+            None => {}
+        }
+        argprefix.extend(command_seq.clone().move_iter());
+    }
+    let cmd = argprefix.shift().unwrap();
     return _run(env, container,
         cmd, (argprefix + args.slice_from(1)), runenv);
 }
@@ -188,6 +192,8 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cname = "devel".to_string();
+    let mut no_wrapper = false;
+    let mut use_shell = false;
     let mut command: Option<String> = None;
     let mut cmdargs: Vec<String> = Vec::new();
     {
@@ -203,6 +209,12 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
             .add_argument("arguments", box List::<String>,
                 "Arguments for the command")
             .required();
+        ap.refer(&mut no_wrapper)
+            .add_option(["-N", "--no-wrapper"], box StoreTrue,
+                "Do not use `command-wrapper` configured for container");
+        ap.refer(&mut use_shell)
+            .add_option(["-S", "--shell"], box StoreTrue,
+                "Run command with `shell` configured for container");
         env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -212,21 +224,24 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
         }
     }
     let container = try!(env.get_container(&cname));
-    let cmd = match (&command, &container.default_command,
-                                          &container.wrapper_script) {
-        (&None, &None, _) =>
-            return Err(format!("No command specified and no default command")),
-        (&None, &Some(ref cmd), &Some(ref wrapper)) => {
-            cmdargs.insert(0, cmd.clone());
-            wrapper.clone()
+
+    if command.is_none() {
+        if container.default_command.is_some() {
+            let cmd = container.default_command.as_ref().unwrap();
+            cmdargs.push_all(cmd.as_slice());
+        } else {
+            return Err(format!("No command specified and no default command"));
         }
-        (&Some(ref cmd), _, &Some(ref wrapper)) => {
-            cmdargs.insert(0, cmd.clone());
-            wrapper.clone()
+    } else {
+        cmdargs.insert(0, command.unwrap());
+        if use_shell {
+            cmdargs = container.shell.clone() + cmdargs;
+        } else if !no_wrapper && container.command_wrapper.is_some() {
+            cmdargs = container.command_wrapper.as_ref().unwrap().clone()+cmdargs;
         }
-        (&None, &Some(ref cmd), &None) => cmd.to_string(),
-        (&Some(ref cmd), _, &None) => cmd.to_string(),
-    };
+    }
+
+    let cmd = cmdargs.shift().unwrap();
     return _run(env, container, cmd, cmdargs, TreeMap::new());
 }
 
