@@ -150,16 +150,42 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     unreachable!();
 }
 
-pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
+pub fn run_user_command(env: &mut Environ, cmdname: &String, args: Vec<String>)
     -> Result<int, String>
 {
-    let command = match env.config.commands.find(cmdname) {
-        Some(c) => c,
-        None => {
-            return Err(format!("Can't find command {} in config",
-                               cmdname));
+    let has_arguments;
+    let description;
+    {
+        let command = match env.config.commands.find(cmdname) {
+            Some(c) => c,
+            None => {
+                return Err(format!("Can't find command {} in config",
+                                   cmdname));
+            }
+        };
+        has_arguments = command.accepts_arguments;
+        description = command.description.clone().unwrap_or("".to_string());
+    }
+    let mut cmdargs;
+    if has_arguments {
+        //  All options forwarded to command (including --help and others)
+        cmdargs = args;
+        cmdargs.shift();  // Zeroth arg is a command
+    } else {
+        //  We can provide useful help in this case
+        cmdargs = Vec::new();
+        let mut ap = ArgumentParser::new();
+        if description.len() > 0 {
+            ap.set_description(description.as_slice());
         }
-    };
+        env_options(env, &mut ap);
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => return Ok(122),
+        }
+    }
+    let command = env.config.commands.find(cmdname).unwrap();
     let cname = match command.container {
         Some(ref name) => name.clone(),
         None => unimplemented!(),
@@ -185,7 +211,7 @@ pub fn run_user_command(env: &Environ, cmdname: &String, args: Vec<String>)
     }
     let cmd = argprefix.shift().unwrap();
     return _run(env, container,
-        cmd, (argprefix + args.slice_from(1)), runenv);
+        cmd, (argprefix + cmdargs), runenv);
 }
 
 pub fn run_command(env: &mut Environ, args: Vec<String>)

@@ -6,7 +6,7 @@ use serialize::json::ToJson;
 use quire::parse;
 use J = serialize::json;
 
-use super::yamlutil::{get_string, get_dict, get_list, get_command};
+use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
 
 
 pub struct Command {
@@ -89,18 +89,25 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
     match root.find(&"commands".to_string()) {
         Some(&J::Object(ref commands)) => {
             for (name, jcmd) in commands.iter() {
-                let cmd = Command {
-                    run: get_string(jcmd, "run"),
-                    command: get_command(jcmd, "command"),
-                    container: get_string(jcmd, "container"),
-                    accepts_arguments: true,  // TODO(tailhook)
-                    environ: get_dict(jcmd, "environ"),
-                    description: get_string(jcmd, "description"),
-                };
-                if cmd.run.is_some() == cmd.command.is_some() {
+                let run = get_string(jcmd, "run");
+                let command = get_command(jcmd, "command");
+                if run.is_some() == command.is_some() {
                     return Err(format!("Should specify exactly one of \
                         `command` or `run` for command {}", name));
                 }
+                let accepts_arguments = get_bool(jcmd, "accepts-arguments")
+                    //  By default accept arguments only by command
+                    //  because "sh -c" only uses arguments if there is
+                    //  $1, $2.. used in the expression
+                    .unwrap_or(command.is_some());
+                let cmd = Command {
+                    run: run,
+                    command: command,
+                    container: get_string(jcmd, "container"),
+                    accepts_arguments: accepts_arguments,
+                    environ: get_dict(jcmd, "environ"),
+                    description: get_string(jcmd, "description"),
+                };
                 config.commands.insert(name.clone(), cmd);
             }
         }
