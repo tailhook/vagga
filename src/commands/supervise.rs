@@ -1,11 +1,11 @@
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::readlink;
-use std::io::signal::Listener;
-use Sig = std::io::signal;
+use libc::pid_t;
 
-use collections::treemap::TreeMap;
+use collections::treemap::{TreeMap, TreeSet};
 use argparse::{ArgumentParser, List};
 
+use super::super::linux::{forkme, wait_any, exit};
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
 use super::super::build::{build_container, link_container};
@@ -55,29 +55,55 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         containers.insert(cname.clone(), container);
     }
 
-    let mut sig = Listener::new();
-    try!(sig.register(Sig::Interrupt).map_err(
-        |e| format!("Can't listen SIGINT: {}", e)));
-    try!(sig.register(Sig::Quit).map_err(
-        |e| format!("Can't listen SIGQUIT: {}", e)));
-    try!(sig.register(Sig::HangUp).map_err(
-        |e| format!("Can't listen SIGHUP: {}", e)));
+    let mut pids: TreeSet<pid_t> = TreeSet::new();
 
-    for (_, command) in processes.iter() {
+    for (cname, command) in processes.iter() {
         let fun = match command.execute {
             Shell(_) => exec_shell_command,
             Plain(_) => exec_plain_command,
             Supervise(_, _) => exec_supervise_command,
         };
         let container = containers.find(command.container.as_ref().unwrap());
-        fun(env, command, container.unwrap());
+
+        let pid = match forkme() {
+            Ok(0) => {  // child
+                match fun(env, command, container.unwrap()) {
+                    Ok(res) => {
+                        exit(res as i32);
+                    }
+                    Err(res) => {
+                        error!("Error running command: {}", res);
+                        exit(121);
+                    }
+                };
+            }
+            Ok(pid) => pid,  // parent
+            Err(e) => {
+                error!("Error forking: {}", e);
+                unimplemented!();
+            }
+        };
+        info!("Command {} started with pid {}", cname, pid);
+        pids.insert(pid);
+    }
+
+    while pids.len() > 0 {
+        match wait_any() {
+            Ok((pid, status)) => {
+                info!("Process {} exited with {}", pid, status);
+                pids.remove(&pid);
+            }
+            Err(errno) => {
+                error!("Error waiting for process: {}", errno);
+            }
+        }
     }
 
     return Ok(0);
 }
 
-pub fn exec_supervise_command(env: &Environ, command: &Command,
-    container: &Container)
+pub fn exec_supervise_command(_env: &Environ, _command: &Command,
+    _container: &Container)
     -> Result<int, String> {
     fail!("Nested supervise commands do not work yet");
 }

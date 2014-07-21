@@ -5,7 +5,7 @@ use std::ptr::null;
 use std::c_str::CString;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
-use libc::{c_int, c_char, c_ulong, pid_t};
+use libc::{c_int, c_char, c_ulong, pid_t, _exit};
 use libc::funcs::posix88::unistd::fork;
 
 // errno.h
@@ -189,7 +189,7 @@ pub fn forkme() -> Result<pid_t, String> {
 
 pub fn wait_process(pid: pid_t) -> Result<int, String> {
     loop {
-        let status = 0;
+        let status: i32 = 0;
         let rc = unsafe { waitpid(pid, &status, 0) };
         if rc < 0 {
             if errno() == EINTR {
@@ -199,8 +199,19 @@ pub fn wait_process(pid: pid_t) -> Result<int, String> {
                     error_string(errno() as uint)));
             }
         }
-        return Ok(rc as int);
+        assert_eq!(rc, pid);
+        info!("Process {} exited with {}", pid, status);
+        return Ok(status as int);
     }
+}
+
+pub fn wait_any() -> Result<(pid_t, int), int> {
+    let status = 0;
+    let pid = unsafe { waitpid(0, &status, 0) };
+    if pid < 0 {
+        return Err(errno());
+    }
+    return Ok((pid as pid_t, status as int));
 }
 
 pub fn ensure_dir(p: &Path) -> Result<(),String> {
@@ -208,4 +219,8 @@ pub fn ensure_dir(p: &Path) -> Result<(),String> {
         return Ok(());
     }
     return mkdir(p, io::UserRWX).map_err(|e| { e.to_str() });
+}
+
+pub fn exit(result: i32) -> ! {
+    unsafe { _exit(result); }
 }
