@@ -150,71 +150,7 @@ pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
     unreachable!();
 }
 
-pub fn run_user_command(env: &mut Environ, cmdname: &String, args: Vec<String>)
-    -> Result<int, String>
-{
-    let has_arguments;
-    let description;
-    {
-        let command = match env.config.commands.find(cmdname) {
-            Some(c) => c,
-            None => {
-                return Err(format!("Can't find command {} in config",
-                                   cmdname));
-            }
-        };
-        has_arguments = command.accepts_arguments;
-        description = command.description.clone().unwrap_or("".to_string());
-    }
-    let mut cmdargs;
-    if has_arguments {
-        //  All options forwarded to command (including --help and others)
-        cmdargs = args;
-        cmdargs.shift();  // Zeroth arg is a command
-    } else {
-        //  We can provide useful help in this case
-        cmdargs = Vec::new();
-        let mut ap = ArgumentParser::new();
-        if description.len() > 0 {
-            ap.set_description(description.as_slice());
-        }
-        env_options(env, &mut ap);
-        match ap.parse(args, &mut stdout(), &mut stderr()) {
-            Ok(()) => {}
-            Err(0) => return Ok(0),
-            Err(_) => return Ok(122),
-        }
-    }
-    let command = env.config.commands.find(cmdname).unwrap();
-    let cname = match command.container {
-        Some(ref name) => name.clone(),
-        None => unimplemented!(),
-    };
-    let container = try!(env.get_container(&cname));
-    let mut runenv = TreeMap::new();
-    for (k, v) in command.environ.iter() {
-        runenv.insert(k.clone(), v.clone());
-    }
-    let mut argprefix: Vec<String> = Vec::new();
-    if command.run.is_some() {
-        argprefix.extend(container.shell.clone().move_iter());
-        argprefix.push(command.run.as_ref().unwrap().clone());
-    } else {
-        let command_seq = command.command.as_ref().unwrap();
-        match container.command_wrapper {
-            Some(ref wrapper) => {
-                argprefix.extend(wrapper.clone().move_iter());
-            }
-            None => {}
-        }
-        argprefix.extend(command_seq.clone().move_iter());
-    }
-    let cmd = argprefix.shift().unwrap();
-    return _run(env, container,
-        cmd, (argprefix + cmdargs), runenv);
-}
-
-pub fn run_command(env: &mut Environ, args: Vec<String>)
+pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cname = "devel".to_string();
@@ -268,10 +204,10 @@ pub fn run_command(env: &mut Environ, args: Vec<String>)
     }
 
     let cmd = cmdargs.shift().unwrap();
-    return _run(env, container, cmd, cmdargs, TreeMap::new());
+    return internal_run(env, container, cmd, cmdargs, TreeMap::new());
 }
 
-pub fn _run(env: &Environ, container_: Container,
+pub fn internal_run(env: &Environ, container_: Container,
     command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<int, String>
 {

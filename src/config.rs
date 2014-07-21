@@ -9,9 +9,21 @@ use J = serialize::json;
 use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
 
 
+pub enum SuperviseMode {
+    WaitAll,
+    StopOnFailure,
+    Restart,
+}
+
+pub enum Executor {
+    Shell(String),
+    Plain(Vec<String>),
+    Supervise(SuperviseMode, TreeMap<String, Command>),
+}
+
+
 pub struct Command {
-    pub run: Option<String>,
-    pub command: Option<Vec<String>>,
+    pub execute: Executor,
     pub container: Option<String>,
     pub accepts_arguments: bool,
     pub environ: TreeMap<String, String>,
@@ -57,6 +69,78 @@ fn find_config_path(workdir: &Path) -> Option<(Path, Path)> {
     }
 }
 
+pub fn get_supervise(map: &TreeMap<String, J::Json>)
+    -> Result<Option<(SuperviseMode, TreeMap<String, Command>)>, String>
+{
+    let mode = match map.find(&"supervise-mode".to_string()) {
+        Some(&J::String(ref val)) => match val.as_slice() {
+            "wait-all" => WaitAll,
+            "stop-on-failure" => StopOnFailure,
+            "restart" => Restart,
+            _ => return Err(format!("The `supervise-mode` can be one of
+                `wait-all`, `stop-on-failure` (default) or `restart`")),
+        },
+        None => StopOnFailure,
+        _ => return Err(format!("The `supervise-mode` must be string")),
+    };
+    let mut commands = TreeMap::new();
+    let ocommands = match map.find(&"supervise".to_string()) {
+        None => return Ok(None),
+        Some(&J::Object(ref map)) => map,
+        _ => return Err(format!("The `supervise` must be mapping")),
+    };
+    for (name, jcmd) in ocommands.iter() {
+        let cmd = try!(parse_command(name, jcmd));
+        commands.insert(name.clone(), cmd);
+    }
+    return Ok(Some((mode, commands)));
+}
+
+fn one<T>(opt: &Option<T>) -> int {
+    return if opt.is_some() { 1 } else { 0 };
+}
+
+fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
+    let dcmd = match jcmd {
+        &J::Object(ref dict) => dict,
+        _ => return Err(format!(
+            "Command {} must be mapping", name)),
+    };
+
+    let run = get_string(jcmd, "run");
+    let command = get_command(jcmd, "command");
+    let supervise = try!(get_supervise(*dcmd));
+    if one(&run) + one(&command) + one(&supervise) != 1 {
+        return Err(format!("Expected exactly one of \
+            `command` or `run` or `supervise` for command {}",
+            name));
+    }
+    let mut accepts_arguments = false;
+    let executor = if run.is_some() {
+        Shell(run.unwrap())
+    } else if command.is_some() {
+        accepts_arguments = true;
+        Plain(command.unwrap())
+    } else if supervise.is_some() {
+        let (mode, svcs) = supervise.unwrap();
+        Supervise(mode, svcs)
+    } else {
+        unreachable!();
+    };
+    let accepts_arguments = get_bool(jcmd, "accepts-arguments")
+        //  By default accept arguments only by command
+        //  because "sh -c" only uses arguments if there is
+        //  $1, $2.. used in the expression
+        .unwrap_or(accepts_arguments);
+    return Ok(Command {
+        execute: executor,
+        container: get_string(jcmd, "container"),
+        accepts_arguments: accepts_arguments,
+        environ: get_dict(jcmd, "environ"),
+        description: get_string(jcmd, "description"),
+    });
+}
+
 pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
     let (cfg_dir, filename) = match find_config_path(workdir) {
         Some(pair) => pair,
@@ -89,25 +173,7 @@ pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
     match root.find(&"commands".to_string()) {
         Some(&J::Object(ref commands)) => {
             for (name, jcmd) in commands.iter() {
-                let run = get_string(jcmd, "run");
-                let command = get_command(jcmd, "command");
-                if run.is_some() == command.is_some() {
-                    return Err(format!("Should specify exactly one of \
-                        `command` or `run` for command {}", name));
-                }
-                let accepts_arguments = get_bool(jcmd, "accepts-arguments")
-                    //  By default accept arguments only by command
-                    //  because "sh -c" only uses arguments if there is
-                    //  $1, $2.. used in the expression
-                    .unwrap_or(command.is_some());
-                let cmd = Command {
-                    run: run,
-                    command: command,
-                    container: get_string(jcmd, "container"),
-                    accepts_arguments: accepts_arguments,
-                    environ: get_dict(jcmd, "environ"),
-                    description: get_string(jcmd, "description"),
-                };
+                let cmd = try!(parse_command(name, jcmd));
                 config.commands.insert(name.clone(), cmd);
             }
         }

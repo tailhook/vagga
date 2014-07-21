@@ -3,11 +3,16 @@ use std::os::{getcwd, args, self_exe_path, self_exe_name};
 use std::io::stdio::stderr;
 
 use super::config::find_config;
+use super::config::{Shell, Plain, Supervise};
 use super::build::build_command;
-use super::run::{run_command, run_user_command};
+use super::run::run_command_line;
+use super::commands::shell::run_shell_command;
+use super::commands::command::run_plain_command;
+use super::commands::supervise::run_supervise_command;
 use super::env::Environ;
 use super::options::env_options;
 use super::settings::{Settings, read_settings, set_variant};
+
 
 pub fn run() -> int {
     let mut err = stderr();
@@ -70,22 +75,28 @@ pub fn run() -> int {
         return 127;
     }
 
-    let cmd = cmd.unwrap();
-    args.insert(0, "vagga ".to_string() + cmd);
-    let result = match cmd.as_slice() {
+    let cname = cmd.unwrap();
+    args.insert(0, "vagga ".to_string() + cname);
+    let result = match cname.as_slice() {
         "_build" => build_command(&mut env, args),
-        "_run" => run_command(&mut env, args),
+        "_run" => run_command_line(&mut env, args),
         "_setv" | "_setvariant" => set_variant(&mut env, args),
         _ => {
-            // TODO(tailhook) look for commands in config
-            match env.config.commands.find(&cmd) {
-                Some(_) => run_user_command(&mut env, &cmd, args),
+            let fun = match env.config.commands.find(&cname) {
+                Some(ref cmd) => {
+                    match cmd.execute {
+                        Shell(_) => run_shell_command,
+                        Plain(_) => run_plain_command,
+                        Supervise(_, _) => run_supervise_command,
+                    }
+                }
                 None => {
                     err.write_line(
-                        format!("Unknown command {}", cmd).as_slice()).ok();
+                        format!("Unknown command {}", cname).as_slice()).ok();
                     return 127;
                 }
-            }
+            };
+            fun(&mut env, &cname, args)
         }
     };
     match result {

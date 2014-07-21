@@ -30,6 +30,12 @@ mod options;
 mod settings;
 mod yamlutil;
 
+mod commands {
+    pub mod shell;
+    pub mod command;
+    pub mod supervise;
+}
+
 
 fn main() {
     set_exit_status(run());
