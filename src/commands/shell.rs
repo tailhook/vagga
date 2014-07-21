@@ -16,13 +16,7 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
     let has_arguments;
     let description;
     {
-        let command = match env.config.commands.find(cmdname) {
-            Some(c) => c,
-            None => {
-                return Err(format!("Can't find command {} in config",
-                                   cmdname));
-            }
-        };
+        let command = env.config.commands.find(cmdname).unwrap();
         has_arguments = command.accepts_arguments;
         description = command.description.clone().unwrap_or("".to_string());
     }
