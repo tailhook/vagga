@@ -135,6 +135,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         digest.input_str(builder.as_slice());
         digest.input_str(":");
         match Command::new(&version_sh).env(env.as_slice())
+            .cwd(&environ.project_root)
             .stdin(Ignored).stderr(InheritFd(2)).output() {
             Ok(out) => match out.status {
                 ExitStatus(0) => {
@@ -207,6 +208,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     env.push(("container_hash".as_bytes(), hash.as_bytes()));
     env.push(("container_root".as_bytes(), container_tmp.as_vec()));
     match Command::new(build_sh).env(env.as_slice())
+        .cwd(&environ.project_root)
         .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
         .status() {
         Ok(ExitStatus(0)) => {}
