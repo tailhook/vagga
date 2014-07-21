@@ -234,7 +234,7 @@ pub fn internal_run(env: &Environ, container_: Container,
         try!(ensure_dir(&container_root.join(*dir)));
     }
 
-    let mount_dir = env.project_root.join_many([".vagga", "mnt"]);
+    let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
     try!(make_namespace());
 
