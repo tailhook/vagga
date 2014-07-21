@@ -3,10 +3,11 @@ use std::io::stdio::{stdout, stderr};
 use collections::treemap::TreeMap;
 use argparse::ArgumentParser;
 
-use super::super::env::Environ;
+use super::super::env::{Environ, Container};
 use super::super::options::env_options;
 use super::super::run::internal_run;
-use super::super::config::Shell;
+use super::super::config::{Shell, Command};
+use super::super::build::ensure_container;
 
 
 pub fn run_shell_command(env: &mut Environ, cmdname: &String,
@@ -44,7 +45,22 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
         Some(ref name) => name.clone(),
         None => unimplemented!(),
     };
-    let container = try!(env.get_container(&cname));
+    let mut container = try!(env.get_container(&cname));
+    try!(ensure_container(env, &mut container));
+    return exec_shell_command_args(env, command, &container, cmdargs);
+}
+
+pub fn exec_shell_command(env: &Environ, command: &Command,
+    container: &Container)
+    -> Result<int, String>
+{
+    return exec_shell_command_args(env, command, container, Vec::new());
+}
+
+pub fn exec_shell_command_args(env: &Environ, command: &Command,
+    container: &Container, cmdargs: Vec<String>)
+    -> Result<int, String>
+{
     let mut runenv = TreeMap::new();
     for (k, v) in command.environ.iter() {
         runenv.insert(k.clone(), v.clone());

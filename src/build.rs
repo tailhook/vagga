@@ -3,7 +3,7 @@ use std::os::getenv;
 use std::path::BytesContainer;
 use std::str::from_utf8_lossy;
 use get_environ = std::os::env;
-use std::io::fs::{mkdir, rmdir_recursive, rename, symlink, unlink};
+use std::io::fs::{mkdir, rmdir_recursive, rename, symlink, unlink, readlink};
 use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
 use std::io::stdio::{stdout, stderr};
 
@@ -14,6 +14,7 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 
 use super::env::{Environ, Container};
 use super::options::env_options;
+use super::linux::ensure_dir;
 
 
 fn makedirs(path: &Path) -> Result<(),String> {
@@ -213,6 +214,10 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         Err(x) => return Err(format!("Can't spawn: {}", x)),
     }
 
+    for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
+        try!(ensure_dir(&container_tmp.join(*dir)));
+    }
+
     let container_old = environ.local_vagga.join_many(
         [".roots", (cdir + ".old").as_slice()]);
     if container_root.exists() {
@@ -245,4 +250,21 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     container.container_root = Some(container_root);
 
     return Ok(true);
+}
+
+pub fn ensure_container(env: &Environ, container: &mut Container)
+    -> Result<(), String>
+{
+    if env.settings.version_check {
+        try!(build_container(env, container, false));
+        try!(link_container(env, container));
+    } else {
+        let lnk = env.local_vagga.join(container.fullname.as_slice());
+        container.container_root = match readlink(&lnk) {
+            Ok(path) => Some(lnk.dir_path().join(path)),
+            Err(e) => return Err(format!("Container {} not found: {}",
+                                         container.fullname, e)),
+        };
+    };
+    return Ok(());
 }

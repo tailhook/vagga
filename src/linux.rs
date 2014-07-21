@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
+use std::io;
 use std::ptr::null;
 use std::c_str::CString;
 use std::os::{errno, error_string};
+use std::io::fs::mkdir;
 use libc::{c_int, c_char, c_ulong, pid_t};
 use libc::funcs::posix88::unistd::fork;
 
@@ -199,4 +201,11 @@ pub fn wait_process(pid: pid_t) -> Result<int, String> {
         }
         return Ok(rc as int);
     }
+}
+
+pub fn ensure_dir(p: &Path) -> Result<(),String> {
+    if p.exists() {
+        return Ok(());
+    }
+    return mkdir(p, io::UserRWX).map_err(|e| { e.to_str() });
 }

@@ -1,9 +1,8 @@
-use std::io;
 use std::to_str::ToStr;
 use std::os::{pipe, change_dir, getenv};
 use std::io::{Open, Write};
 use std::io::{BufferedReader, IoResult};
-use std::io::fs::{mkdir, File, readlink};
+use std::io::fs::File;
 use std::io::pipe::PipeStream;
 use std::io::stdio::{stdout, stderr};
 
@@ -12,9 +11,9 @@ use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue};
 
 use super::env::{Environ, Container};
 use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
-use super::linux::{execute, forkme, wait_process};
+use super::linux::{execute, forkme, wait_process, ensure_dir};
 use super::options::env_options;
-use super::build::{build_container, link_container};
+use super::build::ensure_container;
 use libc::funcs::posix88::unistd::getuid;
 
 static DEFAULT_PATH: &'static str =
@@ -51,12 +50,6 @@ fn mount_all(root: &Path, mount_dir: &Path, project_root: &Path)
     return Ok(());
 }
 
-fn ensure_dir(p: &Path) -> Result<(),String> {
-    if p.exists() {
-        return Ok(());
-    }
-    return mkdir(p, io::UserRWX).map_err(|e| { e.to_str() });
-}
 
 fn read_env_file(path: &Path, env: &mut TreeMap<String, String>)
     -> IoResult<()>
@@ -185,7 +178,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
             Err(_) => return Ok(122),
         }
     }
-    let container = try!(env.get_container(&cname));
+    let mut container = try!(env.get_container(&cname));
 
     if command.is_none() {
         if container.default_command.is_some() {
@@ -204,35 +197,21 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     }
 
     let cmd = cmdargs.shift().unwrap();
-    return internal_run(env, container, cmd, cmdargs, TreeMap::new());
+    try!(ensure_container(env, &mut container));
+    return internal_run(env, &container, cmd, cmdargs, TreeMap::new());
 }
 
-pub fn internal_run(env: &Environ, container_: Container,
+pub fn internal_run(env: &Environ, container: &Container,
     command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<int, String>
 {
-    let mut container = container_;
-    if env.settings.version_check {
-        try!(build_container(env, &mut container, false));
-        try!(link_container(env, &container));
-    } else {
-        let lnk = env.local_vagga.join(container.fullname.as_slice());
-        container.container_root = match readlink(&lnk) {
-            Ok(path) => Some(lnk.dir_path().join(path)),
-            Err(e) => return Err(format!("Container {} not found: {}",
-                                         container.fullname, e)),
-        };
-    };
     let mut runenv = runenv;
-    try!(container_environ(&container, &mut runenv));
+    try!(container_environ(container, &mut runenv));
     let container_root = container.container_root.as_ref().unwrap();
     info!("Running {}: {} {}", container_root.display(), command, cmdargs);
 
     let uid = unsafe { getuid() };
 
-    for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
-        try!(ensure_dir(&container_root.join(*dir)));
-    }
 
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
