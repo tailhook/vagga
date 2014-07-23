@@ -14,6 +14,10 @@ use collections::treemap::TreeMap;
 
 use super::env::{Environ, Container};
 
+// sys/types.h
+// sys/wait.h
+static WNOHANG: c_int = 1;
+
 // sched.h
 static CLONE_NEWNS: c_int = 0x00020000;   /* Set to create new namespace.  */
 static CLONE_NEWUTS: c_int = 0x04000000;  /* New utsname group.  */
@@ -49,6 +53,13 @@ static MS_STRICTATIME: c_ulong = 1 << 24;     /* Always perform atime updates.  
 static MS_ACTIVE: c_ulong = 1 << 30;
 static MS_NOUSER: c_ulong = 1 << 31;
 
+// signal.h
+static SIG_BLOCK: c_int = 0;
+static SIG_UNBLOCK: c_int = 1;
+static SIG_SETMASK: c_int = 2;
+
+pub static SIGCHLD   : c_int =  17    ; /* Child status has changed (POSIX).  */
+
 
 extern  {
     // sched.h
@@ -66,6 +77,11 @@ extern  {
     fn mount(source: *c_char, target: *c_char,
         filesystemtype: *c_char, flags: c_ulong,
         data: *c_char) -> c_int;
+
+    // signal.h
+    fn sigprocmask(how: c_int, set: *u8, oldset: *u8) -> c_int;
+    fn sigwait(set: *u8, sig: *c_int) -> c_int;
+    fn sigfillset(set: *u8) -> c_int;
 
 }
 
@@ -273,14 +289,26 @@ pub fn wait_process(pid: pid_t) -> Result<int, String> {
     }
 }
 
-pub fn wait_any() -> Result<(pid_t, int), int> {
-    let status = 0;
-    let pid = unsafe { waitpid(0, &status, 0) };
-    if pid < 0 {
-        return Err(errno());
+struct DeadProcesses;
+
+impl Iterator<(pid_t, i32)> for DeadProcesses {
+    fn next(&mut self) -> Option<(pid_t, i32)> {
+        loop {
+            let status = 0;
+            let pid = unsafe { waitpid(-1, &status, WNOHANG) };
+            if pid == 0 {
+                return None;
+            }
+            if pid < 0 {
+                debug!("Error in waitpid: {}", error_string(errno() as uint));
+                continue;
+            }
+            return Some((pid, status));
+        }
     }
-    return Ok((pid as pid_t, status as int));
 }
+
+pub fn dead_processes() -> DeadProcesses { DeadProcesses }
 
 pub fn ensure_dir(p: &Path) -> Result<(),String> {
     if p.exists() {
@@ -292,3 +320,37 @@ pub fn ensure_dir(p: &Path) -> Result<(),String> {
 pub fn exit(result: i32) -> ! {
     unsafe { _exit(result); }
 }
+
+pub struct MaskSignals {
+    oldmask: [u8, ..128],
+}
+
+impl MaskSignals {
+    pub fn new() -> MaskSignals {
+        let old = [0, ..128];
+        let new = [0, ..128];
+        unsafe {
+            sigfillset(new.as_ptr());
+            sigprocmask(SIG_BLOCK, new.as_ptr(), old.as_ptr());
+        };
+        MaskSignals {
+            oldmask: old,
+        }
+    }
+    pub fn drop(&self) {
+        let old = [0, ..128];
+        unsafe {
+            sigprocmask(SIG_SETMASK, self.oldmask.as_ptr(), old.as_ptr())
+        };
+    }
+    pub fn wait(&self) -> i32 {
+        let mask = [0xFF, ..128];
+        let sig: c_int = 0;
+        unsafe {
+            sigwait(mask.as_ptr(), &sig);
+        }
+        return sig;
+    }
+}
+
+

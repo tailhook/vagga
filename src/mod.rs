@@ -29,6 +29,7 @@ mod linux;
 mod options;
 mod settings;
 mod yamlutil;
+mod monitor;
 
 mod commands {
     pub mod shell;

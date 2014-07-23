@@ -2,17 +2,19 @@ use std::io::stdio::{stdout, stderr};
 use std::io::fs::readlink;
 
 use libc::pid_t;
-use collections::treemap::{TreeMap, TreeSet};
+use libc::consts::os::posix88::{SIGTERM, SIGINT};
+use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, List};
 
-use super::super::linux::wait_any;
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
 use super::super::build::{build_container, link_container};
 use super::super::config::{Shell, Plain, Supervise};
+use super::super::config::{StopOnFailure, WaitAll, Restart};
 use super::super::config::Command;
 use super::super::commands::shell::exec_shell_command;
 use super::super::commands::command::exec_plain_command;
+use super::super::monitor::{Monitor, Signal, Exit};
 
 
 pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
@@ -55,10 +57,10 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         containers.insert(cname.clone(), container);
     }
 
-    let mut failed: bool = false;
-    let mut pids: TreeSet<pid_t> = TreeSet::new();
+    let mut monitor = Monitor::new();
 
-    for (cname, command) in processes.iter() {
+    let start = |cname: &String, monitor: &mut Monitor| -> bool {
+        let command = processes.find(cname).unwrap();
         let fun = match command.execute {
             Shell(_) => exec_shell_command,
             Plain(_) => exec_plain_command,
@@ -69,29 +71,80 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
 
         match fun(env, command, container) {
             Ok(pid) => {
-                info!("Command {} started with pid {}", cname, pid);
-                pids.insert(pid);
+                info!("Command {} started with pid {}",
+                    cname, pid);
+                monitor.add(cname.clone(), pid);
+                return true;
             }
             Err(e) => {
-                failed = true;  // So we stop if stop-on-failure activated
                 error!("Error starting {}: {}", cname, e);
+                monitor.send_all(SIGTERM);
+                monitor.fail();
+                return false;
             }
+        }
+    };
+
+    for (cname, _) in processes.iter() {
+        if !start(cname, &mut monitor) {
+            break;
         }
     }
 
-    while pids.len() > 0 {
-        match wait_any() {
-            Ok((pid, status)) => {
-                info!("Process {} exited with {}", pid, status);
-                pids.remove(&pid);
-            }
-            Err(errno) => {
-                error!("Error waiting for process: {}", errno);
+    match *mode {
+        StopOnFailure => {
+            while monitor.ok() {
+                match monitor.next_event() {
+                    Exit(_, _, _) => {
+                        monitor.fail();
+                    }
+                    Signal(SIGTERM) => {
+                        warn!("Got SIGTERM. Shutting down...");
+                        monitor.send_all(SIGTERM);
+                        monitor.fail();
+                    }
+                    Signal(SIGINT) => {
+                        warn!("Got SIGINT. Shutting down...");
+                        monitor.send_all(SIGINT);
+                        monitor.fail();
+                    }
+                    Signal(sig) => {
+                        debug!("Got {}. Ignoring.", sig);
+                    }
+                }
             }
         }
+        Restart => {
+            while monitor.ok() {
+                match monitor.next_event() {
+                    Exit(cname, pid, status) => {
+                        error!("Process {}:{} dead with status {}",
+                            cname, pid, status);
+                        start(&cname, &mut monitor);
+                    }
+                    Signal(SIGTERM) => {
+                        warn!("Got SIGTERM. Shutting down...");
+                        monitor.send_all(SIGTERM);
+                        monitor.fail();
+                    }
+                    Signal(SIGINT) => {
+                        warn!("Got SIGINT. Shutting down...");
+                        monitor.send_all(SIGINT);
+                        monitor.fail();
+                    }
+                    Signal(sig) => {
+                        debug!("Got {}. Ignoring.", sig);
+                    }
+                }
+            }
+        }
+        WaitAll => {},
     }
 
-    return Ok(0);
+    // Wait all mode always at the end
+    monitor.wait_all();
+
+    return Ok(monitor.get_status());
 }
 
 pub fn exec_supervise_command(_env: &Environ, _command: &Command,

@@ -72,6 +72,8 @@ int _run_container(void *arg) {
     char val[1];
     struct container *cont = arg;
 
+    setsid();
+
     do {
         rc = read(cont->pipe_reader, val, 1);
     } while(rc < 0 && (errno == EINTR || errno == EAGAIN));
@@ -89,6 +91,9 @@ int _run_container(void *arg) {
     check_error(chdir(cont->work_dir),
         "Can't set working directory to %s: (%d) %s\n", cont->work_dir);
 
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    sigprocmask(SIG_SETMASK, &sigset, NULL);
     for(i = 0; i < cont->exec_filenames_num; ++i) {
         execve(cont->exec_filenames[i], cont->exec_args, cont->exec_environ);
     }
