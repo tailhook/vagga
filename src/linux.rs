@@ -5,12 +5,14 @@ use std::ptr::null;
 use std::c_str::CString;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
-use libc::{c_int, c_char, c_ulong, pid_t, _exit};
-use libc::funcs::posix88::unistd::fork;
+use std::os::{Pipe, pipe};
+use libc::{c_int, c_char, c_ulong, pid_t, _exit, c_void};
+use libc::funcs::posix88::unistd::{close, write};
+use libc::consts::os::posix88::{EINTR, EAGAIN};
 
-// errno.h
-static EINTR: int = 4;
-static ENOENT: int = 2;
+use collections::treemap::TreeMap;
+
+use super::env::{Environ, Container};
 
 // sched.h
 static CLONE_NEWNS: c_int = 0x00020000;   /* Set to create new namespace.  */
@@ -67,132 +69,198 @@ extern  {
 
 }
 
-pub fn make_namespace() -> Result<(), String> {
-    let rc = unsafe {
-        unshare(CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER|CLONE_NEWPID)
-    };
-    if rc != 0 {
-        return Err(format!("Error making namespace: {}",
-            error_string(errno() as uint)));
-    }
-    return Ok(());
+enum Mount {
+    Bind(CString, CString),
+    BindRO(CString, CString),
+    Pseudo(CString, CString, CString),
 }
 
-pub fn change_root(root: &Path) -> Result<(), String> {
-    debug!("Chrooting into {}", root.display());
-    let rc = root.with_c_str(|root| unsafe { chroot(root) });
-    if rc != 0 {
-        return Err(format!("Error changing root: {}",
-            error_string(errno() as uint)));
-    }
-    return Ok(());
+/* Keep in sync with container.c */
+struct CMount {
+    source: *u8,
+    target: *u8,
+    fstype: *u8,
+    options: *u8,
+    flags: c_ulong,
 }
 
-
-pub fn bind_mount(source: &Path, target: &Path, read_write: bool)
-    -> Result<(), String>
-{
-    debug!("Mounting {} into {}{}",
-        source.display(), target.display(), if read_write {""} else {" (ro)"});
-    let rc = unsafe {
-        source.with_c_str(|source|
-        target.with_c_str(|target|
-            mount(source, target, null(), MS_BIND|MS_REC, null())
-        ))};
-    if rc != 0 {
-        return Err(format!("Error mounting {}: {}",
-            target.display(), error_string(errno() as uint)));
-    }
-    if !read_write {
-        let rc = unsafe {
-            source.with_c_str(|source|
-            target.with_c_str(|target|
-                mount(source, target, null(),
-                      MS_BIND|MS_REMOUNT|MS_RDONLY, null())
-            ))};
-        if rc != 0 {
-            return Err(format!("Error remounting ro {}: {}",
-                target.display(), error_string(errno() as uint)));
-        }
-    }
-    Ok(())
+/* Keep in sync with container.c */
+struct CContainer {
+    pipe_reader: c_int,
+    pipe_writer: c_int,
+    container_root: *u8,
+    mount_dir: *u8,
+    mounts_num: c_int,
+    mounts: *CMount,
+    work_dir: *u8,
+    exec_filename: *u8,     // For error messages
+    exec_filenames_num: c_int,
+    exec_filenames: **u8,   // Full paths to try in order
+    exec_args: **u8,
+    exec_environ: **u8,
 }
 
-pub fn mount_pseudofs(fstype: &str, target: &Path, fsoptions: &str)
-    -> Result<(), String>
-{
-    debug!("Mounting {} as {} with options: {}",
-        target.display(), fstype, fsoptions);
-    let flags = MS_NOSUID|MS_NODEV;
-    let rc = unsafe {
-        fstype.with_c_str(|fstype|
-        target.with_c_str(|target|
-        fsoptions.with_c_str(|fsoptions|
-            mount(fstype, target, fstype, flags, fsoptions)
-        )))};
-    if rc != 0 {
-        return Err(format!("Error mounting {}: {}",
-            target.display(), error_string(errno() as uint)));
-    }
-    Ok(())
-}
+pub struct CPipe(Pipe);
 
-pub fn execute(command: &String, path: &[&str],
-               args: &Vec<String>, environ: &Vec<String>)
-    -> Result <(), String>
-{
-    debug!("Executing {} with args: {} with environ: {}",
-        command, args, environ);
-    let mut cargs: Vec<CString> = args.iter()
-        .map(|s| { s.to_c_str() }).collect();
-    cargs.insert(0, command.to_c_str());
-    let cenviron: Vec<CString> = environ.iter()
-        .map(|s| s.to_c_str()).collect();
-    unsafe {
-        let mut argv: Vec<*c_char> =
-            cargs.iter().map(|s| s.with_ref(|p| p)).collect();
-        argv.push(null());
-        let mut envp: Vec<*c_char> =
-            cenviron.iter().map(|s| s.with_ref(|p| p)).collect();
-        envp.push(null());
-        // TODO(tailhook) chdir
-        command.with_c_str(|command|
-            execve(
-                command,
-                argv.as_ptr(),
-                envp.as_ptr(),
-                ));
-        if !command.as_slice().contains_char('/') && errno() == ENOENT {
-            for prefix in path.iter() {
-                (prefix.to_string() + "/" + *command).with_c_str(|command|
-                    execve(
-                        command,
-                        argv.as_ptr(),
-                        envp.as_ptr(),
-                        ));
+impl CPipe {
+    pub fn new() -> Result<CPipe, String> {
+        unsafe {
+            match pipe() {
+                Ok(pipe) => Ok(CPipe(pipe)),
+                Err(e) => Err(format!("Can't create pipe: {}", e)),
             }
         }
     }
-    return Err(format!("Error executing command {}: {}",
-        command, error_string(errno() as uint)));
+    pub fn wakeup(&self) -> Result<(), String> {
+        let mut rc;
+        let &CPipe(ref pipe) = self;
+        loop {
+            unsafe {
+                rc = write(pipe.writer, ['x' as u8].as_ptr() as *c_void, 1);
+            }
+            if rc < 0 && (errno() as i32 == EINTR || errno() as i32 == EAGAIN) {
+                continue
+            }
+            break;
+        }
+        if rc == 0 {
+            return Err(format!("File already closed"));
+        } else if rc == -1 {
+            return Err(format!("Error writing to pipe: {}",
+                error_string(errno() as uint)));
+        }
+        return Ok(());
+    }
+    fn drop(&self) {
+        match self {
+            &CPipe(ref pipe) => {
+                unsafe {
+                    close(pipe.reader);
+                    close(pipe.writer);
+                }
+            }
+        }
+    }
 }
 
-pub fn forkme() -> Result<pid_t, String> {
-    debug!("Forking");
-    let rc = unsafe { fork() };
-    if rc == -1 {
-        return Err(format!("Error forking: {}",
-            error_string(errno() as uint)));
-    }
-    return Ok(rc);
+#[link(name="container", kind="static")]
+extern  {
+    fn fork_to_container(flags: c_int, container: *CContainer) -> pid_t;
 }
+
+impl Mount {
+    fn to_c_mount(&self) -> CMount {
+        match self {
+            &Bind(ref a, ref b) => CMount {
+                source: a.as_bytes().as_ptr(),
+                target: b.as_bytes().as_ptr(),
+                fstype: null(),
+                options: null(),
+                flags: MS_BIND|MS_REC,
+            },
+            &BindRO(ref a, ref b) => CMount {
+                source: a.as_bytes().as_ptr(),
+                target: b.as_bytes().as_ptr(),
+                fstype: null(),
+                options: null(),
+                flags: MS_BIND|MS_REC|MS_RDONLY,
+            },
+            &Pseudo(ref fs, ref dir, ref options) => CMount {
+                source: fs.as_bytes().as_ptr(),
+                target: dir.as_bytes().as_ptr(),
+                fstype: fs.as_bytes().as_ptr(),
+                options: options.as_bytes().as_ptr(),
+                flags: MS_NOSUID|MS_NODEV,
+            },
+        }
+    }
+}
+
+fn c_vec<'x, T:ToCStr, I:Iterator<&'x T>>(iter: I) -> Vec<CString> {
+    return iter.map(|a| a.to_c_str()).collect();
+}
+
+fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
+    return vec.iter().map(|a| a.as_bytes().as_ptr()).collect();
+}
+
+pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
+    cmd: &String, args: &[String], environ: &TreeMap<String, String>)
+    -> Result<pid_t, String>
+{
+    let root = container.container_root.as_ref().unwrap();
+    let c_container_root = root.to_c_str();
+    let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
+    try!(ensure_dir(&mount_dir));
+    let c_mount_dir = mount_dir.to_c_str();
+    // TODO(pc) find recursive bindings for BindRO
+    let mounts = [
+        BindRO(root.to_c_str(), mount_dir.to_c_str()),
+        BindRO("/sys".to_c_str(), mount_dir.join("sys").to_c_str()),
+        // TODO(tailhook) use dev in /var/lib/container-dev
+        BindRO("/dev".to_c_str(), mount_dir.join("dev").to_c_str()),
+        Bind(env.project_root.to_c_str(), mount_dir.join("work").to_c_str()),
+        Pseudo("proc".to_c_str(), mount_dir.join("proc").to_c_str(),
+            "".to_c_str()),
+        Pseudo("tmpfs".to_c_str(), mount_dir.join("tmp").to_c_str(),
+            "size=102400k,mode=1777".to_c_str()),
+        BindRO(env.vagga_path.join("markerdir").to_c_str(),
+               mount_dir.join("work").join(".vagga").to_c_str()),
+        ];
+    let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
+    let c_work_dir = match env.work_dir.path_relative_from(&env.project_root) {
+        Some(path) => Path::new("/work").join(path).to_c_str(),
+        None => "/work".to_c_str(),
+    };
+    let c_exec_fn = cmd.to_c_str();
+    let filenames = if cmd.as_slice().contains("/") {
+            vec!(c_exec_fn.clone())
+        } else {
+            environ.find(&"PATH".to_string()).unwrap()
+                .as_slice().split(':').map(|prefix| {
+                    (prefix.to_string() + "/".to_string() + cmd.to_string())
+                    .to_c_str()
+                }).collect()
+        };
+    let c_filenames:Vec<*u8> = raw_vec(&filenames);
+    let args = c_vec(args.iter());
+    let mut c_args = raw_vec(&args);
+    c_args.insert(0, c_exec_fn.as_bytes().as_ptr());
+    c_args.push(null());
+    let environ = environ.iter().map(|(k, v)| {
+        (*k + "=" + *v).to_c_str()
+    }).collect();
+    let mut c_environ = raw_vec(&environ);
+    c_environ.push(null());
+
+    let &CPipe(pipe) = pipe;
+    unsafe {
+        Ok(fork_to_container(
+            CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER|CLONE_NEWPID,
+            &CContainer {
+                pipe_reader: pipe.reader,
+                pipe_writer: pipe.writer,
+                container_root: c_container_root.as_bytes().as_ptr(),
+                mount_dir: c_mount_dir.as_bytes().as_ptr(),
+                mounts_num: c_mounts.len() as i32,
+                mounts: c_mounts.as_slice().as_ptr(),
+                work_dir: c_work_dir.as_bytes().as_ptr(),
+                exec_filename: c_exec_fn.as_bytes().as_ptr(),
+                exec_filenames_num: c_filenames.len() as i32,
+                exec_filenames: c_filenames.as_slice().as_ptr(),
+                exec_args: c_args.as_slice().as_ptr(),
+                exec_environ: c_environ.as_slice().as_ptr(),
+            }))
+    }
+}
+
 
 pub fn wait_process(pid: pid_t) -> Result<int, String> {
     loop {
         let status: i32 = 0;
         let rc = unsafe { waitpid(pid, &status, 0) };
         if rc < 0 {
-            if errno() == EINTR {
+            if errno() as i32 == EINTR {
                 continue;
             } else {
                 return Err(format!("Error waiting for child: {}",

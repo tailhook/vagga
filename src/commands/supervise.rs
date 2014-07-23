@@ -1,11 +1,11 @@
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::readlink;
-use libc::pid_t;
 
+use libc::pid_t;
 use collections::treemap::{TreeMap, TreeSet};
 use argparse::{ArgumentParser, List};
 
-use super::super::linux::{forkme, wait_any, exit};
+use super::super::linux::wait_any;
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
 use super::super::build::{build_container, link_container};
@@ -55,6 +55,7 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         containers.insert(cname.clone(), container);
     }
 
+    let mut failed: bool = false;
     let mut pids: TreeSet<pid_t> = TreeSet::new();
 
     for (cname, command) in processes.iter() {
@@ -63,28 +64,19 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
             Plain(_) => exec_plain_command,
             Supervise(_, _) => exec_supervise_command,
         };
-        let container = containers.find(command.container.as_ref().unwrap());
+        let container = containers.find(
+            command.container.as_ref().unwrap()).unwrap();
 
-        let pid = match forkme() {
-            Ok(0) => {  // child
-                match fun(env, command, container.unwrap()) {
-                    Ok(res) => {
-                        exit(res as i32);
-                    }
-                    Err(res) => {
-                        error!("Error running command: {}", res);
-                        exit(121);
-                    }
-                };
+        match fun(env, command, container) {
+            Ok(pid) => {
+                info!("Command {} started with pid {}", cname, pid);
+                pids.insert(pid);
             }
-            Ok(pid) => pid,  // parent
             Err(e) => {
-                error!("Error forking: {}", e);
-                unimplemented!();
+                failed = true;  // So we stop if stop-on-failure activated
+                error!("Error starting {}: {}", cname, e);
             }
-        };
-        info!("Command {} started with pid {}", cname, pid);
-        pids.insert(pid);
+        }
     }
 
     while pids.len() > 0 {
@@ -104,6 +96,6 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
 
 pub fn exec_supervise_command(_env: &Environ, _command: &Command,
     _container: &Container)
-    -> Result<int, String> {
+    -> Result<pid_t, String> {
     fail!("Nested supervise commands do not work yet");
 }

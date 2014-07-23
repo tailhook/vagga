@@ -1,54 +1,23 @@
 use std::to_str::ToStr;
-use std::os::{pipe, change_dir, getenv};
+use std::os::getenv;
 use std::io::{Open, Write};
 use std::io::{BufferedReader, IoResult};
 use std::io::fs::File;
-use std::io::pipe::PipeStream;
 use std::io::stdio::{stdout, stderr};
 
+use libc::pid_t;
 use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue};
 
 use super::env::{Environ, Container};
-use super::linux::{make_namespace, change_root, bind_mount, mount_pseudofs};
-use super::linux::{execute, forkme, wait_process, ensure_dir};
+use super::linux::{wait_process, ensure_dir, run_container, CPipe};
 use super::options::env_options;
 use super::build::ensure_container;
 use libc::funcs::posix88::unistd::getuid;
 
+
 static DEFAULT_PATH: &'static str =
     "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin";
-static DEFAULT_SEARCH: &'static [&'static str] = &[
-    "/sbin", "/bin",
-    "/usr/sbin", "/usr/bin",
-    "/usr/local/sbin", "/usr/local/bin",
-    ];
-
-
-fn mount_all(root: &Path, mount_dir: &Path, project_root: &Path)
-    -> Result<(), String>
-{
-    let vagga_marker = mount_dir.join_many(["tmp", ".vagga"]);
-    try!(bind_mount(root, mount_dir, false));
-    try!(bind_mount(&Path::new("/sys"), &mount_dir.join("sys"), false));
-    // TODO(tailhook) use dev in /var/lib/container-dev
-    try!(bind_mount(&Path::new("/dev"), &mount_dir.join("dev"), false));
-    try!(bind_mount(project_root, &mount_dir.join("work"), true));
-    try!(mount_pseudofs("proc", &mount_dir.join("proc"), ""));
-    // TODO(tailhook) allow customize size of tmpfs
-    try!(mount_pseudofs("tmpfs", &mount_dir.join("tmp"),
-                        "size=102400k,mode=1777"));
-    try!(ensure_dir(&vagga_marker));
-    try!(bind_mount(&vagga_marker,
-                    &mount_dir.join_many(["work", ".vagga"]),
-                    false));
-    match File::open_mode(&vagga_marker.join("CONTAINED.txt"), Open, Write)
-        .write_line("You are running in vagga container.") {
-        Ok(()) => {}
-        Err(e) => return Err(format!("Can't write CONTAINED.txt: {}", e)),
-    }
-    return Ok(());
-}
 
 
 fn read_env_file(path: &Path, env: &mut TreeMap<String, String>)
@@ -96,51 +65,6 @@ fn container_environ(container: &Container, env: &mut TreeMap<String, String>)
 
     }
     return Ok(());
-}
-
-
-pub fn run_chroot(env: &Environ, container_root: &Path, mount_dir: &Path,
-    command: String, args: Vec<String>, runenv: TreeMap<String, String>)
-    -> Result<(),String>
-{
-    try!(mount_all(container_root, mount_dir, &env.project_root));
-    debug!("Changing directory to {}", mount_dir.display());
-    change_dir(mount_dir);
-    try!(change_root(mount_dir));
-    let reldir = match env.work_dir.path_relative_from(&env.project_root) {
-        Some(path) => path,
-        None => Path::new(""),
-    };
-    let path = Path::new("/work").join(reldir);
-    debug!("Changing directory to {}", path.display());
-    change_dir(&path);
-
-    let mut runenv = runenv;
-    let home = "HOME".to_string();
-    if runenv.find(&home).is_none() {
-        // TODO(tailhook) set home to real home if /home is mounted
-        runenv.insert(home, "/homeless-shelter".to_string());
-    }
-    let term = "TERM".to_string();
-    if runenv.find(&term).is_none() {
-        runenv.insert(term, getenv("TERM").unwrap_or("linux".to_string()));
-    }
-    let path = "PATH".to_string();
-    let mut search: Vec<&str>;
-    if runenv.find(&path).is_none() {
-        runenv.insert(path, DEFAULT_PATH.to_string());
-        search = DEFAULT_SEARCH.to_owned();
-    } else {
-        search = runenv.find(&path).unwrap().as_slice().split(':').collect();
-    };
-    let mut environ = Vec::new();
-    for (k, v) in runenv.iter() {
-        environ.push(*k + "=" + *v);
-    }
-    try!(execute(&command,
-        search.as_slice(),
-        &args, &environ));
-    unreachable!();
 }
 
 pub fn run_command_line(env: &mut Environ, args: Vec<String>)
@@ -198,12 +122,14 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
 
     let cmd = cmdargs.shift().unwrap();
     try!(ensure_container(env, &mut container));
-    return internal_run(env, &container, cmd, cmdargs, TreeMap::new());
+    let pid = try!(internal_run(env, &container,
+        cmd, cmdargs, TreeMap::new()));
+    return wait_process(pid);
 }
 
 pub fn internal_run(env: &Environ, container: &Container,
     command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
-    -> Result<int, String>
+    -> Result<pid_t, String>
 {
     let mut runenv = runenv;
     try!(container_environ(container, &mut runenv));
@@ -212,47 +138,40 @@ pub fn internal_run(env: &Environ, container: &Container,
 
     let uid = unsafe { getuid() };
 
-
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
-    try!(make_namespace());
 
-    let mut pipe = match PipeStream::pair() {
-        Ok(pipe) => pipe,
-        Err(x) => return Err(format!("Can't create pipe: {}", x)),
-    };
+    let pipe = try!(CPipe::new());
 
-    let pid = try!(forkme());
-    if pid == 0 {
-        let mut buf: [u8,..1] = [0];
-        match pipe.reader.read(buf) {
-            Ok(_) => {}
-            Err(x) => return Err(format!("Can't read from pipe: {}", x)),
-        }
-        drop(pipe);
-        try!(run_chroot(env, container_root, &mount_dir,
-            command, cmdargs, runenv));
-        unreachable!();
-    } else {
-        // TODO(tailhook) set uid map from config
-        let uid_map = format!("0 {} 1", uid);
-        debug!("Writing uid_map: {}", uid_map);
-        match File::open_mode(&Path::new("/proc")
-                          .join(pid.to_str())
-                          .join("uid_map"), Open, Write)
-                .write_str(uid_map.as_slice()) {
-            Ok(()) => {}
-            Err(e) => return Err(format!(
-                "Error writing uid mapping: {}", e)),
-        }
-
-        match pipe.writer.write_char('x') {
-            Ok(_) => {}
-            Err(e) => return Err(format!(
-                "Error writing to pipe: {}", e)),
-        }
-        drop(pipe);
-
-        return wait_process(pid);
+    let home = "HOME".to_string();
+    if runenv.find(&home).is_none() {
+        // TODO(tailhook) set home to real home if /home is mounted
+        runenv.insert(home, "/homeless-shelter".to_string());
     }
+    let term = "TERM".to_string();
+    if runenv.find(&term).is_none() {
+        runenv.insert(term, getenv("TERM").unwrap_or("linux".to_string()));
+    }
+    let path = "PATH".to_string();
+    if runenv.find(&path).is_none() {
+        runenv.insert(path, DEFAULT_PATH.to_string());
+    }
+
+    let pid = try!(run_container(&pipe, env, container,
+        &command, cmdargs.as_slice(), &runenv));
+
+    // TODO(tailhook) set uid map from config
+    let uid_map = format!("0 {} 1", uid);
+    debug!("Writing uid_map: {}", uid_map);
+    match File::open_mode(&Path::new("/proc")
+                      .join(pid.to_str())
+                      .join("uid_map"), Open, Write)
+            .write_str(uid_map.as_slice()) {
+        Ok(()) => {}
+        Err(e) => return Err(format!(
+            "Error writing uid mapping: {}", e)),
+    }
+
+    try!(pipe.wakeup());
+    return Ok(pid);
 }
