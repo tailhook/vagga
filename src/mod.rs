@@ -18,6 +18,7 @@ extern crate argparse;
 use std::os::set_exit_status;
 
 use self::main::run;
+use self::linux::init_prctl;
 
 
 mod config;
@@ -39,5 +40,6 @@ mod commands {
 
 
 fn main() {
+    init_prctl();
     set_exit_status(run());
 }

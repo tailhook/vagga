@@ -58,6 +58,9 @@ static SIG_BLOCK: c_int = 0;
 static SIG_UNBLOCK: c_int = 1;
 static SIG_SETMASK: c_int = 2;
 
+// sys/prctl.h
+static PR_SET_CHILD_SUBREAPER: c_int = 36;
+
 pub static SIGCHLD   : c_int =  17    ; /* Child status has changed (POSIX).  */
 
 
@@ -82,6 +85,11 @@ extern  {
     fn sigprocmask(how: c_int, set: *u8, oldset: *u8) -> c_int;
     fn sigwait(set: *u8, sig: *c_int) -> c_int;
     fn sigfillset(set: *u8) -> c_int;
+
+    // sys/prctl.h
+    fn prctl(option: c_int, arg2: c_ulong, arg3: c_ulong,
+                            arg4: c_ulong, arg5: c_ulong) -> c_int;
+
 
 }
 
@@ -354,4 +362,8 @@ impl MaskSignals {
     }
 }
 
-
+pub fn init_prctl() {
+    unsafe {
+        prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0);
+    }
+}

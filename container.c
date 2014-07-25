@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/mount.h>
+#include <sys/prctl.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -70,6 +71,9 @@ int _run_container(void *arg) {
     int i, rc;
     char val[1];
     struct container *cont = arg;
+
+    check_error(prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0),
+        "Can't set %s: (%d) %s", "DEATHSIG");
 
     do {
         rc = read(cont->pipe_reader, val, 1);
