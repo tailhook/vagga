@@ -10,6 +10,7 @@ use super::super::run::internal_run;
 use super::super::linux::wait_process;
 use super::super::config::{Shell, Command};
 use super::super::build::ensure_container;
+use super::super::monitor::Monitor;
 
 
 pub fn run_shell_command(env: &mut Environ, cmdname: &String,
@@ -49,8 +50,12 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
     };
     let mut container = try!(env.get_container(&cname));
     try!(ensure_container(env, &mut container));
+
+    let mut monitor = Monitor::new();
     let pid = try!(exec_shell_command_args(env, command, &container, cmdargs));
-    return wait_process(pid);
+    monitor.add("child".to_string(), pid);
+    monitor.wait_all();
+    return Ok(monitor.get_status());
 }
 
 pub fn exec_shell_command(env: &Environ, command: &Command,
@@ -75,5 +80,6 @@ pub fn exec_shell_command_args(env: &Environ, command: &Command,
         _ => unreachable!(),
     }
     let cmd = argprefix.shift().unwrap();
-    return internal_run(env, container, cmd, (argprefix + cmdargs), runenv);
+    return internal_run(env, container,
+        command.pid1mode, cmd, (argprefix + cmdargs), runenv);
 }

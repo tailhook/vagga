@@ -10,6 +10,12 @@
 #include <unistd.h>
 #include <errno.h>
 
+enum pid1mode_t {
+    pid1_exec = 0,
+    pid1_wait = 1,
+    pid1_waitany = 2,
+};
+
 /* Keep in sync with linux.rs */
 struct mount {
     char *source;
@@ -21,6 +27,7 @@ struct mount {
 
 /* Keep in sync with linux.rs */
 struct container {
+    enum pid1mode_t pid1_mode;
     int pipe_reader;
     int pipe_writer;
     const char *container_root;
@@ -67,6 +74,94 @@ void mount_all(int num, struct mount *mounts) {
     }
 }
 
+void execute(struct container *cont) {
+    int i;
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    sigprocmask(SIG_SETMASK, &sigset, NULL);
+
+    struct sigaction sig_action;
+    sig_action.sa_handler = SIG_DFL;
+    sig_action.sa_flags = 0;
+    sigemptyset(&sig_action.sa_mask);
+
+    for(i = 0 ; i < NSIG ; i++)
+        sigaction(i, &sig_action, NULL);
+
+    for(i = 0; i < cont->exec_filenames_num; ++i) {
+        execve(cont->exec_filenames[i], cont->exec_args, cont->exec_environ);
+    }
+    check_error(-1, "Couldn't exec file %s: (%d) %s\n", cont->exec_filename);
+    exit(127);
+}
+
+void exec_and_wait(struct container *cont) {
+    int child_pid, child_status;
+    sigset_t sset;
+    int sig;
+    int exit_code = 0;
+
+    pid_t pid = fork();
+    check_error(pid, "Couldn't %s: (%d) %s\n", "fork");
+    if(pid == 0) {
+        execute(cont);
+        exit(121);
+    }
+
+    sigfillset(&sset);
+    do {
+        sigwait(&sset, &sig);
+        switch(sig) {
+        case SIGCHLD:
+            while((child_pid = waitpid(-1, &child_status, WNOHANG)) > 0) {
+                if(child_pid == pid) {
+                    exit_code = child_status;
+                }
+            }
+            break;
+        default:
+            kill(pid, sig);
+            break;
+        }
+    } while(kill(pid, 0) == 0);
+    exit(exit_code);
+}
+
+void exec_and_wait_any(struct container *cont) {
+    int child_pid, child_status;
+    sigset_t sset;
+    int sig;
+    int exit_code = 0;
+
+    pid_t pid = fork();
+    check_error(pid, "Couldn't %s: (%d) %s\n", "fork");
+    if(pid == 0) {
+        execute(cont);
+        exit(121);
+    }
+
+    sigfillset(&sset);
+    while(1) {
+        sigwait(&sset, &sig);
+        switch(sig) {
+        case SIGCHLD:
+            while((child_pid = waitpid(-1, &child_status, WNOHANG)) > 0) {
+                if(child_pid == pid) {
+                    exit_code = child_status;
+                }
+            }
+            if(child_pid < 0 && errno == ECHILD) {
+                exit(exit_code);
+            }
+            break;
+        default:
+            kill(-1, sig);
+            break;
+        }
+    };
+    exit(exit_code);
+}
+
 int _run_container(void *arg) {
     int i, rc;
     char val[1];
@@ -92,24 +187,23 @@ int _run_container(void *arg) {
     check_error(chdir(cont->work_dir),
         "Can't set working directory to %s: (%d) %s\n", cont->work_dir);
 
-    sigset_t sigset;
-    sigemptyset(&sigset);
-    sigprocmask(SIG_SETMASK, &sigset, NULL);
-
-    struct sigaction sig_action;
-    sig_action.sa_handler = SIG_DFL;
-    sig_action.sa_flags = 0;
-    sigemptyset(&sig_action.sa_mask);
-
-    for (i = 0 ; i < NSIG ; i++)
-        sigaction(i, &sig_action, NULL);
-
-    for(i = 0; i < cont->exec_filenames_num; ++i) {
-        execve(cont->exec_filenames[i], cont->exec_args, cont->exec_environ);
+    switch(cont->pid1_mode) {
+    case pid1_exec:
+        execute(cont);
+        break;
+    case pid1_wait:
+        exec_and_wait(cont);
+        break;
+    case pid1_waitany:
+        exec_and_wait_any(cont);
+        break;
+    default:
+        fprintf(stderr, "Internal Error: Wrong pid1mode %s\n", cont->pid1_mode);
+        exit(121);
     }
-    check_error(-1, "Couldn't exec file %s: (%d) %s\n", cont->exec_filename);
-    exit(255);
 }
+
+
 
 
 pid_t fork_to_container(int flags, struct container *container) {

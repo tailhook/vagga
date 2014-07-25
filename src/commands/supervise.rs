@@ -4,7 +4,7 @@ use std::io::fs::readlink;
 use libc::pid_t;
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 use collections::treemap::TreeMap;
-use argparse::{ArgumentParser, List};
+use argparse::ArgumentParser;
 
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
@@ -21,12 +21,8 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     args: Vec<String>)
     -> Result<int, String>
 {
-    let mut processes: Vec<String> = Vec::new();
     {
         let mut ap = ArgumentParser::new();
-        ap.refer(&mut processes)
-            .add_argument("subrocess", box List::<String>,
-                "A subset of processes to run. All will be run by default");
         env_options(env, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

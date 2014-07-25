@@ -99,6 +99,12 @@ enum Mount {
     Pseudo(CString, CString, CString),
 }
 
+pub enum Pid1Mode {
+    Exec = 0,
+    Wait = 1,
+    WaitAny = 2,
+}
+
 /* Keep in sync with container.c */
 struct CMount {
     source: *u8,
@@ -110,6 +116,7 @@ struct CMount {
 
 /* Keep in sync with container.c */
 struct CContainer {
+    pid1_mode: c_int,
     pipe_reader: c_int,
     pipe_writer: c_int,
     container_root: *u8,
@@ -209,7 +216,8 @@ fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
 }
 
 pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
-    cmd: &String, args: &[String], environ: &TreeMap<String, String>)
+    pid1mode: Pid1Mode, cmd: &String, args: &[String],
+    environ: &TreeMap<String, String>)
     -> Result<pid_t, String>
 {
     let root = container.container_root.as_ref().unwrap();
@@ -261,8 +269,9 @@ pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
     let &CPipe(pipe) = pipe;
     unsafe {
         Ok(fork_to_container(
-            CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER,
+            CLONE_NEWPID|CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER,
             &CContainer {
+                pid1_mode: pid1mode as i32,
                 pipe_reader: pipe.reader,
                 pipe_writer: pipe.writer,
                 container_root: c_container_root.as_bytes().as_ptr(),

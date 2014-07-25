@@ -6,6 +6,7 @@ use serialize::json::ToJson;
 use quire::parse;
 use J = serialize::json;
 
+use Pid1 = super::linux;
 use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
 
 
@@ -24,6 +25,7 @@ pub enum Executor {
 
 
 pub struct Command {
+    pub pid1mode: Pid1::Pid1Mode,
     pub execute: Executor,
     pub container: Option<String>,
     pub accepts_arguments: bool,
@@ -134,6 +136,14 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         //  $1, $2.. used in the expression
         .unwrap_or(accepts_arguments);
     return Ok(Command {
+        pid1mode: match get_string(jcmd, "pid1mode") {
+            Some(ref s) if s.as_slice() == "wait" => Pid1::Wait,
+            Some(ref s) if s.as_slice() == "wait-any" => Pid1::WaitAny,
+            Some(ref s) if s.as_slice() == "exec" => Pid1::Exec,
+            None => Pid1::Wait,
+            _ => return Err(format!("The pid1mode must be one of `wait`, \
+                `wait-any` or `exec` for command {}", name)),
+            },
         execute: executor,
         container: get_string(jcmd, "container"),
         accepts_arguments: accepts_arguments,
