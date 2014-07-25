@@ -1,5 +1,5 @@
 use super::linux::{dead_processes, MaskSignals, SIGCHLD};
-use libc::consts::os::posix88::{SIGTERM, SIGINT};
+use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 use libc::funcs::posix88::signal::kill;
 
 use libc::{c_int, pid_t};
@@ -27,16 +27,14 @@ impl Monitor {
     pub fn wait_all(&mut self) {
         while self.processes.len() > 0 {
             match self.next_event() {
-                Exit(_, _, _) => {
-                    self.fail();
+                Exit(cname, pid, status) => {
+                    error!("Process {}:{} dead with status {}",
+                        cname, pid, status);
                 }
-                Signal(SIGTERM) => {
-                    debug!("Got SIGTERM. Propagating.");
-                    self.send_all(SIGTERM);
-                }
-                Signal(SIGINT) => {
-                    debug!("Got SIGINT. Propagating.");
-                    self.send_all(SIGINT);
+                Signal(sig)
+                if sig == SIGTERM || sig == SIGINT || sig == SIGQUIT => {
+                    debug!("Got {}. Propagating.", sig);
+                    self.send_all(sig);
                 }
                 Signal(sig) => {
                     debug!("Got {}. Ignoring.", sig);
@@ -45,8 +43,9 @@ impl Monitor {
         }
     }
     pub fn send_all(&self, sig: i32) {
-        for (pid, _) in self.processes.iter() {
+        for (pid, name) in self.processes.iter() {
             unsafe {
+                debug!("Sending {} to {}:{}", sig, name, pid);
                 kill(*pid, sig);
             }
         }
@@ -61,7 +60,7 @@ impl Monitor {
         return 0;
     }
     pub fn ok(&self) -> bool {
-        return self.failed || self.processes.len() == 0;
+        return !self.failed && self.processes.len() > 0;
     }
     pub fn next_event(&mut self) -> Event {
         loop {

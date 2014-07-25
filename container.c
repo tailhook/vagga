@@ -66,13 +66,10 @@ void mount_all(int num, struct mount *mounts) {
     }
 }
 
-
 int _run_container(void *arg) {
     int i, rc;
     char val[1];
     struct container *cont = arg;
-
-    setsid();
 
     do {
         rc = read(cont->pipe_reader, val, 1);
@@ -94,6 +91,15 @@ int _run_container(void *arg) {
     sigset_t sigset;
     sigemptyset(&sigset);
     sigprocmask(SIG_SETMASK, &sigset, NULL);
+
+    struct sigaction sig_action;
+    sig_action.sa_handler = SIG_DFL;
+    sig_action.sa_flags = 0;
+    sigemptyset(&sig_action.sa_mask);
+
+    for (i = 0 ; i < NSIG ; i++)
+        sigaction(i, &sig_action, NULL);
+
     for(i = 0; i < cont->exec_filenames_num; ++i) {
         execve(cont->exec_filenames[i], cont->exec_args, cont->exec_environ);
     }

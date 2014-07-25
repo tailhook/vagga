@@ -2,7 +2,7 @@ use std::io::stdio::{stdout, stderr};
 use std::io::fs::readlink;
 
 use libc::pid_t;
-use libc::consts::os::posix88::{SIGTERM, SIGINT};
+use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, List};
 
@@ -91,21 +91,21 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         }
     }
 
+    debug!("Monitoring in {} mode", *mode);
     match *mode {
         StopOnFailure => {
             while monitor.ok() {
                 match monitor.next_event() {
-                    Exit(_, _, _) => {
-                        monitor.fail();
-                    }
-                    Signal(SIGTERM) => {
-                        warn!("Got SIGTERM. Shutting down...");
+                    Exit(cname, pid, status) => {
+                        error!("Process {}:{} dead with status {}. Failing.",
+                            cname, pid, status);
                         monitor.send_all(SIGTERM);
                         monitor.fail();
                     }
-                    Signal(SIGINT) => {
-                        warn!("Got SIGINT. Shutting down...");
-                        monitor.send_all(SIGINT);
+                    Signal(sig)
+                    if sig == SIGTERM || sig == SIGINT || sig == SIGQUIT => {
+                        debug!("Got {}. Propagating.", sig);
+                        monitor.send_all(sig);
                         monitor.fail();
                     }
                     Signal(sig) => {
@@ -122,14 +122,10 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
                             cname, pid, status);
                         start(&cname, &mut monitor);
                     }
-                    Signal(SIGTERM) => {
-                        warn!("Got SIGTERM. Shutting down...");
-                        monitor.send_all(SIGTERM);
-                        monitor.fail();
-                    }
-                    Signal(SIGINT) => {
-                        warn!("Got SIGINT. Shutting down...");
-                        monitor.send_all(SIGINT);
+                    Signal(sig)
+                    if sig == SIGTERM || sig == SIGINT || sig == SIGQUIT => {
+                        debug!("Got {}. Propagating.", sig);
+                        monitor.send_all(sig);
                         monitor.fail();
                     }
                     Signal(sig) => {
@@ -142,6 +138,7 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     }
 
     // Wait all mode always at the end
+    debug!("Falled back to WaitAll mode");
     monitor.wait_all();
 
     return Ok(monitor.get_status());

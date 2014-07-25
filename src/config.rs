@@ -9,6 +9,7 @@ use J = serialize::json;
 use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
 
 
+#[deriving(Show)]
 pub enum SuperviseMode {
     WaitAll,
     StopOnFailure,

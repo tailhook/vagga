@@ -216,8 +216,9 @@ pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
         // TODO(tailhook) use dev in /var/lib/container-dev
         BindRO("/dev".to_c_str(), mount_dir.join("dev").to_c_str()),
         Bind(env.project_root.to_c_str(), mount_dir.join("work").to_c_str()),
-        Pseudo("proc".to_c_str(), mount_dir.join("proc").to_c_str(),
-            "".to_c_str()),
+        BindRO("/proc".to_c_str(), mount_dir.join("proc").to_c_str()),
+        //Pseudo("proc".to_c_str(), mount_dir.join("proc").to_c_str(),
+        //    "".to_c_str()),
         Pseudo("tmpfs".to_c_str(), mount_dir.join("tmp").to_c_str(),
             "size=102400k,mode=1777".to_c_str()),
         BindRO(env.vagga_path.join("markerdir").to_c_str(),
@@ -252,7 +253,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
     let &CPipe(pipe) = pipe;
     unsafe {
         Ok(fork_to_container(
-            CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER|CLONE_NEWPID,
+            CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER,
             &CContainer {
                 pipe_reader: pipe.reader,
                 pipe_writer: pipe.writer,
