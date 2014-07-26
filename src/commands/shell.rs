@@ -7,7 +7,6 @@ use argparse::ArgumentParser;
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
 use super::super::run::internal_run;
-use super::super::linux::wait_process;
 use super::super::config::{Shell, Command};
 use super::super::build::ensure_container;
 use super::super::monitor::Monitor;

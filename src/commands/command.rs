@@ -9,7 +9,6 @@ use super::super::options::env_options;
 use super::super::run::internal_run;
 use super::super::config::{Plain, Command};
 use super::super::build::ensure_container;
-use super::super::linux::wait_process;
 use super::super::monitor::Monitor;
 
 

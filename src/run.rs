@@ -12,7 +12,7 @@ use Pid1 = super::linux;
 
 use super::monitor::Monitor;
 use super::env::{Environ, Container};
-use super::linux::{wait_process, ensure_dir, run_container, CPipe};
+use super::linux::{ensure_dir, run_container, CPipe};
 use super::options::env_options;
 use super::build::ensure_container;
 use libc::funcs::posix88::unistd::getuid;
