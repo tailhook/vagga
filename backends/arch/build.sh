@@ -5,7 +5,7 @@
 : ${container_dir:=$project_root/.vagga/$container_name}
 : ${container_root:=$project_root/.vagga/$container_name/root}
 : ${cache_dir:=$project_root/.vagga/.cache/arch}
-: ${pacman_conf:=$project_root/vagga/pacman.conf}
+: ${arch_pacman_conf:=$(dirname $0)/pacman.conf}
 : ${arch_packages:=base}
 
 type mkdir                             # coreutils
@@ -22,5 +22,5 @@ mkdir -p $cache_dir
 lxc-usernsexec -- \
     pacman --root "$container_root" -Sy --noconfirm \
     --cachedir="$cache_dir" \
-    --config="$pacman_conf" \
+    --config="$arch_pacman_conf" \
     $arch_packages
