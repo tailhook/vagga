@@ -7,6 +7,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   compare_to_docker
+   compare_to_vagrant
+
 
 Indices and tables
 ==================
