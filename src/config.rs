@@ -27,6 +27,7 @@ pub enum Executor {
 pub struct Command {
     pub pid1mode: Pid1::Pid1Mode,
     pub execute: Executor,
+    pub work_dir: Option<String>,
     pub container: Option<String>,
     pub accepts_arguments: bool,
     pub environ: TreeMap<String, String>,
@@ -55,8 +56,8 @@ pub struct Config {
 }
 
 
-fn find_config_path(workdir: &Path) -> Option<(Path, Path)> {
-    let mut dir = workdir.clone();
+fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
+    let mut dir = work_dir.clone();
     loop {
         let fname = dir.join_many([".vagga", "vagga.yaml"]);
         if fname.exists() {
@@ -146,17 +147,18 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
             },
         execute: executor,
         container: get_string(jcmd, "container"),
+        work_dir: get_string(jcmd, "work-dir"),
         accepts_arguments: accepts_arguments,
         environ: get_dict(jcmd, "environ"),
         description: get_string(jcmd, "description"),
     });
 }
 
-pub fn find_config(workdir: &Path) -> Result<(Config, Path), String>{
-    let (cfg_dir, filename) = match find_config_path(workdir) {
+pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
+    let (cfg_dir, filename) = match find_config_path(work_dir) {
         Some(pair) => pair,
         None => return Err(format!(
-            "Config not found in path {}", workdir.display())),
+            "Config not found in path {}", work_dir.display())),
     };
     let fname = filename.display();
     let data = match File::open(&filename).read_to_str() {

@@ -2,7 +2,7 @@ use std::io::stdio::{stdout, stderr};
 
 use libc::pid_t;
 use collections::treemap::TreeMap;
-use argparse::ArgumentParser;
+use argparse::{ArgumentParser, StoreFalse};
 
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
@@ -18,10 +18,12 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
 {
     let has_arguments;
     let description;
+    let mut command_workdir;
     {
         let command = env.config.commands.find(cmdname).unwrap();
         has_arguments = command.accepts_arguments;
         description = command.description.clone().unwrap_or("".to_string());
+        command_workdir = command.work_dir.is_some();
     }
     let mut cmdargs;
     if has_arguments {
@@ -34,6 +36,12 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
         let mut ap = ArgumentParser::new();
         if description.len() > 0 {
             ap.set_description(description.as_slice());
+        }
+        if command_workdir {
+            ap.refer(&mut command_workdir)
+                .add_option(["--override-work-dir"], box StoreFalse,
+                    "Do not obey `work-dir` parameter in command definition.
+                     Use current working directory instead.");
         }
         env_options(env, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -50,22 +58,36 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
     let mut container = try!(env.get_container(&cname));
     try!(ensure_container(env, &mut container));
 
+    let work_dir = if command_workdir {
+        let ncwd = env.project_root.join(
+            command.work_dir.as_ref().unwrap().as_slice());
+        if !env.project_root.is_ancestor_of(&ncwd) {
+            return Err(format!("Command's work-dir must be relative to \
+                project root"));
+        }
+        ncwd
+    } else {
+        env.work_dir.clone()
+    };
+
     let mut monitor = Monitor::new();
-    let pid = try!(exec_shell_command_args(env, command, &container, cmdargs));
+    let pid = try!(exec_shell_command_args(env, &work_dir,
+        command, &container, cmdargs));
     monitor.add("child".to_string(), pid);
     monitor.wait_all();
     return Ok(monitor.get_status());
 }
 
-pub fn exec_shell_command(env: &Environ, command: &Command,
-    container: &Container)
+pub fn exec_shell_command(env: &Environ, work_dir: &Path,
+    command: &Command, container: &Container)
     -> Result<pid_t, String>
 {
-    return exec_shell_command_args(env, command, container, Vec::new());
+    return exec_shell_command_args(env, work_dir,
+        command, container, Vec::new());
 }
 
-pub fn exec_shell_command_args(env: &Environ, command: &Command,
-    container: &Container, cmdargs: Vec<String>)
+pub fn exec_shell_command_args(env: &Environ, work_dir: &Path,
+    command: &Command, container: &Container, cmdargs: Vec<String>)
     -> Result<pid_t, String>
 {
     let mut runenv = TreeMap::new();
@@ -80,5 +102,5 @@ pub fn exec_shell_command_args(env: &Environ, command: &Command,
     }
     let cmd = argprefix.shift().unwrap();
     return internal_run(env, container,
-        command.pid1mode, cmd, (argprefix + cmdargs), runenv);
+        command.pid1mode, work_dir, cmd, (argprefix + cmdargs), runenv);
 }

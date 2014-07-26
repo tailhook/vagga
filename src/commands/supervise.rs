@@ -31,12 +31,22 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         }
     }
     let command = env.config.commands.find(cmdname).unwrap();
+    let mut work_dir = env.work_dir.clone();
+    if command.work_dir.is_some() {
+        let ncwd = env.project_root.join(
+            command.work_dir.as_ref().unwrap().as_slice());
+        if !env.project_root.is_ancestor_of(&ncwd) {
+            return Err(format!("Command's work-dir must be relative to \
+                project root"));
+        }
+        work_dir = ncwd;
+    }
     let (mode, processes) = match command.execute {
         Supervise(ref mode, ref processes) => (mode, processes),
         _ => unreachable!(),
     };
     let mut containers = TreeMap::new();
-    for (_, command) in processes.iter() {
+    for (cmdname, command) in processes.iter() {
         let cname = command.container.as_ref().unwrap();
         let mut container = try!(env.get_container(cname));
         if env.settings.version_check {
@@ -49,6 +59,14 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
                 Err(e) => return Err(format!("Container {} not found: {}",
                                              container.fullname, e)),
             };
+        }
+        if command.work_dir.is_some() {
+            let ncwd = env.project_root.join(
+                command.work_dir.as_ref().unwrap().as_slice());
+            if !env.project_root.is_ancestor_of(&ncwd) {
+                return Err(format!("The `work-dir` of {} of must be relative \
+                    to project root", cmdname));
+            }
         }
         containers.insert(cname.clone(), container);
     }
@@ -65,7 +83,13 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         let container = containers.find(
             command.container.as_ref().unwrap()).unwrap();
 
-        match fun(env, command, container) {
+        let cmdworkdir = if command.work_dir.is_some() {
+            env.project_root.join(
+                command.work_dir.as_ref().unwrap().as_slice())
+        } else {
+            work_dir.clone()
+        };
+        match fun(env, &cmdworkdir, command, container) {
             Ok(pid) => {
                 info!("Command {} started with pid {}",
                     cname, pid);
@@ -140,8 +164,8 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     return Ok(monitor.get_status());
 }
 
-pub fn exec_supervise_command(_env: &Environ, _command: &Command,
-    _container: &Container)
+pub fn exec_supervise_command(_env: &Environ, _workdir: &Path,
+    _command: &Command, _container: &Container)
     -> Result<pid_t, String> {
     fail!("Nested supervise commands do not work yet");
 }

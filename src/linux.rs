@@ -216,8 +216,8 @@ fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
 }
 
 pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
-    pid1mode: Pid1Mode, cmd: &String, args: &[String],
-    environ: &TreeMap<String, String>)
+    pid1mode: Pid1Mode, work_dir: &Path,
+    cmd: &String, args: &[String], environ: &TreeMap<String, String>)
     -> Result<pid_t, String>
 {
     let root = container.container_root.as_ref().unwrap();
@@ -241,7 +241,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
                mount_dir.join("work").join(".vagga").to_c_str()),
         ];
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
-    let c_work_dir = match env.work_dir.path_relative_from(&env.project_root) {
+    let c_work_dir = match work_dir.path_relative_from(&env.project_root) {
         Some(path) => Path::new("/work").join(path).to_c_str(),
         None => "/work".to_c_str(),
     };

@@ -145,14 +145,14 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
 
     let mut monitor = Monitor::new();
     let pid = try!(internal_run(env, &container,
-        pid1mode, cmd, cmdargs, TreeMap::new()));
+        pid1mode, &env.work_dir, cmd, cmdargs, TreeMap::new()));
     monitor.add("child".to_string(), pid);
     monitor.wait_all();
     return Ok(monitor.get_status());
 }
 
 pub fn internal_run(env: &Environ, container: &Container,
-    pid1mode: Pid1::Pid1Mode,
+    pid1mode: Pid1::Pid1Mode, work_dir: &Path,
     command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<pid_t, String>
 {
@@ -183,7 +183,7 @@ pub fn internal_run(env: &Environ, container: &Container,
     }
 
     let pid = try!(run_container(&pipe, env, container,
-        pid1mode, &command, cmdargs.as_slice(), &runenv));
+        pid1mode, work_dir, &command, cmdargs.as_slice(), &runenv));
 
     // TODO(tailhook) set uid map from config
     let uid_map = format!("0 {} 1", uid);
