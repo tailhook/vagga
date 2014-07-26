@@ -9,6 +9,7 @@ Contents:
 
    compare_to_docker
    compare_to_vagrant
+   builders
 
 
 Indices and tables
