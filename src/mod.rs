@@ -1,4 +1,5 @@
 #![feature(phase)]
+#![feature(macro_rules)]  // for sha256 from librustc
 
 extern crate serialize;
 extern crate collections;
@@ -7,7 +8,6 @@ extern crate libc;
 extern crate green;
 extern crate rustuv;
 extern crate regex;
-extern crate rustc;  // For sha256, todo (tailhook) remove me
 #[phase(plugin, link)] extern crate log;
 #[phase(plugin)] extern crate regex_macros;
 
@@ -31,6 +31,7 @@ mod options;
 mod settings;
 mod yamlutil;
 mod monitor;
+mod sha256;
 
 mod commands {
     pub mod shell;

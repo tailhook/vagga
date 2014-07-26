@@ -7,8 +7,8 @@ use std::io::fs::{mkdir, rmdir_recursive, rename, symlink, unlink, readlink};
 use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
 use std::io::stdio::{stdout, stderr};
 
-use rustc::util::sha2::Sha256;
-use rustc::util::sha2::Digest;
+use super::sha256::Sha256;
+use super::sha256::Digest;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
