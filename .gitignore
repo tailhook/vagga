@@ -1,5 +1,7 @@
 /tmp/
+/docs/_build
 /vagga
+.vagga
 todo.txt
 libcontainer.a
 container.o

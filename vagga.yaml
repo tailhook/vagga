@@ -1,0 +1,14 @@
+containers:
+  sphinx:
+    builder: nix
+    parameters:
+      config: default.nix
+      attribute: sphinx
+
+
+commands:
+  build-docs:
+    description: Build vagga documentation using sphinx
+    container: sphinx
+    work-dir: docs
+    command: make
