@@ -11,10 +11,10 @@ vagga: $(ARGPARSELIB) $(QUIRELIB) src/*.rs libcontainer.a
 libcontainer.a: container.c
 	$(CC) -c $< -o $@
 
-quire: $(QUIRELIB)
+$(QUIRELIB):
 	make -C rust-quire quire-lib
 
-argparse: $(ARGPARSELIB)
+$(ARGPARSELIB):
 	make -C rust-argparse argparse-lib
 
 .PHONE: all quire argparse
