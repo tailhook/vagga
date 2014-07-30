@@ -1,9 +1,11 @@
 #!/bin/sh -ex
 
 : ${project_root:=.}
+: ${container_hash:=tmpbuildhash}
 : ${container_name:=work}
-: ${container_dir:=$project_root/.vagga/$container_name}
-: ${container_root:=$project_root/.vagga/$container_name/root}
+: ${container_fullname:=$container_name}
+: ${artifacts_dir:=$project_root/.vagga/.artifacts/$container_fullname.$container_hash}
+: ${container_root:=$project_root/.vagga/.roots/$container_fullname.$container_hash}
 : ${cache_dir:=$project_root/.vagga/.cache/arch}
 : ${arch_pacman_conf:=$(dirname $0)/pacman.conf}
 : ${arch_packages:=base}

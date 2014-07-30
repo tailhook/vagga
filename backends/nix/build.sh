@@ -3,8 +3,9 @@
 : ${container_hash:=tmpbuildhash}
 : ${container_name:=work}
 : ${container_fullname:=$container_name}
-: ${artifacts_dir:=.vagga/.artifacts/$container_fullname.$container_hash}
-: ${container_root:=.vagga/.roots/$container_fullname.$container_hash}
+: ${artifacts_dir:=$project_root/.vagga/.artifacts/$container_fullname.$container_hash}
+: ${container_root:=$project_root/.vagga/.roots/$container_fullname.$container_hash}
+: ${cache_dir:=$project_root/.vagga/.cache/nix}
 : ${nix_config:=default.nix}
 : ${nix_attribute:=""}
 : ${NIX_PATH:=${nix_path:-${CALLER_NIX_PATH}}}
