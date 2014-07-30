@@ -31,6 +31,7 @@ pub struct Command {
     pub container: Option<String>,
     pub accepts_arguments: bool,
     pub environ: TreeMap<String, String>,
+    pub inherit_environ: Vec<String>,
     pub description: Option<String>,
 }
 
@@ -150,6 +151,7 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         work_dir: get_string(jcmd, "work-dir"),
         accepts_arguments: accepts_arguments,
         environ: get_dict(jcmd, "environ"),
+        inherit_environ: get_list(jcmd, "inherit-environ"),
         description: get_string(jcmd, "description"),
     });
 }

@@ -113,6 +113,12 @@ Command parameters:
     The mapping of environment to pass to command. This overrides environment
     specified in container on value by value basis.
 
+``inherit-environ``
+    The list of variables that will be inherited from user environment, when
+    running a command. These variables override both ``environ`` in command
+    and container's environment only if is set in user environment (including
+    set to empty string). Inheriting variables is in generally discouraged
+    because this makes reproducing environment harder.
 
 ``description``
     Description that is printed in when vagga is runned without arguments

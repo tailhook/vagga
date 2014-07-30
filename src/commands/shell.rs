@@ -1,4 +1,5 @@
 use std::io::stdio::{stdout, stderr};
+use std::os::getenv;
 
 use libc::pid_t;
 use collections::treemap::TreeMap;
@@ -93,6 +94,12 @@ pub fn exec_shell_command_args(env: &Environ, work_dir: &Path,
     let mut runenv = TreeMap::new();
     for (k, v) in command.environ.iter() {
         runenv.insert(k.clone(), v.clone());
+    }
+    for k in command.inherit_environ.iter() {
+        match getenv(k.as_slice()) {
+            Some(ref val) => { runenv.insert(k.clone(), val.clone()); }
+            None => {}
+        }
     }
     let mut argprefix: Vec<String> = Vec::new();
     argprefix.extend(container.shell.clone().move_iter());

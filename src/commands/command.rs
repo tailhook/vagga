@@ -94,6 +94,12 @@ pub fn exec_plain_command_args(env: &Environ, work_dir: &Path,
     for (k, v) in command.environ.iter() {
         runenv.insert(k.clone(), v.clone());
     }
+    for k in command.inherit_environ.iter() {
+        match getenv(k.as_slice()) {
+            Some(ref val) => { runenv.insert(k.clone(), val.clone()); }
+            None => {}
+        }
+    }
     let mut argprefix: Vec<String> = Vec::new();
     match container.command_wrapper {
         Some(ref wrapper) => {
