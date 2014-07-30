@@ -17,4 +17,4 @@ $(QUIRELIB):
 $(ARGPARSELIB):
 	make -C rust-argparse argparse-lib
 
-.PHONE: all quire argparse
+.PHONY: all
