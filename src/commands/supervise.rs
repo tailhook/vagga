@@ -4,7 +4,7 @@ use std::io::fs::readlink;
 use libc::pid_t;
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 use collections::treemap::TreeMap;
-use argparse::ArgumentParser;
+use argparse::{ArgumentParser, List};
 
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
@@ -21,8 +21,18 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     args: Vec<String>)
     -> Result<int, String>
 {
+    let mut only = Vec::new();
+    let mut exclude = Vec::new();
     {
         let mut ap = ArgumentParser::new();
+        ap.refer(&mut only)
+            .add_option(["--only"], box List::<String>,
+                "Run only specified processes process")
+            .metavar("PROCESS");
+        ap.refer(&mut exclude)
+            .add_option(["--exclude"], box List::<String>,
+                "Run all processes except specified here")
+            .metavar("PROCESS");
         env_options(env, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -106,6 +116,9 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     };
 
     for (cname, _) in processes.iter() {
+        if only.len() > 0 && !only.contains(cname) || exclude.contains(cname) {
+            continue;
+        }
         if !start(cname, &mut monitor) {
             break;
         }
