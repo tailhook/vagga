@@ -8,7 +8,7 @@ use std::io::fs::mkdir;
 use std::os::{Pipe, pipe};
 use libc::{c_int, c_char, c_ulong, pid_t, _exit, c_void};
 use libc::funcs::posix88::unistd::{close, write};
-use libc::consts::os::posix88::{EINTR, EAGAIN};
+use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
 
 use collections::treemap::TreeMap;
 
@@ -65,13 +65,6 @@ pub static SIGCHLD   : c_int =  17    ; /* Child status has changed (POSIX).  */
 
 
 extern  {
-    // sched.h
-    fn unshare(flags: c_int) -> c_int;
-
-    // unistd.h
-    fn chroot(dir: *c_char) -> c_int;
-    fn execve(filename: *c_char, argv: **c_char, envp: **c_char) -> c_int;
-
     // sys/types.h
     // sys/wait.h
     fn waitpid(pid: pid_t, status: *c_int, options: c_int) -> pid_t;
@@ -267,8 +260,8 @@ pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
     c_environ.push(null());
 
     let &CPipe(pipe) = pipe;
-    unsafe {
-        Ok(fork_to_container(
+    let pid = unsafe {
+        fork_to_container(
             CLONE_NEWPID|CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER,
             &CContainer {
                 pid1_mode: pid1mode as i32,
@@ -284,8 +277,19 @@ pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
                 exec_filenames: c_filenames.as_slice().as_ptr(),
                 exec_args: c_args.as_slice().as_ptr(),
                 exec_environ: c_environ.as_slice().as_ptr(),
-            }))
+            })
+    };
+    if pid < 0 {
+        let eno = errno() as i32;
+        let err = error_string(eno as uint);
+        if eno == EINVAL {
+            return Err(format!("Error cloning: {}. It might mean that your
+                kernel doesn't support user namespaces. Sorry.", err));
+        } else {
+            return Err(format!("Error cloning: {}", err));
+        }
     }
+    return Ok(pid);
 }
 
 
