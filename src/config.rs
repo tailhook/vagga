@@ -111,6 +111,11 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         _ => return Err(format!(
             "Command {} must be mapping", name)),
     };
+    let container = get_string(jcmd, "container");
+    if container.is_none() {
+        return Err(format!("The `container` is required for command {}",
+                           name));
+    }
 
     let run = get_string(jcmd, "run");
     let command = get_command(jcmd, "command");
@@ -147,7 +152,7 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
                 `wait-any` or `exec` for command {}", name)),
             },
         execute: executor,
-        container: get_string(jcmd, "container"),
+        container: container,
         work_dir: get_string(jcmd, "work-dir"),
         accepts_arguments: accepts_arguments,
         environ: get_dict(jcmd, "environ"),
