@@ -1,4 +1,5 @@
 use std::io::stdio::{stdout, stderr};
+use std::os::getenv;
 
 use libc::pid_t;
 use collections::treemap::TreeMap;
