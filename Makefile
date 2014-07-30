@@ -5,7 +5,7 @@ QUIRELIB = rust-quire/$(shell rustc --crate-file-name rust-quire/quire/mod.rs)
 
 all: vagga
 
-vagga: $(ARGPARSELIB) $(QUIRELIB) src/*.rs libcontainer.a
+vagga: $(ARGPARSELIB) $(QUIRELIB) src/*.rs src/*/*.rs libcontainer.a
 	$(RUSTC) src/mod.rs -L rust-quire -L rust-argparse -g -o $@
 
 libcontainer.a: container.c
