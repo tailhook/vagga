@@ -12,7 +12,7 @@ use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
 
 use collections::treemap::TreeMap;
 
-use super::env::{Environ, Container};
+use super::env::Environ;
 
 // sys/types.h
 // sys/wait.h
@@ -208,12 +208,11 @@ fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
     return vec.iter().map(|a| a.as_bytes().as_ptr()).collect();
 }
 
-pub fn run_container(pipe: &CPipe, env: &Environ, container: &Container,
+pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
     pid1mode: Pid1Mode, work_dir: &Path,
     cmd: &String, args: &[String], environ: &TreeMap<String, String>)
     -> Result<pid_t, String>
 {
-    let root = container.container_root.as_ref().unwrap();
     let c_container_root = root.to_c_str();
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));

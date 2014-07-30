@@ -6,6 +6,7 @@ use super::config::find_config;
 use super::config::{Shell, Plain, Supervise};
 use super::build::build_command;
 use super::run::run_command_line;
+use super::chroot::run_chroot;
 use super::commands::shell::run_shell_command;
 use super::commands::command::run_plain_command;
 use super::commands::supervise::run_supervise_command;
@@ -80,6 +81,7 @@ pub fn run() -> int {
     let result = match cname.as_slice() {
         "_build" => build_command(&mut env, args),
         "_run" => run_command_line(&mut env, args),
+        "_chroot" => run_chroot(&mut env, args),
         "_setv" | "_setvariant" => set_variant(&mut env, args),
         _ => {
             let fun = match env.config.commands.find(&cname) {

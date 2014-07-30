@@ -8,7 +8,6 @@ use std::io::stdio::{stdout, stderr};
 use libc::pid_t;
 use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue, StoreConst};
-use Pid1 = super::linux;
 
 use super::monitor::Monitor;
 use super::env::{Environ, Container};
@@ -16,6 +15,8 @@ use super::linux::{ensure_dir, run_container, CPipe};
 use super::options::env_options;
 use super::build::ensure_container;
 use libc::funcs::posix88::unistd::getuid;
+
+use Pid1 = super::linux;
 
 
 static DEFAULT_PATH: &'static str =
@@ -166,7 +167,6 @@ pub fn internal_run(env: &Environ, container: &Container,
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
 
-    let pipe = try!(CPipe::new());
 
     let home = "HOME".to_string();
     if runenv.find(&home).is_none() {
@@ -182,7 +182,9 @@ pub fn internal_run(env: &Environ, container: &Container,
         runenv.insert(path, DEFAULT_PATH.to_string());
     }
 
-    let pid = try!(run_container(&pipe, env, container,
+    let pipe = try!(CPipe::new());
+    let pid = try!(run_container(&pipe, env,
+        container.container_root.as_ref().unwrap(),
         pid1mode, work_dir, &command, cmdargs.as_slice(), &runenv));
 
     // TODO(tailhook) set uid map from config

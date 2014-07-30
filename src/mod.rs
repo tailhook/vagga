@@ -24,6 +24,7 @@ use self::linux::init_prctl;
 mod config;
 mod build;
 mod run;
+mod chroot;
 mod env;
 mod main;
 mod linux;
