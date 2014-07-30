@@ -193,14 +193,16 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     info!("Building {} by {}", container_root.display(), build_sh.display());
 
     if container_tmp.exists() {
-        match rmdir_recursive(&container_tmp) {
-            Ok(()) => {}
-            Err(x) => {
-                // TODO(tailhook) join container and rm, because may have
-                // files of different owners (subuid's)
-                return Err(format!("Can't clean temporary root: {}", x));
-            }
-        }
+        // TODO(tailhook) join container and rm, because may have
+        // files of different owners (subuid's)
+        try!(rmdir_recursive(&container_tmp).map_err(
+                |e| format!("Can't clean temporary root: {}", e)));
+    }
+    if artifacts_dir.exists() {
+        // TODO(tailhook) join container and rm, because may have
+        // files of different owners (subuid's)
+        try!(rmdir_recursive(&artifacts_dir).map_err(
+                |e| format!("Can't clean temporary root: {}", e)));
     }
     try!(makedirs(&container_tmp));
 
