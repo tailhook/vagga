@@ -8,9 +8,12 @@ Contents:
    :maxdepth: 2
 
    vagga_features
+   config
+   builders
+   supervision
+   pid1mode
    compare_to_docker
    compare_to_vagrant
-   builders
 
 
 Indices and tables
