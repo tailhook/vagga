@@ -3,7 +3,7 @@ use std::io::{Open, Write};
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::File;
 
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store, List, StoreTrue};
 use collections::treemap::TreeMap;
 
 use super::monitor::Monitor;
@@ -21,6 +21,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let mut root: Path = Path::new("");
     let mut command: String = "".to_string();
     let mut cmdargs: Vec<String> = Vec::new();
+    let mut writeable = false;
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut root)
@@ -33,8 +34,11 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
             .required();
         ap.refer(&mut cmdargs)
             .add_argument("arguments", box List::<String>,
-                "Arguments for the command")
-            .required();
+                "Arguments for the command");
+        ap.refer(&mut writeable)
+            .add_option(["--writeable"], box StoreTrue,
+                "Mount container as writeable. Useful mostly in scripts \
+                 building containers itself");
         env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -57,7 +61,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let pipe = try!(CPipe::new());
     let mut monitor = Monitor::new(true);
 
-    let pid = try!(run_container(&pipe, env, &root,
+    let pid = try!(run_container(&pipe, env, &root, writeable,
         Pid1::Wait, &env.work_dir, &command, cmdargs.as_slice(), &runenv));
 
     // TODO(tailhook) set uid map from config

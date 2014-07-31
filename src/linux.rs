@@ -208,7 +208,7 @@ fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
     return vec.iter().map(|a| a.as_bytes().as_ptr()).collect();
 }
 
-pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
+pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path, writeable: bool,
     pid1mode: Pid1Mode, work_dir: &Path,
     cmd: &String, args: &[String], environ: &TreeMap<String, String>)
     -> Result<pid_t, String>
@@ -218,8 +218,13 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
     try!(ensure_dir(&mount_dir));
     let c_mount_dir = mount_dir.to_c_str();
     // TODO(pc) find recursive bindings for BindRO
+    let rootmount = if writeable {
+        Bind(root.to_c_str(), mount_dir.to_c_str())
+    } else {
+        BindRO(root.to_c_str(), mount_dir.to_c_str())
+    };
     let mounts = [
-        BindRO(root.to_c_str(), mount_dir.to_c_str()),
+        rootmount,
         BindRO("/sys".to_c_str(), mount_dir.join("sys").to_c_str()),
         // TODO(tailhook) use dev in /var/lib/container-dev
         BindRO("/dev".to_c_str(), mount_dir.join("dev").to_c_str()),

@@ -184,7 +184,7 @@ pub fn internal_run(env: &Environ, container: &Container,
 
     let pipe = try!(CPipe::new());
     let pid = try!(run_container(&pipe, env,
-        container.container_root.as_ref().unwrap(),
+        container.container_root.as_ref().unwrap(), false,
         pid1mode, work_dir, &command, cmdargs.as_slice(), &runenv));
 
     // TODO(tailhook) set uid map from config
