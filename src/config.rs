@@ -111,11 +111,6 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         _ => return Err(format!(
             "Command {} must be mapping", name)),
     };
-    let container = get_string(jcmd, "container");
-    if container.is_none() {
-        return Err(format!("The `container` is required for command {}",
-                           name));
-    }
 
     let run = get_string(jcmd, "run");
     let command = get_command(jcmd, "command");
@@ -124,6 +119,11 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         return Err(format!("Expected exactly one of \
             `command` or `run` or `supervise` for command {}",
             name));
+    }
+    let container = get_string(jcmd, "container");
+    if container.is_none() && supervise.is_none() {
+        return Err(format!("The `container` is required for command {}",
+                           name));
     }
     let mut accepts_arguments = false;
     let executor = if run.is_some() {
