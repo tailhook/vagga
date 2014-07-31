@@ -251,6 +251,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     }
     try!(makedirs(&container_tmp));
 
+    env.push(("vagga_exe".as_bytes(), environ.vagga_exe.container_as_bytes()));
     env.push(("artifacts_dir".as_bytes(), artifacts_dir.as_vec()));
     env.push(("container_hash".as_bytes(), hash.as_bytes()));
     env.push(("container_root".as_bytes(), container_tmp.as_vec()));
