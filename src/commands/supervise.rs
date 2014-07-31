@@ -14,7 +14,7 @@ use super::super::config::{StopOnFailure, WaitAll, Restart};
 use super::super::config::Command;
 use super::super::commands::shell::exec_shell_command;
 use super::super::commands::command::exec_plain_command;
-use super::super::monitor::{Monitor, Signal, Exit};
+use super::super::monitor::{Monitor, human_status, Signal, Exit};
 
 
 pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
@@ -81,7 +81,7 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         containers.insert(cname.clone(), container);
     }
 
-    let mut monitor = Monitor::new();
+    let mut monitor = Monitor::new(false);
 
     let start = |cname: &String, monitor: &mut Monitor| -> bool {
         let command = processes.find(cname).unwrap();
@@ -130,16 +130,17 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
             while monitor.ok() {
                 match monitor.next_event() {
                     Exit(cname, pid, status) => {
-                        error!("Process {}:{} dead with status {}. Failing.",
-                            cname, pid, status);
-                        monitor.send_all(SIGTERM);
+                        error!("Process {}:{} dead {}. Failing.",
+                            cname, pid, human_status(status));
                         monitor.fail();
+                        monitor.send_all(SIGTERM);
+                        monitor.set_exit_status(1);
                     }
                     Signal(sig)
                     if sig == SIGTERM || sig == SIGINT || sig == SIGQUIT => {
                         debug!("Got {}. Propagating.", sig);
-                        monitor.send_all(sig);
                         monitor.fail();
+                        monitor.send_all(sig);
                     }
                     Signal(sig) => {
                         debug!("Got {}. Ignoring.", sig);
@@ -151,15 +152,15 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
             while monitor.ok() {
                 match monitor.next_event() {
                     Exit(cname, pid, status) => {
-                        error!("Process {}:{} dead with status {}",
-                            cname, pid, status);
+                        error!("Process {}:{} dead {}",
+                            cname, pid, human_status(status));
                         start(&cname, &mut monitor);
                     }
                     Signal(sig)
                     if sig == SIGTERM || sig == SIGINT || sig == SIGQUIT => {
                         debug!("Got {}. Propagating.", sig);
-                        monitor.send_all(sig);
                         monitor.fail();
+                        monitor.send_all(sig);
                     }
                     Signal(sig) => {
                         debug!("Got {}. Ignoring.", sig);

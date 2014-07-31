@@ -55,7 +55,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
 
 
     let pipe = try!(CPipe::new());
-    let mut monitor = Monitor::new();
+    let mut monitor = Monitor::new(true);
 
     let pid = try!(run_container(&pipe, env, &root,
         Pid1::Wait, &env.work_dir, &command, cmdargs.as_slice(), &runenv));

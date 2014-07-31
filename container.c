@@ -124,7 +124,14 @@ void exec_and_wait(struct container *cont) {
             break;
         }
     } while(kill(pid, 0) == 0);
-    exit(exit_code);
+
+    // Can't emulate signals (can we?) so use bash-style code translation
+    if(WIFEXITED(exit_code)) {
+        // Normal exit status
+        exit(WEXITSTATUS(exit_code));
+    } else {
+        exit(128 + WTERMSIG(exit_code));
+    }
 }
 
 void exec_and_wait_any(struct container *cont) {

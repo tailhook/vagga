@@ -71,7 +71,7 @@ pub fn run_plain_command(env: &mut Environ, cmdname: &String,
         env.work_dir.clone()
     };
 
-    let mut monitor = Monitor::new();
+    let mut monitor = Monitor::new(true);
     let pid = try!(exec_plain_command_args(env, &work_dir,
         command, &container, cmdargs));
     monitor.add("child".to_string(), pid);

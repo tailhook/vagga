@@ -144,7 +144,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     let cmd = cmdargs.shift().unwrap();
     try!(ensure_container(env, &mut container));
 
-    let mut monitor = Monitor::new();
+    let mut monitor = Monitor::new(true);
     let pid = try!(internal_run(env, &container,
         pid1mode, &env.work_dir, cmd, cmdargs, TreeMap::new()));
     monitor.add("child".to_string(), pid);
