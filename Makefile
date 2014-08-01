@@ -10,7 +10,7 @@ export VAGGA_PATH_DEFAULT
 ARGPARSELIB = rust-argparse/$(shell rustc --crate-file-name rust-argparse/argparse/mod.rs)
 QUIRELIB = rust-quire/$(shell rustc --crate-file-name rust-quire/quire/mod.rs)
 
-all: quire argparse vagga
+all: quire argparse vagga libfake
 
 vagga: $(ARGPARSELIB) $(QUIRELIB) src/*.rs src/*/*.rs libcontainer.a
 	$(RUSTC) src/mod.rs -g -o $@ \
@@ -19,6 +19,11 @@ vagga: $(ARGPARSELIB) $(QUIRELIB) src/*.rs src/*/*.rs libcontainer.a
 
 libcontainer.a: container.c
 	$(CC) -c $< -o $@
+
+libfake: libfake.so
+
+libfake.so: fake.c
+	$(CC) -fPIC -shared $< -o $@
 
 quire:
 	make -C rust-quire quire-lib
@@ -34,4 +39,4 @@ install:
 	cp -r builders $(DESTDIR)$(PREFIX)/lib/vagga/
 
 
-.PHONY: all quire argparse
+.PHONY: all quire argparse libfake

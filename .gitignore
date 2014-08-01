@@ -5,3 +5,4 @@
 todo.txt
 libcontainer.a
 container.o
+libfake.so
