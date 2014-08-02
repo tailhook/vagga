@@ -105,6 +105,7 @@ Parameters
     (default: ``base``) A space-separated list of packages to install. Members
     of this list might also be package groups or requirement specifications
     (e.g. ``shadow>=4.1``) that are supported by pacman on a command-line.
+
 ``pacman_conf``
     (defaults to vagga's builtin config) A path to customized ``pacman.conf``.
     The path is relative to project root.
@@ -123,6 +124,68 @@ For example here is how container for vagga docs might be built:
     builder: arch
     parameters:
       packages: python-sphinx make coreutils bash
+
+
+Debian-simple
+=============
+
+The ``debian_simple`` backend can be used to setup debian (or ubuntu or
+probably any other debian derivative) by just unpacking ``deb`` files. No
+``configure`` and ``install`` phases are run.
+
+.. warning:: Given the complexity of debian packages and bad design of
+   debootstrap we have not found a good way to install debian packages in a
+   container (without root privileges). But also unlike in arch, many debian
+   packages do some crazy things after unpacking, so many packages after
+   unpacking do not work at all or have files located in unusual places.
+
+
+Simple debian system setup:
+
+.. code-block:: yaml
+
+   sphinx:
+     builder: debian_simple
+     parameters:
+       packages: python-sphinx,make
+
+Simple ubuntu system setup:
+
+.. code-block:: yaml
+
+   builder: debian_simple
+   parameters:
+     repo: http://archive.ubuntu.com/ubuntu
+     suite: trusty
+     packages: python-sphinx,make
+
+
+Dependencies
+-----------
+
+* ``debootstrap`` (and all of its depedencies)
+
+
+Parameters
+----------
+
+``repo``
+    Repository for the packages. ``http://http.debian.net/debian/`` for Debian
+    and ``http://archive.ubuntu.com/ubuntu`` for ubuntu.
+
+``suite``
+    The suite to run for debian it may be a version of OS or some special value
+    like ``sid`` or ``stable``. Refer to debootstrap documentation for more
+    info.
+
+
+``arch``
+    Target architecture (default should work)
+
+``packages``
+    A comma-separated packages to install
+
+
 
 
 .. _archlinux: http://archlinux.org
