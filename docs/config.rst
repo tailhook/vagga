@@ -81,6 +81,7 @@ Container parameters:
     you shouldn't rely on environment variables, and should setup everything
     needed right in the script.
 
+.. _commands:
 
 Commands
 ========
