@@ -268,7 +268,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
             .arg("_chroot")
             .arg("--writeable")
             .arg(container_tmp.as_vec())
-            .args(container.shell)
+            .args(container.shell.as_slice())
             .arg(container.provision.as_ref().unwrap().as_slice())
             .cwd(&environ.project_root)
             .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
