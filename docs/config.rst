@@ -71,6 +71,16 @@ Container parameters:
     folder. The ``/work`` directory is also mounted in this container (it's
     currently mounted writeable, but this fact may change in future).
 
+    The ``provision`` command is run by ``shell``. And this means that shell
+    must already be installed in container.
+
+    The ``provision`` command is run with same environment variables as a
+    builder, so may know details of build process, but doesn't obey
+    environment of the target execution (e.g. ``PATH`` is used from outer
+    environment). It may be changed or fixed in future. At the end of the day,
+    you shouldn't rely on environment variables, and should setup everything
+    needed right in the script.
+
 
 Commands
 ========
