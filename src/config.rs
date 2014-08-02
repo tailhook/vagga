@@ -45,6 +45,7 @@ pub struct Container {
     pub command_wrapper: Option<Vec<String>>,
     pub shell: Vec<String>,
     pub builder: String,
+    pub provision: Option<String>,
     pub parameters: TreeMap<String, String>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
@@ -215,6 +216,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
                     parameters: get_dict(jcont, "parameters"),
                     environ: get_dict(jcont, "environ"),
                     environ_file: get_string(jcont, "environ-file"),
+                    provision: get_string(jcont, "provision"),
                 };
                 config.containers.insert(name.clone(), cont);
             }

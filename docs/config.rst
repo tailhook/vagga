@@ -64,6 +64,13 @@ Container parameters:
     The mapping, that contitutes environment variables set in container. This
     overrides ``environ-file`` on value by value basis.
 
+``provision``
+    The command-line to be run to provision the container. It's run in
+    container itself, but comparing to normal vagga containers this one has
+    writeable root, so you can install something, or copy config to the system
+    folder. The ``/work`` directory is also mounted in this container (it's
+    currently mounted writeable, but this fact may change in future).
+
 
 Commands
 ========

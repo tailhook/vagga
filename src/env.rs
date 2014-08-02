@@ -15,6 +15,7 @@ pub struct Container {
     pub container_root: Option<Path>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
+    pub provision: Option<String>,
 }
 
 pub struct Environ {
@@ -124,6 +125,7 @@ impl Environ {
             name: name.clone(),
             fullname: name.clone(),
             shell: try!(_subst_list(&src.shell, &vars, &mut used)),
+            provision: try!(_subst_opt(&src.provision, &vars, &mut used)),
             environ_file:
                 try!(_subst_opt(&src.environ_file, &vars, &mut used)),
             command_wrapper:

@@ -263,6 +263,21 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         Ok(x) => return Err(format!("Builder exited with status {}", x)),
         Err(x) => return Err(format!("Can't spawn: {}", x)),
     }
+    if container.provision.is_some() {
+        match Command::new(environ.vagga_exe.as_vec()).env(env.as_slice())
+            .arg("_chroot")
+            .arg("--writeable")
+            .arg(container_tmp.as_vec())
+            .args(container.shell)
+            .arg(container.provision.as_ref().unwrap().as_slice())
+            .cwd(&environ.project_root)
+            .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
+            .status() {
+            Ok(ExitStatus(0)) => {}
+            Ok(x) => return Err(format!("Provision exited with status {}", x)),
+            Err(x) => return Err(format!("Can't spawn provisor: {}", x)),
+        }
+    }
 
     for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
         try!(ensure_dir(&container_tmp.join(*dir)));
