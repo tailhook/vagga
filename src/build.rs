@@ -210,6 +210,11 @@ pub fn build_container(environ: &Environ, container: &mut Container,
             digest.input_str(";");
         }
     }
+    match container.provision {
+        Some(ref x) => digest.input_str(x.as_slice()),
+        None => {}
+    }
+
     let fullhash = digest.result_str();
     let hash = fullhash.as_slice().slice_to(7);
 
