@@ -12,6 +12,7 @@ Contents:
    builders
    supervision
    pid1mode
+   commandline
    compare_to_docker
    compare_to_vagrant
 
