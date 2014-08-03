@@ -231,6 +231,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         match Command::new(environ.vagga_exe.as_vec()).env(env.as_slice())
             .arg("_chroot")
             .arg("--writeable")
+            .arg("--inventory")
             .arg(container_tmp.as_vec())
             .args(container.shell.as_slice())
             .arg(container.provision.as_ref().unwrap().as_slice())
