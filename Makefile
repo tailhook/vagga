@@ -20,10 +20,10 @@ vagga: $(ARGPARSELIB) $(QUIRELIB) src/*.rs src/*/*.rs libcontainer.a
 libcontainer.a: container.c
 	$(CC) -c $< -o $@
 
-libfake: libfake.so
+libfake: inventory/libfake.so
 
-libfake.so: fake.c
-	$(CC) -fPIC -shared $< -o $@
+inventory/libfake.so: fake.c
+	$(CC) -fPIC -shared -ldl $< -o $@
 
 quire:
 	make -C rust-quire quire-lib

@@ -5,4 +5,4 @@
 todo.txt
 libcontainer.a
 container.o
-libfake.so
+inventory/libfake.so

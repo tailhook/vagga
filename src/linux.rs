@@ -6,7 +6,8 @@ use std::c_str::CString;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
 use std::os::{Pipe, pipe};
-use libc::{c_int, c_char, c_ulong, pid_t, _exit, c_void};
+use std::default::Default;
+use libc::{c_int, c_uint, c_char, c_ulong, pid_t, _exit, c_void};
 use libc::funcs::posix88::unistd::{close, write};
 use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
 
@@ -89,6 +90,7 @@ extern  {
 enum Mount {
     Bind(CString, CString),
     BindRO(CString, CString),
+    BindROTmp(CString, CString),
     Pseudo(CString, CString, CString),
 }
 
@@ -98,6 +100,10 @@ pub enum Pid1Mode {
     WaitAny = 2,
 }
 
+pub enum ExtFlags {
+    FlagMkdir = 1,
+}
+
 /* Keep in sync with container.c */
 struct CMount {
     source: *u8,
@@ -105,6 +111,7 @@ struct CMount {
     fstype: *u8,
     options: *u8,
     flags: c_ulong,
+    ext_flags: c_uint,
 }
 
 /* Keep in sync with container.c */
@@ -122,6 +129,23 @@ struct CContainer {
     exec_filenames: **u8,   // Full paths to try in order
     exec_args: **u8,
     exec_environ: **u8,
+}
+
+
+pub struct RunOptions {
+    pub writeable: bool,
+    pub inventory: bool,
+    pub pid1mode: Pid1Mode,
+}
+
+impl Default for RunOptions {
+    fn default() -> RunOptions {
+        return RunOptions {
+            writeable: false,
+            inventory: false,
+            pid1mode: Wait,
+        };
+    }
 }
 
 pub struct CPipe(Pipe);
@@ -181,6 +205,7 @@ impl Mount {
                 fstype: null(),
                 options: null(),
                 flags: MS_BIND|MS_REC,
+                ext_flags: 0,
             },
             &BindRO(ref a, ref b) => CMount {
                 source: a.as_bytes().as_ptr(),
@@ -188,6 +213,15 @@ impl Mount {
                 fstype: null(),
                 options: null(),
                 flags: MS_BIND|MS_REC|MS_RDONLY,
+                ext_flags: 0,
+            },
+            &BindROTmp(ref a, ref b) => CMount {
+                source: a.as_bytes().as_ptr(),
+                target: b.as_bytes().as_ptr(),
+                fstype: null(),
+                options: null(),
+                flags: MS_BIND|MS_REC|MS_RDONLY,
+                ext_flags: FlagMkdir as c_uint,
             },
             &Pseudo(ref fs, ref dir, ref options) => CMount {
                 source: fs.as_bytes().as_ptr(),
@@ -195,6 +229,7 @@ impl Mount {
                 fstype: fs.as_bytes().as_ptr(),
                 options: options.as_bytes().as_ptr(),
                 flags: MS_NOSUID|MS_NODEV,
+                ext_flags: 0,
             },
         }
     }
@@ -208,8 +243,8 @@ fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
     return vec.iter().map(|a| a.as_bytes().as_ptr()).collect();
 }
 
-pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path, writeable: bool,
-    pid1mode: Pid1Mode, work_dir: &Path,
+pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
+    options: &RunOptions, work_dir: &Path,
     cmd: &String, args: &[String], environ: &TreeMap<String, String>)
     -> Result<pid_t, String>
 {
@@ -218,12 +253,12 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path, writeable: bool,
     try!(ensure_dir(&mount_dir));
     let c_mount_dir = mount_dir.to_c_str();
     // TODO(pc) find recursive bindings for BindRO
-    let rootmount = if writeable {
+    let rootmount = if options.writeable {
         Bind(root.to_c_str(), mount_dir.to_c_str())
     } else {
         BindRO(root.to_c_str(), mount_dir.to_c_str())
     };
-    let mounts = [
+    let mut mounts = vec!(
         rootmount,
         BindRO("/sys".to_c_str(), mount_dir.join("sys").to_c_str()),
         // TODO(tailhook) use dev in /var/lib/container-dev
@@ -236,7 +271,15 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path, writeable: bool,
             "size=102400k,mode=1777".to_c_str()),
         BindRO(env.vagga_path.join("markerdir").to_c_str(),
                mount_dir.join("work").join(".vagga").to_c_str()),
-        ];
+        );
+    if options.inventory {
+        match env.find_inventory() {
+            Some(inv) => mounts.push(
+                BindROTmp(inv.to_c_str(),
+                    mount_dir.join_many(["tmp", "inventory"]).to_c_str())),
+            None => return Err(format!("Can't find inventory folder")),
+        }
+    }
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
     let c_work_dir = match work_dir.path_relative_from(&env.project_root) {
         Some(path) => Path::new("/work").join(path).to_c_str(),
@@ -268,7 +311,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path, writeable: bool,
         fork_to_container(
             CLONE_NEWPID|CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER,
             &CContainer {
-                pid1_mode: pid1mode as i32,
+                pid1_mode: options.pid1mode as i32,
                 pipe_reader: pipe.reader,
                 pipe_writer: pipe.writer,
                 container_root: c_container_root.as_bytes().as_ptr(),

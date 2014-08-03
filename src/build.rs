@@ -89,47 +89,6 @@ pub fn link_container(environ: &Environ, container: &Container)
     return Ok(());
 }
 
-pub fn find_builder(environ: &Environ, name: &String) -> Option<Path> {
-    let mut bpath;
-    let suffix = ["builders", name.as_slice()];
-    bpath = environ.vagga_path.join_many(suffix);
-    if bpath.exists() {
-        return Some(bpath);
-    }
-    if cfg!(nix_profiles) {
-        match getenv("NIX_PROFILES") {
-            Some(ref value) => {
-                debug!("Nix profiles: {}", value);
-                let nix_suffix = ["lib", "vagga"];
-                let mut profiles: Vec<&str>;
-                profiles = value.as_slice().split(':').collect();
-                profiles.reverse();
-                for path in profiles.iter() {
-                    bpath = Path::new(*path)
-                        .join_many(nix_suffix).join_many(suffix);
-                    if bpath.exists() {
-                        return Some(bpath);
-                    }
-                }
-            }
-            None => {}
-        }
-    }
-    let envvar = getenv("VAGGA_PATH");
-    let paths = match envvar {
-        Some(ref value) => value.as_slice(),
-        None => env!("VAGGA_PATH_DEFAULT"),
-    };
-    debug!("Vagga path: {}", paths);
-    for path in paths.split(':') {
-        bpath = Path::new(path).join_many(suffix);
-        if bpath.exists() {
-            return Some(bpath);
-        }
-    }
-    return None;
-}
-
 pub fn build_container(environ: &Environ, container: &mut Container,
                        force: bool)
     -> Result <bool, String>
@@ -137,7 +96,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     info!("Checking {}", container.name);
 
     let builder = &container.builder;
-    let bldpath = match find_builder(environ, builder) {
+    let bldpath = match environ.find_builder(builder) {
         Some(b) => b,
         None => return Err(format!("Can't find builder {}, \
             check your VAGGA_PATH", builder)),

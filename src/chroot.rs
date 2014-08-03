@@ -2,17 +2,16 @@ use std::os;
 use std::io::{Open, Write};
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::File;
+use std::default::Default;
 
 use argparse::{ArgumentParser, Store, List, StoreTrue};
 use collections::treemap::TreeMap;
 
 use super::monitor::Monitor;
 use super::env::Environ;
-use super::linux::{ensure_dir, run_container, CPipe};
+use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::options::env_options;
 use libc::funcs::posix88::unistd::getuid;
-
-use Pid1 = super::linux;
 
 
 pub fn run_chroot(env: &mut Environ, args: Vec<String>)
@@ -21,7 +20,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let mut root: Path = Path::new("");
     let mut command: String = "".to_string();
     let mut cmdargs: Vec<String> = Vec::new();
-    let mut writeable = false;
+    let mut ropts: RunOptions = Default::default();
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut root)
@@ -35,10 +34,14 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
         ap.refer(&mut cmdargs)
             .add_argument("arguments", box List::<String>,
                 "Arguments for the command");
-        ap.refer(&mut writeable)
+        ap.refer(&mut ropts.writeable)
             .add_option(["--writeable"], box StoreTrue,
                 "Mount container as writeable. Useful mostly in scripts \
                  building containers itself");
+        ap.refer(&mut ropts.inventory)
+            .add_option(["--inventory"], box StoreTrue,
+                "Mount inventory folder of vagga inside container \
+                 /tmp/vagga-inventory");
         env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -61,8 +64,8 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let pipe = try!(CPipe::new());
     let mut monitor = Monitor::new(true);
 
-    let pid = try!(run_container(&pipe, env, &root, writeable,
-        Pid1::Wait, &env.work_dir, &command, cmdargs.as_slice(), &runenv));
+    let pid = try!(run_container(&pipe, env, &root, &ropts,
+        &env.work_dir, &command, cmdargs.as_slice(), &runenv));
 
     // TODO(tailhook) set uid map from config
     let uid = unsafe { getuid() };

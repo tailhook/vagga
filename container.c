@@ -16,6 +16,10 @@ enum pid1mode_t {
     pid1_waitany = 2,
 };
 
+enum extflags_t {
+    flag_mkdir = 1,
+};
+
 /* Keep in sync with linux.rs */
 struct mount {
     char *source;
@@ -23,6 +27,7 @@ struct mount {
     char *fstype;
     char *options;
     unsigned long flags;
+    unsigned ext_flags;
 };
 
 /* Keep in sync with linux.rs */
@@ -55,6 +60,10 @@ void mount_all(int num, struct mount *mounts) {
     int i;
     for(i = 0; i < num; ++i) {
         struct mount *mnt = &mounts[i];
+        if(mnt->ext_flags & flag_mkdir) {
+            check_error(mkdir(mnt->target, 0755),
+               "Can't mkdir %s: (%d) %s\n", mnt->target);
+        }
         if(mnt->flags & (MS_BIND | MS_RDONLY) == (MS_BIND | MS_RDONLY)) {
             //  Can bind readonly right away must first just bind
             //  then remount readonly

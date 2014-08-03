@@ -4,6 +4,7 @@ use std::io::{Open, Write};
 use std::io::{BufferedReader, IoResult};
 use std::io::fs::File;
 use std::io::stdio::{stdout, stderr};
+use std::default::Default;
 
 use libc::pid_t;
 use collections::treemap::TreeMap;
@@ -11,7 +12,7 @@ use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue, StoreConst};
 
 use super::monitor::Monitor;
 use super::env::{Environ, Container};
-use super::linux::{ensure_dir, run_container, CPipe};
+use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::options::env_options;
 use super::build::ensure_container;
 use libc::funcs::posix88::unistd::getuid;
@@ -183,9 +184,11 @@ pub fn internal_run(env: &Environ, container: &Container,
     }
 
     let pipe = try!(CPipe::new());
+    let mut ropts: RunOptions = Default::default();
+    ropts.pid1mode = pid1mode;
     let pid = try!(run_container(&pipe, env,
-        container.container_root.as_ref().unwrap(), false,
-        pid1mode, work_dir, &command, cmdargs.as_slice(), &runenv));
+        container.container_root.as_ref().unwrap(),
+        &ropts, work_dir, &command, cmdargs.as_slice(), &runenv));
 
     // TODO(tailhook) set uid map from config
     let uid_map = format!("0 {} 1", uid);
