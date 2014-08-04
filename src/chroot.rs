@@ -50,6 +50,10 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
             Err(_) => return Ok(122),
         }
     }
+    if !env.project_root.is_ancestor_of(&root) {
+        return Err(format!("Trying to chroot into wrong folder: {}",
+            root.display()));
+    }
 
     for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
         try!(ensure_dir(&root.join(*dir)));
