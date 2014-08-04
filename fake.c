@@ -3,10 +3,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/auxv.h>
+#include <sys/mount.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <string.h>
 
 inline static void libfake_log(const char *val) {
@@ -50,12 +50,6 @@ int fchownat(int dirfd, const char *pathname,
 }
 
 uid_t getuid(void) {
-    const char *execfn = (const char *)getauxval(AT_EXECFN);
-    const char *base = strrchr(execfn, '/');
-    if(base ? !strcmp(base, "/vagga") : !strcmp(execfn, "vagga")) {
-        libfake_log("VAGGA LIBFAKE: getuid, is real for vagga\n");
-        return getauxval(AT_UID);
-    }
     libfake_log("VAGGA LIBFAKE: getuid, pretend we are root\n");
     return 0;
 }
@@ -77,21 +71,35 @@ gid_t getegid(void) {
 
 int execve(const char *filename, char *const argv[],
           char *const envp[]) {
-    int (*original_execve)(const char*, char*const argv[], char*const envp[]);
-    original_execve = dlsym(RTLD_NEXT, "execve");
+    int (*orig_execve)(const char*, char*const argv[], char*const envp[]);
+    orig_execve = dlsym(RTLD_NEXT, "execve");
     const char *base = strrchr(filename, '/');
     if(base && !strcmp(base, "/chroot")) {
         int nargs = 0;
         for(nargs = 0; argv[nargs]; ++nargs);
-        char *newargv[nargs+3];
+        char *newargv[nargs+6];
         newargv[0] = "vagga";
         newargv[1] = "_chroot";
         newargv[2] = "--writeable";
-        memcpy(newargv+3, argv+1, nargs*sizeof(argv[0]));
+        newargv[3] = "--inventory";
+        newargv[4] = "--environ=LD_PRELOAD=/tmp/inventory/libfake.so";
+        memcpy(newargv+5, argv+1, nargs*sizeof(argv[0]));
+        char* const *e;
+        for(e = envp; *e; ++e) {
+            if(!strncmp(*e, "LD_PRELOAD=", 11)) {
+                (*e)[11] = 0;  // no ld-preload for vagga itself
+            }
+        }
         libfake_log("VAGGA LIBFAKE: replacing chroot\n");
-        return (*original_execve)((const char *)getenv("vagga_exe"), newargv, envp);
+        return (*orig_execve)((const char *)getenv("vagga_exe"), newargv, envp);
     } else {
-        return (*original_execve)(filename, argv, envp);
+        return (*orig_execve)(filename, argv, envp);
     }
 }
 
+int mount(const char *source, const char *target,
+         const char *filesystemtype, unsigned long mountflags,
+         const void *data) {
+    libfake_log("VAGGA LIBFAKE: mount ignored\n");
+    return 0;
+}
