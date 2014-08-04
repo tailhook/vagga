@@ -11,7 +11,7 @@
 
 type basename
 type wget
-type bsdtar
+type tar
 
 mkdir -p $container_root
 mkdir -p $artifacts_dir
@@ -19,4 +19,4 @@ mkdir -p $artifacts_dir
 filename="$artifacts_dir/$(basename $from_image_url)"
 wget $from_image_url -O $filename
 
-bsdtar -xf $filename --exclude 'dev/*' -C $container_root
+tar -xf $filename --exclude 'dev/*' -C $container_root

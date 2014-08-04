@@ -255,12 +255,22 @@ Example Ubuntu image::
     parameters:
       url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
 
+Besides official ubuntu image or any other tar containing root file system
+you can use official lxc_ system images: http://images.linuxcontainers.org/.
+Any image listed there should work, but you must choose correct architecture
+and an ``rootfs.tar.*`` file. For example this one is for ubuntu:
+
+    builder: from_image
+    parameters:
+      url: http://images.linuxcontainers.org/images/debian/sid/amd64/default/20140803_22:42/rootfs.tar.xz
+
+.. _lxc: linuxcontainers.org
 
 Dependencies
 ------------
 
 * ``wget``
-* ``bsdtar`` (the tar variant which opens any archives)
+* ``tar``
 
 
 Parameters
@@ -282,6 +292,52 @@ variant of fake root, to avoid the problem:
     builder: from_image
     parameters:
       url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
-    provision: LD_PRELOAD=/tmp/inventory/libfake.so apt-get -y install python3
+    provision:
+      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      LD_PRELOAD=/tmp/inventory/libfake.so
+      apt-get -y install python3
 
+
+Vagrant LXC
+===========
+
+This backend is very similar to ``from_image`` but allows to use any
+vagrant-lxc_ image from `Vagrant Cloud`_ a base image for vagga container.
+
+.. note:: it doesn't use metadata from vagrant image, only root file system
+   is used
+
+Here is an example of ubuntu container::
+
+.. code-block:: yaml
+
+    builder: vagrant_lxc
+    parameters:
+      name: fgrehm/trusty64-lxc
+
+.. note:: same precautions that are described for ``from_image`` builder apply
+   here
+
+
+Dependencies
+------------
+
+* ``wget``
+* ``tar``
+
+
+Parameters
+----------
+
+``name``
+    Name of an image on `Vagrant Cloud`_ . Should be in form
+    ``username/imagename``.
+
+``url``
+    The full url for the image. Useful for images that are not on
+    Vagrant Cloud. If both ``name`` and ``url`` are specified, the ``url``
+    is used.
+
+.. _vagrant-lxc: https://github.com/fgrehm/vagrant-lxc
+.. _`Vagrant Cloud`: https://vagrantcloud.com/
 
