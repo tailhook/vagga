@@ -125,6 +125,8 @@ For example here is how container for vagga docs might be built:
     parameters:
       packages: python-sphinx make coreutils bash
 
+.. _archlinux: http://archlinux.org
+
 
 Debian-simple
 =============
@@ -186,6 +188,56 @@ Parameters
     A comma-separated packages to install
 
 
+Debian Debootstrap
+==================
+
+The ``debian_debootstrap`` backend set's up debian or debian-derivative system
+using ``debootstrap`` script. Unlike ``debian_simple`` backend this one runs
+all debian hooks. However they may not work because of quirks we do to run
+debootstrap in user namespaces.
 
 
-.. _archlinux: http://archlinux.org
+Simple debian system setup:
+
+.. code-block:: yaml
+
+   sphinx:
+     builder: debian_debootstrap
+     parameters:
+       packages: python-sphinx,make
+
+Simple ubuntu system setup:
+
+.. code-block:: yaml
+
+   builder: debian_debootstrap
+   parameters:
+     repo: http://archive.ubuntu.com/ubuntu
+     suite: trusty
+     packages: python-sphinx,make
+
+Dependencies
+------------
+
+* ``debootstrap`` (and all of its depedencies)
+
+
+Parameters
+----------
+
+``repo``
+    Repository for the packages. ``http://http.debian.net/debian/`` for Debian
+    and ``http://archive.ubuntu.com/ubuntu`` for ubuntu.
+
+``suite``
+    The suite to run for debian it may be a version of OS or some special value
+    like ``sid`` or ``stable``. Refer to debootstrap documentation for more
+    info.
+
+
+``arch``
+    Target architecture (default should work)
+
+``packages``
+    A comma-separated packages to install
+
