@@ -8,9 +8,13 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdlib.h>
 
 inline static void libfake_log(const char *val) {
-    write(2, val, strlen(val));
+    const char *trace = getenv("LIBFAKE_TRACE");
+    if(trace && *trace) {
+        write(2, val, strlen(val));
+    }
 }
 
 int __xmknod(int __ver, const char *__path, __mode_t __mode, __dev_t *dev) {
@@ -91,7 +95,7 @@ int execve(const char *filename, char *const argv[],
             }
         }
         libfake_log("VAGGA LIBFAKE: replacing chroot\n");
-        return (*orig_execve)((const char *)getenv("vagga_exe"), newargv, envp);
+        return (*orig_execve)(getenv("vagga_exe"), newargv, envp);
     } else {
         return (*orig_execve)(filename, argv, envp);
     }
