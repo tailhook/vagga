@@ -52,11 +52,8 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
         }
     }
     let command = env.config.commands.find(cmdname).unwrap();
-    let cname = match command.container {
-        Some(ref name) => name.clone(),
-        None => unimplemented!(),
-    };
-    let mut container = try!(env.get_container(&cname));
+    let cname = env.container.as_ref().or(command.container.as_ref()).unwrap();
+    let mut container = try!(env.get_container(cname));
     try!(ensure_container(env, &mut container));
 
     let work_dir = if command_workdir {

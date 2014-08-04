@@ -159,6 +159,7 @@ pub fn internal_run(env: &Environ, container: &Container,
     -> Result<pid_t, String>
 {
     let mut runenv = runenv;
+    env.populate_environ(&mut runenv);
     try!(container_environ(container, &mut runenv));
     let container_root = container.container_root.as_ref().unwrap();
     info!("Running {}: {} {}", container_root.display(), command, cmdargs);

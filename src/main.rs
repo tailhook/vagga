@@ -35,6 +35,9 @@ pub fn run() -> int {
         variables: Vec::new(),
         config: config,
         settings: Settings::new(),
+        set_env: Vec::new(),
+        propagate_env: Vec::new(),
+        container: None,
     };
     read_settings(&mut env);
 

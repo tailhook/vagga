@@ -59,6 +59,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     for &(ref k, ref v) in os::env().iter() {
         runenv.insert(k.clone(), v.clone());
     }
+    env.populate_environ(&mut runenv);
 
 
     let pipe = try!(CPipe::new());

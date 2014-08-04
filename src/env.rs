@@ -29,6 +29,9 @@ pub struct Environ {
     pub variables: Vec<String>,
     pub config: cfg::Config,
     pub settings: Settings,
+    pub container: Option<String>,
+    pub set_env: Vec<String>,
+    pub propagate_env: Vec<String>,
 }
 
 fn _subst<'x>(src: &'x String, vars: &TreeMap<&'x str, &str>,
@@ -212,6 +215,23 @@ impl Environ {
             }
         }
         return None;
+    }
+
+    pub fn populate_environ(&self, env: &mut TreeMap<String, String>) {
+        for var in self.propagate_env.iter() {
+            match getenv(var.as_slice()) {
+                Some(x) => { env.insert(var.clone(), x.clone()); }
+                None => { env.remove(var); }
+            }
+        }
+        for pair in self.set_env.iter() {
+            let mut iter = pair.as_slice().splitn('=', 1);
+            let key = iter.next().unwrap();
+            match iter.next() {
+                Some(x) => { env.insert(key.to_string(), x.to_string()); }
+                None => { env.remove(&key.to_string()); }
+            }
+        }
     }
 }
 
