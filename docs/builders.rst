@@ -241,3 +241,47 @@ Parameters
 ``packages``
     A comma-separated packages to install
 
+
+From Image
+==========
+
+The ``from_image`` backend downloads image, unpacks it, and uses that as an
+image for the system. Using :ref:`provision` you can install additional
+packages or do whatever you need to configure system.
+
+Example Ubuntu image::
+
+    builder: from_image
+    parameters:
+      url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
+
+
+Dependencies
+------------
+
+* ``wget``
+* ``bsdtar`` (the tar variant which opens any archives)
+
+
+Parameters
+----------
+
+``url``
+    A url of an image.
+
+
+Tips
+----
+
+When using ubuntu/debian system, you can't install packages with ``dpkg``
+or ``apt-get``, because they don't like user namespaces having only few users
+(we often have only root in the namespace). In this case you may use vagga's
+variant of fake root, to avoid the problem:
+
+
+    builder: from_image
+    parameters:
+      url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
+    provision: LD_PRELOAD=/tmp/inventory/libfake.so apt-get -y install python3
+
+

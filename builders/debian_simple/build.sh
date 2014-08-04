@@ -6,7 +6,7 @@
 : ${container_fullname:=$container_name}
 : ${artifacts_dir:=$project_root/.vagga/.artifacts/$container_fullname.$container_hash}
 : ${container_root:=$project_root/.vagga/.roots/$container_fullname.$container_hash}
-: ${cache_dir:=$project_root/.vagga/.cache/debian}
+: ${cache_dir:=$project_root/.vagga/.cache/debian_simple}
 : ${debian_simple_repo:=http://http.debian.net/debian/}
 : ${debian_simple_suite:=sid}
 : ${debian_simple_arch:=amd64}
