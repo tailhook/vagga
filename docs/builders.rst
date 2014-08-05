@@ -249,7 +249,9 @@ The ``from_image`` backend downloads image, unpacks it, and uses that as an
 image for the system. Using :ref:`provision` you can install additional
 packages or do whatever you need to configure system.
 
-Example Ubuntu image::
+Example Ubuntu image:
+
+.. code-block:: yaml
 
     builder: from_image
     parameters:
@@ -259,6 +261,8 @@ Besides official ubuntu image or any other tar containing root file system
 you can use official lxc_ system images: http://images.linuxcontainers.org/.
 Any image listed there should work, but you must choose correct architecture
 and an ``rootfs.tar.*`` file. For example this one is for ubuntu:
+
+.. code-block:: yaml
 
     builder: from_image
     parameters:
@@ -288,6 +292,7 @@ or ``apt-get``, because they don't like user namespaces having only few users
 (we often have only root in the namespace). In this case you may use vagga's
 variant of fake root, to avoid the problem:
 
+.. code-block:: yaml
 
     builder: from_image
     parameters:
@@ -307,7 +312,7 @@ vagrant-lxc_ image from `Vagrant Cloud`_ a base image for vagga container.
 .. note:: it doesn't use metadata from vagrant image, only root file system
    is used
 
-Here is an example of ubuntu container::
+Here is an example of ubuntu container:
 
 .. code-block:: yaml
 
@@ -340,4 +345,19 @@ Parameters
 
 .. _vagrant-lxc: https://github.com/fgrehm/vagrant-lxc
 .. _`Vagrant Cloud`: https://vagrantcloud.com/
+
+
+Ubuntu
+======
+
+We do not have any official ubuntu builder yet. This is because
+``debootstrap``, ``dpkg`` and ``apt-get`` need to have quite many quirks for
+working in user namespaces (BTW, docker have plenty of hacks to get it working
+too, but they are different from what we need). We are working to provide the
+official best of all worlds ubuntu (and debian) container builder. In the
+meantime you can use any of `Debian Debootstrap`_, `From Image`_,  `Vagrant
+LXC`_ or `Debian-simple`_ builders. Every of it's section have an example on
+how to setup Ubuntu specifically. Please report any issues you have with any
+of them.
+
 
