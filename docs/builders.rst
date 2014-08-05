@@ -290,7 +290,7 @@ Tips
 When using ubuntu/debian system, you can't install packages with ``dpkg``
 or ``apt-get``, because they don't like user namespaces having only few users
 (we often have only root in the namespace). In this case you may use vagga's
-variant of fake root, to avoid the problem:
+variant of fakeroot, to avoid the problem:
 
 .. code-block:: yaml
 
@@ -298,8 +298,8 @@ variant of fake root, to avoid the problem:
     parameters:
       url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
     provision:
-      PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      LD_PRELOAD=/tmp/inventory/libfake.so
+      export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;
+      export LD_PRELOAD=/tmp/inventory/libfake.so;
       apt-get -y install python3
 
 
