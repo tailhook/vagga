@@ -33,6 +33,7 @@ pub struct Command {
     pub environ: TreeMap<String, String>,
     pub inherit_environ: Vec<String>,
     pub description: Option<String>,
+    pub resolv_conf: bool,
 }
 
 pub struct Variant {
@@ -159,6 +160,7 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         environ: get_dict(jcmd, "environ"),
         inherit_environ: get_list(jcmd, "inherit-environ"),
         description: get_string(jcmd, "description"),
+        resolv_conf: get_bool(jcmd, "resolv_conf").unwrap_or(true),
     });
 }
 

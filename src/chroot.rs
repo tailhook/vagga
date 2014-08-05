@@ -1,10 +1,10 @@
 use std::os;
 use std::io::{Open, Write};
 use std::io::stdio::{stdout, stderr};
-use std::io::fs::File;
+use std::io::fs::{File, rename, copy};
 use std::default::Default;
 
-use argparse::{ArgumentParser, Store, List, StoreTrue};
+use argparse::{ArgumentParser, Store, List, StoreTrue, StoreFalse};
 use collections::treemap::TreeMap;
 
 use super::monitor::Monitor;
@@ -21,6 +21,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let mut command: String = "".to_string();
     let mut cmdargs: Vec<String> = Vec::new();
     let mut ropts: RunOptions = Default::default();
+    let mut resolv: bool = true;
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut root)
@@ -42,6 +43,9 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
             .add_option(["--inventory"], box StoreTrue,
                 "Mount inventory folder of vagga inside container \
                  /tmp/vagga-inventory");
+        ap.refer(&mut resolv)
+            .add_option(["--no-resolv"], box StoreFalse,
+                "Do not copy /etc/resolv.conf");
         env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -57,6 +61,15 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
 
     for dir in ["proc", "sys", "dev", "work", "tmp"].iter() {
         try!(ensure_dir(&root.join(*dir)));
+    }
+    if resolv {
+        try!(ensure_dir(&root.join("etc")));
+        try!(copy(&Path::new("/etc/resolv.conf"),
+                  &root.join("etc/resolv.conf.tmp"))
+            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+        try!(rename(&root.join("etc/resolv.conf.tmp"),
+                    &root.join("etc/resolv.conf"),)
+            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
     }
 
     let mut runenv = TreeMap::new();

@@ -2,13 +2,14 @@ use std::to_str::ToStr;
 use std::os::getenv;
 use std::io::{Open, Write};
 use std::io::{BufferedReader, IoResult};
-use std::io::fs::File;
+use std::io::fs::{File, copy, rename};
 use std::io::stdio::{stdout, stderr};
 use std::default::Default;
 
 use libc::pid_t;
 use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue, StoreConst};
+use argparse::{StoreFalse};
 
 use super::monitor::Monitor;
 use super::env::{Environ, Container};
@@ -80,6 +81,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     let mut pid1mode = Pid1::Wait;
     let mut command: Option<String> = None;
     let mut cmdargs: Vec<String> = Vec::new();
+    let mut resolv: bool = true;
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut cname)
@@ -102,6 +104,9 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
         ap.refer(&mut use_shell)
             .add_option(["-S", "--shell"], box StoreTrue,
                 "Run command with `shell` configured for container");
+        ap.refer(&mut resolv)
+            .add_option(["--no-resolv"], box StoreFalse,
+                "Do not copy /etc/resolv.conf");
         ap.refer(&mut pid1mode)
             .add_option(["--wait"], box StoreConst(Pid1::Wait),
                 "Spawn a supervisor as pid 1 and wait until target command \
@@ -146,15 +151,15 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     try!(ensure_container(env, &mut container));
 
     let mut monitor = Monitor::new(true);
-    let pid = try!(internal_run(env, &container,
-        pid1mode, &env.work_dir, cmd, cmdargs, TreeMap::new()));
+    let pid = try!(internal_run(env, &container, pid1mode, resolv,
+        &env.work_dir, cmd, cmdargs, TreeMap::new()));
     monitor.add("child".to_string(), pid);
     monitor.wait_all();
     return Ok(monitor.get_status());
 }
 
 pub fn internal_run(env: &Environ, container: &Container,
-    pid1mode: Pid1::Pid1Mode, work_dir: &Path,
+    pid1mode: Pid1::Pid1Mode, resolv: bool, work_dir: &Path,
     command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<pid_t, String>
 {
@@ -168,6 +173,15 @@ pub fn internal_run(env: &Environ, container: &Container,
 
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
+
+    if resolv {
+        try!(copy(&Path::new("/etc/resolv.conf"),
+                  &container_root.join("etc/resolv.conf.tmp"))
+            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+        try!(rename(&container_root.join("etc/resolv.conf.tmp"),
+                    &container_root.join("etc/resolv.conf"),)
+            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+    }
 
 
     let home = "HOME".to_string();

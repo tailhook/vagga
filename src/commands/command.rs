@@ -110,6 +110,6 @@ pub fn exec_plain_command_args(env: &Environ, work_dir: &Path,
         _ => unreachable!(),
     }
     let cmd = argprefix.shift().unwrap();
-    return internal_run(env, container,
-        command.pid1mode, work_dir, cmd, (argprefix + cmdargs), runenv);
+    return internal_run(env, container, command.pid1mode, command.resolv_conf,
+        work_dir, cmd, (argprefix + cmdargs), runenv);
 }
