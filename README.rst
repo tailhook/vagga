@@ -18,7 +18,7 @@ Mayor Features Are:
   redis-python-nginx server with one command)
 * Partial compatibility with `Vagrant-LXC` and Docker_ (pretty limited so far)
 
-More deep `feature description in docs <http://vagga.readthedocs.orl/vagga_features.html>`_
+More deep `feature description in docs <http://vagga.readthedocs.org/en/latest/vagga_features.html>`_
 
 
 Documentation_
