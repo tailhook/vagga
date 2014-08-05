@@ -6,6 +6,8 @@ Vagga
 Vagga is a fully-userspace container engine inspired by Vagrant_ and Docker_,
 mainly used for development environments.
 
+:Status: beta
+
 Mayor Features Are:
 
 * Running programs in linux containers (not a full virtualization like Vagrant)
@@ -13,14 +15,13 @@ Mayor Features Are:
 * Runs containerized process as a child of current shell, no attach/detach hell
 * Images are automatically rebuilt and versioned
 * Vagga has tools to manage trees of processes (so you run your
-    redis-python-nginx server with one command)
+  redis-python-nginx server with one command)
 * Partial compatibility with `Vagrant-LXC` and Docker_ (pretty limited so far)
 
-More deep `feature description at documentation <http://vagga.readthedocs.orl/vagga_features.html>`
+More deep `feature description in docs <http://vagga.readthedocs.orl/vagga_features.html>`_
 
-Status: beta
 
-* Documentation_
+Documentation_
 
 .. _vagrant: http://vagrantup.com
 .. _docker: http://docker.io
