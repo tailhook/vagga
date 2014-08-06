@@ -61,7 +61,7 @@ Container parameters:
     in systemd, but doesn't support commands quoting and line wrapping yet)
 
 ``environ``
-    The mapping, that contitutes environment variables set in container. This
+    The mapping, that constitutes environment variables set in container. This
     overrides ``environ-file`` on value by value basis.
 
 ``provision``
