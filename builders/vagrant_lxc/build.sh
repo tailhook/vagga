@@ -1,6 +1,7 @@
 #!/bin/sh -ex
 
 : ${project_root:=.}
+: ${vagga_inventory:=/usr/lib/vagga/inventory}
 : ${container_hash:=tmpbuildhash}
 : ${container_name:=work}
 : ${container_fullname:=$container_name}
@@ -11,15 +12,13 @@
 : ${vagrant_lxc_url:=https://vagrantcloud.com/${vagrant_lxc_name}/version/1/provider/lxc.box}
 
 type basename
-type wget
 type bsdtar
 
 rmdir $container_root
 mkdir -p $artifacts_dir
 
-filename="$artifacts_dir/lxc.box"
-wget "$vagrant_lxc_url" -O $filename
-tar -xf $filename -C "$artifacts_dir/"
+path=$($vagga_inventory/fetch "$vagrant_lxc_url")
+tar -xf $path -C "$artifacts_dir/"
 
 tar -xf $artifacts_dir/rootfs.tar.* --exclude=rootfs/dev/* -C $artifacts_dir
 mv $artifacts_dir/rootfs/ $container_root
