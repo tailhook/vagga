@@ -74,6 +74,10 @@ have another uid so must have a different entry in ``/etc/passwd``. Also if
 some process realy needs to be root inside the container (e.g. it must spawn
 processes by different users) you just can't fix it.
 
+.. note:: In fact you can specify `uid` without adding a ``passwd`` entry, and
+   that works most of the time. Up to the point some utility needs to
+   lookup info about user.
+
 With help of user namespaces Vagga runs programs as a root inside a container,
 but it looks like your user outside. So all your files in project dir are still
 owned by you.
