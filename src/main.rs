@@ -26,9 +26,15 @@ pub fn run() -> int {
             return 126;
         }
     };
+    let inv = Environ::find_inventory(&self_exe_path().unwrap());
+    if inv.is_none(){
+        err.write_line("Vagga inventory not found").ok();
+        return 121;
+    }
     let mut env = Environ {
         vagga_path: self_exe_path().unwrap(),
         vagga_exe: self_exe_name().unwrap(),
+        vagga_inventory: inv.unwrap(),
         work_dir: workdir,
         local_vagga: project_root.join(".vagga"),
         project_root: project_root,

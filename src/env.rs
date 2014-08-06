@@ -23,6 +23,7 @@ pub struct Container {
 pub struct Environ {
     pub vagga_path: Path,
     pub vagga_exe: Path,
+    pub vagga_inventory: Path,
     pub work_dir: Path,
     pub project_root: Path,
     pub local_vagga: Path,
@@ -194,11 +195,11 @@ impl Environ {
         return None;
     }
 
-    pub fn find_inventory(&self) -> Option<Path> {
+    pub fn find_inventory(vagga_path: &Path) -> Option<Path> {
         let mut bpath;
         // Seaching in the same folder as a binary to be able to run from
         // source folder without issues
-        bpath = self.vagga_path.join("inventory");
+        bpath = vagga_path.join("inventory");
         if bpath.exists() {
             return Some(bpath);
         }

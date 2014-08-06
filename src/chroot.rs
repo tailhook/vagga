@@ -42,7 +42,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
         ap.refer(&mut ropts.inventory)
             .add_option(["--inventory"], box StoreTrue,
                 "Mount inventory folder of vagga inside container \
-                 /tmp/vagga-inventory");
+                 /tmp/inventory");
         ap.refer(&mut resolv)
             .add_option(["--no-resolv"], box StoreFalse,
                 "Do not copy /etc/resolv.conf");

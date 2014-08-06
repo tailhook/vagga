@@ -273,12 +273,8 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
                mount_dir.join("work").join(".vagga").to_c_str()),
         );
     if options.inventory {
-        match env.find_inventory() {
-            Some(inv) => mounts.push(
-                BindROTmp(inv.to_c_str(),
-                    mount_dir.join_many(["tmp", "inventory"]).to_c_str())),
-            None => return Err(format!("Can't find inventory folder")),
-        }
+        mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
+                    mount_dir.join_many(["tmp", "inventory"]).to_c_str()));
     }
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
     let c_work_dir = match work_dir.path_relative_from(&env.project_root) {
