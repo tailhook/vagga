@@ -9,8 +9,9 @@ else if type curl >&2; then
     download() { curl "$1" --output "$2"; }
 fi fi
 
-url=$1
+[ "$1" = "--no-cache" ] && no_cache=1 && shift
 
+url="$1"
 
 if [ -z "$url" ]; then
     echo "Usage: $0 URL\n" >&2
@@ -22,7 +23,7 @@ fi
 hash=$(echo -n $url | sha1sum | cut -c1-8)
 target="$cache_dir/$hash-$(basename $url)"
 
-if [ ! -e $target ]; then
+if [ "$no_cache" = "1" ] || [ ! -e $target ]; then
     download "$url" "${target}.tmp"
     mv "${target}.tmp" "$target"
 fi
