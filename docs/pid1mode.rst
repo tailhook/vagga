@@ -32,15 +32,16 @@ In fact there are three modes of operation of PID 1 supported by vagga (set by
 
 * ``wait`` -- (default) run command (usually it gets PID 2) and wait until it
   exits
-* ``wait-any`` -- run command, then wait all processes in namespace to finish
+* ``wait-all-children`` -- run command, then wait all processes in namespace to
+  finish
 * ``exec`` -- run the command as PID 1, useful only if command itself is
   process supervisor like upstart_, systemd_ or supervisord_
 
 Note that in ``wait`` and ``exec`` modes, when you kill vagga itself with a
-signal, it will propagate the signal to the command itself. In ``wait-any``
-mode, signal will be propagated to all processes in the container (even if it's
-some supplementary command run as a child of some intermediary process). This
-is rarely the problem.
+signal, it will propagate the signal to the command itself. In
+``wait-all-children`` mode, signal will be propagated to all processes in the
+container (even if it's some supplementary command run as a child of some
+intermediary process). This is rarely the problem.
 
 
 .. _upstart: http://upstart.ubuntu.com

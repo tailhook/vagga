@@ -147,11 +147,12 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
     return Ok(Command {
         pid1mode: match get_string(jcmd, "pid1mode") {
             Some(ref s) if s.as_slice() == "wait" => Pid1::Wait,
-            Some(ref s) if s.as_slice() == "wait-any" => Pid1::WaitAny,
+            Some(ref s) if s.as_slice() == "wait-all-children"
+                => Pid1::WaitAllChildren,
             Some(ref s) if s.as_slice() == "exec" => Pid1::Exec,
             None => Pid1::Wait,
             _ => return Err(format!("The pid1mode must be one of `wait`, \
-                `wait-any` or `exec` for command {}", name)),
+                `wait-all-children` or `exec` for command {}", name)),
             },
         execute: executor,
         container: container,

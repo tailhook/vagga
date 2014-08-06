@@ -87,7 +87,8 @@ modes.
 .. note:: depending on pid1mode of each proccess in each container vagga will
    wait either only for process spawned by vagga (``pid1mode: wait`` or
    ``pidmode: exec``), or for all (including daemonized) processes spawned by
-   that command (``pid1mode: wait-any``). See :ref:`pid1mode` for details.
+   that command (``pid1mode: wait-all-children``). See :ref:`pid1mode` for
+   details.
 
 
 Restart

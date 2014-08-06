@@ -97,7 +97,7 @@ enum Mount {
 pub enum Pid1Mode {
     Exec = 0,
     Wait = 1,
-    WaitAny = 2,
+    WaitAllChildren = 2,
 }
 
 pub enum ExtFlags {

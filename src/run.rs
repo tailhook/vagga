@@ -112,7 +112,8 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
                 "Spawn a supervisor as pid 1 and wait until target command \
                  exits. But if it spawned any children, they will be killed \
                  at the death of the target command (default)")
-            .add_option(["--wait-any"], box StoreConst(Pid1::WaitAny),
+            .add_option(["--wait-all-children"],
+                box StoreConst(Pid1::WaitAllChildren),
                 "Spawn a supervisor as pid 1 and wait until target command \
                  and all of its children are dead. (Dangerous in some cases \
                  as some non useful child process may block container \

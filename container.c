@@ -13,7 +13,7 @@
 enum pid1mode_t {
     pid1_exec = 0,
     pid1_wait = 1,
-    pid1_waitany = 2,
+    pid1_waitallchildren = 2,
 };
 
 enum extflags_t {
@@ -210,7 +210,7 @@ int _run_container(void *arg) {
     case pid1_wait:
         exec_and_wait(cont);
         break;
-    case pid1_waitany:
+    case pid1_waitallchildren:
         exec_and_wait_any(cont);
         break;
     default:

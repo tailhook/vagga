@@ -143,8 +143,8 @@ Command parameters:
 
 ``pid1mode``
     This denotes what is run as pid 1 in container. It may be ``wait``,
-    ``wait-any`` or ``exec``. The default ``wait`` is ok for most regular
-    processes. See :ref:`pid1mode` for more info.
+    ``wait-all-children`` or ``exec``. The default ``wait`` is ok for most
+    regular processes. See :ref:`pid1mode` for more info.
 
 
 .. _variants:
