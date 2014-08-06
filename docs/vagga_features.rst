@@ -81,7 +81,7 @@ Let's declare that with vagga. Just define two containers:
      build:
        builder: ubuntu
        parameters:
-         packabes: make nodejs uglifyjs
+         packages: make nodejs uglifyjs
 
      serve:
        builder: ubuntu
