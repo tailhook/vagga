@@ -12,7 +12,7 @@ pub fn extract_json(_env: &mut Environ, args: Vec<String>)
     -> Result<int, String>
 {
     let mut filename = Path::new(".");
-    let mut columns = Vec::new();
+    let mut columns: Vec<String> = Vec::new();
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut filename)
@@ -41,6 +41,11 @@ pub fn extract_json(_env: &mut Environ, args: Vec<String>)
     let ncols = columns.len();
     for obj in lst.iter() {
         let tree = match obj {
+            &J::String(ref val) if columns.get(0).len() == 0 => {
+                try!(out.write_str(val.as_slice()).and(out.write_char('\n'))
+                    .map_err(|e| format!("Error writing to stdout: {}", e)));
+                continue;
+            }
             &J::Object(ref tmap) => tmap,
             _ => return Err(format!("Not an object in a list")),
         };
