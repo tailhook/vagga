@@ -40,6 +40,10 @@ mod commands {
     pub mod supervise;
 }
 
+mod utils {
+    pub mod json;
+}
+
 
 fn main() {
     init_prctl();

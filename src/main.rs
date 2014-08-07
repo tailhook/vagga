@@ -10,6 +10,7 @@ use super::chroot::run_chroot;
 use super::commands::shell::run_shell_command;
 use super::commands::command::run_plain_command;
 use super::commands::supervise::run_supervise_command;
+use super::utils::json::extract_json;
 use super::env::Environ;
 use super::options::env_options;
 use super::settings::{Settings, read_settings, set_variant};
@@ -88,10 +89,15 @@ pub fn run() -> int {
     let cname = cmd.unwrap();
     args.insert(0, "vagga ".to_string() + cname);
     let result = match cname.as_slice() {
+        // Commands for users
         "_build" => build_command(&mut env, args),
         "_run" => run_command_line(&mut env, args),
-        "_chroot" => run_chroot(&mut env, args),
         "_setv" | "_setvariant" => set_variant(&mut env, args),
+
+        // Commands for builders
+        "_chroot" => run_chroot(&mut env, args),
+        "_extract_json" => extract_json(&mut env, args),
+
         _ => {
             let fun = match env.config.commands.find(&cname) {
                 Some(ref cmd) => {

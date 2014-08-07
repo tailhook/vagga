@@ -90,11 +90,11 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
             .required();
         ap.refer(&mut command)
             .add_argument("command", box StoreOption::<String>,
-                "A command to run inside container");
+                "A command to run inside container")
+            .required();
         ap.refer(&mut cmdargs)
             .add_argument("arguments", box List::<String>,
-                "Arguments for the command")
-            .required();
+                "Arguments for the command");
         ap.refer(&mut no_wrapper)
             .add_option(["-N", "--no-wrapper"], box StoreTrue,
                 "Do not use `command-wrapper` configured for container");
