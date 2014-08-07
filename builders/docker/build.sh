@@ -1,5 +1,6 @@
 #!/bin/sh -xe
 : ${project_root:=.}
+: ${vagga_exe:=vagga}
 : ${vagga_inventory:=/usr/lib/vagga/inventory}
 : ${container_hash:=tmpbuildhash}
 : ${container_name:=work}
@@ -7,11 +8,39 @@
 : ${artifacts_dir:=$project_root/.vagga/.artifacts/$container_fullname.$container_hash}
 : ${container_root:=$project_root/.vagga/.roots/$container_fullname.$container_hash}
 : ${cache_dir:=$project_root/.vagga/.cache/from_image}
-: ${docker_image:=ubuntu}
+: ${docker_image:=}
+: ${docker_dockerfile:=}
 
 type curl
 type mkdir
 type awk
+
+if [ -n "$docker_dockerfile" ]; then
+    exec < "$docker_dockerfile"
+    while read kw tail; do
+        case "$kw" in
+            \#*|"") ;;
+            FROM)
+                if [ -z "$docker_image" ]; then
+                    docker_image="$tail"
+                else
+                    echo "Using $docker_image instead $tail" >&2
+                fi
+                break
+                ;;
+            *)
+                echo "FROM instruction not found" >&2
+                exit 1
+                ;;
+        esac
+    done
+fi
+
+if [ -z "$docker_image" ]; then
+    echo 'Either `image` or `dockerfile` must be specified' >&2
+    exit 1
+fi
+
 
 if [ "${docker_image#*/}" = "$docker_image" ]; then
     repo="library/$docker_image";
@@ -78,9 +107,30 @@ done
 
 
 for fn in $filenames; do
-    echo $fn
     tar -xf "$fn" --exclude "dev/*" -C "$container_root"
     find "$container_root" -name ".wh.*" | sed 's/\.wh\.//' \
         | xargs --no-run-if-empty rm -rf
     find "$container_root" -name ".wh.*" -delete
+done
+
+[ -z "$docker_dockerfile" ] && exit 0
+
+while read kw tail; do
+    case "$kw" in
+        \#*|"") ;;
+        FROM)
+            echo "FROM instruction starts new container. Stopping." >&2
+            exit 0
+            ;;
+        RUN)
+            ${vagga_exe} _chroot --writeable --inventory \
+                --environ=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+                --environ=LD_PRELOAD=/tmp/inventory/libfake.so \
+                "$container_root" \
+                /bin/sh -c "$tail"
+            ;;
+        *)
+            echo "Unknown instruction ${kw}. Ignoring." >&2
+            ;;
+    esac
 done
