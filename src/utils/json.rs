@@ -38,19 +38,22 @@ pub fn extract_json(_env: &mut Environ, args: Vec<String>)
         _ => return Err(format!("Root entitity is not a list")),
     };
     let mut out = stdout();
+    let ncols = columns.len();
     for obj in lst.iter() {
         let tree = match obj {
             &J::Object(ref tmap) => tmap,
             _ => return Err(format!("Not an object in a list")),
         };
-        for col in columns.iter() {
+        for (idx, col) in columns.iter().enumerate() {
             match tree.find(col) {
                 Some(&J::String(ref x)) => try!(out.write_str(x.as_slice())
                     .map_err(|e| format!("Error writing to stdout: {}", e))),
                 _ => {},
             };
-            try!(out.write_char('\t')
-                .map_err(|e| format!("Error writing to stdout: {}", e)));
+            if idx < ncols - 1 {
+                try!(out.write_char('\t')
+                    .map_err(|e| format!("Error writing to stdout: {}", e)));
+            }
         }
         try!(out.write_char('\n')
             .map_err(|e| format!("Error writing to stdout: {}", e)));
