@@ -16,7 +16,7 @@ use super::env::{Environ, Container};
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::options::env_options;
 use super::build::ensure_container;
-use libc::funcs::posix88::unistd::getuid;
+use libc::funcs::posix88::unistd::{geteuid, getegid};
 
 use Pid1 = super::linux;
 
@@ -170,7 +170,8 @@ pub fn internal_run(env: &Environ, container: &Container,
     let container_root = container.container_root.as_ref().unwrap();
     info!("Running {}: {} {}", container_root.display(), command, cmdargs);
 
-    let uid = unsafe { getuid() };
+    let uid = unsafe { geteuid() };
+    let gid = unsafe { getegid() };
 
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
@@ -216,6 +217,17 @@ pub fn internal_run(env: &Environ, container: &Container,
         Ok(()) => {}
         Err(e) => return Err(format!(
             "Error writing uid mapping: {}", e)),
+    }
+
+    let gid_map = format!("0 {} 1", gid);
+    debug!("Writing gid_map: {}", gid_map);
+    match File::open_mode(&Path::new("/proc")
+                      .join(pid.to_str())
+                      .join("gid_map"), Open, Write)
+            .write_str(gid_map.as_slice()) {
+        Ok(()) => {}
+        Err(e) => return Err(format!(
+            "Error writing gid mapping: {}", e)),
     }
 
     try!(pipe.wakeup());
