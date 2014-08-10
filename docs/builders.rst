@@ -246,8 +246,8 @@ From Image
 ==========
 
 The ``from_image`` backend downloads image, unpacks it, and uses that as an
-image for the system. Using :ref:`provision` you can install additional
-packages or do whatever you need to configure system.
+image for the system. Using :ref:`Provision<provision>` you can install
+additional packages or do whatever you need to configure system.
 
 Example Ubuntu image:
 
@@ -346,6 +346,73 @@ Parameters
 .. _vagrant-lxc: https://github.com/fgrehm/vagrant-lxc
 .. _`Vagrant Cloud`: https://vagrantcloud.com/
 
+.. _docker-builder:
+
+Docker
+======
+
+This backend can fetch Docker_ images from a repository and/or use Dockerfiles
+to build containers.
+
+Raw ubuntu container:
+
+.. code-block:: yaml
+
+   ubuntu:
+     builder: docker
+     parameters:
+       image: ubuntu
+
+Container with dockerfile:
+
+.. code-block:: yaml
+
+   mycontainer:
+     builder: docker
+     parameters:
+        dockerfile: Dockerfile
+
+
+Dependencies
+------------
+
+* ``curl``
+* ``awk`` (tested on gawk, other variants may work too)
+
+.. note:: you *don't need* to have docker installed when using the builder
+
+
+Parameters
+----------
+
+``image``
+    Base docker image to use. Currently we only support downloading images from
+    ``index.docker.io``, support of private repositories will be added later.
+
+``dockerfile``
+    Filename of the Dockerfile_ to use, relative to the project directory (the
+    directory where ``vagga.yaml`` is).
+
+.. note:: if both ``image`` and ``dockerfile`` are specified, the ``image``
+   parameter overrides the one used in ``FROM``. For example you can make
+   container which is built from ``ubuntu-debootstrap`` instead of
+   ``FROM ubuntu``, effectively making container smaller (in some cases).
+
+
+Limitations
+-----------
+
+* Only single ``FROM`` instruction supported
+* Only ``RUN`` instructions are supported so far, other will be implemented
+  later
+* Instructions which influence command run in container will probably never
+  be implemented, including ONBUILD, CMD, WORKDIR... There is :ref:`vagga
+  syntax for those things<Containers>`.
+
+
+.. _docker: http://docker.com
+.. _Dockerfile: http://docs.docker.com/reference/builder/
+
 
 Ubuntu
 ======
@@ -356,8 +423,8 @@ working in user namespaces (BTW, docker have plenty of hacks to get it working
 too, but they are different from what we need). We are working to provide the
 official best of all worlds ubuntu (and debian) container builder. In the
 meantime you can use any of `Debian Debootstrap`_, `From Image`_,  `Vagrant
-LXC`_ or `Debian-simple`_ builders. Every of it's section have an example on
-how to setup Ubuntu specifically. Please report any issues you have with any
-of them.
+LXC`_, :ref:`docker-builder` or `Debian-simple`_ builders. Every of it's
+section have an example on how to setup Ubuntu specifically. Please report any
+issues you have with any of them.
 
 

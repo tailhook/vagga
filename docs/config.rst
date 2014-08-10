@@ -12,6 +12,7 @@ The ``vagga.yaml`` has three sections:
 * ``variants`` -- defines a set of variables that can be used to customize
   containers and commands
 
+.. _containers:
 
 Containers
 ==========
@@ -63,6 +64,8 @@ Container parameters:
 ``environ``
     The mapping, that constitutes environment variables set in container. This
     overrides ``environ-file`` on value by value basis.
+
+.. _provision:
 
 ``provision``
     The command-line to be run to provision the container. It's run in
