@@ -194,6 +194,11 @@ int _run_container(void *arg) {
     close(cont->pipe_reader);
     close(cont->pipe_writer);
 
+    setuid(0);
+    setgid(0);
+    gid_t group = 0;
+    setgroups(1, &group);
+
     mount_all(cont->mounts_num, cont->mounts);
 
     check_error(chdir(cont->mount_dir),
