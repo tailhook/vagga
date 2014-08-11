@@ -4,6 +4,7 @@ use collections::treemap::TreeMap;
 use collections::treemap::TreeSet;
 
 use super::settings::Settings;
+use super::config::Range;
 use cfg = super::config;
 
 pub struct Container {
@@ -18,6 +19,8 @@ pub struct Container {
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
     pub provision: Option<String>,
+    pub uids: Vec<Range>,
+    pub gids: Vec<Range>,
 }
 
 pub struct Environ {
@@ -142,6 +145,8 @@ impl Environ {
             parameters: parameters,
             environ: environ,
             container_root: None,
+            uids: src.uids.clone(),
+            gids: src.gids.clone(),
         };
         for item in used.iter() {
             container.fullname.push_str("--");

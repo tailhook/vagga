@@ -65,6 +65,25 @@ Container parameters:
     The mapping, that constitutes environment variables set in container. This
     overrides ``environ-file`` on value by value basis.
 
+``uids``
+    List of ranges of user ids that need to be mapped when container runs.
+    User must have some ranges in ``/etc/subuid`` to run this contiainer,
+    and total size of all allowed ranges must be larger or equal to the sum of
+    sizes of all ranges specified in ``uids`` parameter.  Currenlty vagga
+    applies ranges found in ``/etc/subuid`` one by one until all ranges are
+    satisfied. It's not always optimal or desirable, we will allow to customize
+    mapping in later versions.
+
+``gids``
+    List of ranges of group ids that need to be mapped when container runs.
+    User must have some ranges in ``/etc/subgid`` to run this contiainer,
+    and total size of all allowed ranges must be larger or equal to the sum of
+    sizes of all ranges specified in ``gids`` parameter.  Currenlty vagga
+    applies ranges found in ``/etc/subgid`` one by one until all ranges are
+    satisfied. It's not always optimal or desirable, we will allow to customize
+    mapping in later versions.
+
+
 .. _provision:
 
 ``provision``

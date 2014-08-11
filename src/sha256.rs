@@ -12,6 +12,7 @@
 //! needed for internal use. This implementation is not intended for external
 //! use or for any use where security is important.
 
+use std::io::extensions::u64_to_le_bytes;
 use std::iter::range_step;
 use std::num::Zero;
 use std::slice::bytes::{MutableByteVector, copy_memory};
@@ -251,6 +252,15 @@ pub trait Digest {
     /// * `input` The string to feed into the digest
     fn input_str(&mut self, input: &str) {
         self.input(input.as_bytes());
+    }
+
+    /// Convenience function that feeds a int into a digest.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` The uint to feed into the digest
+    fn input_uint(&mut self, input: u64) {
+        u64_to_le_bytes(input, 8, |v| self.input(v))
     }
 
     /// Convenience function that retrieves the result of a digest as a

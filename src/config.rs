@@ -8,6 +8,7 @@ use J = serialize::json;
 
 use Pid1 = super::linux;
 use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
+use super::yamlutil::{get_ranges};
 
 
 #[deriving(Show)]
@@ -41,6 +42,12 @@ pub struct Variant {
     pub options: Vec<String>,
 }
 
+#[deriving(Clone)]
+pub struct Range {
+    pub start: uint,
+    pub end: uint,
+}
+
 pub struct Container {
     pub default_command: Option<Vec<String>>,
     pub command_wrapper: Option<Vec<String>>,
@@ -50,6 +57,8 @@ pub struct Container {
     pub parameters: TreeMap<String, String>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
+    pub uids: Vec<Range>,
+    pub gids: Vec<Range>,
 }
 
 pub struct Config {
@@ -58,6 +67,17 @@ pub struct Config {
     pub containers: TreeMap<String, Container>,
 }
 
+impl Range {
+    pub fn new(start: uint, end: uint) -> Range {
+        return Range { start: start, end: end };
+    }
+    pub fn len(&self) -> uint {
+        return self.end - self.start + 1;
+    }
+    pub fn shift(&self, val: uint) -> Range {
+        return Range::new(self.start + val, self.end - val);
+    }
+}
 
 fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
     let mut dir = work_dir.clone();
@@ -220,6 +240,8 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
                     environ: get_dict(jcont, "environ"),
                     environ_file: get_string(jcont, "environ-file"),
                     provision: get_string(jcont, "provision"),
+                    uids: get_ranges(jcont, "uids"),
+                    gids: get_ranges(jcont, "gids"),
                 };
                 config.containers.insert(name.clone(), cont);
             }

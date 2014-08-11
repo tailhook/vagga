@@ -1,13 +1,15 @@
 #![allow(dead_code)]
+#![allow(non_camel_case_types)]
 
 use std::io;
 use std::ptr::null;
 use std::c_str::CString;
+use std::str::raw::from_c_str;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
 use std::os::{Pipe, pipe};
 use std::default::Default;
-use libc::{c_int, c_uint, c_char, c_ulong, pid_t, _exit, c_void};
+use libc::{c_int, c_uint, c_char, c_ulong, pid_t, _exit, c_void, uid_t, gid_t};
 use libc::funcs::posix88::unistd::{close, write};
 use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
 
@@ -64,6 +66,16 @@ static PR_SET_CHILD_SUBREAPER: c_int = 36;
 
 pub static SIGCHLD   : c_int =  17    ; /* Child status has changed (POSIX).  */
 
+// pwd.h
+struct passwd {
+    pw_name: *c_char,       /* username */
+    pw_passwd: *u8,     /* user password */
+    pw_uid: uid_t,      /* user ID */
+    pw_gid: gid_t,      /* group ID */
+    pw_gecos: *u8,      /* user information */
+    pw_dir: *u8,        /* home directory */
+    pw_shell: *u8,      /* shell program */
+}
 
 extern  {
     // sys/types.h
@@ -84,6 +96,9 @@ extern  {
     fn prctl(option: c_int, arg2: c_ulong, arg3: c_ulong,
                             arg4: c_ulong, arg5: c_ulong) -> c_int;
 
+
+    // pwd.h
+    fn getpwuid(uid: uid_t) -> *passwd;
 
 }
 
@@ -422,4 +437,14 @@ pub fn init_prctl() {
     unsafe {
         prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0);
     }
+}
+
+pub fn get_user_name(uid: uid_t) -> Result<String, String> {
+    unsafe {
+        let val = getpwuid(uid);
+        if val != null() {
+            return Ok(from_c_str((*val).pw_name));
+        }
+    }
+    return Err(format!("User {} not found", uid));
 }

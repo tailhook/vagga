@@ -1,6 +1,4 @@
-use std::to_str::ToStr;
 use std::os::getenv;
-use std::io::{Open, Write};
 use std::io::{BufferedReader, IoResult};
 use std::io::fs::{File, copy, rename};
 use std::io::stdio::{stdout, stderr};
@@ -11,12 +9,12 @@ use collections::treemap::TreeMap;
 use argparse::{ArgumentParser, Store, StoreOption, List, StoreTrue, StoreConst};
 use argparse::{StoreFalse};
 
+use super::uidmap::write_uid_map;
 use super::monitor::Monitor;
 use super::env::{Environ, Container};
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::options::env_options;
 use super::build::ensure_container;
-use libc::funcs::posix88::unistd::{geteuid, getegid};
 
 use Pid1 = super::linux;
 
@@ -170,9 +168,6 @@ pub fn internal_run(env: &Environ, container: &Container,
     let container_root = container.container_root.as_ref().unwrap();
     info!("Running {}: {} {}", container_root.display(), command, cmdargs);
 
-    let uid = unsafe { geteuid() };
-    let gid = unsafe { getegid() };
-
     let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
     try!(ensure_dir(&mount_dir));
 
@@ -207,28 +202,7 @@ pub fn internal_run(env: &Environ, container: &Container,
         container.container_root.as_ref().unwrap(),
         &ropts, work_dir, &command, cmdargs.as_slice(), &runenv));
 
-    // TODO(tailhook) set uid map from config
-    let uid_map = format!("0 {} 1", uid);
-    debug!("Writing uid_map: {}", uid_map);
-    match File::open_mode(&Path::new("/proc")
-                      .join(pid.to_str())
-                      .join("uid_map"), Open, Write)
-            .write_str(uid_map.as_slice()) {
-        Ok(()) => {}
-        Err(e) => return Err(format!(
-            "Error writing uid mapping: {}", e)),
-    }
-
-    let gid_map = format!("0 {} 1", gid);
-    debug!("Writing gid_map: {}", gid_map);
-    match File::open_mode(&Path::new("/proc")
-                      .join(pid.to_str())
-                      .join("gid_map"), Open, Write)
-            .write_str(gid_map.as_slice()) {
-        Ok(()) => {}
-        Err(e) => return Err(format!(
-            "Error writing gid mapping: {}", e)),
-    }
+    try!(write_uid_map(pid, &container.uids, &container.gids));
 
     try!(pipe.wakeup());
     return Ok(pid);

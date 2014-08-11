@@ -169,6 +169,20 @@ pub fn build_container(environ: &Environ, container: &mut Container,
             digest.input_str(";");
         }
     }
+    if container.uids.len() > 0 {
+        digest.input_str("uids:");
+        for rng in container.uids.iter() {
+            digest.input_uint(rng.start as u64);
+            digest.input_uint(rng.end as u64);
+        }
+    }
+    if container.gids.len() > 0 {
+        digest.input_str("gids:");
+        for rng in container.gids.iter() {
+            digest.input_uint(rng.start as u64);
+            digest.input_uint(rng.end as u64);
+        }
+    }
     match container.provision {
         Some(ref x) => digest.input_str(x.as_slice()),
         None => {}

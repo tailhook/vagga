@@ -2,6 +2,8 @@ use collections::treemap::TreeMap;
 
 use J = serialize::json;
 
+use super::config::Range;
+
 pub fn get_string(json: &J::Json, key: &'static str) -> Option<String> {
     return match json {
         &J::Object(ref dict) => match dict.find(&key.to_string()) {
@@ -100,4 +102,36 @@ pub fn get_command(json: &J::Json, key: &'static str) -> Option<Vec<String>> {
     }
 
     return Some(res);
+}
+
+pub fn get_ranges(json: &J::Json, key: &'static str) -> Vec<Range> {
+    let mut res = Vec::new();
+    let list = match json {
+        &J::Object(ref dict) => match dict.find(&key.to_string()) {
+            Some(&J::List(ref val)) => val,
+            _ => return res,
+        },
+        _ => return res,
+    };
+
+    for item in list.iter() {
+        match item {
+            &J::Number(ref val) => {
+                res.push(Range::new(*val as uint, *val as uint));
+            }
+            &J::String(ref val) => {
+                match regex!(r"^(\d+)-(\d+)$").captures(val.as_slice()) {
+                    Some(caps) => {
+                        res.push(Range::new(
+                            from_str(caps.at(1)).unwrap(),
+                            from_str(caps.at(2)).unwrap()));
+                    }
+                    None => continue,  // TODO(tailhook) assert maybe?
+                }
+            }
+            _ => continue,  // TODO(tailhook) assert maybe?
+        }
+    }
+
+    return res;
 }
