@@ -235,14 +235,31 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     env.push(("artifacts_dir".as_bytes(), artifacts_dir.as_vec()));
     env.push(("container_hash".as_bytes(), hash.as_bytes()));
     env.push(("container_root".as_bytes(), container_tmp.as_vec()));
-    match Command::new(build_sh).env(env.as_slice())
-        .cwd(&environ.project_root)
-        .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
-        .status() {
+
+    let mut cmd = Command::new(environ.vagga_exe.as_vec());
+    cmd.arg("_userns");
+    if container.uids.len() > 0 {
+        cmd.arg("--uid-ranges");
+        let lst: Vec<String> = container.uids.iter()
+                .map(|r| format!("{}-{}", r.start, r.end)).collect();
+        cmd.arg(lst.connect(","));
+    }
+    if container.gids.len() > 0 {
+        cmd.arg("--gid-ranges");
+        let lst: Vec<String> = container.gids.iter()
+                .map(|r| format!("{}-{}", r.start, r.end)).collect();
+        cmd.arg(lst.connect(","));
+    }
+    cmd.arg(build_sh);
+    cmd.env(env.as_slice());
+    cmd.cwd(&environ.project_root);
+    cmd.stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2));
+    match cmd.status() {
         Ok(ExitStatus(0)) => {}
         Ok(x) => return Err(format!("Builder exited with status {}", x)),
         Err(x) => return Err(format!("Can't spawn: {}", x)),
     }
+
     if container.provision.is_some() {
         match Command::new(environ.vagga_exe.as_vec()).env(env.as_slice())
             .arg("_chroot")

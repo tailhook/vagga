@@ -95,7 +95,6 @@ Dependencies
 
 * ``pacman``
 * ``wget``
-* ``lxc`` (``lxc-usernsexec`` command, will remove this dependency in future)
 
 
 Parameters

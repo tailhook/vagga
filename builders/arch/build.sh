@@ -11,7 +11,6 @@
 : ${arch_packages:=base}
 
 type mkdir                             # coreutils
-type lxc-usernsexec                    # lxc (get rid of it?)
 type wget                              # needed for pacman
 type pacman                            # arch package manager
 
@@ -21,8 +20,7 @@ mkdir -m 0755 -p $container_root/var/log
 
 mkdir -p $cache_dir
 
-lxc-usernsexec -- \
-    pacman --root "$container_root" -Sy --noconfirm \
+pacman --root "$container_root" -Sy --noconfirm \
     --cachedir="$cache_dir" \
     --config="$arch_pacman_conf" \
     $arch_packages
