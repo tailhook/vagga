@@ -377,6 +377,7 @@ Dependencies
 
 * ``curl``
 * ``awk`` (tested on gawk, other variants may work too)
+* ``tar``
 
 .. note:: you *don't need* to have docker installed when using the builder
 

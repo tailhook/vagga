@@ -20,5 +20,6 @@ mkdir -p $artifacts_dir
 path=$($vagga_inventory/fetch "$vagrant_lxc_url")
 tar -xf $path -C "$artifacts_dir/"
 
-tar -xf $artifacts_dir/rootfs.tar.* --exclude=rootfs/dev/* -C $artifacts_dir
+tar -xf $artifacts_dir/rootfs.tar.* \
+    --no-same-owner --exclude=rootfs/dev/* -C $artifacts_dir
 mv $artifacts_dir/rootfs/ $container_root

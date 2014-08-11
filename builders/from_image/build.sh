@@ -18,4 +18,4 @@ mkdir -p $artifacts_dir
 
 path=$($vagga_inventory/fetch $from_image_url)
 
-tar -xf $path --exclude 'dev/*' -C $container_root
+tar -xf $path --no-same-owner --exclude 'dev/*' -C $container_root

@@ -14,6 +14,7 @@
 type curl
 type mkdir
 type awk
+type tar
 
 if [ -n "$docker_dockerfile" ]; then
     exec < "$docker_dockerfile"
@@ -107,7 +108,7 @@ done
 
 
 for fn in $filenames; do
-    tar -xf "$fn" --exclude "dev/*" -C "$container_root"
+    tar -xf "$fn" --no-same-owner --exclude "dev/*" -C "$container_root"
     find "$container_root" -name ".wh.*" | sed 's/\.wh\.//' \
         | xargs --no-run-if-empty rm -rf
     find "$container_root" -name ".wh.*" -delete
