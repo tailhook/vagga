@@ -350,6 +350,64 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
     return Ok(pid);
 }
 
+pub fn run_newuser(pipe: &CPipe,
+    cmd: &String, args: &[String], environ: &TreeMap<String, String>)
+    -> Result<pid_t, String>
+{
+    let c_exec_fn = cmd.to_c_str();
+    let filenames = if cmd.as_slice().contains("/") {
+            vec!(c_exec_fn.clone())
+        } else {
+            environ.find(&"PATH".to_string()).unwrap()
+                .as_slice().split(':').map(|prefix| {
+                    (prefix.to_string() + "/".to_string() + cmd.to_string())
+                    .to_c_str()
+                }).collect()
+        };
+    let c_filenames:Vec<*u8> = raw_vec(&filenames);
+    let args = c_vec(args.iter());
+    let mut c_args = raw_vec(&args);
+    c_args.insert(0, c_exec_fn.as_bytes().as_ptr());
+    c_args.push(null());
+    let environ = environ.iter().map(|(k, v)| {
+        (*k + "=" + *v).to_c_str()
+    }).collect();
+    let mut c_environ = raw_vec(&environ);
+    c_environ.push(null());
+
+    let &CPipe(pipe) = pipe;
+    let pid = unsafe {
+        fork_to_container(
+            CLONE_NEWUSER,
+            &CContainer {
+                pid1_mode: Exec as i32,
+                pipe_reader: pipe.reader,
+                pipe_writer: pipe.writer,
+                container_root: null(),
+                mount_dir: null(),
+                mounts_num: 0,
+                mounts: null(),
+                work_dir: null(),
+                exec_filename: c_exec_fn.as_bytes().as_ptr(),
+                exec_filenames_num: c_filenames.len() as i32,
+                exec_filenames: c_filenames.as_slice().as_ptr(),
+                exec_args: c_args.as_slice().as_ptr(),
+                exec_environ: c_environ.as_slice().as_ptr(),
+            })
+    };
+    if pid < 0 {
+        let eno = errno() as i32;
+        let err = error_string(eno as uint);
+        if eno == EINVAL {
+            return Err(format!("Error cloning: {}. It might mean that your
+                kernel doesn't support user namespaces. Sorry.", err));
+        } else {
+            return Err(format!("Error cloning: {}", err));
+        }
+    }
+    return Ok(pid);
+}
+
 
 pub fn wait_process(pid: pid_t) -> Result<int, String> {
     loop {

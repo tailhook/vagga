@@ -25,6 +25,7 @@ mod config;
 mod build;
 mod run;
 mod chroot;
+mod userns;
 mod env;
 mod main;
 mod linux;

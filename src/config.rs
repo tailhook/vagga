@@ -75,7 +75,8 @@ impl Range {
         return self.end - self.start + 1;
     }
     pub fn shift(&self, val: uint) -> Range {
-        return Range::new(self.start + val, self.end - val);
+        assert!(self.end - self.start + 1 >= val);
+        return Range::new(self.start + val, self.end);
     }
 }
 

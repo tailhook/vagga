@@ -201,12 +201,16 @@ int _run_container(void *arg) {
 
     mount_all(cont->mounts_num, cont->mounts);
 
-    check_error(chdir(cont->mount_dir),
-        "Can't set working directory to %s: (%d) %s\n", cont->mount_dir);
-    check_error(chroot(cont->mount_dir),
-        "Can't change root to %s: (%d) %s\n", cont->mount_dir);
-    check_error(chdir(cont->work_dir),
-        "Can't set working directory to %s: (%d) %s\n", cont->work_dir);
+    if(cont->mount_dir) {
+        check_error(chdir(cont->mount_dir),
+            "Can't set working directory to %s: (%d) %s\n", cont->mount_dir);
+        check_error(chroot(cont->mount_dir),
+            "Can't change root to %s: (%d) %s\n", cont->mount_dir);
+    }
+    if(cont->work_dir) {
+        check_error(chdir(cont->work_dir),
+            "Can't set working directory to %s: (%d) %s\n", cont->work_dir);
+    }
 
     switch(cont->pid1_mode) {
     case pid1_exec:

@@ -7,6 +7,7 @@ use super::config::{Shell, Plain, Supervise};
 use super::build::build_command;
 use super::run::run_command_line;
 use super::chroot::run_chroot;
+use super::userns::run_userns;
 use super::commands::shell::run_shell_command;
 use super::commands::command::run_plain_command;
 use super::commands::supervise::run_supervise_command;
@@ -96,6 +97,7 @@ pub fn run() -> int {
 
         // Commands for builders
         "_chroot" => run_chroot(&mut env, args),
+        "_userns" => run_userns(&mut env, args),
         "_extract_json" => extract_json(&mut env, args),
 
         _ => {
