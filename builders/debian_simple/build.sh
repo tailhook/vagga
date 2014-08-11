@@ -29,6 +29,6 @@ touch "$container_root/var/lib/dpkg/available"
 
 for i in $container_root/var/cache/apt/archives/*.deb; do
     dpkg-deb --fsys-tarfile $i;
-done  |  tar --ignore-zeros -xf- -C $container_root
+done  |  tar --ignore-zeros --no-same-owner -xf- -C $container_root
 
 
