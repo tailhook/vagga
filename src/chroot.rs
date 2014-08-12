@@ -1,17 +1,17 @@
 use std::os;
-use std::io::{Open, Write};
 use std::io::stdio::{stdout, stderr};
-use std::io::fs::{File, rename, copy};
+use std::io::fs::{rename, copy};
 use std::default::Default;
 
 use argparse::{ArgumentParser, Store, List, StoreTrue, StoreFalse};
 use collections::treemap::TreeMap;
 
+use super::uidmap::write_uid_map;
 use super::monitor::Monitor;
 use super::env::Environ;
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::options::env_options;
-use libc::funcs::posix88::unistd::getuid;
+use super::userns::IdRanges;
 
 
 pub fn run_chroot(env: &mut Environ, args: Vec<String>)
@@ -22,6 +22,8 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let mut cmdargs: Vec<String> = Vec::new();
     let mut ropts: RunOptions = Default::default();
     let mut resolv: bool = true;
+    let mut uidranges: IdRanges = Vec::new();
+    let mut gidranges: IdRanges = Vec::new();
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut root)
@@ -46,6 +48,12 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
         ap.refer(&mut resolv)
             .add_option(["--no-resolv"], box StoreFalse,
                 "Do not copy /etc/resolv.conf");
+        ap.refer(&mut uidranges)
+            .add_option(["--uid-ranges"], box Store::<IdRanges>,
+                "Uid ranges that must be mapped. E.g. 0-1000,65534");
+        ap.refer(&mut gidranges)
+            .add_option(["--gid-ranges"], box Store::<IdRanges>,
+                "Gid ranges that must be mapped. E.g. 0-100,500-1000");
         env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -85,17 +93,8 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let pid = try!(run_container(&pipe, env, &root, &ropts,
         &env.work_dir, &command, cmdargs.as_slice(), &runenv));
 
-    // TODO(tailhook) set uid map from config
-    let uid = unsafe { getuid() };
-    let uid_map = format!("0 {} 1", uid);
-    debug!("Writing uid_map: {}", uid_map);
-    match File::open_mode(&Path::new("/proc")
-                      .join(pid.to_str())
-                      .join("uid_map"), Open, Write)
-            .write_str(uid_map.as_slice()) {
-        Ok(()) => {}
-        Err(e) => return Err(format!(
-            "Error writing uid mapping: {}", e)),
+    if ropts.uidmap {
+        try!(write_uid_map(pid, &uidranges, &gidranges));
     }
 
     try!(pipe.wakeup());

@@ -261,16 +261,30 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     }
 
     if container.provision.is_some() {
-        match Command::new(environ.vagga_exe.as_vec()).env(env.as_slice())
-            .arg("_chroot")
-            .arg("--writeable")
-            .arg("--inventory")
-            .arg(container_tmp.as_vec())
-            .args(container.shell.as_slice())
-            .arg(container.provision.as_ref().unwrap().as_slice())
-            .cwd(&environ.project_root)
-            .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
-            .status() {
+        let mut pcmd = Command::new(environ.vagga_exe.as_vec());
+        pcmd.env(env.as_slice());
+        pcmd.arg("_chroot");
+        pcmd.arg("--writeable");
+        pcmd.arg("--inventory");
+        if container.uids.len() > 0 {
+            cmd.arg("--uid-ranges");
+            let lst: Vec<String> = container.uids.iter()
+                    .map(|r| format!("{}-{}", r.start, r.end)).collect();
+            cmd.arg(lst.connect(","));
+        }
+        if container.gids.len() > 0 {
+            cmd.arg("--gid-ranges");
+            let lst: Vec<String> = container.gids.iter()
+                    .map(|r| format!("{}-{}", r.start, r.end)).collect();
+            cmd.arg(lst.connect(","));
+        }
+        pcmd.arg(container_tmp.as_vec());
+        pcmd.args(container.shell.as_slice());
+        pcmd.arg(container.provision.as_ref().unwrap().as_slice());
+        pcmd.cwd(&environ.project_root);
+        pcmd.stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+        match pcmd.status() {
             Ok(ExitStatus(0)) => {}
             Ok(x) => return Err(format!("Provision exited with status {}", x)),
             Err(x) => return Err(format!("Can't spawn provisor: {}", x)),

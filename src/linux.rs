@@ -10,7 +10,7 @@ use std::io::fs::mkdir;
 use std::os::{Pipe, pipe};
 use std::default::Default;
 use libc::{c_int, c_uint, c_char, c_ulong, pid_t, _exit, c_void, uid_t, gid_t};
-use libc::funcs::posix88::unistd::{close, write};
+use libc::funcs::posix88::unistd::{close, write, geteuid};
 use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
 
 use collections::treemap::TreeMap;
@@ -150,6 +150,7 @@ struct CContainer {
 pub struct RunOptions {
     pub writeable: bool,
     pub inventory: bool,
+    pub uidmap: bool,
     pub pid1mode: Pid1Mode,
 }
 
@@ -158,6 +159,7 @@ impl Default for RunOptions {
         return RunOptions {
             writeable: false,
             inventory: false,
+            uidmap: unsafe { geteuid() } != 0,
             pid1mode: Wait,
         };
     }
@@ -318,9 +320,12 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
     c_environ.push(null());
 
     let &CPipe(pipe) = pipe;
+    let mut ns = CLONE_NEWPID|CLONE_NEWNS|CLONE_NEWIPC;
+    if options.uidmap {
+        ns |= CLONE_NEWUSER;
+    }
     let pid = unsafe {
-        fork_to_container(
-            CLONE_NEWPID|CLONE_NEWNS|CLONE_NEWIPC|CLONE_NEWUSER,
+        fork_to_container(ns,
             &CContainer {
                 pid1_mode: options.pid1mode as i32,
                 pipe_reader: pipe.reader,

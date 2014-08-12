@@ -13,7 +13,7 @@ use super::linux::{CPipe, run_newuser};
 use super::options::env_options;
 
 
-type IdRanges = Vec<Range>;
+pub type IdRanges = Vec<Range>;
 
 
 impl FromStr for IdRanges {
