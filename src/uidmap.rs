@@ -179,3 +179,87 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
     }
     return Ok(());
 }
+
+pub fn write_max_map(pid: pid_t) -> Result<(), String>
+{
+    let uid_map = read_uid_map().ok();
+    let gid_map = read_gid_map().ok();
+
+    let uid = unsafe { geteuid() };
+    let gid = unsafe { getegid() };
+    if uid_map.is_none() {
+        //  No required mapping, just write our effective uid/gid to mapping
+        let uid_map = format!("0 {} 1", uid);
+        debug!("Writing uid_map: {}", uid_map);
+        match File::open_mode(&Path::new("/proc")
+                          .join(pid.to_str())
+                          .join("uid_map"), Open, Write)
+                .write_str(uid_map.as_slice()) {
+            Ok(()) => {}
+            Err(e) => return Err(format!(
+                "Error writing uid mapping: {}", e)),
+        }
+    } else {
+        let uid_map = uid_map.unwrap();
+        let mut cmd = Command::new("newuidmap");
+        cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
+        cmd.arg(pid.to_str());
+        cmd.arg("0");
+        cmd.arg(uid.to_str());
+        cmd.arg("1");
+        for &rng in uid_map.iter() {
+            let mut rng = rng;
+            if uid as uint >= rng.start && uid as uint <= rng.end {
+                // TODO(tailhook) implement better heuristic
+                assert!(uid as uint == rng.start);
+                rng = rng.shift(1);
+                if rng.len() == 0 { continue; }
+            }
+            cmd.arg(rng.start.to_str());
+            cmd.arg(rng.start.to_str());
+            cmd.arg(rng.len().to_str());
+        }
+        match cmd.status() {
+            Ok(ExitStatus(0)) => {},
+            x => return Err(format!("Error running newuidmap: {}", x)),
+        }
+    }
+
+    if gid_map.is_none() {
+        let gid_map = format!("0 {} 1", gid);
+        debug!("Writing gid_map: {}", gid_map);
+        match File::open_mode(&Path::new("/proc")
+                          .join(pid.to_str())
+                          .join("gid_map"), Open, Write)
+                .write_str(gid_map.as_slice()) {
+            Ok(()) => {}
+            Err(e) => return Err(format!(
+                "Error writing gid mapping: {}", e)),
+        }
+    } else {
+        let gid_map = gid_map.unwrap();
+        let mut cmd = Command::new("newgidmap");
+        cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
+        cmd.arg(pid.to_str());
+        cmd.arg("0");
+        cmd.arg(gid.to_str());
+        cmd.arg("1");
+        for &rng in gid_map.iter() {
+            let mut rng = rng;
+            if gid as uint >= rng.start && gid as uint <= rng.end {
+                // TODO(tailhook) implement better heuristic
+                assert!(gid as uint == rng.start);
+                rng = rng.shift(1);
+                if rng.len() == 0 { continue; }
+            }
+            cmd.arg(rng.start.to_str());
+            cmd.arg(rng.start.to_str());
+            cmd.arg(rng.len().to_str());
+        }
+        match cmd.status() {
+            Ok(ExitStatus(0)) => {},
+            x => return Err(format!("Error running newgidmap: {}", x)),
+        }
+    }
+    return Ok(());
+}

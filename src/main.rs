@@ -8,6 +8,7 @@ use super::build::build_command;
 use super::run::run_command_line;
 use super::chroot::run_chroot;
 use super::userns::run_userns;
+use super::clean::{run_do_rm, run_clean};
 use super::commands::shell::run_shell_command;
 use super::commands::command::run_plain_command;
 use super::commands::supervise::run_supervise_command;
@@ -94,11 +95,15 @@ pub fn run() -> int {
         "_build" => build_command(&mut env, args),
         "_run" => run_command_line(&mut env, args),
         "_setv" | "_setvariant" => set_variant(&mut env, args),
+        "_clean" => run_clean(&mut env, args),
 
         // Commands for builders
         "_chroot" => run_chroot(&mut env, args),
         "_userns" => run_userns(&mut env, args),
         "_extract_json" => extract_json(&mut env, args),
+
+        // Commands run by vagga in namespaces
+        "__rm" => run_do_rm(&mut env, args),
 
         _ => {
             let fun = match env.config.commands.find(&cname) {

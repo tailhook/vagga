@@ -35,6 +35,7 @@ mod yamlutil;
 mod monitor;
 mod sha256;
 mod uidmap;
+mod clean;
 
 mod commands {
     pub mod shell;
