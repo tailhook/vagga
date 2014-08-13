@@ -117,8 +117,8 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         let ausum = allowed_uids.iter().map(|r| r.len()).sum();
 
         if usum > ausum {
-            warn!(concat!("Container requires more users than you ",
-                          "are allowed to use (see /etc/subuid)"));
+            error!(concat!("Container requires more users than you ",
+                           "are allowed to use (see /etc/subuid)"));
         }
 
         let uid_map = match_ranges(uid_req, &allowed_uids);
@@ -159,8 +159,8 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         let gsum = gid_req.iter().map(|r| r.len()).sum();
         let agsum = allowed_gids.iter().map(|r| r.len()).sum();
         if gsum > agsum {
-            warn!(concat!("Container requires more groups than you are ",
-                          "allowed to use (see /etc/subgid)"));
+            error!(concat!("Container requires more groups than you are ",
+                           "allowed to use (see /etc/subgid)"));
         }
 
         let gid_map = match_ranges(gid_req, &allowed_gids);
