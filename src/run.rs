@@ -1,6 +1,6 @@
 use std::os::getenv;
-use std::io::{BufferedReader, IoResult};
-use std::io::fs::{File, copy, rename};
+use std::io::{BufferedReader, IoResult, AllPermissions};
+use std::io::fs::{File, copy, rename, mkdir};
 use std::io::stdio::{stdout, stderr};
 use std::default::Default;
 
@@ -172,11 +172,16 @@ pub fn internal_run(env: &Environ, container: &Container,
     try!(ensure_dir(&mount_dir));
 
     if resolv {
+        let etc = container_root.join("etc");
+        if !etc.exists() {
+            try!(mkdir(&etc, AllPermissions)
+                .map_err(|e| format!("Error creating /etc: {}", e)));
+        }
         try!(copy(&Path::new("/etc/resolv.conf"),
-                  &container_root.join("etc/resolv.conf.tmp"))
+                  &etc.join("resolv.conf.tmp"))
             .map_err(|e| format!("Error copying resolv.conf: {}", e)));
-        try!(rename(&container_root.join("etc/resolv.conf.tmp"),
-                    &container_root.join("etc/resolv.conf"),)
+        try!(rename(&etc.join("resolv.conf.tmp"),
+                    &etc.join("resolv.conf"),)
             .map_err(|e| format!("Error copying resolv.conf: {}", e)));
     }
 
