@@ -230,6 +230,11 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     env.push(("artifacts_dir".as_bytes(), artifacts_dir.as_vec()));
     env.push(("container_hash".as_bytes(), hash.as_bytes()));
     env.push(("container_root".as_bytes(), container_tmp.as_vec()));
+    let rustlog = getenv("RUST_LOG");
+    match rustlog {
+        Some(ref x) => env.push(("RUST_LOG".as_bytes(), x.as_bytes())),
+        None => {}
+    }
 
     let mut cmd = Command::new(environ.vagga_exe.as_vec());
     cmd.arg("_userns");
