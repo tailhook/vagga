@@ -42,7 +42,7 @@ pub struct Variant {
     pub options: Vec<String>,
 }
 
-#[deriving(Clone)]
+#[deriving(Clone, Show)]
 pub struct Range {
     pub start: uint,
     pub end: uint,
