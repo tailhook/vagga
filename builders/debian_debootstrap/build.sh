@@ -8,7 +8,7 @@
 : ${artifacts_dir:=$project_root/.vagga/.artifacts/$container_fullname.$container_hash}
 : ${container_root:=$project_root/.vagga/.roots/$container_fullname.$container_hash}
 : ${cache_dir:=$project_root/.vagga/.cache/ubuntu_debootstrap}
-: ${debian_debootstrap_repo:=http://http.debian.net/debian_debootstrap}
+: ${debian_debootstrap_repo:=http://http.debian.net/debian}
 : ${debian_debootstrap_suite:=sid}
 : ${debian_debootstrap_arch:=amd64}
 : ${debian_debootstrap_packages:=}
