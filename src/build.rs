@@ -3,7 +3,7 @@ use std::os::getenv;
 use std::path::BytesContainer;
 use std::str::from_utf8_lossy;
 use get_environ = std::os::env;
-use std::io::fs::{mkdir, rmdir_recursive, rename, symlink, unlink, readlink};
+use std::io::fs::{mkdir, rename, symlink, unlink, readlink};
 use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
 use std::io::stdio::{stdout, stderr};
 
@@ -14,6 +14,7 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 
 use super::env::{Environ, Container};
 use super::options::env_options;
+use super::clean::run_rmdirs;
 use super::linux::ensure_dir;
 
 
@@ -216,16 +217,10 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     info!("Building {} by {}", container_root.display(), build_sh.display());
 
     if container_tmp.exists() {
-        // TODO(tailhook) join container and rm, because may have
-        // files of different owners (subuid's)
-        try!(rmdir_recursive(&container_tmp).map_err(
-                |e| format!("Can't clean temporary root: {}", e)));
+        try!(run_rmdirs(environ, vec!(container_tmp.clone())));
     }
     if artifacts_dir.exists() {
-        // TODO(tailhook) join container and rm, because may have
-        // files of different owners (subuid's)
-        try!(rmdir_recursive(&artifacts_dir).map_err(
-                |e| format!("Can't clean temporary root: {}", e)));
+        try!(run_rmdirs(environ, vec!(artifacts_dir.clone())));
     }
     try!(makedirs(&container_tmp));
 
@@ -299,10 +294,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         [".roots", (cdir + ".old").as_slice()]);
     if container_root.exists() {
         if container_old.exists() {
-            match rmdir_recursive(&container_old) {
-                Ok(()) => {}
-                Err(x) => return Err(format!("Can't remove old root: {}", x)),
-            }
+            try!(run_rmdirs(environ, vec!(container_old.clone())));
         }
         match rename(&container_root, &container_old) {
             Ok(()) => {}
@@ -316,10 +308,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     }
 
     if container_old.exists() {
-        match rmdir_recursive(&container_old) {
-            Ok(()) => {}
-            Err(x) => return Err(format!("Can't remove old root: {}", x)),
-        }
+        try!(run_rmdirs(environ, vec!(container_old.clone())));
     }
     info!("Done building {} as {}",
         container.name, container_root.display());

@@ -41,7 +41,7 @@ pub fn run_do_rm(_env: &mut Environ, args: Vec<String>) -> Result<int, String>
     return Ok(0);
 }
 
-pub fn run_rmdirs(env: &mut Environ, dirs: Vec<Path>) -> Result<(), String> {
+pub fn run_rmdirs(env: &Environ, dirs: Vec<Path>) -> Result<(), String> {
     let pipe = try!(CPipe::new());
     let mut monitor = Monitor::new(true);
 
