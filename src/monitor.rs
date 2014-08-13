@@ -61,6 +61,9 @@ impl Monitor {
     }
     pub fn fail(&mut self) {
         self.failed = true;
+        if !self.singleton {
+            println!("----------------- SHUTTING DOWN ---------------------");
+        }
     }
     pub fn set_exit_status(&mut self, val: int) {
         self.exit_code = Some(val);
