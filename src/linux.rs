@@ -8,9 +8,10 @@ use std::str::raw::from_c_str;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
 use std::os::{Pipe, pipe};
+use std::os::getenv;
 use std::default::Default;
 use libc::{c_int, c_uint, c_char, c_ulong, pid_t, _exit, c_void, uid_t, gid_t};
-use libc::funcs::posix88::unistd::{close, write, geteuid};
+use libc::funcs::posix88::unistd::{close, write};
 use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
 
 use collections::treemap::TreeMap;
@@ -159,7 +160,7 @@ impl Default for RunOptions {
         return RunOptions {
             writeable: false,
             inventory: false,
-            uidmap: unsafe { geteuid() } != 0,
+            uidmap: getenv("VAGGA_IN_BUILD").is_none(),
             pid1mode: Wait,
         };
     }
