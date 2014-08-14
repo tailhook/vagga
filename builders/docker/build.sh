@@ -127,6 +127,7 @@ while read kw tail; do
             ${vagga_exe} _chroot --writeable --inventory \
                 --environ=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
                 --environ=LD_PRELOAD=/tmp/inventory/libfake.so \
+                --environ=HOME=/ \
                 "$container_root" \
                 /bin/sh -c "$tail"
             ;;
