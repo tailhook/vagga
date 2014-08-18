@@ -1,6 +1,7 @@
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::{rmdir_recursive};
 use std::io::fs::{readdir, readlink};
+use std::io::FileNotFound;
 use std::os;
 
 use argparse::{ArgumentParser, StoreConst, List};
@@ -115,15 +116,21 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
             let arts = env.local_vagga.join(".artifacts");
             let mut to_delete = Vec::new();
             for d in [roots, arts].iter() {
-                let items = try!(readdir(d)
-                    .map_err(|e| format!("Can't read dir {}: {}",
-                        d.display(), e)));
-                for path in items.iter() {
-                    match path.extension_str() {
-                        Some(x) if x.as_slice() == "tmp" => {
-                            to_delete.push(path.clone());
+                match readdir(d) {
+                    Ok(items) => {
+                        for path in items.iter() {
+                            match path.extension_str() {
+                                Some(x) if x.as_slice() == "tmp" => {
+                                    to_delete.push(path.clone());
+                                }
+                                _ => continue,
+                            }
                         }
-                        _ => continue,
+                    }
+                    Err(ref e) if e.kind == FileNotFound => {}
+                    Err(ref e) => {
+                        return Err(format!("Can't read dir {}: {}",
+                            d.display(), e));
                     }
                 }
             }
