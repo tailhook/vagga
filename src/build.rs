@@ -267,6 +267,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         pcmd.arg("_chroot");
         pcmd.arg("--writeable");
         pcmd.arg("--inventory");
+        pcmd.arg("--force-user-namespace");
         if container.uids.len() > 0 {
             let lst: Vec<String> = container.uids.iter()
                     .map(|r| format!("{}-{}", r.start, r.end)).collect();

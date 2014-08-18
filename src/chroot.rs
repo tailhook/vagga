@@ -54,6 +54,10 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
         ap.refer(&mut gidranges)
             .add_option(["--gid-ranges"], box Store::<IdRanges>,
                 "Gid ranges that must be mapped. E.g. 0-100,500-1000");
+        ap.refer(&mut ropts.uidmap)
+            .add_option(["--force-user-namespace"], box StoreTrue,
+                "Forces creation usernamespace (by default doesn't create if
+                 VAGGA_IN_BUILD is set");
         env_options(env, &mut ap);
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
