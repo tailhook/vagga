@@ -428,3 +428,46 @@ section have an example on how to setup Ubuntu specifically. Please report any
 issues you have with any of them.
 
 
+Alpine Linux
+============
+
+``alpine`` builder installs `Alpine linux`_ packages. This distribution known
+for it's smallest package sizes. Also unlike other distributions Alpine has
+easily downloadable static build of it's package manager, so you don't need to
+have ``apk`` installed on host system.
+
+Example:
+
+.. code-block:: yaml
+
+  alpine:
+    builder: alpine
+    parameters:
+      packages: py-sphinx make
+
+
+To give you some notion of how smaller alpine linux is. This example has size
+of about 64Mb. Similar example built by :ref:`Debian Debootstrap` builder has
+size of about 297Mb.
+
+
+Dependencies
+------------
+
+* ``wget`` or ``curl``
+* ``tar``
+
+
+Parameters
+----------
+
+``packages``
+    Space-separated list of packages (default ``alpine-base``)
+
+``mirror``
+    The url of the alpine mirror for installation (default
+    ``http://nl.alpinelinux.org/alpine/``)
+
+
+
+_`Alpine linux`: http://alpinelinux.org/
