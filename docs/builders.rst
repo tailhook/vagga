@@ -447,7 +447,7 @@ Example:
 
 
 To give you some notion of how smaller alpine linux is. This example has size
-of about 64Mb. Similar example built by :ref:`Debian Debootstrap` builder has
+of about 64Mb. Similar example built by `Debian Debootstrap`_ builder has
 size of about 297Mb.
 
 
@@ -469,5 +469,85 @@ Parameters
     ``http://nl.alpinelinux.org/alpine/``)
 
 
+.. _`Alpine linux`: http://alpinelinux.org/
 
-_`Alpine linux`: http://alpinelinux.org/
+
+Node Package Manager
+====================
+
+The ``npm`` builder, builds small system with installed npm_ packages. This
+is useful for web projects which need nodejs to build some static scripts but
+don't need it for other tasks. Here is a encouraging example:
+
+.. code-block:: yaml
+
+   containers:
+     react:
+       builder: npm
+       uids: [0-50, 65534]
+       gids: [0-50, 65534]
+       parameters:
+         packages: react-tools
+
+   commands:
+     build:
+       container: react
+       command: make
+
+This way just typing ``vagga make`` in a project directory when frist run
+creates container with react-tools (i.e. ``jsx`` command) and runs ``make``
+tool to build whatever is specified in ``Makefile``.
+
+.. warning:: Specifying ``uids`` and ``gids`` is mandatory, as npm is not
+   smart enough to skip non-existing users. So you must have ``newuidmap`` and
+   ``newgidmap`` installed (from package ``shadow>=4.1`` or ``uidmap``). Also
+   you must have something like the following in your system config files
+   (assuming your user is ``username`` and your uid is ``1000``)::
+
+        # /etc/subuid
+        username:1000:1
+        username:100000:100
+        # /etc/subgid
+        username:100000:100
+
+   See man subuid(5) and subgid(5) for more info.
+
+
+Currently installed in container by default are: ``nodejs``, ``npm``, ``make``,
+and ``git``. Latter one is mostly needed to install some nodejs packages. And
+``make`` is often useful to build javascripts. Container with base system
+occupy about 40Mb without additional node modules.
+
+.. note:: Currently we use `Alpine linux`_ to build container. But you should
+   not rely this. The only guaranteed is existence of node and other tools
+   mentioned above. We may change the base system if feel it reasonable.
+
+
+Dependencies
+------------
+
+* ``wget`` or ``curl``
+* ``tar``
+
+
+Parameters
+----------
+
+``packages``
+    A space-separated list of packages. Each name may be any string supported
+    by ``npm install``
+
+``alpine_packages``
+    Space-separated list of alpine packages to install. Usage of this option
+    is discouraged. This option may stop working at any moment. Use on your own
+    risk.
+
+``alpine_mirror``
+    The mirror to use for fetching packages. Usage of this option is
+    discouraged. This option may stop working at any moment.
+
+
+
+.. _npm: http://npmjs.org
+
+
