@@ -19,6 +19,7 @@ enum CleanMode {
     Container,
     TmpFolders,
     OldContainers,
+    Everything,
 }
 
 pub fn run_do_rm(_env: &mut Environ, args: Vec<String>) -> Result<int, String>
@@ -82,6 +83,10 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
                 "Delete .tmp folders. They are just garbage from previous
                  unsuccessful commands and safe to delete if you don't run any
                  other vagga processes in parallel")
+            .add_option(["--everything"], box StoreConst(Everything),
+                "Remove `.vagga` directory. Useful mostly before removing
+                 project itself. Needed when subuid/subgid used, so some files
+                 are not owned by the same user.")
             .add_option(["--old", "--old-containers"],
                 box StoreConst(OldContainers),
                 "Delete old containers. Currently it deletes all containers
@@ -110,6 +115,9 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
             let roots = env.local_vagga.join(".roots");
             try!(run_rmdirs(env,
                 names.iter().map(|n| roots.join(n.as_slice())).collect()));
+        }
+        Everything => {
+            try!(run_rmdirs(env, vec!(env.local_vagga.clone())));
         }
         TmpFolders => {
             let roots = env.local_vagga.join(".roots");
