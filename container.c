@@ -223,7 +223,7 @@ int _run_container(void *arg) {
         exec_and_wait_any(cont);
         break;
     default:
-        fprintf(stderr, "Internal Error: Wrong pid1mode %s\n", cont->pid1_mode);
+        fprintf(stderr, "Internal Error: Wrong pid1mode %d\n", cont->pid1_mode);
         exit(121);
     }
 }
