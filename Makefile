@@ -36,7 +36,7 @@ install:
 	install -d $(DESTDIR)$(PREFIX)/lib/vagga
 	install -m 755 vagga $(DESTDIR)$(PREFIX)/bin/vagga
 
-	cp -r builders $(DESTDIR)$(PREFIX)/lib/vagga/
+	cp -r builders inventory $(DESTDIR)$(PREFIX)/lib/vagga/
 
 
 .PHONY: all quire argparse libfake

@@ -287,7 +287,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
         //    "".to_c_str()),
         Pseudo("tmpfs".to_c_str(), mount_dir.join("tmp").to_c_str(),
             "size=102400k,mode=1777".to_c_str()),
-        BindRO(env.vagga_path.join("markerdir").to_c_str(),
+        BindRO(env.vagga_inventory.join("markerdir").to_c_str(),
                mount_dir.join("work").join(".vagga").to_c_str()),
         );
     if options.inventory {
