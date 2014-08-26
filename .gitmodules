@@ -1,6 +1,6 @@
 [submodule "rust-quire"]
 	path = rust-quire
-	url = git://github.com:tailhook/rust-quire
+	url = git://github.com/tailhook/rust-quire
 [submodule "rust-argparse"]
 	path = rust-argparse
 	url = git://github.com/tailhook/rust-argparse
