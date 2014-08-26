@@ -8,6 +8,7 @@ Contents:
    :maxdepth: 2
 
    vagga_features
+   installation
    config
    builders
    supervision
