@@ -74,9 +74,9 @@ layer=$(${vagga_exe} _extract_json $artifacts_dir/tags.json name layer \
 image=$(${vagga_exe} _extract_json $artifacts_dir/images.json id \
         | grep --max-count=1 "^$layer")
 
-token=$(awk 'BEGIN { RS="\r\n"; } /^x-docker-token:/{ print $2; exit 0; } ENDFILE { exit 1; }' \
+token=$(awk 'BEGIN { RS="\r\n"; } tolower($0) ~ /^x-docker-token:/{ print $2; exit 0; } ENDFILE { exit 1; }' \
     $artifacts_dir/images_header.txt)
-endpoint=$(awk '/^x-docker-endpoints:/{
+endpoint=$(awk 'tolower($0) ~ /^x-docker-endpoints:/{
         match($2, /[a-z0-9.-]+/, s);
         print s[0]; exit 0;}
     ENDFILE { exit 1; }' \
