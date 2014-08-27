@@ -83,7 +83,6 @@ Container parameters:
     satisfied. It's not always optimal or desirable, we will allow to customize
     mapping in later versions.
 
-
 .. _provision:
 
 ``provision``
@@ -167,6 +166,20 @@ Command parameters:
     This denotes what is run as pid 1 in container. It may be ``wait``,
     ``wait-all-children`` or ``exec``. The default ``wait`` is ok for most
     regular processes. See :ref:`pid1mode` for more info.
+
+``write-mode``
+    The parameter specifies how container's base file system is used. By
+    default container is immutable (corresponds to the ``read-only`` value of
+    the parameter), which means you can only write to the ``/tmp`` or
+    to the ``/work`` (which is your project directory).
+
+    Another option is ``transient-hard-link-copy``, which means that whenever
+    command is run, create a copy of the container, consisting of hard-links to
+    the original files, and remove the container after running command. Should
+    be used with care as hard-linking doesn't prevent original files to be
+    modified. Still very useful to try package installation in the system. Use
+    ``vagga _build --force container_name`` to fix base container if that was
+    modified.
 
 
 .. _variants:

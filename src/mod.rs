@@ -8,6 +8,7 @@ extern crate libc;
 extern crate green;
 extern crate rustuv;
 extern crate regex;
+extern crate time;
 #[phase(plugin, link)] extern crate log;
 #[phase(plugin)] extern crate regex_macros;
 
@@ -45,6 +46,7 @@ mod commands {
 
 mod utils {
     pub mod json;
+    pub mod run;
 }
 
 

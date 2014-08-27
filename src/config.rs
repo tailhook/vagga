@@ -18,6 +18,12 @@ pub enum SuperviseMode {
     Restart,
 }
 
+#[deriving(Show)]
+pub enum WriteMode {
+    ReadOnly,
+    TransientHardLinkCopy,
+}
+
 pub enum Executor {
     Shell(String),
     Plain(Vec<String>),
@@ -35,6 +41,7 @@ pub struct Command {
     pub inherit_environ: Vec<String>,
     pub description: Option<String>,
     pub resolv_conf: bool,
+    pub write_mode: WriteMode,
 }
 
 pub struct Variant {
@@ -174,6 +181,13 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
             None => Pid1::Wait,
             _ => return Err(format!("The pid1mode must be one of `wait`, \
                 `wait-all-children` or `exec` for command {}", name)),
+            },
+        write_mode: match get_string(jcmd, "write-mode") {
+            Some(ref s) if s.as_slice() == "transient-hard-link-copy"
+                => TransientHardLinkCopy,
+            None => ReadOnly,
+            _ => return Err(format!("The write-mode must be one of `read-only`,\
+                `transient-hard-link-copy` for command {}", name)),
             },
         execute: executor,
         container: container,

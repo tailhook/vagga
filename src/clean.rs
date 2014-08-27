@@ -1,8 +1,11 @@
+use std::os;
+use std::io::FileNotFound;
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::{rmdir_recursive};
 use std::io::fs::{readdir, readlink};
-use std::io::FileNotFound;
-use std::os;
+use std::io::process::Process;
+use std::from_str::from_str;
+use std::str::from_utf8;
 
 use argparse::{ArgumentParser, StoreConst, List};
 use collections::treemap::{TreeMap, TreeSet};
@@ -19,6 +22,8 @@ enum CleanMode {
     Container,
     TmpFolders,
     OldContainers,
+    Transient,
+    AllTransient,
     Everything,
 }
 
@@ -43,14 +48,14 @@ pub fn run_do_rm(_env: &mut Environ, args: Vec<String>) -> Result<int, String>
     return Ok(0);
 }
 
-pub fn run_rmdirs(env: &Environ, dirs: Vec<Path>) -> Result<(), String> {
+pub fn run_rmdirs(exe: &Path, dirs: Vec<Path>) -> Result<(), String> {
     let pipe = try!(CPipe::new());
     let mut monitor = Monitor::new(true);
 
     let mut args = vec!("__rm".to_string());
     args.extend(dirs.iter().map(|p| p.as_str().unwrap().to_string()));
     let pid = try!(run_newuser(&pipe,
-        &env.vagga_exe.as_str().unwrap().to_string(),
+        &exe.as_str().unwrap().to_string(),
         args.as_slice(),
         &TreeMap::new()));
 
@@ -93,6 +98,14 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
                  not linked in .vagga/xxx directly. Basically it means keep
                  single container (of each name/variant) with version last used
                  for this specific contianer.")
+            .add_option(["--tmp", "--transient"],
+                box StoreConst(Transient),
+                "Remove all transient containers, which do not have running
+                 processes. Note running processes are matched by pid, so may
+                 not be robust enough in some cases")
+            .add_option(["--all-transient"],
+                box StoreConst(AllTransient),
+                "Remove all transient containers without liveness checking")
             .required();
         env_options(env, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -113,11 +126,11 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
         Help => return Err(format!("Use one of the cleanup options")),
         Container => {
             let roots = env.local_vagga.join(".roots");
-            try!(run_rmdirs(env,
+            try!(run_rmdirs(&env.vagga_exe,
                 names.iter().map(|n| roots.join(n.as_slice())).collect()));
         }
         Everything => {
-            try!(run_rmdirs(env, vec!(env.local_vagga.clone())));
+            try!(run_rmdirs(&env.vagga_exe, vec!(env.local_vagga.clone())));
         }
         TmpFolders => {
             let roots = env.local_vagga.join(".roots");
@@ -142,7 +155,7 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
                     }
                 }
             }
-            try!(run_rmdirs(env, to_delete));
+            try!(run_rmdirs(&env.vagga_exe, to_delete));
         }
         OldContainers => {
             let links = try!(readdir(&env.local_vagga)
@@ -171,7 +184,49 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
                     _ => { to_delete.push(path.clone()); }
                 }
             }
-            try!(run_rmdirs(env, to_delete));
+            try!(run_rmdirs(&env.vagga_exe, to_delete));
+        }
+        AllTransient => {
+            let transient = env.local_vagga.join(".transients");
+            let mut to_delete = Vec::new();
+            match readdir(&transient) {
+                Ok(items) => {
+                    for path in items.iter() {
+                        to_delete.push(path.clone());
+                    }
+                }
+                Err(ref e) if e.kind == FileNotFound => {}
+                Err(ref e) => {
+                    return Err(format!("Can't read dir {}: {}",
+                        transient.display(), e));
+                }
+            }
+            try!(run_rmdirs(&env.vagga_exe, to_delete));
+        }
+        Transient => {
+            let transient = env.local_vagga.join(".transients");
+            let mut to_delete = Vec::new();
+            match readdir(&transient) {
+                Ok(items) => {
+                    for path in items.iter() {
+                        let pid = match path.extension()
+                            .and_then(from_utf8)
+                            .and_then(from_str) {
+                            None => continue,  // Not our dir, skip
+                            Some(pid) => pid,
+                        };
+                        if Process::kill(pid, 0).ok().is_none() {
+                            to_delete.push(path.clone());
+                        }
+                    }
+                }
+                Err(ref e) if e.kind == FileNotFound => {}
+                Err(ref e) => {
+                    return Err(format!("Can't read dir {}: {}",
+                        transient.display(), e));
+                }
+            }
+            try!(run_rmdirs(&env.vagga_exe, to_delete));
         }
     }
 

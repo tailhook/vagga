@@ -217,10 +217,10 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     info!("Building {} by {}", container_root.display(), build_sh.display());
 
     if container_tmp.exists() {
-        try!(run_rmdirs(environ, vec!(container_tmp.clone())));
+        try!(run_rmdirs(&environ.vagga_exe, vec!(container_tmp.clone())));
     }
     if artifacts_dir.exists() {
-        try!(run_rmdirs(environ, vec!(artifacts_dir.clone())));
+        try!(run_rmdirs(&environ.vagga_exe, vec!(artifacts_dir.clone())));
     }
     try!(makedirs(&container_tmp));
 
@@ -302,7 +302,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         [".roots", (cdir + ".old").as_slice()]);
     if container_root.exists() {
         if container_old.exists() {
-            try!(run_rmdirs(environ, vec!(container_old.clone())));
+            try!(run_rmdirs(&environ.vagga_exe, vec!(container_old.clone())));
         }
         match rename(&container_root, &container_old) {
             Ok(()) => {}
@@ -316,7 +316,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     }
 
     if container_old.exists() {
-        try!(run_rmdirs(environ, vec!(container_old.clone())));
+        try!(run_rmdirs(&environ.vagga_exe, vec!(container_old.clone())));
     }
     info!("Done building {} as {}",
         container.name, container_root.display());

@@ -76,10 +76,10 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     let mut cname = "devel".to_string();
     let mut no_wrapper = false;
     let mut use_shell = false;
-    let mut pid1mode = Pid1::Wait;
     let mut command: Option<String> = None;
     let mut cmdargs: Vec<String> = Vec::new();
     let mut resolv: bool = true;
+    let mut ropts: RunOptions = Default::default();
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut cname)
@@ -105,7 +105,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
         ap.refer(&mut resolv)
             .add_option(["--no-resolv"], box StoreFalse,
                 "Do not copy /etc/resolv.conf");
-        ap.refer(&mut pid1mode)
+        ap.refer(&mut ropts.pid1mode)
             .add_option(["--wait"], box StoreConst(Pid1::Wait),
                 "Spawn a supervisor as pid 1 and wait until target command \
                  exits. But if it spawned any children, they will be killed \
@@ -150,7 +150,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     try!(ensure_container(env, &mut container));
 
     let mut monitor = Monitor::new(true);
-    let pid = try!(internal_run(env, &container, pid1mode, resolv,
+    let pid = try!(internal_run(env, &container, ropts, resolv,
         &env.work_dir, cmd, cmdargs, TreeMap::new()));
     monitor.add("child".to_string(), pid);
     monitor.wait_all();
@@ -158,7 +158,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
 }
 
 pub fn internal_run(env: &Environ, container: &Container,
-    pid1mode: Pid1::Pid1Mode, resolv: bool, work_dir: &Path,
+    ropts: RunOptions, resolv: bool, work_dir: &Path,
     command: String, cmdargs: Vec<String>, runenv: TreeMap<String, String>)
     -> Result<pid_t, String>
 {
@@ -201,8 +201,6 @@ pub fn internal_run(env: &Environ, container: &Container,
     }
 
     let pipe = try!(CPipe::new());
-    let mut ropts: RunOptions = Default::default();
-    ropts.pid1mode = pid1mode;
     let pid = try!(run_container(&pipe, env,
         container.container_root.as_ref().unwrap(),
         &ropts, work_dir, &command, cmdargs.as_slice(), &runenv));

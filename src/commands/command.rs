@@ -1,5 +1,7 @@
 use std::io::stdio::{stdout, stderr};
 use std::os::getenv;
+use std::default::Default;
+
 
 use libc::pid_t;
 use collections::treemap::TreeMap;
@@ -11,6 +13,9 @@ use super::super::run::internal_run;
 use super::super::config::{Plain, Command};
 use super::super::build::ensure_container;
 use super::super::monitor::Monitor;
+use super::super::utils::run::{write_sentinel, check_command_workdir};
+use super::super::utils::run::{is_writeable};
+use super::super::linux::{RunOptions};
 
 
 pub fn run_plain_command(env: &mut Environ, cmdname: &String,
@@ -56,17 +61,8 @@ pub fn run_plain_command(env: &mut Environ, cmdname: &String,
     let mut container = try!(env.get_container(cname));
     try!(ensure_container(env, &mut container));
 
-    let work_dir = if command_workdir {
-        let ncwd = env.project_root.join(
-            command.work_dir.as_ref().unwrap().as_slice());
-        if !env.project_root.is_ancestor_of(&ncwd) {
-            return Err(format!("Command's work-dir must be relative to \
-                project root"));
-        }
-        ncwd
-    } else {
-        env.work_dir.clone()
-    };
+    let _sent = try!(write_sentinel(env, &mut container, command.write_mode));
+    let work_dir = try!(check_command_workdir(env, command));
 
     let mut monitor = Monitor::new(true);
     let pid = try!(exec_plain_command_args(env, &work_dir,
@@ -110,6 +106,11 @@ pub fn exec_plain_command_args(env: &Environ, work_dir: &Path,
         _ => unreachable!(),
     }
     let cmd = argprefix.shift().unwrap();
-    return internal_run(env, container, command.pid1mode, command.resolv_conf,
+    let ropts = RunOptions {
+        pid1mode: command.pid1mode,
+        writeable: is_writeable(command.write_mode),
+        .. Default::default()
+        };
+    return internal_run(env, container, ropts, command.resolv_conf,
         work_dir, cmd, (argprefix + cmdargs), runenv);
 }
