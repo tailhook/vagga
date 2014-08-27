@@ -6,3 +6,5 @@ todo.txt
 libcontainer.a
 container.o
 inventory/libfake.so
+*.deb
+*.rpm
