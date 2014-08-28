@@ -7,26 +7,18 @@ containers:
       attribute: sphinx
 
   ubuntu:
-    builder: from_image
+    builder: ubuntu
     uids: [0-1000, 65534]
     gids: [0-1000, 65534]
     parameters:
-      url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
+      repos: universe
+      PPAs: hansjorg/rust
+      additional_keys: 37FD5E80BD6B6386  # for rust
+      packages: make checkinstall rust-0.11
     provision:
-      set -ex;
-      export PATH=/bin:/sbin:/usr/bin:/usr/sbin;
-      export DEBIAN_FRONTEND=noninteractive;
-      export LANG=en_US.UTF-8;
-      sed -i '/universe/{s/^# //;}' /etc/apt/sources.list;
-      apt-get update;
-      apt-get -y install software-properties-common;
-      apt-add-repository -y ppa:hansjorg/rust;
-      apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 37FD5E80BD6B6386;
-      apt-get update;
-      apt-get -y install make checkinstall rust-0.11;
+      export PATH=/bin;
       rmdir /var/tmp;
       ln -sfT /tmp /var/tmp;
-
 
 commands:
   build-docs:
@@ -35,7 +27,7 @@ commands:
     work-dir: docs
     command: make
 
-  build-deb-package:
+  build-ubuntu-package:
     container: ubuntu
     write-mode: transient-hard-link-copy
     command:
