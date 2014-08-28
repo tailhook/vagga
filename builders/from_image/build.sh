@@ -10,7 +10,6 @@
 : ${cache_dir:=$project_root/.vagga/.cache/from_image}
 : ${from_image_url:=http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz}
 
-type basename
 type tar
 
 mkdir -p $container_root
