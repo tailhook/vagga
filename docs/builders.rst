@@ -417,24 +417,119 @@ Limitations
 Ubuntu
 ======
 
-We do not have any official ubuntu builder yet. This is because
-``debootstrap``, ``dpkg`` and ``apt-get`` need to have quite many quirks for
-working in user namespaces (BTW, docker have plenty of hacks to get it working
-too, but they are different from what we need). We are working to provide the
-official best of all worlds ubuntu (and debian) container builder. In the
-meantime you can use any of `Debian Debootstrap`_, `From Image`_,  `Vagrant
-LXC`_, :ref:`docker-builder` or `Debian-simple`_ builders. Every of it's
-section have an example on how to setup Ubuntu specifically. Please report any
-issues you have with any of them.
+The official ubuntu builder contains has the following features:
+
+* uses official ubuntu image as base (so no need for ``dpkg`` on host)
+* standard and universe (multiverse) repository support
+* installs packages from PPA's and custom repositories
+* installs either using subuid/subgid or as single user (using libfake)
+* caches downloaded packages amongst multiple builds
+
+Traditional example for building docs:
+
+.. code-block:: yaml
+
+    builder: ubuntu
+    parameters:
+      release: precise
+      packages: make python-sphinx
+
+More complex example with PPA and "universe":
+
+.. code-block:: yaml
+
+    builder: ubuntu
+    uids: [0-1000, 65534]
+    gids: [0-1000, 65534]
+    parameters:
+      repos: universe
+      PPAs: hansjorg/rust
+      additional_keys: 37FD5E80BD6B6386  # for rust
+      packages: make checkinstall rust-0.11
+
+Example with custom repository (note the syntax for repository):
+
+.. code-block:: yaml
+
+    builder: ubuntu
+    uids: [0-1000, 65534]
+    gids: [0-1000, 65534]
+    parameters:
+      additional_repos:
+        https://get.docker.io/ubuntu|docker|main
+      additional_keys: 36A1D7869245C8950F966E92D8576A8BA88D21E9
+      packages: lxc-docker
+
+
+Dependencies
+------------
+
+* ``wget`` or ``curl``
+* ``tar``
+* ``sed``, ``awk``
+
+
+Parameters
+----------
+
+``packages``
+    Space separated list of packages to install. May include packages from
+    PPA's or custom repos (described below)
+
+``release``
+    The ubuntu release name. Default is latest LTS (currently ``trusty``). It
+    seems only LTS images are supported by canonical. So only ``precise``
+    alternative may work.
+
+``arch``
+    The architecture of system. Only ``amd64`` is tested, which is default.
+
+``initial_image``
+    The full url of the initial image used to bootstrap system. For most cases
+    default is ok (it's constructed from kind/release/arch)
+
+``PPAs``
+    The space-separated list of PPA names to use. Packages set in ``packages``
+    parameter with be searched for in these PPA's too. The PPA specified as
+    ``login/repo`` (e.g. ``hansjorg/rust``).
+
+``repos``
+    The space-separated list of repositories to enable (probably only useful
+    values are ``universe`` and ``multiverse``)
+
+``additional_repos``
+    The space-separated list of additional repos to use. It's in the form of
+    ``uri|suite|component1|component2...``. I.e. it's similar to what is used
+    in ``sources.list`` but with pipe as separator char and without ``deb``
+    prefix. For example, to use docker repository you should use the following
+    line (no, I don't know why you need docker in vagga, just example)::
+
+      additional_repos:
+        https://get.docker.io/ubuntu|docker|main
+
+``additional_keys``
+    The space-separated list of keys to import. You usually need this for using
+    PPA's or custom repositories. All keys are imported from
+    ``keyserver.ubuntu.com``.
+
+``initial_packages``
+    List of packages to install before anything else. Mostly needed for plugins
+    for ``apt-get``. Some are detected automatically. You should avoid this
+    setting if possible.
+
+``kind``
+    The kind of image used as base. Default is ``core`` which means
+    ``ubuntu-core`` image is used.
+
 
 
 Alpine Linux
 ============
 
 ``alpine`` builder installs `Alpine linux`_ packages. This distribution known
-for it's smallest package sizes. Also unlike other distributions Alpine has
-easily downloadable static build of it's package manager, so you don't need to
-have ``apk`` installed on host system.
+for it's smallest package sizes. Also unlike some other distributions Alpine
+has easily downloadable static build of it's package manager, so you don't need
+to have ``apk`` (the package manager) installed on host system.
 
 Example:
 
