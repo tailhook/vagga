@@ -20,7 +20,7 @@
 : ${ubuntu_additional_keys:=}
 : ${ubuntu_packages:=}
 
-type tar sed cut sha1sum
+type tar sed cut sha1sum awk
 
 mkdir -p $container_root
 mkdir -p $artifacts_dir
@@ -36,8 +36,13 @@ chroot="${vagga_exe} _chroot \
         --environ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
         --environ DEBIAN_FRONTEND=noninteractive \
         --environ LANG=${CALLER_LANG} \
-        --environ TERM=${CALLER_TERM} \
-        $container_root"
+        --environ TERM=${CALLER_TERM}"
+if test "$(awk '{total += $3} END {print total}' /proc/self/uid_map)" -lt 2; then
+    echo "Warning you have no mapped uids. You should probably add some" >&2
+    echo "But we will try to fix it using libfake" >&2
+    chroot="$chroot --environ=LD_PRELOAD=/tmp/inventory/libfake.so"
+fi
+chroot="$chroot $container_root"
 
 tar -xf $path --no-same-owner --exclude 'dev/*' -C $container_root
 
