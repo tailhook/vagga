@@ -103,7 +103,8 @@ extern  {
 
 }
 
-enum Mount {
+#[deriving(Clone)]
+pub enum Mount {
     Bind(CString, CString),
     BindRO(CString, CString),
     BindROTmp(CString, CString),
@@ -153,6 +154,7 @@ pub struct RunOptions {
     pub inventory: bool,
     pub uidmap: bool,
     pub pid1mode: Pid1Mode,
+    pub mounts: Vec<Mount>,
 }
 
 impl Default for RunOptions {
@@ -162,6 +164,7 @@ impl Default for RunOptions {
             inventory: false,
             uidmap: getenv("VAGGA_IN_BUILD").is_none(),
             pid1mode: Wait,
+            mounts: Vec::new(),
         };
     }
 }
@@ -267,7 +270,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
     -> Result<pid_t, String>
 {
     let c_container_root = root.to_c_str();
-    let mount_dir = env.project_root.join_many([".vagga", ".mnt"]);
+    let mount_dir = env.local_vagga.join(".mnt");
     try!(ensure_dir(&mount_dir));
     let c_mount_dir = mount_dir.to_c_str();
     // TODO(pc) find recursive bindings for BindRO
@@ -294,7 +297,9 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
         mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
                     mount_dir.join_many(["tmp", "inventory"]).to_c_str()));
     }
+    mounts.extend(options.mounts.clone().move_iter());
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
+
     let c_work_dir = match work_dir.path_relative_from(&env.project_root) {
         Some(path) => Path::new("/work").join(path).to_c_str(),
         None => "/work".to_c_str(),

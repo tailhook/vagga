@@ -2,16 +2,51 @@ use std::os;
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::{rename, copy};
 use std::default::Default;
+use std::from_str::FromStr;
 
-use argparse::{ArgumentParser, Store, List, StoreTrue, StoreFalse};
+use argparse::{ArgumentParser, Store, List, Collect, StoreTrue, StoreFalse};
 use collections::treemap::TreeMap;
 
 use super::uidmap::write_uid_map;
 use super::monitor::Monitor;
 use super::env::Environ;
-use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
+use super::linux::{ensure_dir, RunOptions, run_container, CPipe, Bind, BindRO};
 use super::options::env_options;
 use super::userns::IdRanges;
+
+#[deriving(Clone)]
+struct Volume {
+    source: Path,
+    target: Path,
+    writeable: bool,
+}
+
+impl FromStr for Volume {
+    fn from_str(input: &str) -> Option<Volume> {
+        let mut split = input.splitn(':', 2);
+        let src = match split.next() {
+            Some(val) => Path::new(val),
+            None => return None,
+        };
+        let tgt = match split.next() {
+            Some(val) => Path::new(val),
+            None => return None,
+        };
+        let flags = match split.next() {
+            Some(val) => val,
+            None => "ro",
+        };
+        return Some(Volume {
+            source: src,
+            target: tgt,
+            writeable: match flags {
+                "ro" => false,
+                "rw" => true,
+                _ => return None,
+            },
+        });
+    }
+}
 
 
 pub fn run_chroot(env: &mut Environ, args: Vec<String>)
@@ -21,6 +56,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let mut command: String = "".to_string();
     let mut cmdargs: Vec<String> = Vec::new();
     let mut ropts: RunOptions = Default::default();
+    let mut volumes: Vec<Volume> = Vec::new();
     let mut resolv: bool = true;
     let mut uidranges: IdRanges = Vec::new();
     let mut gidranges: IdRanges = Vec::new();
@@ -45,6 +81,13 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
             .add_option(["--inventory"], box StoreTrue,
                 "Mount inventory folder of vagga inside container \
                  /tmp/inventory");
+        ap.refer(&mut volumes)
+            .metavar("SOURCE:TARGET:FLAGS")
+            .add_option(["--volume"], box Collect::<Volume>,
+                "Mount folder SOURCE into the directory TARGET inside
+                 container. FLAGS is one of 'ro' -- readonly (default),
+                 'rw' -- writeable. Note: currently vagga requires existing
+                 directory for the mount. This may change in future");
         ap.refer(&mut resolv)
             .add_option(["--no-resolv"], box StoreFalse,
                 "Do not copy /etc/resolv.conf");
@@ -89,6 +132,17 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
         runenv.insert(k.clone(), v.clone());
     }
     env.populate_environ(&mut runenv);
+    let path_root = Path::new("/");
+    let mnt_root = env.local_vagga.join(".mnt");
+    ropts.mounts.extend(volumes.iter().map(|vol| {
+        let fullpath = mnt_root.join(
+            vol.target.path_relative_from(&path_root).unwrap());
+        if vol.writeable {
+            Bind(vol.source.to_c_str(), fullpath.to_c_str())
+        } else {
+            BindRO(vol.source.to_c_str(), fullpath.to_c_str())
+        }
+    }));
 
 
     let pipe = try!(CPipe::new());
