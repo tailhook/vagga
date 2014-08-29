@@ -2,7 +2,7 @@
 Vagga vs Docker
 ===============
 
-Both products use linux namespaces (a/k/a linux containers) to to the work.
+Both products use linux namespaces (a/k/a linux containers) to the work.
 However, docker requires root privileges to run, and doesn't allow to make
 development evironments as easy as vagga.
 
