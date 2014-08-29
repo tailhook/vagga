@@ -61,15 +61,19 @@ fn read_gid_map() -> Result<Vec<Range>,String> {
     return Ok(res);
 }
 
-pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>)
+pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uint)
     -> Vec<(uint, uint, uint)>
 {
-    let mut res = Vec::new();
+    let mut res = vec!((0, own_id, 1));
     let mut reqiter = req.iter();
     let mut reqval = *reqiter.next().unwrap();
     let mut allowiter = allowed.iter();
     let mut allowval = *allowiter.next().unwrap();
     loop {
+        if reqval.start == 0 {
+            reqval = reqval.shift(1);
+            continue;
+        }
         let clen = min(reqval.len(), allowval.len());
         res.push((reqval.start, allowval.start, clen));
         reqval = reqval.shift(clen);
@@ -121,8 +125,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
                            "are allowed to use (see /etc/subuid)"));
         }
 
-        let uid_map = match_ranges(uid_req, &allowed_uids);
-        info!("Uid map: {}", uid_map);
+        let uid_map = match_ranges(uid_req, &allowed_uids, uid as uint);
 
         let mut cmd = Command::new("newuidmap");
         cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
@@ -130,6 +133,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         for &(req, allowed, count) in uid_map.iter() {
             cmd.arg(req.to_str()).arg(allowed.to_str()).arg(count.to_str());
         }
+        info!("Uid map command: {}", cmd);
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             x => return Err(format!("Error running newuidmap: {}", x)),
@@ -163,8 +167,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
                            "allowed to use (see /etc/subgid)"));
         }
 
-        let gid_map = match_ranges(gid_req, &allowed_gids);
-        info!("Gid map: {}", gid_map);
+        let gid_map = match_ranges(gid_req, &allowed_gids, gid as uint);
 
         let mut cmd = Command::new("newgidmap");
         cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
@@ -172,6 +175,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         for &(req, allowed, count) in gid_map.iter() {
             cmd.arg(req.to_str()).arg(allowed.to_str()).arg(count.to_str());
         }
+        info!("Gid map command: {}", cmd);
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             x => return Err(format!("Error running newgidmap: {}", x)),

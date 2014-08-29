@@ -600,7 +600,6 @@ tool to build whatever is specified in ``Makefile``.
    (assuming your user is ``username`` and your uid is ``1000``)::
 
         # /etc/subuid
-        username:1000:1
         username:100000:100
         # /etc/subgid
         username:100000:100
