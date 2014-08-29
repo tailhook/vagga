@@ -36,7 +36,7 @@ ways to run things on development machine.
 Stop on Failure
 ---------------
 
-It's not conincidence that ``stop-on-failure`` mode is default. It's very
+It's not coincidence that ``stop-on-failure`` mode is default. It's very
 useful mode of operation for running on development machine.
 
 Let me show an example:
