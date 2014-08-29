@@ -15,10 +15,10 @@ containers:
       PPAs: hansjorg/rust
       additional_keys: 37FD5E80BD6B6386  # for rust
       packages: make checkinstall rust-0.11
-    provision:
-      export PATH=/bin;
-      rmdir /var/tmp;
-      ln -sfT /tmp /var/tmp;
+    provision: |
+      export PATH=/bin
+      rmdir /var/tmp
+      ln -sfT /tmp /var/tmp
 
 commands:
 
@@ -27,9 +27,9 @@ commands:
     container: sphinx
     work-dir: docs
     command: [make, html]
-    epilog:
-      "----------------------------------------------------------------
-       Done. Now docs are in docs/_build/html/index.html"
+    epilog: |
+      -------------------------------------------------
+      Done. Now docs are in docs/_build/html/index.html
 
   build-docs:
     description: Generic documentation builder command

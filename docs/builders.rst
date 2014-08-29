@@ -296,9 +296,9 @@ variant of fakeroot, to avoid the problem:
     builder: from_image
     parameters:
       url: http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
-    provision:
-      export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;
-      export LD_PRELOAD=/tmp/inventory/libfake.so;
+    provision: |
+      export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      export LD_PRELOAD=/tmp/inventory/libfake.so
       apt-get -y install python3
 
 
