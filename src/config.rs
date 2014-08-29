@@ -8,7 +8,7 @@ use J = serialize::json;
 
 use Pid1 = super::linux;
 use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
-use super::yamlutil::{get_ranges};
+use super::yamlutil::{get_ranges, get_int};
 
 
 #[deriving(Show)]
@@ -42,6 +42,9 @@ pub struct Command {
     pub description: Option<String>,
     pub resolv_conf: bool,
     pub write_mode: WriteMode,
+    pub banner: Option<String>,
+    pub banner_delay: int,
+    pub epilog: Option<String>,
 }
 
 pub struct Variant {
@@ -197,6 +200,9 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         inherit_environ: get_list(jcmd, "inherit-environ"),
         description: get_string(jcmd, "description"),
         resolv_conf: get_bool(jcmd, "resolv_conf").unwrap_or(true),
+        banner: get_string(jcmd, "banner"),
+        banner_delay: get_int(jcmd, "banner-delay").unwrap_or(0),
+        epilog: get_string(jcmd, "epilog"),
     });
 }
 

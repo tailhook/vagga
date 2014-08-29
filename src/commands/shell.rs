@@ -1,4 +1,5 @@
 use std::io::stdio::{stdout, stderr};
+use std::io::timer::sleep;
 use std::os::getenv;
 use std::default::Default;
 
@@ -13,7 +14,7 @@ use super::super::config::{Shell, Command};
 use super::super::build::ensure_container;
 use super::super::monitor::Monitor;
 use super::super::utils::run::{write_sentinel, check_command_workdir};
-use super::super::utils::run::{is_writeable};
+use super::super::utils::run::{is_writeable, print_banner};
 use super::super::linux::RunOptions;
 
 
@@ -63,12 +64,23 @@ pub fn run_shell_command(env: &mut Environ, cmdname: &String,
     let _sent = try!(write_sentinel(env, &mut container, command.write_mode));
     let work_dir = try!(check_command_workdir(env, command));
 
+    if command.banner_delay == 0 {
+        print_banner(&command.banner);
+    }
     let mut monitor = Monitor::new(true);
     let pid = try!(exec_shell_command_args(env, &work_dir,
         command, &container, cmdargs));
     monitor.add("child".to_string(), pid);
+    if command.banner_delay > 0 {
+        sleep(command.banner_delay as u64 * 1000);
+        print_banner(&command.banner);
+    }
     monitor.wait_all();
-    return Ok(monitor.get_status());
+    let result = monitor.get_status();
+    if result == 0 {
+        print_banner(&command.epilog);
+    }
+    return Ok(result);
 }
 
 pub fn exec_shell_command(env: &Environ, work_dir: &Path,

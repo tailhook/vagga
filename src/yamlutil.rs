@@ -1,3 +1,4 @@
+use std::from_str::from_str;
 use collections::treemap::TreeMap;
 
 use J = serialize::json;
@@ -9,6 +10,16 @@ pub fn get_string(json: &J::Json, key: &'static str) -> Option<String> {
         &J::Object(ref dict) => match dict.find(&key.to_string()) {
             Some(&J::String(ref val)) => Some(val.clone()),
             Some(&J::Number(val)) => Some(val.to_str().to_string()),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+pub fn get_int(json: &J::Json, key: &'static str) -> Option<int> {
+    return match json {
+        &J::Object(ref dict) => match dict.find(&key.to_string()) {
+            Some(&J::Number(val)) => Some(val as int),
             _ => None,
         },
         _ => None,

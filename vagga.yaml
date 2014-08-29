@@ -21,8 +21,18 @@ containers:
       ln -sfT /tmp /var/tmp;
 
 commands:
+
+  html-docs:
+    description: Build HTML version of vagga documentation
+    container: sphinx
+    work-dir: docs
+    command: [make, html]
+    epilog:
+      "----------------------------------------------------------------
+       Done. Now docs are in docs/_build/html/index.html"
+
   build-docs:
-    description: Build vagga documentation using sphinx
+    description: Generic documentation builder command
     container: sphinx
     work-dir: docs
     command: make

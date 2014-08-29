@@ -1,5 +1,6 @@
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::readlink;
+use std::io::timer::sleep;
 
 use libc::pid_t;
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
@@ -15,6 +16,7 @@ use super::super::config::Command;
 use super::super::commands::shell::exec_shell_command;
 use super::super::commands::command::exec_plain_command;
 use super::super::monitor::{Monitor, human_status, Signal, Exit};
+use super::super::utils::run::{print_banner};
 
 
 pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
@@ -81,6 +83,10 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         containers.insert(cname.clone(), container);
     }
 
+    if command.banner_delay == 0 {
+        print_banner(&command.banner);
+    }
+
     let mut monitor = Monitor::new(false);
 
     let start = |cname: &String, monitor: &mut Monitor| -> bool {
@@ -122,6 +128,11 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         if !start(cname, &mut monitor) {
             break;
         }
+    }
+
+    if command.banner_delay > 0 {
+        sleep(command.banner_delay as u64 * 1000);
+        print_banner(&command.banner);
     }
 
     debug!("Monitoring in {} mode", *mode);
@@ -175,7 +186,9 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     debug!("Falled back to WaitAll mode");
     monitor.wait_all();
 
-    return Ok(monitor.get_status());
+    let result = Ok(monitor.get_status());
+    print_banner(&command.epilog);
+    return result;
 }
 
 pub fn exec_supervise_command(_env: &Environ, _workdir: &Path,

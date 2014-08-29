@@ -65,6 +65,22 @@ Container parameters:
     The mapping, that constitutes environment variables set in container. This
     overrides ``environ-file`` on value by value basis.
 
+``banner``
+    The message that is printed before running process(es). Useful for
+    documenting command behavior.
+
+``banner-delay``
+    The seconds to sleep before printing banner. For example if commands run
+    a web service, banner may provide a URL for accessing the service. The
+    delay is used so that banner is printed after service startup messages not
+    before.  Note that currently vagga sleeps this amount of seconds even
+    if service is failed immediately.
+
+``epilog``
+    The message printed after command is run. It's printed only if command
+    returned zero exit status. Useful to print further instructions, e.g. to
+    display names of build artifacts produced by command.
+
 ``uids``
     List of ranges of user ids that need to be mapped when container runs.
     User must have some ranges in ``/etc/subuid`` to run this contiainer,

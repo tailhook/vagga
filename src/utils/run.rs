@@ -104,3 +104,16 @@ pub fn is_writeable(val: WriteMode) -> bool {
         TransientHardLinkCopy => true,
     };
 }
+
+pub fn print_banner(val: &Option<String>) {
+    match *val {
+        None => {}
+        Some(ref x) => {
+            if x.len() == 0 || x.as_slice().chars().last().unwrap() != '\n' {
+                println!("{}", x);
+            } else {
+                print!("{}", x);
+            }
+        }
+    }
+}
