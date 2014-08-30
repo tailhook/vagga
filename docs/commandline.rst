@@ -37,3 +37,6 @@ here
 * ``vagga _setvariant NAME VALUE`` -- store in ``.vagga/settings.yaml`` the
   variant to be used, instead of default (yet can be overriden by ``-v``).
   See :ref:`variants` for more info.
+* ``vagga _clean`` -- removes images and temporary files created by vagga. To
+  fully remove ``.vagga`` directory you can run ``vagga _clean --everything``.
+  For other operations see ``vagga _clean --help``
