@@ -40,3 +40,5 @@ here
 * ``vagga _clean`` -- removes images and temporary files created by vagga. To
   fully remove ``.vagga`` directory you can run ``vagga _clean --everything``.
   For other operations see ``vagga _clean --help``
+* ``vagga _list`` -- list of commands (including builtin ones when using
+  ``--builtin`` flag)
