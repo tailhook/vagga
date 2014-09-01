@@ -8,6 +8,7 @@ use super::super::env::{Environ, Container};
 use super::super::config::{Command, WriteMode};
 use super::super::config::{ReadOnly, TransientHardLinkCopy};
 use super::super::clean::run_rmdirs;
+use super::super::linux::{Mount, Pseudo};
 
 
 pub fn check_command_workdir(env: &Environ, command: &Command)
@@ -116,4 +117,13 @@ pub fn print_banner(val: &Option<String>) {
             }
         }
     }
+}
+
+pub fn container_volumes(env: &Environ, container: &Container) -> Vec<Mount> {
+    let mount_dir = env.local_vagga.join(".mnt");
+    let root = Path::new("/");
+    return container.tmpfs_volumes.iter().map(|&(ref dir, ref opts)|
+        Pseudo("tmpfs".to_c_str(),
+        mount_dir.join(dir.path_relative_from(&root).unwrap()).to_c_str(),
+        opts.to_c_str())).collect();
 }

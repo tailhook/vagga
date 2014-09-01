@@ -83,6 +83,23 @@ Container parameters:
     satisfied. It's not always optimal or desirable, we will allow to customize
     mapping in later versions.
 
+``tmpfs-volumes``
+    Allows add additional tmpfs volumes to the container. Note all tmpfs
+    volumes are mounted as command run, and are dropped on command exit. Also
+    when running two commands in parallel, they get separate tmpfs volumes.
+    Default is::
+
+        tmpfs-volumes:
+            /tmp: size=100m,mode=1777
+
+    Which means: mount ``/tmp`` with size 100 megabytes, and set mode of root
+    folder to ``1777`` (sticky, writable by anyone). Currently any mount
+    options may be specified, but we may restrict to a subset of options in
+    the future. Note: volumes are not mounted while building container and
+    directory must already be created (you may create it as part of provision
+    step). The ``/tmp`` is exception to the rule, it's created and mounted with
+    default options during container build.
+
 .. _provision:
 
 ``provision``

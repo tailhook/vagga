@@ -69,6 +69,7 @@ pub struct Container {
     pub environ: TreeMap<String, String>,
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
+    pub tmpfs_volumes: TreeMap<String, String>,
 }
 
 pub struct Config {
@@ -250,7 +251,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
     match root.find(&"containers".to_string()) {
         Some(&J::Object(ref containers)) => {
             for (name, jcont) in containers.iter() {
-                let cont = Container {
+                let mut cont = Container {
                     default_command: get_command(jcont, "default-command"),
                     command_wrapper: get_command(jcont, "command-wrapper"),
                     shell: get_command(jcont, "shell").unwrap_or(
@@ -258,12 +259,18 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
                     builder: get_string(jcont, "builder")
                              .unwrap_or("nix".to_string()),
                     parameters: get_dict(jcont, "parameters"),
+                    tmpfs_volumes: get_dict(jcont, "tmpfs-volumes"),
                     environ: get_dict(jcont, "environ"),
                     environ_file: get_string(jcont, "environ-file"),
                     provision: get_string(jcont, "provision"),
                     uids: get_ranges(jcont, "uids"),
                     gids: get_ranges(jcont, "gids"),
                 };
+                if cont.tmpfs_volumes.len() == 0 {
+                    cont.tmpfs_volumes.insert(
+                        "/tmp".to_string(),
+                        "size=100m,mode=1777".to_string());
+                }
                 config.containers.insert(name.clone(), cont);
             }
         }

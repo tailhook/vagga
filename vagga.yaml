@@ -15,10 +15,9 @@ containers:
       PPAs: hansjorg/rust
       additional_keys: 37FD5E80BD6B6386  # for rust
       packages: make checkinstall rust-0.11
-    provision: |
-      export PATH=/bin
-      rmdir /var/tmp
-      ln -sfT /tmp /var/tmp
+    tmpfs-volumes:
+      /tmp: size=1m,mode=1777
+      /var/tmp: size=100m,mode=1777
 
 commands:
 

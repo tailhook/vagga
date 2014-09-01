@@ -15,7 +15,7 @@ use super::super::config::{Plain, Command};
 use super::super::build::ensure_container;
 use super::super::monitor::Monitor;
 use super::super::utils::run::{write_sentinel, check_command_workdir};
-use super::super::utils::run::{is_writeable, print_banner};
+use super::super::utils::run::{is_writeable, print_banner, container_volumes};
 use super::super::linux::{RunOptions};
 
 
@@ -121,6 +121,7 @@ pub fn exec_plain_command_args(env: &Environ, work_dir: &Path,
     let ropts = RunOptions {
         pid1mode: command.pid1mode,
         writeable: is_writeable(command.write_mode),
+        mounts: container_volumes(env, container),
         .. Default::default()
         };
     return internal_run(env, container, ropts, command.resolv_conf,

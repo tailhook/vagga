@@ -10,7 +10,8 @@ use collections::treemap::TreeMap;
 use super::uidmap::write_uid_map;
 use super::monitor::Monitor;
 use super::env::Environ;
-use super::linux::{ensure_dir, RunOptions, run_container, CPipe, Bind, BindRO};
+use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
+use super::linux::{Pseudo, Bind, BindRO};
 use super::options::env_options;
 use super::userns::IdRanges;
 
@@ -134,6 +135,9 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     env.populate_environ(&mut runenv);
     let path_root = Path::new("/");
     let mnt_root = env.local_vagga.join(".mnt");
+    ropts.mounts.push(Pseudo(
+        "tmpfs".to_c_str(), mnt_root.join("tmp").to_c_str(),
+        "size=100m,mode=1777".to_c_str()));
     ropts.mounts.extend(volumes.iter().map(|vol| {
         let fullpath = mnt_root.join(
             vol.target.path_relative_from(&path_root).unwrap());

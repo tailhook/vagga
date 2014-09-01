@@ -21,6 +21,7 @@ pub struct Container {
     pub provision: Option<String>,
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
+    pub tmpfs_volumes: Vec<(Path, String)>,
 }
 
 pub struct Environ {
@@ -130,6 +131,15 @@ impl Environ {
             environ.insert(k.clone(),
                 try!(_subst(v, &vars, &mut used)));
         }
+        let mut tmpfs_volumes: Vec<(Path, String)> = Vec::new();
+        for (k, v) in src.tmpfs_volumes.iter() {
+            let path = Path::new(try!(_subst(k, &vars, &mut used)));
+            let options = try!(_subst(v, &vars, &mut used));
+            if !path.is_absolute() {
+                return Err(format!("Path in tmpfs-volume must be absolute"));
+            }
+            tmpfs_volumes.push((path, options));
+        }
         let mut container = Container {
             name: name.clone(),
             fullname: name.clone(),
@@ -147,6 +157,7 @@ impl Environ {
             container_root: None,
             uids: src.uids.clone(),
             gids: src.gids.clone(),
+            tmpfs_volumes: tmpfs_volumes,
         };
         for item in used.iter() {
             container.fullname.push_str("--");

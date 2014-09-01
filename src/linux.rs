@@ -287,16 +287,14 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
         Bind(env.project_root.to_c_str(), mount_dir.join("work").to_c_str()),
         Pseudo("proc".to_c_str(), mount_dir.join("proc").to_c_str(),
             "".to_c_str()),
-        Pseudo("tmpfs".to_c_str(), mount_dir.join("tmp").to_c_str(),
-            "size=102400k,mode=1777".to_c_str()),
         BindRO(env.vagga_inventory.join("markerdir").to_c_str(),
                mount_dir.join("work").join(".vagga").to_c_str()),
         );
+    mounts.extend(options.mounts.clone().move_iter());
     if options.inventory {
         mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
                     mount_dir.join_many(["tmp", "inventory"]).to_c_str()));
     }
-    mounts.extend(options.mounts.clone().move_iter());
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
 
     let c_work_dir = match work_dir.path_relative_from(&env.project_root) {
