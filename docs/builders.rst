@@ -80,14 +80,16 @@ And how it's used in ``vagga.yaml``:
 Archlinux
 =========
 
-Current archlinux_ builder can only setup packages from archlinux binary
-repositories. In future we are going to implement building source packages with
-makepkg in the container.
 
-.. note:: There is no versioning support for this backend. This means that
-   containers will be versioned barely by list of packages. This should be
-   ok for most uses, but it means that builds on different machines and/or in
-   different periods will vary.
+
+
+Arch-simple
+===========
+
+The `arch_simple` builder is a simple builder which just installs packages
+using pacman. This backend requires pacman to be installed on the host system,
+however, comparing to `arch` builder it can make a smaller container (e.g. you
+don't need to have a pacman on guest system).
 
 
 Dependencies
