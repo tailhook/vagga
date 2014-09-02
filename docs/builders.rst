@@ -81,6 +81,33 @@ Archlinux
 =========
 
 
+Dependencies
+------------
+
+* ``wget`` or ``curl``
+* ``tar``
+* ``sed``, ``awk``
+
+
+Parameters
+----------
+
+``mirror``
+    A URL to the archlinux you want to use. Used both for initial image and
+    for pacman packages later
+
+``arch``
+    Architecture to install. Only ``x86_64`` tested, and that is default
+
+``image_release``
+    The date of the release to use. Default is latest one.
+
+``packages``
+    The space-separated list of package names to install
+
+``initial_image``
+    Initial image to use for installing base system. Usually it's built from
+    ``mirror``/``arch``/``image_release`` triple, so you shouldn't touch it.
 
 
 Arch-simple
