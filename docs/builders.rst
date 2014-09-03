@@ -80,6 +80,10 @@ And how it's used in ``vagga.yaml``:
 Archlinux
 =========
 
+The ``arch`` builder features:
+
+* starts from official image (no need for ``pacman`` on host system)
+* builds additional packages with makepkg
 
 Dependencies
 ------------
@@ -108,6 +112,21 @@ Parameters
 ``initial_image``
     Initial image to use for installing base system. Usually it's built from
     ``mirror``/``arch``/``image_release`` triple, so you shouldn't touch it.
+
+``pkgbuilds``
+    Directories (relative to project dir) contaning PKGBUILDs to build in
+    addition to community packages
+
+``build_dependencies``
+    Space-separated list of packages to install for building. Which are removed
+    after build finish. Default is ``base-devel`` and in most cases must
+    contain at least ``base-devel``. Note: currently all build dependencies
+    must be declared here. In future we may install non-optional dependencies
+    automatically .
+
+``build_nocheck``
+    If set to no-empty string builds with ``makepkg --nocheck``, useful if test
+    contain additional dependencies or run too slow.
 
 
 Arch-simple

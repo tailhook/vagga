@@ -40,11 +40,12 @@ chroot="${vagga_exe} _chroot \
 if test "$(awk '{total += $3} END {print total}' /proc/self/uid_map)" -lt 2; then
     echo "Warning you have no mapped uids. You should probably add some" >&2
     echo "But we will try to fix it using libfake" >&2
+    tar_flags="--no-same-owner"
     chroot="$chroot --environ=LD_PRELOAD=/tmp/inventory/libfake.so"
 fi
 chroot="$chroot $container_root"
 
-tar -xf $path --no-same-owner --exclude 'dev/*' -C $container_root
+tar -xf $path $tar_flags --exclude 'dev/*' -C $container_root
 
 # prevent init scripts from running
 echo $'#!/bin/sh\nexit 101' > "$container_root/usr/sbin/policy-rc.d"
