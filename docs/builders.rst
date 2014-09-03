@@ -128,6 +128,21 @@ Parameters
     If set to no-empty string builds with ``makepkg --nocheck``, useful if test
     contain additional dependencies or run too slow.
 
+``additional_repos``
+    A space separated list of additional repositories to use. For example::
+
+        arch:
+          builder: arch
+          parameters:
+            additional_repos: archlinuxfr|http://repo.archlinux.fr/$arch
+            packages: yaourt
+
+    The name of the repository and url are separated by pipe character.
+    The ``$arch`` variable is put into ``pacman.conf`` as is and expanded by
+    pacman itself. Note: repository is always added as with
+    ``SigLevel = Never`` we may fix this in the future.
+
+
 
 Arch-simple
 ===========

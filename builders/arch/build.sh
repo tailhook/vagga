@@ -1,20 +1,21 @@
 #!/bin/sh -ex
 
-project_root="${project_root:=.}"
-container_hash="${container_hash:=tmpbuildhash}"
-container_name="${container_name:=work}"
-container_fullname="${container_fullname:=$container_name}"
-artifacts_dir="${artifacts_dir:=$project_root/.vagga/.artifacts/$container_fullname.$container_hash}"
-container_root="${container_root:=$project_root/.vagga/.roots/$container_fullname.$container_hash}"
-cache_dir="${cache_dir:=$project_root/.vagga/.cache/arch}"
-arch_mirror="${arch_mirror:=http://mirror.de.leaseweb.net/archlinux/}"
-arch_arch="${arch_arch:=x86_64}"
-arch_image_release="${arch_image_release:=2014.08.01}"
+project_root="${project_root:-.}"
+container_hash="${container_hash:-tmpbuildhash}"
+container_name="${container_name:-work}"
+container_fullname="${container_fullname:-$container_name}"
+artifacts_dir="${artifacts_dir:-$project_root/.vagga/.artifacts/$container_fullname.$container_hash}"
+container_root="${container_root:-$project_root/.vagga/.roots/$container_fullname.$container_hash}"
+cache_dir="${cache_dir:-$project_root/.vagga/.cache/arch}"
+arch_mirror="${arch_mirror:-http://mirror.de.leaseweb.net/archlinux/}"
+arch_arch="${arch_arch:-x86_64}"
+arch_image_release="${arch_image_release:-2014.09.03}"
 arch_initial_image="${arch_mirror}/iso/${arch_image_release}/archlinux-bootstrap-${arch_image_release}-${arch_arch}.tar.gz"
-arch_packages="${arch_packages:=base}"
-arch_pkgbuilds="${arch_pkgbuilds:=}"
-arch_build_dependencies="${arch_build_dependencies:=base-devel}"
-arch_build_nocheck="${arch_build_nocheck:=}"
+arch_packages="${arch_packages:-base}"
+arch_pkgbuilds="${arch_pkgbuilds:-}"
+arch_build_dependencies="${arch_build_dependencies:-base-devel}"
+arch_build_nocheck="${arch_build_nocheck:-}"
+arch_additional_repos="${arch_additional_repos:-}"
 
 type tar sed cut sha1sum awk
 
@@ -55,6 +56,16 @@ $chroot pacman -Sy --noconfirm archlinux-keyring
 
 sed -i '/^SigLevel/{s/.*/SigLevel = Required DatabaseOptional/;}' \
     "$container_root/etc/pacman.conf"
+
+for repo in ${arch_additional_repos}; do
+    name="$(echo $repo | cut -d'|' -f1)"
+    url="$(echo $repo | cut -d'|' -f2)"
+    cat <<END >> "$container_root/etc/pacman.conf"
+[$name]
+SigLevel = Never
+Server = $url
+END
+done
 
 $chroot pacman -Syu --noconfirm
 $chroot pacman -S --noconfirm ${arch_packages}
