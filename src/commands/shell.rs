@@ -111,6 +111,7 @@ pub fn exec_shell_command_args(env: &Environ, work_dir: &Path,
         Shell(ref x) => argprefix.push(x.clone()),
         _ => unreachable!(),
     }
+    argprefix.push(command.name.clone());
     let cmd = argprefix.shift().unwrap();
     let ropts = RunOptions {
         pid1mode: command.pid1mode,

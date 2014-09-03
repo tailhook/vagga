@@ -32,6 +32,7 @@ pub enum Executor {
 
 
 pub struct Command {
+    pub name: String,
     pub pid1mode: Pid1::Pid1Mode,
     pub execute: Executor,
     pub work_dir: Option<String>,
@@ -177,6 +178,7 @@ fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
         //  $1, $2.. used in the expression
         .unwrap_or(accepts_arguments);
     return Ok(Command {
+        name: "vagga ".to_string() + *name,
         pid1mode: match get_string(jcmd, "pid1mode") {
             Some(ref s) if s.as_slice() == "wait" => Pid1::Wait,
             Some(ref s) if s.as_slice() == "wait-all-children"
