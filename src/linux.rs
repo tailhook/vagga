@@ -151,7 +151,6 @@ struct CContainer {
 
 pub struct RunOptions {
     pub writeable: bool,
-    pub inventory: bool,
     pub uidmap: bool,
     pub pid1mode: Pid1Mode,
     pub mounts: Vec<Mount>,
@@ -161,7 +160,6 @@ impl Default for RunOptions {
     fn default() -> RunOptions {
         return RunOptions {
             writeable: false,
-            inventory: false,
             uidmap: getenv("VAGGA_IN_BUILD").is_none(),
             pid1mode: Wait,
             mounts: Vec::new(),
@@ -287,14 +285,8 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
         Bind(env.project_root.to_c_str(), mount_dir.join("work").to_c_str()),
         Pseudo("proc".to_c_str(), mount_dir.join("proc").to_c_str(),
             "".to_c_str()),
-        BindRO(env.vagga_inventory.join("markerdir").to_c_str(),
-               mount_dir.join("work").join(".vagga").to_c_str()),
         );
     mounts.extend(options.mounts.clone().move_iter());
-    if options.inventory {
-        mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
-                    mount_dir.join_many(["tmp", "inventory"]).to_c_str()));
-    }
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
 
     let c_work_dir = match work_dir.path_relative_from(&env.project_root) {

@@ -13,6 +13,7 @@ use super::uidmap::write_uid_map;
 use super::monitor::Monitor;
 use super::env::{Environ, Container};
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
+use super::linux::{BindRO, BindROTmp};
 use super::options::env_options;
 use super::build::ensure_container;
 
@@ -199,6 +200,14 @@ pub fn internal_run(env: &Environ, container: &Container,
     if runenv.find(&path).is_none() {
         runenv.insert(path, DEFAULT_PATH.to_string());
     }
+
+    let mut ropts = ropts;
+    let mount_dir = env.local_vagga.join(".mnt");
+    ropts.mounts.push(
+        BindRO(env.vagga_inventory.join("markerdir").to_c_str(),
+               mount_dir.join("work").join(".vagga").to_c_str()));
+    ropts.mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
+                mount_dir.join_many(["tmp", "inventory"]).to_c_str()));
 
     let pipe = try!(CPipe::new());
     let pid = try!(run_container(&pipe, env,

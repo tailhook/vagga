@@ -11,7 +11,7 @@ use super::uidmap::write_uid_map;
 use super::monitor::Monitor;
 use super::env::Environ;
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
-use super::linux::{Pseudo, Bind, BindRO};
+use super::linux::{Pseudo, Bind, BindRO, BindROTmp};
 use super::options::env_options;
 use super::userns::IdRanges;
 
@@ -61,6 +61,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     let mut resolv: bool = true;
     let mut uidranges: IdRanges = Vec::new();
     let mut gidranges: IdRanges = Vec::new();
+    let mut inventory: bool = false;
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut root)
@@ -78,7 +79,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
             .add_option(["--writeable"], box StoreTrue,
                 "Mount container as writeable. Useful mostly in scripts \
                  building containers itself");
-        ap.refer(&mut ropts.inventory)
+        ap.refer(&mut inventory)
             .add_option(["--inventory"], box StoreTrue,
                 "Mount inventory folder of vagga inside container \
                  /tmp/inventory");
@@ -138,6 +139,10 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
     ropts.mounts.push(Pseudo(
         "tmpfs".to_c_str(), mnt_root.join("tmp").to_c_str(),
         "size=100m,mode=1777".to_c_str()));
+    if inventory {
+        ropts.mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
+                    mnt_root.join_many(["tmp", "inventory"]).to_c_str()));
+    }
     ropts.mounts.extend(volumes.iter().map(|vol| {
         let fullpath = mnt_root.join(
             vol.target.path_relative_from(&path_root).unwrap());
