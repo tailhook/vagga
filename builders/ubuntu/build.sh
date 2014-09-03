@@ -50,6 +50,7 @@ tar -xf $path $tar_flags --exclude 'dev/*' -C $container_root
 # prevent init scripts from running
 echo $'#!/bin/sh\nexit 101' > "$container_root/usr/sbin/policy-rc.d"
 chmod +x "$container_root/usr/sbin/policy-rc.d"
+echo 'force-unsafe-io' > "$container_root/etc/dpkg/dpkg.cfg.d/02apt-speedup"
 
 if test -n "$ubuntu_PPAs" || test -n "$ubuntu_additional_repos"; then
     ubuntu_initial_packages="${ubuntu_initial_packages} software-properties-common"
