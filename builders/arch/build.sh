@@ -17,7 +17,7 @@ arch_build_dependencies="${arch_build_dependencies:-base-devel}"
 arch_build_nocheck="${arch_build_nocheck:-}"
 arch_additional_repos="${arch_additional_repos:-}"
 
-type tar sed cut sha1sum awk
+type grep tar sed cut sha1sum awk
 
 mkdir -p $container_root
 mkdir -p $artifacts_dir

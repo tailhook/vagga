@@ -83,14 +83,16 @@ Archlinux
 The ``arch`` builder features:
 
 * starts from official image (no need for ``pacman`` on host system)
+* supports additional repositories
 * builds additional packages with makepkg
+* rebuilds container on parameter change and when any of the PKGBUILDs change
 
 Dependencies
 ------------
 
 * ``wget`` or ``curl``
 * ``tar``
-* ``sed``, ``awk``
+* ``sed``, ``awk``, ``grep``
 
 
 Parameters
