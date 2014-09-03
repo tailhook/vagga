@@ -14,6 +14,7 @@ use super::monitor::Monitor;
 use super::env::{Environ, Container};
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::linux::{BindRO, BindROTmp};
+use super::utils::run::{container_volumes};
 use super::options::env_options;
 use super::build::ensure_container;
 
@@ -150,6 +151,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
     let cmd = cmdargs.shift().unwrap();
     try!(ensure_container(env, &mut container));
 
+    ropts.mounts = container_volumes(env, &container);
     let mut monitor = Monitor::new(true);
     let pid = try!(internal_run(env, &container, ropts, resolv,
         &env.work_dir, cmd, cmdargs, TreeMap::new()));
