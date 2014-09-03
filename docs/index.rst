@@ -16,6 +16,7 @@ Contents:
    commandline
    compare_to_docker
    compare_to_vagrant
+   tips
 
 
 Indices and tables
