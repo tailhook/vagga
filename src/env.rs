@@ -37,6 +37,7 @@ pub struct Environ {
     pub container: Option<String>,
     pub set_env: Vec<String>,
     pub propagate_env: Vec<String>,
+    pub debugger: bool,
 }
 
 fn _subst<'x>(src: &'x String, vars: &TreeMap<&'x str, &str>,

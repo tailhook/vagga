@@ -2,6 +2,7 @@ use std::os::getenv;
 use std::io::{BufferedReader, IoResult, AllPermissions};
 use std::io::fs::{File, copy, rename, mkdir};
 use std::io::stdio::{stdout, stderr};
+use std::io::timer::sleep;
 use std::default::Default;
 
 use libc::pid_t;
@@ -215,6 +216,18 @@ pub fn internal_run(env: &Environ, container: &Container,
     let pid = try!(run_container(&pipe, env,
         container.container_root.as_ref().unwrap(),
         &ropts, work_dir, &command, cmdargs.as_slice(), &runenv));
+
+    if env.debugger {
+        let mut err = stderr();
+        for i in range(0u32, 10) {
+            err.write_str(
+                format!("Pid {}, countdown: {} sec... \r", pid, 10 - i)
+                .as_slice()).ok();
+            err.flush().ok();
+            sleep(1000);
+        }
+        err.write_line("Starting...                                 ").ok();
+    }
 
     try!(write_uid_map(pid, &container.uids, &container.gids));
 

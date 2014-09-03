@@ -111,6 +111,7 @@ pub enum Mount {
     Pseudo(CString, CString, CString),
 }
 
+#[deriving(Clone)]
 pub enum Pid1Mode {
     Exec = 0,
     Wait = 1,

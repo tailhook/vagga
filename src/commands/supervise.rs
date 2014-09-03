@@ -5,7 +5,7 @@ use std::io::timer::sleep;
 use libc::pid_t;
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 use collections::treemap::TreeMap;
-use argparse::{ArgumentParser, List};
+use argparse::{ArgumentParser, List, StoreOption};
 
 use super::super::env::{Environ, Container};
 use super::super::options::env_options;
@@ -25,6 +25,7 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
 {
     let mut only = Vec::new();
     let mut exclude = Vec::new();
+    let mut debug_command: Option<String> = None;
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut only)
@@ -35,6 +36,10 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
             .add_option(["--exclude"], box List::<String>,
                 "Run all processes except specified here")
             .metavar("PROCESS");
+        ap.refer(&mut debug_command)
+            .add_option(["--debug-process"], box StoreOption::<String>,
+                "Wait for debugger for process named PROCESS")
+            .metavar("PROCESS");
         env_options(env, &mut ap);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -42,7 +47,7 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
             Err(_) => return Ok(122),
         }
     }
-    let command = env.config.commands.find(cmdname).unwrap();
+    let command = (*env.config.commands.find(cmdname).unwrap()).clone();
     let mut work_dir = env.work_dir.clone();
     if command.work_dir.is_some() {
         let ncwd = env.project_root.join(
@@ -99,6 +104,8 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
         let container = containers.find(
             command.container.as_ref().unwrap()).unwrap();
 
+        env.debugger = debug_command.is_some() &&
+            cname.equiv(debug_command.as_ref().unwrap());
         let cmdworkdir = if command.work_dir.is_some() {
             env.project_root.join(
                 command.work_dir.as_ref().unwrap().as_slice())

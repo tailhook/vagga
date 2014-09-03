@@ -1,4 +1,4 @@
-use argparse::{ArgumentParser, Collect, StoreFalse, StoreOption};
+use argparse::{ArgumentParser, Collect, StoreFalse, StoreOption, StoreTrue};
 use super::env::Environ;
 
 
@@ -22,4 +22,8 @@ pub fn env_options(env: &mut Environ, ap: &mut ArgumentParser) {
       .add_option(&["-C", "--force-container"], box StoreOption::<String>,
             "Use container NAME for the following command")
       .metavar("NAME");
+    ap.refer(&mut env.debugger)
+        .add_option(["--wait-for-debugger"], box StoreTrue,
+            "Sleep before starting process so debugger can be attached.
+             Doesn't work for supervisor commands");
 }

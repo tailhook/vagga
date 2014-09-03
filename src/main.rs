@@ -109,6 +109,7 @@ pub fn run() -> int {
         set_env: Vec::new(),
         propagate_env: Vec::new(),
         container: None,
+        debugger: false,
     };
     read_settings(&mut env);
 

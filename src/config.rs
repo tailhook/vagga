@@ -11,19 +11,20 @@ use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
 use super::yamlutil::{get_ranges, get_int};
 
 
-#[deriving(Show)]
+#[deriving(Show, Clone)]
 pub enum SuperviseMode {
     WaitAll,
     StopOnFailure,
     Restart,
 }
 
-#[deriving(Show)]
+#[deriving(Show, Clone)]
 pub enum WriteMode {
     ReadOnly,
     TransientHardLinkCopy,
 }
 
+#[deriving(Clone)]
 pub enum Executor {
     Shell(String),
     Plain(Vec<String>),
@@ -31,6 +32,7 @@ pub enum Executor {
 }
 
 
+#[deriving(Clone)]
 pub struct Command {
     pub name: String,
     pub pid1mode: Pid1::Pid1Mode,
