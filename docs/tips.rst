@@ -21,6 +21,12 @@ Not that unless :ref:`pid1mode<pid1mode>` is ``exec``, the target command will
 be started as a child of the process displayed, so you always want to start
 strace with ``-f`` flag.
 
+Running gdb is tiny bit more complex::
+
+    $ gdb
+    (gdb) set follow-fork-mode child
+    (gdb) attach 1234
+
 For commands using ``supervise`` you need another form of the command::
 
     vagga run-bunch-of-processes --debug-process process_name
