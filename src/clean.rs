@@ -98,8 +98,7 @@ pub fn run_clean(env: &mut Environ, args: Vec<String>) -> Result<int, String>
                  not linked in .vagga/xxx directly. Basically it means keep
                  single container (of each name/variant) with version last used
                  for this specific contianer.")
-            .add_option(["--tmp", "--transient"],
-                box StoreConst(Transient),
+            .add_option(["--transient"], box StoreConst(Transient),
                 "Remove all transient containers, which do not have running
                  processes. Note running processes are matched by pid, so may
                  not be robust enough in some cases")
