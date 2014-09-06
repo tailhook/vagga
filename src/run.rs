@@ -206,9 +206,11 @@ pub fn internal_run(env: &Environ, container: &Container,
 
     let mut ropts = ropts;
     let mount_dir = env.local_vagga.join(".mnt");
-    ropts.mounts.push(
-        BindRO(env.vagga_inventory.join("markerdir").to_c_str(),
-               mount_dir.join("work").join(".vagga").to_c_str()));
+    if !env.keep_vagga_dir {
+        ropts.mounts.push(
+            BindRO(env.vagga_inventory.join("markerdir").to_c_str(),
+                   mount_dir.join("work").join(".vagga").to_c_str()));
+    }
     ropts.mounts.push(BindROTmp(env.vagga_inventory.to_c_str(),
                 mount_dir.join_many(["tmp", "inventory"]).to_c_str()));
 

@@ -26,4 +26,8 @@ pub fn env_options(env: &mut Environ, ap: &mut ArgumentParser) {
         .add_option(["--wait-for-debugger"], box StoreTrue,
             "Sleep before starting process so debugger can be attached.
              Doesn't work for supervisor commands");
+    ap.refer(&mut env.keep_vagga_dir)
+        .add_option(["--keep-vagga-dir"], box StoreTrue,
+            "Keep `.vagga` directory. Useful mostly for container-in-container
+             things.");
 }
