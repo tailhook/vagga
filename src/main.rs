@@ -1,5 +1,5 @@
 use argparse::{ArgumentParser, StoreOption, StoreTrue, List};
-use std::os::{getcwd, args, self_exe_path, self_exe_name};
+use std::os::{getcwd, args};
 use std::io::stdio::stderr;
 use std::io::stdio::stdout;
 
@@ -16,7 +16,7 @@ use super::commands::supervise::run_supervise_command;
 use super::utils::json::extract_json;
 use super::env::Environ;
 use super::options::env_options;
-use super::settings::{Settings, read_settings, set_variant};
+use super::settings::{read_settings, set_variant};
 
 
 pub fn print_list(env: &mut Environ, args: Vec<String>)
@@ -91,26 +91,12 @@ pub fn run() -> int {
             return 126;
         }
     };
-    let inv = Environ::find_inventory(&self_exe_path().unwrap());
-    if inv.is_none(){
-        err.write_line("Vagga inventory not found").ok();
-        return 121;
-    }
-    let mut env = Environ {
-        vagga_path: self_exe_path().unwrap(),
-        vagga_exe: self_exe_name().unwrap(),
-        vagga_inventory: inv.unwrap(),
-        work_dir: workdir,
-        local_vagga: project_root.join(".vagga"),
-        project_root: project_root,
-        variables: Vec::new(),
-        config: config,
-        settings: Settings::new(),
-        set_env: Vec::new(),
-        propagate_env: Vec::new(),
-        container: None,
-        debugger: false,
-        keep_vagga_dir: false,
+    let mut env = match Environ::new(project_root, config) {
+        Ok(env) => env,
+        Err(e) => {
+            err.write_line(e.as_slice()).ok();
+            return 121;
+        }
     };
     read_settings(&mut env);
 

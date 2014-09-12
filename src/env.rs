@@ -1,10 +1,11 @@
 use std::os::getenv;
+use std::os::{getcwd, args, self_exe_path, self_exe_name};
 
 use collections::treemap::TreeMap;
 use collections::treemap::TreeSet;
 
 use super::settings::Settings;
-use super::config::Range;
+use super::config::{Range, Config};
 use cfg = super::config;
 
 pub struct Container {
@@ -94,6 +95,27 @@ fn _subst_list_opt<'x>(src: &'x Option<Vec<String>>,
 }
 
 impl Environ {
+
+    pub fn new(project_root: Path, config: Config) -> Result<Environ,String> {
+        let inv = try!(Environ::find_inventory(&self_exe_path().unwrap()));
+        return Ok(Environ {
+            vagga_path: self_exe_path().unwrap(),
+            vagga_exe: self_exe_name().unwrap(),
+            vagga_inventory: inv,
+            work_dir: getcwd(),
+            local_vagga: project_root.join(".vagga"),
+            project_root: project_root,
+            variables: Vec::new(),
+            config: config,
+            settings: Settings::new(),
+            set_env: Vec::new(),
+            propagate_env: Vec::new(),
+            container: None,
+            debugger: false,
+            keep_vagga_dir: false,
+        });
+    }
+
     pub fn get_container<'x>(&'x self, name: &String)
         -> Result<Container, String>
     {
@@ -213,13 +235,13 @@ impl Environ {
         return None;
     }
 
-    pub fn find_inventory(vagga_path: &Path) -> Option<Path> {
+    pub fn find_inventory(vagga_path: &Path) -> Result<Path, String> {
         let mut bpath;
         // Seaching in the same folder as a binary to be able to run from
         // source folder without issues
         bpath = vagga_path.join("inventory");
         if bpath.exists() {
-            return Some(bpath);
+            return Ok(bpath);
         }
         let envvar = getenv("VAGGA_PATH");
         let paths = match envvar {
@@ -230,10 +252,12 @@ impl Environ {
         for path in paths.split(':') {
             bpath = Path::new(path).join("inventory");
             if bpath.exists() {
-                return Some(bpath);
+                return Ok(bpath);
             }
         }
-        return None;
+        return Err(format!("Inventory not found in {} or {}",
+            vagga_path.join("inventory").display(),
+            paths));
     }
 
     pub fn populate_environ(&self, env: &mut TreeMap<String, String>) {
@@ -252,5 +276,6 @@ impl Environ {
             }
         }
     }
+
 }
 
