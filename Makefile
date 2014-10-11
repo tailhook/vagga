@@ -8,7 +8,7 @@ NIX_PROFILES_SUPPORT ?= yes
 export VAGGA_PATH_DEFAULT
 
 ARGPARSELIB = rust-argparse/$(shell rustc --crate-file-name rust-argparse/argparse/mod.rs)
-QUIRELIB = rust-quire/$(shell rustc --crate-file-name rust-quire/quire/mod.rs)
+QUIRELIB = rust-quire/$(shell rustc --crate-file-name rust-quire/src/lib.rs)
 
 all: quire argparse vagga libfake
 

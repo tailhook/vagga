@@ -2,18 +2,23 @@ use std::os::homedir;
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::{File};
 use std::io::{Write, Truncate};
-use std::io::FileNotFound;
+use std::default::Default;
 
 use collections::treemap::TreeMap;
-use serialize::json::ToJson;
 
 use argparse::{ArgumentParser, Store};
-use quire::parse;
+use quire::parse_config;
+use V = quire::validate;
 use Y = quire::emit;
 
 use super::env::Environ;
-use super::yamlutil::{get_dict, get_bool};
 
+
+#[deriving(Decodable)]
+pub struct TmpSettings {
+    pub variants: TreeMap<String, String>,
+    pub version_check: Option<bool>,
+}
 
 pub struct Settings {
     pub variants: TreeMap<String, String>,
@@ -25,8 +30,31 @@ impl Settings {
         return Settings {
             variants: TreeMap::new(),
             version_check: true,
-            };
+        };
     }
+    fn merge(&mut self, other: TmpSettings) {
+        for (k, v) in other.variants.move_iter() {
+            self.variants.insert(k, v);
+        }
+        other.version_check.map(|v| {
+            self.version_check = v;
+        });
+    }
+}
+
+fn settings_validator() -> Box<V::Validator> {
+    return box V::Structure { members: vec!(
+        ("variants".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("version_check".to_string(), box V::Numeric {
+            optional: true,
+            default: None::<bool>,
+            .. Default::default()} as Box<V::Validator>),
+    ), .. Default::default()} as Box<V::Validator>;
 }
 
 pub fn read_settings(env: &mut Environ) {
@@ -42,33 +70,17 @@ pub fn read_settings(env: &mut Environ) {
     files.push(env.project_root.join(".vagga.settings.yaml"));
     files.push(env.local_vagga.join("settings.yaml"));
 
+    let validator = settings_validator();
     for filename in files.iter() {
-        debug!("Trying to open {}", filename.display());
-        let data = match File::open(filename).read_to_str() {
-            Ok(data) => data,
-            Err(ref e) if e.kind == FileNotFound => { continue; }
-            Err(e) => {
-                warn!("{}: {}", filename.display(), e);
-                continue;
+        if filename.exists() {
+            match parse_config(filename, validator, Default::default()) {
+                Ok(s) => {
+                    env.settings.merge(s);
+                }
+                Err(e) => {
+                    error!("Error in config {}: {}", filename.display(), e);
+                }
             }
-        };
-        let json = match parse(data.as_slice(), |doc| {
-            return doc.to_json();
-        }) {
-            Ok(json) => json,
-            Err(e) => {
-                warn!("{}: {}", filename.display(), e);
-                continue;
-            }
-        };
-        let dic = get_dict(&json, "variants");
-        for (k, v) in dic.move_iter() {
-            info!("{}: Setting {}={}", filename.display(), k, v);
-            env.settings.variants.insert(k, v);
-        }
-        match get_bool(&json, "version-check") {
-            Some(val) => { env.settings.version_check = val; }
-            _ => {}
         }
     }
 }

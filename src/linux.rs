@@ -10,6 +10,7 @@ use std::io::fs::mkdir;
 use std::os::{Pipe, pipe};
 use std::os::getenv;
 use std::default::Default;
+use serialize::{Decoder, Decodable};
 use libc::{c_int, c_uint, c_char, c_ulong, pid_t, _exit, c_void, uid_t, gid_t};
 use libc::funcs::posix88::unistd::{close, write};
 use libc::consts::os::posix88::{EINTR, EAGAIN, EINVAL};
@@ -111,11 +112,26 @@ pub enum Mount {
     Pseudo(CString, CString, CString),
 }
 
-#[deriving(Clone)]
+#[deriving(Clone, PartialEq, Eq)]
 pub enum Pid1Mode {
     Exec = 0,
     Wait = 1,
     WaitAllChildren = 2,
+}
+
+impl<E, D:Decoder<E>> Decodable<D, E> for Pid1Mode {
+    fn decode(d: &mut D) -> Result<Pid1Mode, E> {
+        d.read_enum("Pid1Mode", |d| {
+            d.read_enum_variant(["exec", "wait", "wait-all-children"], |_, i| {
+                Ok(match i {
+                    0 => Exec,
+                    1 => Wait,
+                    2 => WaitAllChildren,
+                    _ => unreachable!(),
+                })
+            })
+        })
+    }
 }
 
 pub enum ExtFlags {

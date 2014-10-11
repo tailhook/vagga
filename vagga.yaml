@@ -25,7 +25,7 @@ commands:
     description: Build HTML version of vagga documentation
     container: sphinx
     work-dir: docs
-    command: [make, html]
+    command: make html
     epilog: |
       -------------------------------------------------
       Done. Now docs are in docs/_build/html/index.html

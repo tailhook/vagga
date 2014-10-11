@@ -1,27 +1,58 @@
-use std::io::File;
+use std::default::Default;
+use std::from_str::FromStr;
 
 use collections::treemap::TreeMap;
-use serialize::json::ToJson;
+use serialize::{Decoder, Decodable};
+use quire::parse_config;
 
-use quire::parse;
-use J = serialize::json;
+use V = quire::validate;
+use A = quire::ast;
 
 use Pid1 = super::linux;
-use super::yamlutil::{get_string, get_dict, get_list, get_command, get_bool};
-use super::yamlutil::{get_ranges, get_int};
 
 
-#[deriving(Show, Clone)]
+#[deriving(Show, Clone, PartialEq, Eq)]
 pub enum SuperviseMode {
     WaitAll,
     StopOnFailure,
     Restart,
 }
 
-#[deriving(Show, Clone)]
+impl<E, D:Decoder<E>> Decodable<D, E> for SuperviseMode {
+    fn decode(d: &mut D) -> Result<SuperviseMode, E> {
+        d.read_enum("Pid1Mode", |d| {
+            d.read_enum_variant(
+                ["wait-all", "stop-on-failure", "restart"], |_, i| {
+                Ok(match i {
+                    0 => WaitAll,
+                    1 => StopOnFailure,
+                    2 => Restart,
+                    _ => unreachable!(),
+                })
+            })
+        })
+    }
+}
+
+#[deriving(Show, Clone, PartialEq, Eq)]
 pub enum WriteMode {
     ReadOnly,
     TransientHardLinkCopy,
+}
+
+impl<E, D:Decoder<E>> Decodable<D, E> for WriteMode {
+    fn decode(d: &mut D) -> Result<WriteMode, E> {
+        d.read_enum("Pid1Mode", |d| {
+            d.read_enum_variant(
+                ["read-only", "transient-hard-link-copy"], |_, i| {
+                Ok(match i {
+                    0 => ReadOnly,
+                    1 => TransientHardLinkCopy,
+                    _ => unreachable!(),
+                })
+            })
+        })
+    }
 }
 
 #[deriving(Clone)]
@@ -31,12 +62,10 @@ pub enum Executor {
     Supervise(SuperviseMode, TreeMap<String, Command>),
 }
 
-
 #[deriving(Clone)]
 pub struct Command {
     pub name: String,
     pub pid1mode: Pid1::Pid1Mode,
-    pub execute: Executor,
     pub work_dir: Option<String>,
     pub container: Option<String>,
     pub accepts_arguments: bool,
@@ -46,13 +75,103 @@ pub struct Command {
     pub resolv_conf: bool,
     pub write_mode: WriteMode,
     pub banner: Option<String>,
-    pub banner_delay: int,
+    pub banner_delay: uint,
     pub epilog: Option<String>,
+    pub execute: Executor,
 }
 
+#[deriving(Decodable)]
+pub struct GenericCommand {
+    pub pid1mode: Pid1::Pid1Mode,
+    pub work_dir: Option<String>,
+    pub container: Option<String>,
+    pub accepts_arguments: Option<bool>,
+    pub environ: TreeMap<String, String>,
+    pub inherit_environ: Vec<String>,
+    pub description: Option<String>,
+    pub resolv_conf: bool,
+    pub write_mode: WriteMode,
+    pub banner: Option<String>,
+    pub banner_delay: uint,
+    pub epilog: Option<String>,
+
+    pub run: Option<String>,
+    pub command: Vec<String>,
+    pub supervise: TreeMap<String, GenericCommand>,
+    pub supervise_mode: SuperviseMode,
+}
+
+fn one_opt<T>(opt: &Option<T>) -> int {
+    return if opt.is_some() { 1 } else { 0 };
+}
+
+fn one_len<T:Collection>(coll: &T) -> int {
+    return if coll.len() > 0 { 1 } else { 0 };
+}
+
+impl GenericCommand {
+    fn to_command(self, name: String) -> Result<Command, String> {
+        if one_opt(&self.run) +
+            one_len(&self.command) + one_len(&self.supervise) != 1
+        {
+            return Err(format!("Expected exactly one of \
+                `command` or `run` or `supervise` for command {}",
+                name));
+        }
+        if self.container.is_none() && self.supervise.len() == 0 {
+            return Err(format!("The `container` is required for command {}",
+                               name));
+        }
+        let mut accepts_arguments = false;
+        let executor = if self.run.is_some() {
+            Shell(self.run.unwrap())
+        } else if self.command.len() > 0 {
+            accepts_arguments = true;
+            Plain(self.command)
+        } else if self.supervise.len() > 0 {
+            let svcs = self.supervise;
+            let mut new = TreeMap::new();
+            for (name, gcmd) in svcs.move_iter() {
+                let cmd = try!(gcmd.to_command(name.clone()));
+                new.insert(name, cmd);
+            }
+
+            Supervise(self.supervise_mode, new)
+        } else {
+            unreachable!();
+        };
+        return Ok(Command {
+            name: name,
+            pid1mode: self.pid1mode,
+            work_dir: self.work_dir,
+            container: self.container,
+            accepts_arguments:
+                self.accepts_arguments.unwrap_or(accepts_arguments),
+            environ: self.environ,
+            inherit_environ: self.inherit_environ,
+            description: self.description,
+            resolv_conf: self.resolv_conf,
+            write_mode: self.write_mode,
+            banner: self.banner,
+            banner_delay: self.banner_delay,
+            epilog: self.epilog,
+            execute: executor,
+        });
+    }
+}
+
+impl PartialEq for GenericCommand {
+    fn eq(&self, _other: &GenericCommand) -> bool { false }
+}
+
+#[deriving(Decodable)]
 pub struct Variant {
     pub default: Option<String>,
     pub options: Vec<String>,
+}
+
+impl PartialEq for Variant {
+    fn eq(&self, _other: &Variant) -> bool { false }
 }
 
 #[deriving(Clone, Show)]
@@ -61,6 +180,31 @@ pub struct Range {
     pub end: uint,
 }
 
+impl<E, D:Decoder<E>> Decodable<D, E> for Range {
+    fn decode(d: &mut D) -> Result<Range, E> {
+        match d.read_str() {
+            Ok(val) => {
+                let num:Option<uint> = FromStr::from_str(val.as_slice());
+                match num {
+                    Some(num) => return Ok(Range::new(num, num)),
+                    None => {}
+                }
+                match regex!(r"^(\d+)-(\d+)$").captures(val.as_slice()) {
+                    Some(caps) => {
+                        return Ok(Range::new(
+                            from_str(caps.at(1)).unwrap(),
+                            from_str(caps.at(2)).unwrap()));
+                    }
+                    None => unimplemented!(),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+
+#[deriving(Decodable)]
 pub struct Container {
     pub default_command: Option<Vec<String>>,
     pub command_wrapper: Option<Vec<String>>,
@@ -75,10 +219,175 @@ pub struct Container {
     pub tmpfs_volumes: TreeMap<String, String>,
 }
 
+impl PartialEq for Container {
+    fn eq(&self, _other: &Container) -> bool { false }
+}
+
+
+#[deriving(Decodable)]
+pub struct TmpConfig {
+    pub commands: TreeMap<String, GenericCommand>,
+    pub variants: TreeMap<String, Variant>,
+    pub containers: TreeMap<String, Container>,
+}
+
 pub struct Config {
     pub commands: TreeMap<String, Command>,
     pub variants: TreeMap<String, Variant>,
     pub containers: TreeMap<String, Container>,
+}
+
+fn scalar_command(ast: A::Ast) -> Vec<A::Ast> {
+    match ast {
+        A::Scalar(pos, _, style, value) => {
+            return value.as_slice().words().map(|w|
+                A::Scalar(pos.clone(), A::NonSpecific, style, w.to_string()))
+                .collect();
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn command_validator(supports_supervise: bool) -> Box<V::Validator> {
+    let mut members = vec!(
+        ("pid1mode".to_string(), box V::Scalar {
+            optional: true,
+            default: Some("wait".to_string()),
+            .. Default::default()} as Box<V::Validator>),
+        ("work_dir".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("container".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("accepts_arguments".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("environ".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("inherit_environ".to_string(), box V::Sequence {
+            element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("description".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("resolv_conf".to_string(), box V::Scalar {
+            default: Some("true".to_string()),
+            .. Default::default()} as Box<V::Validator>),
+        ("write_mode".to_string(), box V::Scalar {
+            default: Some("read-only".to_string()),
+            .. Default::default()} as Box<V::Validator>),
+        ("banner".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("banner_delay".to_string(), box V::Numeric {
+            default: Some(0i),
+            .. Default::default()} as Box<V::Validator>),
+        ("epilog".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("run".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("command".to_string(), box V::Sequence {
+            from_scalar: Some(scalar_command),
+            element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+    );
+    if supports_supervise {
+        members.push(
+            ("supervise".to_string(), box V::Mapping {
+                key_element: box V::Scalar {
+                    .. Default::default()} as Box<V::Validator>,
+                value_element: command_validator(false),
+                .. Default::default()} as Box<V::Validator>));
+        members.push(
+            ("supervise_mode".to_string(), box V::Scalar {
+                default: Some("stop-on-failure".to_string()),
+                .. Default::default()} as Box<V::Validator>));
+    }
+    return box V::Structure { members: members,
+        .. Default::default()} as Box<V::Validator>;
+}
+
+fn container_validator() -> Box<V::Validator> {
+    return box V::Structure { members: vec!(
+        ("default_command".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("command_wrapper".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("shell".to_string(), box V::Sequence {
+            element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("builder".to_string(), box V::Scalar {
+            .. Default::default()} as Box<V::Validator>),
+        ("provision".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("parameters".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("environ".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("environ_file".to_string(), box V::Scalar {
+            optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("uids".to_string(), box V::Sequence {
+            element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("gids".to_string(), box V::Sequence {
+            element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("tmpfs_volumes".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ), .. Default::default()} as Box<V::Validator>;
+}
+
+fn variant_validator() -> Box<V::Validator> {
+    return box V::Structure { members: vec!(
+        ), .. Default::default()} as Box<V::Validator>;
+}
+
+pub fn config_validator() -> Box<V::Validator> {
+    return box V::Structure { members: vec!(
+        ("containers".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: container_validator(),
+            .. Default::default()} as Box<V::Validator>),
+        ("commands".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: command_validator(true),
+            .. Default::default()} as Box<V::Validator>),
+        ("variants".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: variant_validator(),
+            .. Default::default()} as Box<V::Validator>),
+    ), .. Default::default()} as Box<V::Validator>;
 }
 
 impl Range {
@@ -111,191 +420,41 @@ fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
     }
 }
 
-pub fn get_supervise(map: &TreeMap<String, J::Json>)
-    -> Result<Option<(SuperviseMode, TreeMap<String, Command>)>, String>
-{
-    let mode = match map.find(&"supervise-mode".to_string()) {
-        Some(&J::String(ref val)) => match val.as_slice() {
-            "wait-all" => WaitAll,
-            "stop-on-failure" => StopOnFailure,
-            "restart" => Restart,
-            _ => return Err(format!("The `supervise-mode` can be one of
-                `wait-all`, `stop-on-failure` (default) or `restart`")),
-        },
-        None => StopOnFailure,
-        _ => return Err(format!("The `supervise-mode` must be string")),
-    };
-    let mut commands = TreeMap::new();
-    let ocommands = match map.find(&"supervise".to_string()) {
-        None => return Ok(None),
-        Some(&J::Object(ref map)) => map,
-        _ => return Err(format!("The `supervise` must be mapping")),
-    };
-    for (name, jcmd) in ocommands.iter() {
-        let cmd = try!(parse_command(name, jcmd));
-        commands.insert(name.clone(), cmd);
-    }
-    return Ok(Some((mode, commands)));
-}
-
-fn one<T>(opt: &Option<T>) -> int {
-    return if opt.is_some() { 1 } else { 0 };
-}
-
-fn parse_command(name: &String, jcmd: &J::Json) -> Result<Command, String> {
-    let dcmd = match jcmd {
-        &J::Object(ref dict) => dict,
-        _ => return Err(format!(
-            "Command {} must be mapping", name)),
-    };
-
-    let run = get_string(jcmd, "run");
-    let command = get_command(jcmd, "command");
-    let supervise = try!(get_supervise(*dcmd));
-    if one(&run) + one(&command) + one(&supervise) != 1 {
-        return Err(format!("Expected exactly one of \
-            `command` or `run` or `supervise` for command {}",
-            name));
-    }
-    let container = get_string(jcmd, "container");
-    if container.is_none() && supervise.is_none() {
-        return Err(format!("The `container` is required for command {}",
-                           name));
-    }
-    let mut accepts_arguments = false;
-    let executor = if run.is_some() {
-        Shell(run.unwrap())
-    } else if command.is_some() {
-        accepts_arguments = true;
-        Plain(command.unwrap())
-    } else if supervise.is_some() {
-        let (mode, svcs) = supervise.unwrap();
-        Supervise(mode, svcs)
-    } else {
-        unreachable!();
-    };
-    let accepts_arguments = get_bool(jcmd, "accepts-arguments")
-        //  By default accept arguments only by command
-        //  because "sh -c" only uses arguments if there is
-        //  $1, $2.. used in the expression
-        .unwrap_or(accepts_arguments);
-    return Ok(Command {
-        name: "vagga ".to_string() + *name,
-        pid1mode: match get_string(jcmd, "pid1mode") {
-            Some(ref s) if s.as_slice() == "wait" => Pid1::Wait,
-            Some(ref s) if s.as_slice() == "wait-all-children"
-                => Pid1::WaitAllChildren,
-            Some(ref s) if s.as_slice() == "exec" => Pid1::Exec,
-            None => Pid1::Wait,
-            _ => return Err(format!("The pid1mode must be one of `wait`, \
-                `wait-all-children` or `exec` for command {}", name)),
-            },
-        write_mode: match get_string(jcmd, "write-mode") {
-            Some(ref s) if s.as_slice() == "transient-hard-link-copy"
-                => TransientHardLinkCopy,
-            None => ReadOnly,
-            _ => return Err(format!("The write-mode must be one of `read-only`,\
-                `transient-hard-link-copy` for command {}", name)),
-            },
-        execute: executor,
-        container: container,
-        work_dir: get_string(jcmd, "work-dir"),
-        accepts_arguments: accepts_arguments,
-        environ: get_dict(jcmd, "environ"),
-        inherit_environ: get_list(jcmd, "inherit-environ"),
-        description: get_string(jcmd, "description"),
-        resolv_conf: get_bool(jcmd, "resolv_conf").unwrap_or(true),
-        banner: get_string(jcmd, "banner"),
-        banner_delay: get_int(jcmd, "banner-delay").unwrap_or(0),
-        epilog: get_string(jcmd, "epilog"),
-    });
-}
-
 pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
     let (cfg_dir, filename) = match find_config_path(work_dir) {
         Some(pair) => pair,
         None => return Err(format!(
             "Config not found in path {}", work_dir.display())),
     };
-    let fname = filename.display();
-    let data = match File::open(&filename).read_to_str() {
-        Ok(data) => data,
-        Err(e) => return Err(format!("{}: {}", fname, e)),
+    let mut tmp: TmpConfig = match parse_config(
+        &filename, config_validator(), Default::default())
+    {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            return Err(format!("Config {} cannot be read: {}",
+                filename.display(), e));
+        }
     };
-    let json = match parse(data.as_slice(), |doc| {
-        return doc.to_json();
-    }) {
-        Ok(json) => json,
-        Err(e) => return Err(format!("{}: {}", fname, e)),
-    };
-
+    for (_, cont) in tmp.containers.mut_iter() {
+        if cont.shell.len() == 0 {
+            cont.shell.push("/bin/sh".to_string());
+            cont.shell.push("-c".to_string());
+        }
+        if cont.tmpfs_volumes.len() == 0 {
+            cont.tmpfs_volumes.insert(
+                "/tmp".to_string(),
+                "size=100m,mode=1777".to_string());
+        }
+    }
     let mut config = Config {
         commands: TreeMap::new(),
-        variants: TreeMap::new(),
-        containers: TreeMap::new(),
+        containers: tmp.containers,
+        variants: tmp.variants,
     };
 
-    let root = match json {
-        J::Object(val) => val,
-        _ => return Err(format!("{}: root node must be mapping", fname)),
-    };
-
-    match root.find(&"commands".to_string()) {
-        Some(&J::Object(ref commands)) => {
-            for (name, jcmd) in commands.iter() {
-                let cmd = try!(parse_command(name, jcmd));
-                config.commands.insert(name.clone(), cmd);
-            }
-        }
-        Some(_) => return Err(format!(
-            "{}: commands key must be mapping", fname)),
-        None => {}
-    }
-
-    match root.find(&"containers".to_string()) {
-        Some(&J::Object(ref containers)) => {
-            for (name, jcont) in containers.iter() {
-                let mut cont = Container {
-                    default_command: get_command(jcont, "default-command"),
-                    command_wrapper: get_command(jcont, "command-wrapper"),
-                    shell: get_command(jcont, "shell").unwrap_or(
-                        vec!("/bin/sh".to_string(), "-c".to_string())),
-                    builder: get_string(jcont, "builder")
-                             .unwrap_or("nix".to_string()),
-                    parameters: get_dict(jcont, "parameters"),
-                    tmpfs_volumes: get_dict(jcont, "tmpfs-volumes"),
-                    environ: get_dict(jcont, "environ"),
-                    environ_file: get_string(jcont, "environ-file"),
-                    provision: get_string(jcont, "provision"),
-                    uids: get_ranges(jcont, "uids"),
-                    gids: get_ranges(jcont, "gids"),
-                };
-                if cont.tmpfs_volumes.len() == 0 {
-                    cont.tmpfs_volumes.insert(
-                        "/tmp".to_string(),
-                        "size=100m,mode=1777".to_string());
-                }
-                config.containers.insert(name.clone(), cont);
-            }
-        }
-        Some(_) => return Err(format!(
-            "{}: containers key must be mapping", fname)),
-        None => {}
-    }
-
-    match root.find(&"variants".to_string()) {
-        Some(&J::Object(ref variants)) => {
-            for (name, jvar) in variants.iter() {
-                let var = Variant {
-                    default: get_string(jvar, "default"),
-                    options: get_list(jvar, "options"),
-                };
-                config.variants.insert(name.clone(), var);
-            }
-        }
-        Some(_) => return Err(format!(
-            "{}: variants key must be mapping", fname)),
-        None => {}
+    for (name, gcmd) in tmp.commands.move_iter() {
+        let cmd = try!(gcmd.to_command(name.clone()));
+        config.commands.insert(name, cmd);
     }
 
     return Ok((config, cfg_dir));
