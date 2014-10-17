@@ -4,7 +4,7 @@
 use std::io;
 use std::ptr::null;
 use std::c_str::CString;
-use std::str::raw::from_c_str;
+use std::string::raw::from_buf;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
 use std::io::fs::PathExtensions;
@@ -70,6 +70,7 @@ static PR_SET_CHILD_SUBREAPER: c_int = 36;
 pub static SIGCHLD   : c_int =  17    ; /* Child status has changed (POSIX).  */
 
 // pwd.h
+#[repr(C)]
 struct passwd {
     pw_name: *mut c_char,       /* username */
     pw_passwd: *mut u8,     /* user password */
@@ -140,6 +141,7 @@ pub enum ExtFlags {
 }
 
 /* Keep in sync with container.c */
+#[repr(C)]
 struct CMount {
     source: *const u8,
     target: *const u8,
@@ -150,6 +152,7 @@ struct CMount {
 }
 
 /* Keep in sync with container.c */
+#[repr(C)]
 struct CContainer {
     pid1_mode: c_int,
     pipe_reader: c_int,
@@ -304,7 +307,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
         Pseudo("proc".to_c_str(), mount_dir.join("proc").to_c_str(),
             "".to_c_str()),
         );
-    mounts.extend(options.mounts.clone().move_iter());
+    mounts.extend(options.mounts.clone().into_iter());
     let c_mounts: Vec<CMount> = mounts.iter().map(|v| v.to_c_mount()).collect();
 
     let c_work_dir = match work_dir.path_relative_from(&env.project_root) {
@@ -470,7 +473,7 @@ pub fn ensure_dir(p: &Path) -> Result<(),String> {
     if p.exists() {
         return Ok(());
     }
-    return mkdir(p, io::UserRWX).map_err(|e| { e.to_string() });
+    return mkdir(p, io::USER_RWX).map_err(|e| { e.to_string() });
 }
 
 pub fn exit(result: i32) -> ! {
@@ -519,7 +522,7 @@ pub fn get_user_name(uid: uid_t) -> Result<String, String> {
     unsafe {
         let val = getpwuid(uid);
         if val != null() {
-            return Ok(from_c_str((*val).pw_name as *const i8));
+            return Ok(from_buf((*val).pw_name as *const u8));
         }
     }
     return Err(format!("User {} not found", uid));

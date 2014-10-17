@@ -132,7 +132,7 @@ impl GenericCommand {
         } else if self.supervise.len() > 0 {
             let svcs = self.supervise;
             let mut new = TreeMap::new();
-            for (name, gcmd) in svcs.move_iter() {
+            for (name, gcmd) in svcs.into_iter() {
                 let cmd = try!(gcmd.to_command(name.clone()));
                 new.insert(name, cmd);
             }
@@ -437,7 +437,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
                 filename.display(), e));
         }
     };
-    for (_, cont) in tmp.containers.mut_iter() {
+    for (_, cont) in tmp.containers.iter_mut() {
         if cont.shell.len() == 0 {
             cont.shell.push("/bin/sh".to_string());
             cont.shell.push("-c".to_string());
@@ -454,7 +454,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
         variants: tmp.variants,
     };
 
-    for (name, gcmd) in tmp.commands.move_iter() {
+    for (name, gcmd) in tmp.commands.into_iter() {
         let cmd = try!(gcmd.to_command(name.clone()));
         config.commands.insert(name, cmd);
     }

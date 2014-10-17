@@ -34,7 +34,7 @@ impl Settings {
         };
     }
     fn merge(&mut self, other: TmpSettings) {
-        for (k, v) in other.variants.move_iter() {
+        for (k, v) in other.variants.into_iter() {
             self.variants.insert(k, v);
         }
         other.version_check.map(|v| {

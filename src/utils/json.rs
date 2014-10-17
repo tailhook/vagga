@@ -41,7 +41,7 @@ pub fn extract_json(_env: &mut Environ, args: Vec<String>)
     let ncols = columns.len();
     for obj in lst.iter() {
         let tree = match obj {
-            &J::String(ref val) if columns.get(0).len() == 0 => {
+            &J::String(ref val) if columns[0].len() == 0 => {
                 try!(out.write_str(val.as_slice()).and(out.write_char('\n'))
                     .map_err(|e| format!("Error writing to stdout: {}", e)));
                 continue;

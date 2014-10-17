@@ -24,7 +24,7 @@ fn makedirs(path: &Path) -> Result<(),String> {
         return Ok(());
     }
     try!(makedirs(&path.dir_path()));
-    return match mkdir(path, io::UserRWX) {
+    return match mkdir(path, io::USER_RWX) {
         Ok(()) => Ok(()),
         Err(e) => Err(format!("Can't mkdir: {}", e)),
     };
@@ -121,7 +121,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     env.push(("container_fullname".as_bytes(), container.fullname.as_bytes()));
     env.push(("cache_dir".as_bytes(), cache_dir.as_vec()));
     env.push(("project_root".as_bytes(), environ.project_root.as_vec()));
-    for (k, v) in get_environ().move_iter() {
+    for (k, v) in get_environ().into_iter() {
         let pk = "CALLER_".to_string() + k;
         let pv = v;
         caller_env.push((pk, pv));

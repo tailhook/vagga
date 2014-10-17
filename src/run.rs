@@ -1,5 +1,5 @@
 use std::os::getenv;
-use std::io::{BufferedReader, IoResult, AllPermissions};
+use std::io::{BufferedReader, IoResult, ALL_PERMISSIONS};
 use std::io::fs::{File, copy, rename, mkdir};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
@@ -151,7 +151,7 @@ pub fn run_command_line(env: &mut Environ, args: Vec<String>)
         }
     }
 
-    let cmd = cmdargs.shift().unwrap();
+    let cmd = cmdargs.remove(0).unwrap();
     try!(ensure_container(env, &mut container));
 
     ropts.mounts = container_volumes(env, &container);
@@ -180,7 +180,7 @@ pub fn internal_run(env: &Environ, container: &Container,
     if resolv {
         let etc = container_root.join("etc");
         if !etc.exists() {
-            try!(mkdir(&etc, AllPermissions)
+            try!(mkdir(&etc, ALL_PERMISSIONS)
                 .map_err(|e| format!("Error creating /etc: {}", e)));
         }
         try!(copy(&Path::new("/etc/resolv.conf"),

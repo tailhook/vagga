@@ -37,7 +37,7 @@ pub fn run_plain_command(env: &mut Environ, cmdname: &String,
     if has_arguments {
         //  All options forwarded to command (including --help and others)
         cmdargs = args;
-        cmdargs.shift();  // Zeroth arg is a command
+        cmdargs.remove(0);  // Zeroth arg is a command
     } else {
         //  We can provide useful help in this case
         cmdargs = Vec::new();
@@ -110,7 +110,7 @@ pub fn exec_plain_command_args(env: &Environ, work_dir: &Path,
     let mut argprefix: Vec<String> = Vec::new();
     match container.command_wrapper {
         Some(ref wrapper) => {
-            argprefix.extend(wrapper.clone().move_iter());
+            argprefix.extend(wrapper.clone().into_iter());
         }
         None => {}
     }
@@ -118,7 +118,7 @@ pub fn exec_plain_command_args(env: &Environ, work_dir: &Path,
         Plain(ref cmd) => argprefix.push_all(cmd.as_slice()),
         _ => unreachable!(),
     }
-    let cmd = argprefix.shift().unwrap();
+    let cmd = argprefix.remove(0).unwrap();
     let ropts = RunOptions {
         pid1mode: command.pid1mode,
         writeable: is_writeable(command.write_mode),
