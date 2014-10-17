@@ -1,8 +1,10 @@
 use std::os::getenv;
 use std::io::{BufferedReader, IoResult, AllPermissions};
 use std::io::fs::{File, copy, rename, mkdir};
+use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
 use std::io::timer::sleep;
+use std::time::duration::Duration;
 use std::default::Default;
 
 use libc::pid_t;
@@ -19,7 +21,7 @@ use super::utils::run::{container_volumes};
 use super::options::env_options;
 use super::build::ensure_container;
 
-use Pid1 = super::linux;
+use super::linux as Pid1;
 
 
 static DEFAULT_PATH: &'static str =
@@ -33,7 +35,7 @@ fn read_env_file(path: &Path, env: &mut TreeMap<String, String>)
     let mut reader = BufferedReader::new(file);
     for (n, line) in reader.lines().enumerate() {
         let line = try!(line);
-        let pair: Vec<&str> = line.as_slice().splitn('=', 1).collect();
+        let pair: Vec<&str> = line.as_slice().splitn(1, '=').collect();
         match pair.as_slice() {
             [key, val] => {
                 let nkey = key.trim().to_string();
@@ -226,7 +228,7 @@ pub fn internal_run(env: &Environ, container: &Container,
                 format!("Pid {}, countdown: {} sec... \r", pid, 10 - i)
                 .as_slice()).ok();
             err.flush().ok();
-            sleep(1000);
+            sleep(Duration::seconds(1));
         }
         err.write_line("Starting...                                 ").ok();
     }

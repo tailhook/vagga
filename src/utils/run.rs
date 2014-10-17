@@ -1,6 +1,7 @@
 use time::now;
 use libc::funcs::posix88::unistd::getpid;
 use std::io::fs::{mkdir_recursive, mkdir, link, readdir};
+use std::io::fs::PathExtensions;
 use std::io::{FilePermission, TypeSymlink};
 use std::io;
 

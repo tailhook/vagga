@@ -1,6 +1,7 @@
 use std::os::homedir;
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::{File};
+use std::io::fs::PathExtensions;
 use std::io::{Write, Truncate};
 use std::default::Default;
 
@@ -8,8 +9,8 @@ use collections::treemap::TreeMap;
 
 use argparse::{ArgumentParser, Store};
 use quire::parse_config;
-use V = quire::validate;
-use Y = quire::emit;
+use quire::validate as V;
+use quire::emit as Y;
 
 use super::env::Environ;
 
@@ -42,7 +43,7 @@ impl Settings {
     }
 }
 
-fn settings_validator() -> Box<V::Validator> {
+fn settings_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Structure { members: vec!(
         ("variants".to_string(), box V::Mapping {
             key_element: box V::Scalar {
@@ -73,7 +74,7 @@ pub fn read_settings(env: &mut Environ) {
     let validator = settings_validator();
     for filename in files.iter() {
         if filename.exists() {
-            match parse_config(filename, validator, Default::default()) {
+            match parse_config(filename, &*validator, Default::default()) {
                 Ok(s) => {
                     env.settings.merge(s);
                 }

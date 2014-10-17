@@ -1,12 +1,12 @@
 #![feature(phase)]
-#![feature(macro_rules)]  // for sha256 from librustc
+#![feature(macro_rules)]
+#![feature(slicing_syntax)]  // for sha256 from librustc
 
 extern crate serialize;
 extern crate collections;
 extern crate debug;
 extern crate libc;
 extern crate green;
-extern crate rustuv;
 extern crate regex;
 extern crate time;
 #[phase(plugin, link)] extern crate log;

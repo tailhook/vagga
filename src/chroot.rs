@@ -24,7 +24,7 @@ struct Volume {
 
 impl FromStr for Volume {
     fn from_str(input: &str) -> Option<Volume> {
-        let mut split = input.splitn(':', 2);
+        let mut split = input.splitn(2, ':');
         let src = match split.next() {
             Some(val) => Path::new(val),
             None => return None,

@@ -104,7 +104,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         let uid_map = format!("0 {} 1", uid);
         debug!("Writing uid_map: {}", uid_map);
         match File::open_mode(&Path::new("/proc")
-                          .join(pid.to_str())
+                          .join(pid.to_string())
                           .join("uid_map"), Open, Write)
                 .write_str(uid_map.as_slice()) {
             Ok(()) => {}
@@ -129,9 +129,12 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
 
         let mut cmd = Command::new("newuidmap");
         cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
-        cmd.arg(pid.to_str());
+        cmd.arg(pid.to_string());
         for &(req, allowed, count) in uid_map.iter() {
-            cmd.arg(req.to_str()).arg(allowed.to_str()).arg(count.to_str());
+            cmd
+                .arg(req.to_string())
+                .arg(allowed.to_string())
+                .arg(count.to_string());
         }
         info!("Uid map command: {}", cmd);
         match cmd.status() {
@@ -144,7 +147,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         let gid_map = format!("0 {} 1", gid);
         debug!("Writing gid_map: {}", gid_map);
         match File::open_mode(&Path::new("/proc")
-                          .join(pid.to_str())
+                          .join(pid.to_string())
                           .join("gid_map"), Open, Write)
                 .write_str(gid_map.as_slice()) {
             Ok(()) => {}
@@ -171,9 +174,12 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
 
         let mut cmd = Command::new("newgidmap");
         cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
-        cmd.arg(pid.to_str());
+        cmd.arg(pid.to_string());
         for &(req, allowed, count) in gid_map.iter() {
-            cmd.arg(req.to_str()).arg(allowed.to_str()).arg(count.to_str());
+            cmd
+                .arg(req.to_string())
+                .arg(allowed.to_string())
+                .arg(count.to_string());
         }
         info!("Gid map command: {}", cmd);
         match cmd.status() {
@@ -196,7 +202,7 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
         let uid_map = format!("0 {} 1", uid);
         debug!("Writing uid_map: {}", uid_map);
         match File::open_mode(&Path::new("/proc")
-                          .join(pid.to_str())
+                          .join(pid.to_string())
                           .join("uid_map"), Open, Write)
                 .write_str(uid_map.as_slice()) {
             Ok(()) => {}
@@ -207,9 +213,9 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
         let uid_map = uid_map.unwrap();
         let mut cmd = Command::new("newuidmap");
         cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
-        cmd.arg(pid.to_str());
+        cmd.arg(pid.to_string());
         cmd.arg("0");
-        cmd.arg(uid.to_str());
+        cmd.arg(uid.to_string());
         cmd.arg("1");
         for &rng in uid_map.iter() {
             let mut rng = rng;
@@ -219,9 +225,9 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
                 rng = rng.shift(1);
                 if rng.len() == 0 { continue; }
             }
-            cmd.arg(rng.start.to_str());
-            cmd.arg(rng.start.to_str());
-            cmd.arg(rng.len().to_str());
+            cmd.arg(rng.start.to_string());
+            cmd.arg(rng.start.to_string());
+            cmd.arg(rng.len().to_string());
         }
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
@@ -233,7 +239,7 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
         let gid_map = format!("0 {} 1", gid);
         debug!("Writing gid_map: {}", gid_map);
         match File::open_mode(&Path::new("/proc")
-                          .join(pid.to_str())
+                          .join(pid.to_string())
                           .join("gid_map"), Open, Write)
                 .write_str(gid_map.as_slice()) {
             Ok(()) => {}
@@ -244,9 +250,9 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
         let gid_map = gid_map.unwrap();
         let mut cmd = Command::new("newgidmap");
         cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
-        cmd.arg(pid.to_str());
+        cmd.arg(pid.to_string());
         cmd.arg("0");
-        cmd.arg(gid.to_str());
+        cmd.arg(gid.to_string());
         cmd.arg("1");
         for &rng in gid_map.iter() {
             let mut rng = rng;
@@ -256,9 +262,9 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
                 rng = rng.shift(1);
                 if rng.len() == 0 { continue; }
             }
-            cmd.arg(rng.start.to_str());
-            cmd.arg(rng.start.to_str());
-            cmd.arg(rng.len().to_str());
+            cmd.arg(rng.start.to_string());
+            cmd.arg(rng.start.to_string());
+            cmd.arg(rng.len().to_string());
         }
         match cmd.status() {
             Ok(ExitStatus(0)) => {},

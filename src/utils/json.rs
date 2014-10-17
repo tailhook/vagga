@@ -2,7 +2,7 @@ use std::io::stdio::{stdout, stderr};
 use std::io::fs::File;
 
 use serialize::json::from_reader;
-use J = serialize::json;
+use serialize::json as J;
 use argparse::{ArgumentParser, Store, List};
 
 use super::super::env::Environ;

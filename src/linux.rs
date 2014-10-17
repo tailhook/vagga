@@ -7,6 +7,7 @@ use std::c_str::CString;
 use std::str::raw::from_c_str;
 use std::os::{errno, error_string};
 use std::io::fs::mkdir;
+use std::io::fs::PathExtensions;
 use std::os::{Pipe, pipe};
 use std::os::getenv;
 use std::default::Default;
@@ -70,29 +71,29 @@ pub static SIGCHLD   : c_int =  17    ; /* Child status has changed (POSIX).  */
 
 // pwd.h
 struct passwd {
-    pw_name: *c_char,       /* username */
-    pw_passwd: *u8,     /* user password */
+    pw_name: *mut c_char,       /* username */
+    pw_passwd: *mut u8,     /* user password */
     pw_uid: uid_t,      /* user ID */
     pw_gid: gid_t,      /* group ID */
-    pw_gecos: *u8,      /* user information */
-    pw_dir: *u8,        /* home directory */
-    pw_shell: *u8,      /* shell program */
+    pw_gecos: *mut u8,      /* user information */
+    pw_dir: *mut u8,        /* home directory */
+    pw_shell: *mut u8,      /* shell program */
 }
 
 extern  {
     // sys/types.h
     // sys/wait.h
-    fn waitpid(pid: pid_t, status: *c_int, options: c_int) -> pid_t;
+    fn waitpid(pid: pid_t, status: *mut c_int, options: c_int) -> pid_t;
 
     // sys/mount.h
-    fn mount(source: *c_char, target: *c_char,
-        filesystemtype: *c_char, flags: c_ulong,
-        data: *c_char) -> c_int;
+    fn mount(source: *const c_char, target: *const c_char,
+        filesystemtype: *const c_char, flags: c_ulong,
+        data: *const c_char) -> c_int;
 
     // signal.h
-    fn sigprocmask(how: c_int, set: *u8, oldset: *u8) -> c_int;
-    fn sigwait(set: *u8, sig: *c_int) -> c_int;
-    fn sigfillset(set: *u8) -> c_int;
+    fn sigprocmask(how: c_int, set: *const u8, oldset: *mut u8) -> c_int;
+    fn sigwait(set: *const u8, sig: *mut c_int) -> c_int;
+    fn sigfillset(set: *mut u8) -> c_int;
 
     // sys/prctl.h
     fn prctl(option: c_int, arg2: c_ulong, arg3: c_ulong,
@@ -100,7 +101,7 @@ extern  {
 
 
     // pwd.h
-    fn getpwuid(uid: uid_t) -> *passwd;
+    fn getpwuid(uid: uid_t) -> *const passwd;
 
 }
 
@@ -140,10 +141,10 @@ pub enum ExtFlags {
 
 /* Keep in sync with container.c */
 struct CMount {
-    source: *u8,
-    target: *u8,
-    fstype: *u8,
-    options: *u8,
+    source: *const u8,
+    target: *const u8,
+    fstype: *const u8,
+    options: *const u8,
     flags: c_ulong,
     ext_flags: c_uint,
 }
@@ -153,16 +154,16 @@ struct CContainer {
     pid1_mode: c_int,
     pipe_reader: c_int,
     pipe_writer: c_int,
-    container_root: *u8,
-    mount_dir: *u8,
+    container_root: *const u8,
+    mount_dir: *const u8,
     mounts_num: c_int,
-    mounts: *CMount,
-    work_dir: *u8,
-    exec_filename: *u8,     // For error messages
+    mounts: *const CMount,
+    work_dir: *const u8,
+    exec_filename: *const u8,     // For error messages
     exec_filenames_num: c_int,
-    exec_filenames: **u8,   // Full paths to try in order
-    exec_args: **u8,
-    exec_environ: **u8,
+    exec_filenames: *const *const u8,   // Full paths to try in order
+    exec_args: *const *const u8,
+    exec_environ: *const *const u8,
 }
 
 
@@ -200,7 +201,7 @@ impl CPipe {
         let &CPipe(ref pipe) = self;
         loop {
             unsafe {
-                rc = write(pipe.writer, ['x' as u8].as_ptr() as *c_void, 1);
+                rc = write(pipe.writer, ['x' as u8].as_ptr() as *const c_void, 1);
             }
             if rc < 0 && (errno() as i32 == EINTR || errno() as i32 == EAGAIN) {
                 continue
@@ -229,7 +230,7 @@ impl CPipe {
 
 #[link(name="container", kind="static")]
 extern  {
-    fn fork_to_container(flags: c_int, container: *CContainer) -> pid_t;
+    fn fork_to_container(flags: c_int, container: *const CContainer) -> pid_t;
 }
 
 impl Mount {
@@ -275,7 +276,7 @@ fn c_vec<'x, T:ToCStr, I:Iterator<&'x T>>(iter: I) -> Vec<CString> {
     return iter.map(|a| a.to_c_str()).collect();
 }
 
-fn raw_vec(vec: &Vec<CString>) -> Vec<*u8> {
+fn raw_vec(vec: &Vec<CString>) -> Vec<*const u8> {
     return vec.iter().map(|a| a.as_bytes().as_ptr()).collect();
 }
 
@@ -320,7 +321,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
                     .to_c_str()
                 }).collect()
         };
-    let c_filenames:Vec<*u8> = raw_vec(&filenames);
+    let c_filenames:Vec<*const u8> = raw_vec(&filenames);
     let args = c_vec(args.iter());
     let mut c_args = raw_vec(&args);
     c_args.insert(0, c_exec_fn.as_bytes().as_ptr());
@@ -381,7 +382,7 @@ pub fn run_newuser(pipe: &CPipe,
                     .to_c_str()
                 }).collect()
         };
-    let c_filenames:Vec<*u8> = raw_vec(&filenames);
+    let c_filenames:Vec<*const u8> = raw_vec(&filenames);
     let args = c_vec(args.iter());
     let mut c_args = raw_vec(&args);
     c_args.insert(0, c_exec_fn.as_bytes().as_ptr());
@@ -428,8 +429,8 @@ pub fn run_newuser(pipe: &CPipe,
 
 pub fn wait_process(pid: pid_t) -> Result<int, String> {
     loop {
-        let status: i32 = 0;
-        let rc = unsafe { waitpid(pid, &status, 0) };
+        let mut status: i32 = 0;
+        let rc = unsafe { waitpid(pid, &mut status, 0) };
         if rc < 0 {
             if errno() as i32 == EINTR {
                 continue;
@@ -449,8 +450,8 @@ struct DeadProcesses;
 impl Iterator<(pid_t, i32)> for DeadProcesses {
     fn next(&mut self) -> Option<(pid_t, i32)> {
         loop {
-            let status = 0;
-            let pid = unsafe { waitpid(-1, &status, WNOHANG) };
+            let mut status = 0;
+            let pid = unsafe { waitpid(-1, &mut status, WNOHANG) };
             if pid == 0 {
                 return None;
             }
@@ -469,7 +470,7 @@ pub fn ensure_dir(p: &Path) -> Result<(),String> {
     if p.exists() {
         return Ok(());
     }
-    return mkdir(p, io::UserRWX).map_err(|e| { e.to_str() });
+    return mkdir(p, io::UserRWX).map_err(|e| { e.to_string() });
 }
 
 pub fn exit(result: i32) -> ! {
@@ -482,27 +483,27 @@ pub struct MaskSignals {
 
 impl MaskSignals {
     pub fn new() -> MaskSignals {
-        let old = [0, ..128];
-        let new = [0, ..128];
+        let mut old = [0, ..128];
+        let mut new = [0, ..128];
         unsafe {
-            sigfillset(new.as_ptr());
-            sigprocmask(SIG_BLOCK, new.as_ptr(), old.as_ptr());
+            sigfillset(new.as_mut_ptr());
+            sigprocmask(SIG_BLOCK, new.as_ptr(), old.as_mut_ptr());
         };
         MaskSignals {
             oldmask: old,
         }
     }
     pub fn drop(&self) {
-        let old = [0, ..128];
+        let mut old = [0, ..128];
         unsafe {
-            sigprocmask(SIG_SETMASK, self.oldmask.as_ptr(), old.as_ptr())
+            sigprocmask(SIG_SETMASK, self.oldmask.as_ptr(), old.as_mut_ptr())
         };
     }
     pub fn wait(&self) -> i32 {
         let mask = [0xFF, ..128];
-        let sig: c_int = 0;
+        let mut sig: c_int = 0;
         unsafe {
-            sigwait(mask.as_ptr(), &sig);
+            sigwait(mask.as_ptr(), &mut sig);
         }
         return sig;
     }
@@ -518,7 +519,7 @@ pub fn get_user_name(uid: uid_t) -> Result<String, String> {
     unsafe {
         let val = getpwuid(uid);
         if val != null() {
-            return Ok(from_c_str((*val).pw_name));
+            return Ok(from_c_str((*val).pw_name as *const i8));
         }
     }
     return Err(format!("User {} not found", uid));

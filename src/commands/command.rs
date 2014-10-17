@@ -2,6 +2,7 @@ use std::io::stdio::{stdout, stderr};
 use std::io::timer::sleep;
 use std::os::getenv;
 use std::default::Default;
+use std::time::duration::Duration;
 
 
 use libc::pid_t;
@@ -73,7 +74,7 @@ pub fn run_plain_command(env: &mut Environ, cmdname: &String,
         command, &container, cmdargs));
     monitor.add("child".to_string(), pid);
     if command.banner_delay > 0 {
-        sleep(command.banner_delay as u64 * 1000);
+        sleep(Duration::seconds(command.banner_delay));
         print_banner(&command.banner);
     }
     monitor.wait_all();

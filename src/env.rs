@@ -1,12 +1,13 @@
 use std::os::getenv;
 use std::os::{getcwd, args, self_exe_path, self_exe_name};
+use std::io::fs::PathExtensions;
 
 use collections::treemap::TreeMap;
 use collections::treemap::TreeSet;
 
 use super::settings::Settings;
 use super::config::{Range, Config};
-use cfg = super::config;
+use super::config as cfg;
 
 pub struct Container {
     pub name: String,
@@ -136,7 +137,7 @@ impl Environ {
             vars.insert(k.as_slice(), v.as_slice());
         }
         for pairstr in self.variables.iter() {
-            let mut pair = pairstr.as_slice().splitn('=', 1);
+            let mut pair = pairstr.as_slice().splitn(1, '=');
             let key = pair.next();
             let value = pair.next();
             if key.is_none() || value.is_none() {
@@ -268,7 +269,7 @@ impl Environ {
             }
         }
         for pair in self.set_env.iter() {
-            let mut iter = pair.as_slice().splitn('=', 1);
+            let mut iter = pair.as_slice().splitn(1, '=');
             let key = iter.next().unwrap();
             match iter.next() {
                 Some(x) => { env.insert(key.to_string(), x.to_string()); }

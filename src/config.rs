@@ -1,14 +1,15 @@
 use std::default::Default;
 use std::from_str::FromStr;
+use std::io::fs::PathExtensions;
 
 use collections::treemap::TreeMap;
 use serialize::{Decoder, Decodable};
 use quire::parse_config;
 
-use V = quire::validate;
-use A = quire::ast;
+use quire::validate as V;
+use quire::ast as A;
 
-use Pid1 = super::linux;
+use super::linux as Pid1;
 
 
 #[deriving(Show, Clone, PartialEq, Eq)]
@@ -75,7 +76,7 @@ pub struct Command {
     pub resolv_conf: bool,
     pub write_mode: WriteMode,
     pub banner: Option<String>,
-    pub banner_delay: uint,
+    pub banner_delay: i64,
     pub epilog: Option<String>,
     pub execute: Executor,
 }
@@ -92,7 +93,7 @@ pub struct GenericCommand {
     pub resolv_conf: bool,
     pub write_mode: WriteMode,
     pub banner: Option<String>,
-    pub banner_delay: uint,
+    pub banner_delay: i64,
     pub epilog: Option<String>,
 
     pub run: Option<String>,
@@ -248,7 +249,7 @@ fn scalar_command(ast: A::Ast) -> Vec<A::Ast> {
     }
 }
 
-fn command_validator(supports_supervise: bool) -> Box<V::Validator> {
+fn command_validator<'a>(supports_supervise: bool) -> Box<V::Validator + 'a> {
     let mut members = vec!(
         ("pid1mode".to_string(), box V::Scalar {
             optional: true,
@@ -286,7 +287,8 @@ fn command_validator(supports_supervise: bool) -> Box<V::Validator> {
             optional: true,
             .. Default::default()} as Box<V::Validator>),
         ("banner_delay".to_string(), box V::Numeric {
-            default: Some(0i),
+            min: Some(0),
+            default: Some(0i64),
             .. Default::default()} as Box<V::Validator>),
         ("epilog".to_string(), box V::Scalar {
             optional: true,
@@ -316,7 +318,7 @@ fn command_validator(supports_supervise: bool) -> Box<V::Validator> {
         .. Default::default()} as Box<V::Validator>;
 }
 
-fn container_validator() -> Box<V::Validator> {
+fn container_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Structure { members: vec!(
         ("default_command".to_string(), box V::Scalar {
             optional: true,
@@ -365,12 +367,12 @@ fn container_validator() -> Box<V::Validator> {
         ), .. Default::default()} as Box<V::Validator>;
 }
 
-fn variant_validator() -> Box<V::Validator> {
+fn variant_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Structure { members: vec!(
         ), .. Default::default()} as Box<V::Validator>;
 }
 
-pub fn config_validator() -> Box<V::Validator> {
+pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Structure { members: vec!(
         ("containers".to_string(), box V::Mapping {
             key_element: box V::Scalar {
@@ -427,7 +429,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
             "Config not found in path {}", work_dir.display())),
     };
     let mut tmp: TmpConfig = match parse_config(
-        &filename, config_validator(), Default::default())
+        &filename, &*config_validator(), Default::default())
     {
         Ok(cfg) => cfg,
         Err(e) => {

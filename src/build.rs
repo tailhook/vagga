@@ -1,8 +1,9 @@
 use std::io;
 use std::os::getenv;
 use std::path::BytesContainer;
+use std::io::fs::PathExtensions;
 use std::str::from_utf8_lossy;
-use get_environ = std::os::env;
+use std::os::env as get_environ;
 use std::io::fs::{mkdir, rename, symlink, unlink, readlink};
 use std::io::process::{ExitStatus, Command, Ignored, InheritFd};
 use std::io::stdio::{stdout, stderr};
@@ -128,10 +129,12 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     for (k, v) in container.parameters.iter() {
         parameters.push((builder + "_" + *k, v.clone()));
     }
-    for &(ref k, ref v) in caller_env.iter() {
+    let mut caller_env_iter = caller_env.iter();
+    for &(ref k, ref v) in caller_env_iter {
         env.push((k.container_as_bytes(), v.container_as_bytes()));
     }
-    for &(ref k, ref v) in parameters.iter() {
+    let mut parameters_iter = parameters.iter();
+    for &(ref k, ref v) in parameters_iter {
         env.push((k.container_as_bytes(), v.container_as_bytes()));
     }
 
@@ -140,7 +143,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
     if version_sh.exists() {
         digest.input_str(builder.as_slice());
         digest.input_str(":");
-        match Command::new(&version_sh).env(env.as_slice())
+        match Command::new(&version_sh).env_set_all(env.as_slice())
             .cwd(&environ.project_root)
             .stdin(Ignored).stderr(InheritFd(2)).output() {
             Ok(out) => match out.status {
@@ -252,7 +255,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         cmd.arg(lst.connect(","));
     }
     cmd.arg(build_sh);
-    cmd.env(env.as_slice());
+    cmd.env_set_all(env.as_slice());
     cmd.cwd(&environ.project_root);
     cmd.stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2));
     match cmd.status() {
@@ -263,7 +266,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
 
     if container.provision.is_some() {
         let mut pcmd = Command::new(environ.vagga_exe.as_vec());
-        pcmd.env(env.as_slice());
+        pcmd.env_set_all(env.as_slice());
         pcmd.arg("_chroot");
         pcmd.arg("--writeable");
         pcmd.arg("--inventory");

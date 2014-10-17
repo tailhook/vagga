@@ -1,6 +1,7 @@
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::readlink;
 use std::io::timer::sleep;
+use std::time::duration::Duration;
 
 use libc::pid_t;
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
@@ -138,7 +139,7 @@ pub fn run_supervise_command(env: &mut Environ, cmdname: &String,
     }
 
     if command.banner_delay > 0 {
-        sleep(command.banner_delay as u64 * 1000);
+        sleep(Duration::seconds(command.banner_delay));
         print_banner(&command.banner);
     }
 
