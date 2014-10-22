@@ -257,7 +257,6 @@ fn scalar_command(ast: A::Ast) -> Vec<A::Ast> {
 fn command_validator<'a>(supports_supervise: bool) -> Box<V::Validator + 'a> {
     let mut members = vec!(
         ("pid1mode".to_string(), box V::Scalar {
-            optional: true,
             default: Some("wait".to_string()),
             .. Default::default()} as Box<V::Validator>),
         ("work_dir".to_string(), box V::Scalar {
@@ -314,11 +313,13 @@ fn command_validator<'a>(supports_supervise: bool) -> Box<V::Validator + 'a> {
                     .. Default::default()} as Box<V::Validator>,
                 value_element: command_validator(false),
                 .. Default::default()} as Box<V::Validator>));
-        members.push(
-            ("supervise_mode".to_string(), box V::Scalar {
-                default: Some("stop-on-failure".to_string()),
-                .. Default::default()} as Box<V::Validator>));
     }
+    //  This should not be necessary, but since we don't make the field
+    //  optional, we need to have it filled with default value when absent
+    members.push(
+        ("supervise_mode".to_string(), box V::Scalar {
+            default: Some("stop-on-failure".to_string()),
+            .. Default::default()} as Box<V::Validator>));
     return box V::Structure { members: members,
         .. Default::default()} as Box<V::Validator>;
 }
