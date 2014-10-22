@@ -1,7 +1,8 @@
 use std::io;
+use std::io::FilePermission;
 use std::os::getenv;
 use std::path::BytesContainer;
-use std::io::fs::PathExtensions;
+use std::io::fs::{PathExtensions, mkdir_recursive};
 use std::str::from_utf8_lossy;
 use std::os::env as get_environ;
 use std::io::fs::{mkdir, rename, symlink, unlink, readlink};
@@ -187,6 +188,13 @@ pub fn build_container(environ: &Environ, container: &mut Container,
             digest.input_uint(rng.end as u64);
         }
     }
+    if container.ensure_dirs.len() > 0 {
+        digest.input_str("ensure_dir:");
+        for (path, val) in container.ensure_dirs.iter() {
+            digest.input(path.as_vec());
+            digest.input_uint(val.mode as u64);
+        }
+    }
     match container.provision {
         Some(ref x) => digest.input_str(x.as_slice()),
         None => {}
@@ -299,6 +307,16 @@ pub fn build_container(environ: &Environ, container: &mut Container,
 
     for dir in ["proc", "sys", "dev", "work", "tmp", "etc"].iter() {
         try!(ensure_dir(&container_tmp.join(*dir)));
+    }
+
+    let root = Path::new("/");
+    for (path, props) in container.ensure_dirs.iter() {
+        assert!(path.is_absolute());
+        try!(mkdir_recursive(
+            &container_tmp.join(path.path_relative_from(&root).unwrap()),
+            FilePermission::from_bits(props.mode).unwrap())
+            .map_err(|e| format!("Can't create dir {}: {}",
+                                 path.display(), e)));
     }
 
     let container_old = environ.local_vagga.join_many(

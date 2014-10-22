@@ -24,6 +24,7 @@ pub struct Container {
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
     pub tmpfs_volumes: Vec<(Path, String)>,
+    pub ensure_dirs: TreeMap<Path, cfg::Directory>,
 }
 
 pub struct Environ {
@@ -183,6 +184,9 @@ impl Environ {
             uids: src.uids.clone(),
             gids: src.gids.clone(),
             tmpfs_volumes: tmpfs_volumes,
+            ensure_dirs: src.ensure_dirs.iter()
+                .map(|(p, d)| (Path::new(p.as_slice()), d.clone()))
+                .collect(),
         };
         for item in used.iter() {
             container.fullname.push_str("--");

@@ -204,6 +204,10 @@ impl<E, D:Decoder<E>> Decodable<D, E> for Range {
     }
 }
 
+#[deriving(Decodable, PartialEq, Clone)]
+pub struct Directory {
+    pub mode: u32,
+}
 
 #[deriving(Decodable)]
 pub struct Container {
@@ -215,6 +219,7 @@ pub struct Container {
     pub parameters: TreeMap<String, String>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
+    pub ensure_dirs: TreeMap<String, Directory>,
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
     pub tmpfs_volumes: TreeMap<String, String>,
@@ -340,6 +345,28 @@ fn container_validator<'a>() -> Box<V::Validator + 'a> {
                 .. Default::default()} as Box<V::Validator>,
             value_element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("ensure_dirs".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
+            value_element: box V::Structure { members: vec!(
+                ("mode".to_string(), box V::Numeric {
+                    min: Some(0),
+                    max: Some(0o1777),
+                    default: Some(0o755u32),
+                    .. Default::default()} as Box<V::Validator>),
+                // TODO(tailhook) owner and group
+                // ("owner".to_string(), box V::Numeric {
+                //     min: Some(0),
+                //     max: Some(65534),
+                //     default: Some(0),
+                //     .. Default::default()} as Box<V::Validator>),
+                // ("group".to_string(), box V::Numeric {
+                //     min: Some(0),
+                //     max: Some(65534),
+                //     default: Some(0),
+                //     .. Default::default()} as Box<V::Validator>),
+                ), .. Default::default()} as Box<V::Validator>,
             .. Default::default()} as Box<V::Validator>),
         ("environ".to_string(), box V::Mapping {
             key_element: box V::Scalar {
