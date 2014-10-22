@@ -51,9 +51,9 @@ fn settings_validator<'a>() -> Box<V::Validator + 'a> {
             value_element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
             .. Default::default()} as Box<V::Validator>),
-        ("version_check".to_string(), box V::Numeric {
+        ("version_check".to_string(), box V::Scalar {
             optional: true,
-            default: None::<bool>,
+            default: None,
             .. Default::default()} as Box<V::Validator>),
     ), .. Default::default()} as Box<V::Validator>;
 }
