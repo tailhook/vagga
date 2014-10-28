@@ -111,7 +111,7 @@ for fn in $filenames; do
     tar -xf "$fn" --no-same-owner --exclude "dev/*" -C "$container_root"
     find "$container_root" -name ".wh.*" | sed 's/\.wh\.//' \
         | xargs --no-run-if-empty rm -rf
-    find "$container_root" -name ".wh.*" -delete
+    find "$container_root" -name ".wh.*" | xargs --no-run-if-empty rm -rf
 done
 
 [ -z "$docker_dockerfile" ] && exit 0
