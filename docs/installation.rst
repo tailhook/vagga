@@ -9,7 +9,7 @@ Generic Installation
 
 Build-time dependencies:
 
-* Rust_ compiler 0.11 (``rustc``)
+* Rust_ compiler 0.12 (``rustc``)
 * ``make`` (probably gnu variant)
 * ``git`` (when installing from git source)
 
@@ -39,7 +39,7 @@ Installing ``rustc``::
 
     sudo apt-add-repository ppa:hansjorg/rust
     sudo apt-get update
-    sudo apt-get install rust-0.11
+    sudo apt-get install rust-0.12
 
 Building vagga::
 
