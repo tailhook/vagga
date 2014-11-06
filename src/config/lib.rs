@@ -19,7 +19,7 @@ use quire::validate as V;
 use quire::ast as A;
 pub use self::settings::Settings;
 
-mod settings;
+pub mod settings;
 
 
 #[deriving(Clone, PartialEq, Eq)]

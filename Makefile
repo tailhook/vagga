@@ -20,6 +20,7 @@ libconfig.rlib: src/config/*.rs
 		-L rust-quire -L rust-argparse
 
 vagga: rust-argparse/libargparse.rlib rust-quire/libquire.rlib libconfig.rlib
+vagga: src/launcher/*.rs
 	$(RUSTC) src/launcher/main.rs -g -o $@ \
 		-L rust-quire -L rust-argparse -L .
 

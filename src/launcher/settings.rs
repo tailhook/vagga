@@ -21,15 +21,23 @@ struct InsecureSettings {
 }
 
 struct MergedSettings {
-    allowed_dirs: TreeMap<String, Path>,
-    allowed_files: TreeMap<String, Path>,
-    storage_dir: Path,
-    cache_dir: Path,
-    version_check: bool,
+    pub allowed_dirs: TreeMap<String, Path>,
+    pub allowed_files: TreeMap<String, Path>,
+    pub storage_dir: Option<Path>,
+    pub cache_dir: Option<Path>,
 }
 
 pub fn read_settings(project_root: &Path)
     -> Result<(MergedSettings, Settings), String>
 {
-    unimplemented!();
+    let mut ext_settings = MergedSettings {
+        allowed_dirs: TreeMap::new(),
+        allowed_files: TreeMap::new(),
+        storage_dir: None,
+        cache_dir: None,
+    };
+    let mut int_settings = Settings {
+        version_check: true,
+    };
+    return Ok((ext_settings, int_settings));
 }
