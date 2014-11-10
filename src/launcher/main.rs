@@ -60,6 +60,10 @@ pub fn run() -> int {
         }
     };
 
+    if cmd.is_some() {
+        args.insert(0, "vagga ".to_string() + *cmd.as_ref().unwrap());
+    }
+
 
     let result:Result<int, String> = match cmd.as_ref().map(|x| x.as_slice()) {
         None => {
@@ -86,6 +90,9 @@ pub fn run() -> int {
             return 127;
         }
         Some("_clean") => {
+            unimplemented!();
+        }
+        Some("_build") => {
             unimplemented!();
         }
         Some("_run") => {
