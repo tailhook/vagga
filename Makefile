@@ -19,7 +19,17 @@ libconfig.rlib: src/config/*.rs
 	$(RUSTC) src/config/lib.rs -g -o $@ \
 		-L rust-quire -L rust-argparse
 
-vagga: rust-argparse/libargparse.rlib rust-quire/libquire.rlib libconfig.rlib
+container.o: container.c
+	$(CC) -c $< -o $@ -fPIC -D_GNU_SOURCE -std=c99
+
+libcontainer.a: container.o
+	$(AR) rcs $@ $^
+
+libcontainer.rlib: src/container/*.rs libcontainer.a
+	$(RUSTC) src/container/lib.rs -g -o $@ -L .
+
+vagga: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+vagga: libconfig.rlib libcontainer.rlib
 vagga: src/launcher/*.rs
 	$(RUSTC) src/launcher/main.rs -g -o $@ \
 		-L rust-quire -L rust-argparse -L .

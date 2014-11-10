@@ -15,7 +15,7 @@ use settings::read_settings;
 use argparse::{ArgumentParser, StoreOption, List};
 
 mod settings;
-
+mod list;
 
 pub fn run() -> int {
     let mut err = stderr();
@@ -61,35 +61,54 @@ pub fn run() -> int {
     };
 
 
-    if cmd.is_none() {
-        err.write_line("Available commands:").ok();
-        for (k, cmd) in config.commands.iter() {
-            err.write_str("    ").ok();
-            err.write_str(k.as_slice()).ok();
-            match cmd.description {
-                Some(ref val) => {
-                    for _ in range(k.len(), 20) {
-                        err.write_char(' ').ok();
+    let result:Result<int, String> = match cmd.as_ref().map(|x| x.as_slice()) {
+        None => {
+            err.write_line("Available commands:").ok();
+            for (k, cmd) in config.commands.iter() {
+                err.write_str("    ").ok();
+                err.write_str(k.as_slice()).ok();
+                match cmd.description {
+                    Some(ref val) => {
+                        if k.len() > 19 {
+                            err.write_str("\n                        ").ok();
+                        } else {
+                            for _ in range(k.len(), 19) {
+                                err.write_char(' ').ok();
+                            }
+                            err.write_char(' ').ok();
+                        }
+                        err.write_str(val.as_slice()).ok();
                     }
-                    err.write_str(val.as_slice()).ok();
+                    None => {}
                 }
-                None => {}
+                err.write_char('\n').ok();
             }
-            err.write_char('\n').ok();
+            return 127;
         }
-        return 127;
-    }
+        Some("_clean") => {
+            unimplemented!();
+        }
+        Some("_run") => {
+            unimplemented!();
+        }
+        Some("_list") => {
+            list::print_list(&config, args)
+        }
+        Some(cmd) => {
+            (writeln!(err, "Unknown command: {}", cmd)).ok();
+            Ok(1)
+        }
+    };
 
-    //match Ok(0) {
-    //    Ok(rc) => {
-    //        return rc;
-    //    }
-    //    Err(text) =>  {
-    //        err.write_line(text.as_slice()).ok();
-    //        return 121;
-    //    }
-    //}
-    return 0;
+    match result {
+        Ok(rc) => {
+            return rc;
+        }
+        Err(text) =>  {
+            err.write_line(text.as_slice()).ok();
+            return 121;
+        }
+    }
 }
 
 fn main() {
