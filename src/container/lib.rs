@@ -9,3 +9,4 @@ extern crate time;
 pub mod container;
 pub mod monitor;
 pub mod signal;
+pub mod pipe;

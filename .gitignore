@@ -1,4 +1,6 @@
 /*.rlib
-/vagga
 /*.a
 /*.o
+/vagga
+/launcher
+/wrapper

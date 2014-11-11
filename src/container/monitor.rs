@@ -24,7 +24,7 @@ pub enum PrepareResult {
 pub trait Executor {
     fn prepare(&self) -> PrepareResult { return Run; }
     fn command(&self) -> Command;
-    fn finish(&self) -> bool { return true; }
+    fn finish(&self, _status: int) -> bool { return true; }
 }
 
 pub struct Process<'a> {
@@ -141,7 +141,7 @@ impl<'a> Monitor<'a> {
         let prc = self.processes.find_mut(name).unwrap();
         warn!("[{:s}] Child {}:{} exited with status {}",
             self.myname, prc.name, pid, status);
-        if !prc.executor.finish() {
+        if !prc.executor.finish(status) {
             return false;
         }
         self.start_queue.push((

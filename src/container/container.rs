@@ -7,7 +7,10 @@ use std::os::getcwd;
 use std::collections::TreeMap;
 use std::collections::enum_set::{EnumSet, CLike};
 
+use super::pipe::CPipe;
+
 use libc::{c_int, c_char, pid_t};
+
 
 #[deriving(Show)]
 enum Namespace {
@@ -100,11 +103,14 @@ impl Command {
         }
     }
 
-    pub fn container(&mut self, network: bool) {
+    pub fn container(&mut self, user: bool, network: bool) {
         self.namespaces.add(NewMount);
         self.namespaces.add(NewUts);
         self.namespaces.add(NewIpc);
         self.namespaces.add(NewPid);
+        if user {
+            self.namespaces.add(NewUser);
+        }
         if network {
             self.namespaces.add(NewNet);
         }
@@ -123,7 +129,10 @@ impl Command {
             // Only errors are logged from C code
             "ERROR:lithos::container.c: [{}]", self.name
             ).to_c_str();
+
+        let pipe = try!(CPipe::new());
         let pid = unsafe { execute_command(&CCommand {
+            pipe_reader: pipe.writer_fd(),
             logprefix: logprefix.as_bytes().as_ptr(),
             fs_root: self.chroot.as_bytes().as_ptr(),
             exec_path: self.executable.as_bytes().as_ptr(),
@@ -137,6 +146,7 @@ impl Command {
         if pid < 0 {
             return Err(IoError::last_error());
         }
+        try!(pipe.wakeup());
         return Ok(pid)
     }
 }
@@ -167,6 +177,7 @@ static CLONE_NEWNET: c_int = 0x40000000;  /* New network namespace.  */
 #[repr(C)]
 pub struct CCommand {
     namespaces: c_int,
+    pipe_reader: c_int,
     user_id: c_int,
     restore_sigmask: c_int,
     logprefix: *const u8,
@@ -181,4 +192,3 @@ pub struct CCommand {
 extern {
     fn execute_command(cmd: *const CCommand) -> pid_t;
 }
-

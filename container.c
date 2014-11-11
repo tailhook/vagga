@@ -11,6 +11,7 @@
 
 typedef struct {
     int namespaces;
+    int pipe_reader;
     int user_id;
     int restore_sigmask;
     const char *logprefix;

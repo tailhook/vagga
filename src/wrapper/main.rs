@@ -18,9 +18,10 @@ use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
+use settings::read_settings;
 use argparse::{ArgumentParser, StoreOption, List};
 
-mod list;
+mod settings;
 
 
 struct RunWrapper {
@@ -88,6 +89,13 @@ pub fn run() -> int {
             return 126;
         }
     };
+    let (ext_settings, int_settings) = match read_settings(&project_root) {
+        Ok(tup) => tup,
+        Err(e) => {
+            err.write_line(e.as_slice()).ok();
+            return 126;
+        }
+    };
 
     let result:Result<int, String> = match cmd.as_ref().map(|x| x.as_slice()) {
         None => {
@@ -114,18 +122,11 @@ pub fn run() -> int {
             return 127;
         }
         Some("_list") => {
-            list::print_list(&config, args)
+            //  Intercepted by launcher
+            unreachable!();
         }
         Some(cmd) => {
-            args.insert(0, cmd.to_string());
-            let result = Cell::new(-1);
-            let mut mon = Monitor::new("launcher".to_string());
-            mon.add(Rc::new("wrapper".to_string()), box RunWrapper {
-                args: args,
-                result: result,
-                }, Duration::seconds(0), None);
-            mon.run();
-            Ok(result.get())
+            unimplemented!();
         }
     };
 

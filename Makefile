@@ -7,7 +7,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 
-all: vagga
+all: launcher wrapper
 
 rust-argparse/libargparse.rlib:
 	make -C rust-argparse libargparse.rlib
@@ -28,10 +28,15 @@ libcontainer.a: container.o
 libcontainer.rlib: src/container/*.rs libcontainer.a
 	$(RUSTC) src/container/lib.rs -g -o $@ -L .
 
-vagga: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
-vagga: libconfig.rlib libcontainer.rlib
-vagga: src/launcher/*.rs
+launcher: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+launcher: libconfig.rlib libcontainer.rlib
+launcher: src/launcher/*.rs
 	$(RUSTC) src/launcher/main.rs -g -o $@ \
+		-L rust-quire -L rust-argparse -L .
+
+wrapper: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+wrapper: src/wrapper/*.rs
+	$(RUSTC) src/wrapper/main.rs -g -o $@ \
 		-L rust-quire -L rust-argparse -L .
 
 
