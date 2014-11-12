@@ -100,6 +100,37 @@ Container parameters:
     step). The ``/tmp`` is exception to the rule, it's created and mounted with
     default options during container build.
 
+``ensure-dirs``
+    A list of directories to create when creating container. Useful mostly for
+    mountpoints. A custom ``mode`` may be specified::
+
+        ensure-dirs:
+            /some-dir:
+            /other-dir: {mode: 493}  # octal 0755
+
+``mutable-dirs``
+    (experimental option) A list of directories that will be mutable inside a
+    container. When container is initially builds it can put some files there.
+    Then any command are allowed to mutate directory, and that mutable
+    directory will be shared between all invocations of all commands.
+
+    .. note:: directories must exist after container is built, you may use
+       ``ensure-dirs`` or ``provision`` to create them.
+
+    Use as last resort. Usually it's better to use:
+
+    1. Configure target process to write inside a project dir, for example
+       mysql might write to ``/work/tmp/mysql`` instead of ``/var/lib/mysql``
+       (Note: ``/work`` is mounted project dir, i.e. dir which contains
+       ``vagga.yaml`` file)
+
+    2. Use ``write-mode: transient-hardlink-copy``. This allows to modify
+       everything, but changes will be cleaned on process death. (But see
+       warning in documentation of the option).
+
+    If you later need to start from scratch, you need to run
+    ``vagga _build --force container_name`` or ``vagga _clean --everything``.
+
 .. _provision:
 
 ``provision``

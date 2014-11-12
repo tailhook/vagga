@@ -64,17 +64,17 @@ void mount_all(int num, struct mount *mounts) {
             check_error(mkdir(mnt->target, 0755),
                "Can't mkdir %s: (%d) %s\n", mnt->target);
         }
-        if(mnt->flags & (MS_BIND | MS_RDONLY) == (MS_BIND | MS_RDONLY)) {
+        if(mnt->flags & MS_BIND) {
             //  Can bind readonly right away must first just bind
             //  then remount readonly
             int flags1 = mnt->flags & ~(MS_REMOUNT | MS_RDONLY);
-            int flags2 = MS_BIND | MS_RDONLY | MS_REMOUNT;
+            int flags2 = MS_BIND | (mnt->flags & MS_RDONLY) | MS_REMOUNT;
             check_error(mount(mnt->source, mnt->target, mnt->fstype,
                               flags1, NULL),
                 "Can't mount %s: (%d) %s\n", mnt->target);
             check_error(mount(mnt->source, mnt->target, mnt->fstype,
                               flags2, NULL),
-                "Can't remount ro %s: (%d) %s\n", mnt->target);
+                "Can't remount %s: (%d) %s\n", mnt->target);
         } else {
             check_error(mount(mnt->source, mnt->target, mnt->fstype,
                               mnt->flags, NULL),

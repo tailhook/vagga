@@ -6,6 +6,11 @@ containers:
       config: default.nix
       attribute: sphinx
 
+  ubuntu-mut:
+    builder: ubuntu
+    mutable-dirs:
+    - /var/tmp
+
   ubuntu:
     builder: ubuntu
     uids: [0-1000, 65534]

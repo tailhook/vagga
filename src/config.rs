@@ -220,6 +220,7 @@ pub struct Container {
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
     pub ensure_dirs: TreeMap<String, Directory>,
+    pub mutable_dirs: Vec<Path>,
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
     pub tmpfs_volumes: TreeMap<String, String>,
@@ -368,6 +369,10 @@ fn container_validator<'a>() -> Box<V::Validator + 'a> {
                 //     default: Some(0),
                 //     .. Default::default()} as Box<V::Validator>),
                 ), .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("mutable_dirs".to_string(), box V::Sequence {
+            element: box V::Scalar {
+                .. Default::default()} as Box<V::Validator>,
             .. Default::default()} as Box<V::Validator>),
         ("environ".to_string(), box V::Mapping {
             key_element: box V::Scalar {
