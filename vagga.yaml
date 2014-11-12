@@ -37,6 +37,8 @@ commands:
     command: make
 
   build-ubuntu-package:
+    description: Create an ubuntu (.deb) package using checkinstall in
+      container
     container: ubuntu
     write-mode: transient-hard-link-copy
     command:
