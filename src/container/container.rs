@@ -8,6 +8,7 @@ use std::collections::TreeMap;
 use std::collections::enum_set::{EnumSet, CLike};
 
 use super::pipe::CPipe;
+use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 
 use libc::{c_int, c_char, pid_t};
 
@@ -56,6 +57,7 @@ pub struct Command {
     restore_sigmask: bool,
     user_id: uint,
     workdir: CString,
+    uidmap: Option<Uidmap>,
 }
 
 
@@ -71,6 +73,7 @@ impl Command {
             environment: TreeMap::new(),
             restore_sigmask: true,
             user_id: 0,
+            uidmap: None,
         };
     }
     pub fn set_user_id(&mut self, uid: uint) {
@@ -102,18 +105,16 @@ impl Command {
             self.environment.insert(k.clone(), v.clone());
         }
     }
-
-    pub fn container(&mut self, user: bool, network: bool) {
+    pub fn set_max_uidmap(&mut self) {
+        self.namespaces.add(NewUser);
+        self.uidmap = Some(get_max_uidmap().unwrap());
+    }
+    pub fn container(&mut self) {
+        // Mount and user namespaces are set separately
         self.namespaces.add(NewMount);
         self.namespaces.add(NewUts);
         self.namespaces.add(NewIpc);
         self.namespaces.add(NewPid);
-        if user {
-            self.namespaces.add(NewUser);
-        }
-        if network {
-            self.namespaces.add(NewNet);
-        }
     }
     pub fn spawn(&self) -> Result<pid_t, IoError> {
         let mut exec_args: Vec<*const u8> = self.arguments.iter()
@@ -132,7 +133,7 @@ impl Command {
 
         let pipe = try!(CPipe::new());
         let pid = unsafe { execute_command(&CCommand {
-            pipe_reader: pipe.writer_fd(),
+            pipe_reader: pipe.reader_fd(),
             logprefix: logprefix.as_bytes().as_ptr(),
             fs_root: self.chroot.as_bytes().as_ptr(),
             exec_path: self.executable.as_bytes().as_ptr(),
@@ -145,6 +146,9 @@ impl Command {
         }) };
         if pid < 0 {
             return Err(IoError::last_error());
+        }
+        if let Some(uidmap) = self.uidmap.as_ref() {
+            try!(apply_uidmap(pid, uidmap));
         }
         try!(pipe.wakeup());
         return Ok(pid)

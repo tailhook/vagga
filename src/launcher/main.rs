@@ -43,7 +43,8 @@ impl Executor for RunWrapper {
         if let Some(x) = getenv("RUST_BACKTRACE") {
             cmd.set_env("RUST_BACKTRACE".to_string(), x);
         }
-        cmd.container(true, false);
+        cmd.container();
+        cmd.set_max_uidmap();
         return cmd;
     }
     fn finish(&self, status: int) -> bool {

@@ -16,9 +16,9 @@ impl CPipe {
             Err(e) => Err(e),
         }
     }
-    pub fn writer_fd(&self) -> c_int {
+    pub fn reader_fd(&self) -> c_int {
         let &CPipe(ref pipe) = self;
-        return pipe.writer;
+        return pipe.reader;
     }
     pub fn wakeup(&self) -> Result<(), IoError> {
         let mut rc;

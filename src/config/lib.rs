@@ -6,10 +6,12 @@ extern crate serialize;
 extern crate quire;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
+extern crate libc;
 
 use std::default::Default;
 use std::from_str::FromStr;
 use std::io::fs::PathExtensions;
+use libc::uid_t;
 
 use std::collections::treemap::TreeMap;
 use serialize::{Decoder, Decodable};
@@ -209,15 +211,15 @@ impl PartialEq for Variant {
 
 #[deriving(Clone, Show)]
 pub struct Range {
-    pub start: uint,
-    pub end: uint,
+    pub start: uid_t,
+    pub end: uid_t,
 }
 
 impl<E, D:Decoder<E>> Decodable<D, E> for Range {
     fn decode(d: &mut D) -> Result<Range, E> {
         match d.read_str() {
             Ok(val) => {
-                let num:Option<uint> = FromStr::from_str(val.as_slice());
+                let num:Option<uid_t> = FromStr::from_str(val.as_slice());
                 match num {
                     Some(num) => return Ok(Range::new(num, num)),
                     None => {}
@@ -453,13 +455,13 @@ pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
 }
 
 impl Range {
-    pub fn new(start: uint, end: uint) -> Range {
+    pub fn new(start: uid_t, end: uid_t) -> Range {
         return Range { start: start, end: end };
     }
-    pub fn len(&self) -> uint {
+    pub fn len(&self) -> uid_t {
         return self.end - self.start + 1;
     }
-    pub fn shift(&self, val: uint) -> Range {
+    pub fn shift(&self, val: uid_t) -> Range {
         assert!(self.end - self.start + 1 >= val);
         return Range::new(self.start + val, self.end);
     }

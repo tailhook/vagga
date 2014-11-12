@@ -100,6 +100,9 @@ impl<'a> Monitor<'a> {
                     }
                     Err(e) => {
                         error!("Can't run container {}: {}", prc.name, e);
+                        if !prc.executor.finish(-1) {
+                            return Shutdown;
+                        }
                         self.start_queue.push((
                             -(get_time() + prc.restart_timeout).sec,
                             prc.name.clone(),

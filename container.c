@@ -30,6 +30,20 @@ typedef struct {
 
 static void _run_container(CCommand *cmd) {
     prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0);
+
+    //  Wait for user namespace to be set up
+    int rc;
+    char val[1];
+    do {
+        rc = read(cmd->pipe_reader, val, 1);
+    } while(rc < 0 && (errno == EINTR || errno == EAGAIN));
+    if(rc < 0) {
+        fprintf(stderr, "%s Error reading from parent's pipe: %m\n",
+            cmd->logprefix);
+        abort();
+    }
+    close(cmd->pipe_reader);
+
     if(chdir(cmd->fs_root)) {
         fprintf(stderr, "%s Error changing workdir to the root %s: %m\n",
             cmd->logprefix, cmd->fs_root);

@@ -26,7 +26,7 @@ libcontainer.a: container.o
 	$(AR) rcs $@ $^
 
 libcontainer.rlib: src/container/*.rs libcontainer.a
-	$(RUSTC) src/container/lib.rs -g -o $@ -L .
+	$(RUSTC) src/container/lib.rs -g -o $@ -L . -L rust-quire
 
 launcher: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
 launcher: libconfig.rlib libcontainer.rlib
