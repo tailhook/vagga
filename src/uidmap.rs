@@ -128,7 +128,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         let uid_map = match_ranges(uid_req, &allowed_uids, uid as uint);
 
         let mut cmd = Command::new("newuidmap");
-        cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
+        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
         cmd.arg(pid.to_string());
         for &(req, allowed, count) in uid_map.iter() {
             cmd
@@ -173,7 +173,7 @@ pub fn write_uid_map(pid: pid_t, uid_req: &Vec<Range>, gid_req: &Vec<Range>)
         let gid_map = match_ranges(gid_req, &allowed_gids, gid as uint);
 
         let mut cmd = Command::new("newgidmap");
-        cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
+        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
         cmd.arg(pid.to_string());
         for &(req, allowed, count) in gid_map.iter() {
             cmd
@@ -212,7 +212,7 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
     } else {
         let uid_map = uid_map.unwrap();
         let mut cmd = Command::new("newuidmap");
-        cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
+        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
         cmd.arg(pid.to_string());
         cmd.arg("0");
         cmd.arg(uid.to_string());
@@ -249,7 +249,7 @@ pub fn write_max_map(pid: pid_t) -> Result<(), String>
     } else {
         let gid_map = gid_map.unwrap();
         let mut cmd = Command::new("newgidmap");
-        cmd.stdin(Ignored).stdout(InheritFd(0)).stderr(InheritFd(2));
+        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
         cmd.arg(pid.to_string());
         cmd.arg("0");
         cmd.arg(gid.to_string());
