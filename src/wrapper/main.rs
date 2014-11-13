@@ -9,54 +9,77 @@ extern crate regex;
 extern crate config;
 extern crate container;
 
-use std::rc::Rc;
 use std::cell::Cell;
 use std::io::stderr;
-use std::time::duration::Duration;
+use std::io::{TypeSymlink, TypeDirectory, PathDoesntExist};
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
+use std::io::FilePermission;
+use std::io::fs::mkdir;
+use std::io::fs::PathExtensions;
 use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
 use settings::read_settings;
-use argparse::{ArgumentParser, StoreOption, List};
+use argparse::{ArgumentParser, Store, List};
 
 mod settings;
 
 
-struct RunWrapper {
-    args: Vec<String>,
-    result: Cell<int>,
-}
-
-
-impl Executor for RunWrapper {
-    fn command(&self) -> Command {
-        let mut cmd = Command::new("wrapper".to_string(),
-            self_exe_path().unwrap().join("wrapper"));
-        cmd.keep_sigmask();
-        cmd.args(self.args.as_slice());
-        cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
+pub fn make_mountpoint(project_root: &Path) -> Result<(), String> {
+    let vagga_dir = project_root.join(".vagga");
+    match vagga_dir.lstat() {
+        Ok(stat) if stat.kind == TypeSymlink => {
+            return Err(concat!("The `.vagga` dir can't be a symlink. ",
+                               "Please run `unlink .vagga`").to_string());
         }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        Ok(stat) if stat.kind == TypeDirectory => {
+            // ok
         }
-        cmd.container();
-        return cmd;
+        Ok(_) => {
+            return Err(concat!("The `.vagga` must be a directory. ",
+                               "Please run `unlink .vagga`").to_string());
+        }
+        Err(ref e) if e.kind == PathDoesntExist => {
+            try!(mkdir(&vagga_dir,
+                FilePermission::from_bits_truncate(0o755))
+                .map_err(|e| format!("Can't create {}: {}",
+                                     vagga_dir.display(), e)));
+        }
+        Err(ref e) => {
+            return Err(format!("Can't stat `.vagga`: {}", e));
+        }
     }
-    fn finish(&self, status: int) -> bool {
-        self.result.set(status);
-        return false;
+    let mnt_dir = vagga_dir.join(".mnt");
+    match mnt_dir.lstat() {
+        Ok(stat) if stat.kind == TypeSymlink => {
+            return Err(concat!("The `.vagga/.mnt` dir can't be a symlink. ",
+                               "Please run `unlink .vagga/.mnt`").to_string());
+        }
+        Ok(stat) if stat.kind == TypeDirectory => {
+            // ok
+        }
+        Ok(_) => {
+            return Err(concat!("The `.vagga/.mnt` must be a directory. ",
+                               "Please run `unlink .vagga/.mnt`").to_string());
+        }
+        Err(ref e) if e.kind == PathDoesntExist => {
+            try!(mkdir(&mnt_dir,
+                FilePermission::from_bits_truncate(0o755))
+                .map_err(|e| format!("Can't create {}: {}",
+                                     mnt_dir.display(), e)));
+        }
+        Err(ref e) => {
+            return Err(format!("Can't stat `.vagga/.mnt`: {}", e));
+        }
     }
+    return Ok(());
 }
 
 
 pub fn run() -> int {
     let mut err = stderr();
-    let mut cmd: Option<String> = None;
+    let mut cmd: String = "".to_string();
     let mut args: Vec<String> = Vec::new();
     {
         let mut ap = ArgumentParser::new();
@@ -67,8 +90,9 @@ pub fn run() -> int {
             Run `vagga` without arguments to see the list of commands.
             ");
         ap.refer(&mut cmd)
-          .add_argument("command", box StoreOption::<String>,
-                "A vagga command to run");
+          .add_argument("command", box Store::<String>,
+                "A vagga command to run")
+          .required();
         ap.refer(&mut args)
           .add_argument("args", box List::<String>,
                 "Arguments for the command");
@@ -97,38 +121,9 @@ pub fn run() -> int {
         }
     };
 
-    let result:Result<int, String> = match cmd.as_ref().map(|x| x.as_slice()) {
-        None => {
-            err.write_line("Available commands:").ok();
-            for (k, cmd) in config.commands.iter() {
-                err.write_str("    ").ok();
-                err.write_str(k.as_slice()).ok();
-                match cmd.description {
-                    Some(ref val) => {
-                        if k.len() > 19 {
-                            err.write_str("\n                        ").ok();
-                        } else {
-                            for _ in range(k.len(), 19) {
-                                err.write_char(' ').ok();
-                            }
-                            err.write_char(' ').ok();
-                        }
-                        err.write_str(val.as_slice()).ok();
-                    }
-                    None => {}
-                }
-                err.write_char('\n').ok();
-            }
-            return 127;
-        }
-        Some("_list") => {
-            //  Intercepted by launcher
-            unreachable!();
-        }
-        Some(cmd) => {
-            unimplemented!();
-        }
-    };
+
+
+    let result = make_mountpoint(&project_root).map(|_| 0);
 
     match result {
         Ok(rc) => {

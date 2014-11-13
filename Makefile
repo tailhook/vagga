@@ -7,7 +7,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 
-all: launcher wrapper
+all: launcher wrapper vagga_test
 
 rust-argparse/libargparse.rlib:
 	make -C rust-argparse libargparse.rlib
@@ -38,6 +38,9 @@ wrapper: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
 wrapper: src/wrapper/*.rs
 	$(RUSTC) src/wrapper/main.rs -g -o $@ \
 		-L rust-quire -L rust-argparse -L .
+
+vagga_test: tests/*.rs tests/*/*.rs
+	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
 
 
 .PHONY: all
