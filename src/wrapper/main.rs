@@ -7,19 +7,22 @@ extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
 
 extern crate config;
-extern crate container;
+#[phase(plugin, link)] extern crate container;
 
 use std::cell::Cell;
 use std::io::stderr;
 use std::io::{TypeSymlink, TypeDirectory, PathDoesntExist};
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
 use std::io::FilePermission;
-use std::io::fs::mkdir;
+use std::io::fs::{mkdir, walk_dir};
 use std::io::fs::PathExtensions;
 use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
+use container::mount::{mount_tmpfs, bind_mount, mount_private, unmount};
+use container::mount::{mount_ro_recursive};
+use container::root::change_root;
 use settings::read_settings;
 use argparse::{ArgumentParser, Store, List};
 
@@ -77,6 +80,29 @@ pub fn make_mountpoint(project_root: &Path) -> Result<(), String> {
 }
 
 
+pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
+    let mnt_dir = project_root.join(".vagga/.mnt");
+    try!(make_mountpoint(project_root));
+    try!(mount_tmpfs(&mnt_dir, "size=10m"));
+    let vagga_dir = mnt_dir.join("vagga");
+    try_str!(mkdir(&vagga_dir,
+        FilePermission::from_bits_truncate(0o755)));
+
+    let bin_dir = vagga_dir.join("bin");
+    try_str!(mkdir(&bin_dir,
+        FilePermission::from_bits_truncate(0o755)));
+    try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
+    try!(mount_ro_recursive(&bin_dir));
+
+
+    for dir in walk_dir(&mnt_dir).unwrap() {
+        println!("DIR {}", dir.display());
+    }
+
+    return Ok(());
+}
+
+
 pub fn run() -> int {
     let mut err = stderr();
     let mut cmd: String = "".to_string();
@@ -121,13 +147,9 @@ pub fn run() -> int {
         }
     };
 
-
-
-    let result = make_mountpoint(&project_root).map(|_| 0);
-
-    match result {
-        Ok(rc) => {
-            return rc;
+    match setup_filesystem(&project_root) {
+        Ok(()) => {
+            return 0;
         }
         Err(text) =>  {
             err.write_line(text.as_slice()).ok();

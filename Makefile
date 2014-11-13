@@ -35,6 +35,7 @@ launcher: src/launcher/*.rs
 		-L rust-quire -L rust-argparse -L .
 
 wrapper: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+wrapper: libconfig.rlib libcontainer.rlib
 wrapper: src/wrapper/*.rs
 	$(RUSTC) src/wrapper/main.rs -g -o $@ \
 		-L rust-quire -L rust-argparse -L .
