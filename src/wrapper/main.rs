@@ -24,7 +24,7 @@ use container::mount::{mount_tmpfs, bind_mount, mount_private, unmount};
 use container::mount::{mount_ro_recursive};
 use container::root::change_root;
 use settings::read_settings;
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store, StoreOption, List};
 
 mod settings;
 
@@ -106,6 +106,7 @@ pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
 pub fn run() -> int {
     let mut err = stderr();
     let mut cmd: String = "".to_string();
+    let mut extra_settings: Option<Path> = None;
     let mut args: Vec<String> = Vec::new();
     {
         let mut ap = ArgumentParser::new();
@@ -115,6 +116,9 @@ pub fn run() -> int {
 
             Run `vagga` without arguments to see the list of commands.
             ");
+        ap.refer(&mut extra_settings)
+          .add_option(["--extra-settings"], box StoreOption::<Path>,
+                "Extra settings file to use (mostly for tests)");
         ap.refer(&mut cmd)
           .add_argument("command", box Store::<String>,
                 "A vagga command to run")
@@ -139,7 +143,9 @@ pub fn run() -> int {
             return 126;
         }
     };
-    let (ext_settings, int_settings) = match read_settings(&project_root) {
+    let (ext_settings, int_settings) = match read_settings(
+        &project_root, &extra_settings)
+    {
         Ok(tup) => tup,
         Err(e) => {
             err.write_line(e.as_slice()).ok();

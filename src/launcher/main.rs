@@ -18,13 +18,15 @@ use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
-use argparse::{ArgumentParser, StoreOption, List};
+use argparse::{ArgumentParser, Store, StoreOption, List};
 
 mod list;
 
 
 struct RunWrapper {
+    cmd: String,
     args: Vec<String>,
+    extra_settings: Option<Path>,
     result: Cell<int>,
 }
 
@@ -34,6 +36,11 @@ impl Executor for RunWrapper {
         let mut cmd = Command::new("wrapper".to_string(),
             self_exe_path().unwrap().join("wrapper"));
         cmd.keep_sigmask();
+        if let Some(ref ex) = self.extra_settings {
+            cmd.arg("--extra-settings");
+            cmd.arg(ex);
+        }
+        cmd.arg(self.cmd.as_slice());
         cmd.args(self.args.as_slice());
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
@@ -56,8 +63,13 @@ impl Executor for RunWrapper {
 
 pub fn run() -> int {
     let mut err = stderr();
-    let mut cmd: Option<String> = None;
-    let mut args: Vec<String> = Vec::new();
+    let result = Cell::new(-1);
+    let mut wrapper = RunWrapper {
+        cmd: "".to_string(),
+        args: vec!(),
+        extra_settings: None,
+        result: result,
+    };
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -66,10 +78,13 @@ pub fn run() -> int {
 
             Run `vagga` without arguments to see the list of commands.
             ");
-        ap.refer(&mut cmd)
-          .add_argument("command", box StoreOption::<String>,
+        ap.refer(&mut wrapper.extra_settings)
+          .add_option(["--extra-settings"], box StoreOption::<Path>,
+                "Extra settings file to use (mostly for tests)");
+        ap.refer(&mut wrapper.cmd)
+          .add_argument("command", box Store::<String>,
                 "A vagga command to run");
-        ap.refer(&mut args)
+        ap.refer(&mut wrapper.args)
           .add_argument("args", box List::<String>,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
@@ -90,8 +105,8 @@ pub fn run() -> int {
         }
     };
 
-    let result:Result<int, String> = match cmd.as_ref().map(|x| x.as_slice()) {
-        None => {
+    let result:Result<int, String> = match wrapper.cmd.as_slice() {
+        "" => {
             err.write_line("Available commands:").ok();
             for (k, cmd) in config.commands.iter() {
                 err.write_str("    ").ok();
@@ -114,17 +129,13 @@ pub fn run() -> int {
             }
             return 127;
         }
-        Some("_list") => {
-            list::print_list(&config, args)
+        "_list" => {
+            list::print_list(&config, wrapper.args)
         }
-        Some(cmd) => {
-            args.insert(0, cmd.to_string());
-            let result = Cell::new(-1);
+        _ => {
             let mut mon = Monitor::new("launcher".to_string());
-            mon.add(Rc::new("wrapper".to_string()), box RunWrapper {
-                args: args,
-                result: result,
-                }, Duration::seconds(0), None);
+            mon.add(Rc::new("wrapper".to_string()), box wrapper,
+                Duration::seconds(0), None);
             mon.run();
             Ok(result.get())
         }

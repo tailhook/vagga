@@ -17,6 +17,7 @@ struct InsecureSettings {
     storage_dir: Option<Path>,
     cache_dir: Option<Path>,
     version_check: Option<bool>,
+    shared_cache: Option<bool>,
     site_settings: TreeMap<String, InsecureSettings>,
 }
 
@@ -25,9 +26,10 @@ struct MergedSettings {
     pub allowed_files: TreeMap<String, Path>,
     pub storage_dir: Option<Path>,
     pub cache_dir: Option<Path>,
+    pub shared_cache: bool,
 }
 
-pub fn read_settings(project_root: &Path)
+pub fn read_settings(project_root: &Path, extra_settings: &Option<Path>)
     -> Result<(MergedSettings, Settings), String>
 {
     let mut ext_settings = MergedSettings {
@@ -35,6 +37,7 @@ pub fn read_settings(project_root: &Path)
         allowed_files: TreeMap::new(),
         storage_dir: None,
         cache_dir: None,
+        shared_cache: true,
     };
     let mut int_settings = Settings {
         version_check: true,
