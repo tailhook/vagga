@@ -34,7 +34,7 @@ struct RunWrapper {
 impl Executor for RunWrapper {
     fn command(&self) -> Command {
         let mut cmd = Command::new("wrapper".to_string(),
-            self_exe_path().unwrap().join("wrapper"));
+            self_exe_path().unwrap().join("vagga_wrapper"));
         cmd.keep_sigmask();
         if let Some(ref ex) = self.extra_settings {
             cmd.arg("--extra-settings");
