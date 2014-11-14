@@ -14,14 +14,16 @@ use std::io::stderr;
 use std::io::{TypeSymlink, TypeDirectory, PathDoesntExist};
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
 use std::io::FilePermission;
-use std::io::fs::{mkdir, walk_dir};
+use std::io::fs::{mkdir, walk_dir, copy};
 use std::io::fs::PathExtensions;
+use std::io::fs::File;
 use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
 use container::mount::{mount_tmpfs, bind_mount, mount_private, unmount};
-use container::mount::{mount_ro_recursive};
+use container::mount::{mount_ro_recursive, mount_pseudo};
+use container::mount::{get_submounts_of};
 use container::root::change_root;
 use settings::read_settings;
 use argparse::{ArgumentParser, Store, StoreOption, List};
@@ -85,6 +87,13 @@ pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
     try!(make_mountpoint(project_root));
     try!(mount_tmpfs(&mnt_dir, "size=10m"));
     let vagga_dir = mnt_dir.join("vagga");
+
+    let proc_dir = mnt_dir.join("proc");
+    try_str!(mkdir(&proc_dir,
+        FilePermission::from_bits_truncate(0o755)));
+    try!(mount_pseudo(&proc_dir, "proc", "", true));
+
+    let vagga_dir = mnt_dir.join("vagga");
     try_str!(mkdir(&vagga_dir,
         FilePermission::from_bits_truncate(0o755)));
 
@@ -94,10 +103,19 @@ pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
     try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
     try!(mount_ro_recursive(&bin_dir));
 
+    let etc_dir = vagga_dir.join("etc");
+    try_str!(mkdir(&etc_dir,
+        FilePermission::from_bits_truncate(0o755)));
+    try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
+        .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
+    try!(copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
+        .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
 
-    for dir in walk_dir(&mnt_dir).unwrap() {
-        println!("DIR {}", dir.display());
-    }
+    let old_root = vagga_dir.join("old_root");
+    try_str!(mkdir(&old_root,
+        FilePermission::from_bits_truncate(0o755)));
+    try!(change_root(&mnt_dir, &old_root));
+    try!(unmount(&Path::new("/vagga/old_root")));
 
     return Ok(());
 }
