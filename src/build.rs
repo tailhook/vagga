@@ -305,7 +305,7 @@ pub fn build_container(environ: &Environ, container: &mut Container,
         }
     }
 
-    for dir in ["proc", "sys", "dev", "work", "tmp", "etc"].iter() {
+    for dir in ["proc", "sys", "dev", "work", "tmp", "etc", "mnt"].iter() {
         try!(ensure_dir(&container_tmp.join(*dir)));
     }
 

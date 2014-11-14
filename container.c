@@ -37,6 +37,7 @@ struct container {
     int pipe_writer;
     const char *container_root;
     const char *mount_dir;
+    const char *pivot_dir;
     int mounts_num;
     struct mount *mounts;
     const char *work_dir;
@@ -204,8 +205,10 @@ int _run_container(void *arg) {
     if(cont->mount_dir) {
         check_error(chdir(cont->mount_dir),
             "Can't set working directory to %s: (%d) %s\n", cont->mount_dir);
-        check_error(chroot(cont->mount_dir),
+        check_error(pivot_root(cont->mount_dir, cont->pivot_dir),
             "Can't change root to %s: (%d) %s\n", cont->mount_dir);
+        check_error(umount2("/mnt", MNT_DETACH),
+            "Can't umount /mnt: (%d) %s\n", cont->mount_dir);
     }
     if(cont->work_dir) {
         check_error(chdir(cont->work_dir),

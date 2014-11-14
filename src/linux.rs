@@ -159,6 +159,7 @@ struct CContainer {
     pipe_writer: c_int,
     container_root: *const u8,
     mount_dir: *const u8,
+    pivot_dir: *const u8,
     mounts_num: c_int,
     mounts: *const CMount,
     work_dir: *const u8,
@@ -292,6 +293,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
     let mount_dir = env.local_vagga.join(".mnt");
     try!(ensure_dir(&mount_dir));
     let c_mount_dir = mount_dir.to_c_str();
+    let c_pivot_dir = mount_dir.join("mnt").to_c_str();
     // TODO(pc) find recursive bindings for BindRO
     let rootmount = if options.writeable {
         Bind(root.to_c_str(), mount_dir.to_c_str())
@@ -348,6 +350,7 @@ pub fn run_container(pipe: &CPipe, env: &Environ, root: &Path,
                 pipe_writer: pipe.writer,
                 container_root: c_container_root.as_bytes().as_ptr(),
                 mount_dir: c_mount_dir.as_bytes().as_ptr(),
+                pivot_dir: c_pivot_dir.as_bytes().as_ptr(),
                 mounts_num: c_mounts.len() as i32,
                 mounts: c_mounts.as_slice().as_ptr(),
                 work_dir: c_work_dir.as_bytes().as_ptr(),
@@ -406,6 +409,7 @@ pub fn run_newuser(pipe: &CPipe,
                 pipe_writer: pipe.writer,
                 container_root: null(),
                 mount_dir: null(),
+                pivot_dir: null(),
                 mounts_num: 0,
                 mounts: null(),
                 work_dir: null(),
