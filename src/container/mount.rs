@@ -33,12 +33,17 @@ static MS_STRICTATIME: c_ulong = 1 << 24;     /* Always perform atime updates.  
 static MS_ACTIVE: c_ulong = 1 << 30;
 static MS_NOUSER: c_ulong = 1 << 31;
 
+static MNT_FORCE: c_int = 1;           /* Force unmounting.  */
+static MNT_DETACH: c_int = 2;          /* Just detach from the tree.  */
+static MNT_EXPIRE: c_int = 4;          /* Mark for expiry.  */
+static UMOUNT_NOFOLLOW: c_int = 8;     /* Don't follow symlink on umount.  */
 
 extern {
     fn mount(source: *const u8, target: *const u8,
         filesystemtype: *const u8, flags: c_ulong,
         data: *const u8) -> c_int;
     fn umount(target: *const u8) -> c_int;
+    fn umount2(target: *const u8, flags: c_int) -> c_int;
 }
 
 
@@ -142,6 +147,29 @@ pub fn check_mount_point(dir: &str, fun: |MountRecord|)
         }
     }
     return Ok(());
+}
+
+pub fn get_submounts_of(dir: &Path)
+    -> Result<Vec<Path>, String>
+{
+    let f = try_str!(File::open(&Path::new("/proc/self/mountinfo")));
+    let mut buf = BufferedReader::new(f);
+    let mut result = vec!();
+    for line in buf.lines() {
+        let line = try_str!(line);
+        match MountRecord::from_str(line.as_slice()) {
+            Some(rec) => {
+                let mut path = Path::new(rec.mount_point);
+                if dir.is_ancestor_of(&path) {
+                    result.push(path);
+                }
+            }
+            None => {
+                return Err(format!("Can't parse mountinfo line: {}", line));
+            }
+        }
+    }
+    return Ok(result);
 }
 
 pub fn mount_ro_recursive(target: &Path) -> Result<(), String> {
@@ -277,7 +305,7 @@ pub fn mount_tmpfs(target: &Path, options: &str) -> Result<(), String> {
 
 pub fn unmount(target: &Path) -> Result<(), String> {
     let c_target = target.to_c_str();
-    let rc = unsafe { umount(c_target.as_bytes().as_ptr()) };
+    let rc = unsafe { umount2(c_target.as_bytes().as_ptr(), MNT_DETACH) };
     if rc == 0 {
         return Ok(());
     } else {
