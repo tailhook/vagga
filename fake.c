@@ -2,7 +2,6 @@
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/auxv.h>
 #include <sys/mount.h>
 #include <fcntl.h>
 #include <unistd.h>

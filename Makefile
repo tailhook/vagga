@@ -25,7 +25,7 @@ libcontainer.a: container.c
 libfake: inventory/libfake.so
 
 inventory/libfake.so: fake.c
-	$(CC) -fPIC -shared -ldl $< -o $@
+	$(CC) -fPIC -shared -ldl $< -o $@ $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
 
 quire:
 	make -C rust-quire quire-lib

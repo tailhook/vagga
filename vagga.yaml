@@ -6,20 +6,32 @@ containers:
       config: default.nix
       attribute: sphinx
 
-  ubuntu-mut:
-    builder: ubuntu
-    mutable-dirs:
-    - /var/tmp
-
-  ubuntu:
+  sphinx-ubuntu:
     builder: ubuntu
     uids: [0-1000, 65534]
     gids: [0-1000, 65534]
     parameters:
       repos: universe
-      PPAs: hansjorg/rust
-      additional_keys: 37FD5E80BD6B6386  # for rust
-      packages: make checkinstall rust-0.11
+      packages:
+        python-sphinx make
+
+  ubuntu:
+    builder: ubuntu
+    uids: [0-1000, 65534, 100000-102000]
+    gids: [0-1000, 65534, 100000-102000]
+    parameters:
+      repos: universe
+      packages: make checkinstall wget git uidmap
+    provision: |
+      export PATH=/bin:/usr/bin:/usr/bin/local
+      chown root /var/spool/rsyslog
+      cd /work/run
+      wget -c https://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+      tar -xf rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+      cd rust-0.12.0-x86_64-unknown-linux-gnu
+      ./install.sh --prefix=/usr
+    environ:
+      LD_LIBRARY_PATH: /usr/lib/rustlib/x86_64-unknown-linux-gnu/lib
     tmpfs-volumes:
       /tmp: size=1m,mode=1777
       /var/tmp: size=100m,mode=1777
@@ -41,6 +53,12 @@ commands:
     work-dir: docs
     command: make
 
+  build-docs-ubuntu:
+    description: Build docs in ubuntu container
+    container: sphinx-ubuntu
+    work-dir: docs
+    command: make
+
   build-ubuntu-package:
     description: Create an ubuntu (.deb) package using checkinstall in
       container
@@ -57,3 +75,26 @@ commands:
     - -B
     - all
     - install
+
+  vagga-in-vagga-test:
+    description: Build docs with vagga in ubuntu in vagga
+    container: ubuntu
+    write-mode: transient-hard-link-copy
+    run: |
+      set -ex
+      # Build and install vagga
+      git clone --share --recursive /work /var/tmp/vagga_build
+      git diff --cached | ( cd /var/tmp/vagga_build; git apply ) || true
+      git diff | ( cd /var/tmp/vagga_build; git apply ) || true
+      cd /var/tmp/vagga_build
+      make -B all install
+      # Build container with vagga
+      useradd vagga
+      cat /etc/subuid
+      sudo -u vagga sh -exc '
+        git clone --share /work /var/tmp/vagga
+        git diff --cached | ( cd /var/tmp/vagga; git apply ) || true
+        git diff | ( cd /var/tmp/vagga; git apply ) || true
+        cd /var/tmp/vagga
+        vagga build-docs-ubuntu html
+      '
