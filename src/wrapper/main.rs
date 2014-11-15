@@ -91,7 +91,17 @@ pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
     let proc_dir = mnt_dir.join("proc");
     try_str!(mkdir(&proc_dir,
         FilePermission::from_bits_truncate(0o755)));
-    try!(mount_pseudo(&proc_dir, "proc", "", true));
+    try!(mount_pseudo(&proc_dir, "proc", "", false));
+
+    let dev_dir = mnt_dir.join("dev");
+    try_str!(mkdir(&dev_dir,
+        FilePermission::from_bits_truncate(0o755)));
+    try!(bind_mount(&Path::new("/dev"), &dev_dir));
+
+    let work_dir = mnt_dir.join("work");
+    try_str!(mkdir(&work_dir,
+        FilePermission::from_bits_truncate(0o755)));
+    try!(bind_mount(project_root, &work_dir));
 
     let vagga_dir = mnt_dir.join("vagga");
     try_str!(mkdir(&vagga_dir,
@@ -103,7 +113,7 @@ pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
     try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
     try!(mount_ro_recursive(&bin_dir));
 
-    let etc_dir = vagga_dir.join("etc");
+    let etc_dir = mnt_dir.join("etc");
     try_str!(mkdir(&etc_dir,
         FilePermission::from_bits_truncate(0o755)));
     try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
