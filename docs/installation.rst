@@ -35,11 +35,13 @@ Process is as simple as following::
 Ubuntu
 ======
 
-Installing ``rustc``::
+Unfortunately rust-0.12 PPA doesn't work. You need to setup rust from
+binaries::
 
-    sudo apt-add-repository ppa:hansjorg/rust
-    sudo apt-get update
-    sudo apt-get install rust-0.12
+    wget https://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+    tar -xf rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+    cd rust-0.12.0-x86_64-unknown-linux-gnu
+    ./install.sh --prefix=/usr
 
 Building vagga::
 
