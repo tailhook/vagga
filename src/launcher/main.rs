@@ -26,7 +26,6 @@ mod list;
 struct RunWrapper {
     cmd: String,
     args: Vec<String>,
-    extra_settings: Option<Path>,
     result: Cell<int>,
 }
 
@@ -36,10 +35,6 @@ impl Executor for RunWrapper {
         let mut cmd = Command::new("wrapper".to_string(),
             self_exe_path().unwrap().join("vagga_wrapper"));
         cmd.keep_sigmask();
-        if let Some(ref ex) = self.extra_settings {
-            cmd.arg("--extra-settings");
-            cmd.arg(ex);
-        }
         cmd.arg(self.cmd.as_slice());
         cmd.args(self.args.as_slice());
         cmd.set_env("TERM".to_string(),
@@ -67,7 +62,6 @@ pub fn run() -> int {
     let mut wrapper = RunWrapper {
         cmd: "".to_string(),
         args: vec!(),
-        extra_settings: None,
         result: result,
     };
     {
@@ -78,9 +72,6 @@ pub fn run() -> int {
 
             Run `vagga` without arguments to see the list of commands.
             ");
-        ap.refer(&mut wrapper.extra_settings)
-          .add_option(["--extra-settings"], box StoreOption::<Path>,
-                "Extra settings file to use (mostly for tests)");
         ap.refer(&mut wrapper.cmd)
           .add_argument("command", box Store::<String>,
                 "A vagga command to run");
