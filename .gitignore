@@ -1,4 +1,5 @@
 /tmp/
+/run/
 /docs/_build
 /vagga
 .vagga
@@ -8,3 +9,4 @@ container.o
 inventory/libfake.so
 *.deb
 *.rpm
+backup-*.tgz

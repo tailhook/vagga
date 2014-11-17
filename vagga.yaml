@@ -23,8 +23,10 @@ containers:
       repos: universe
       packages: make checkinstall wget git uidmap
     provision: |
+      set -ex
       export PATH=/bin:/usr/bin:/usr/bin/local
       chown root /var/spool/rsyslog
+      mkdir /work/run || true
       cd /work/run
       wget -c https://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
       tar -xf rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
@@ -91,10 +93,18 @@ commands:
       # Build container with vagga
       useradd vagga
       cat /etc/subuid
-      sudo -u vagga sh -exc '
+      # Build and run container (must not be root)
+      su vagga -c '
+        set -ex
         git clone --share /work /var/tmp/vagga
         git diff --cached | ( cd /var/tmp/vagga; git apply ) || true
         git diff | ( cd /var/tmp/vagga; git apply ) || true
-        cd /var/tmp/vagga
-        vagga build-docs-ubuntu html
+        mkdir -p /var/tmp/vagga/.vagga/.cache
       '
+      cd /var/tmp/vagga
+      # Keep cache for subsequent builds
+      mkdir -p /work/run/cache || true
+      chown -R vagga /work/run/cache
+      mount --bind /work/run/cache .vagga/.cache
+      # Do the real build
+      su vagga -c 'vagga build-docs-ubuntu html'
