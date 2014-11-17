@@ -1,6 +1,5 @@
 use std::os;
 use std::io::stdio::{stdout, stderr};
-use std::io::fs::{rename, copy};
 use std::default::Default;
 use std::from_str::FromStr;
 
@@ -14,6 +13,7 @@ use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::linux::{Pseudo, Bind, BindRO, BindROTmp};
 use super::options::env_options;
 use super::userns::IdRanges;
+use super::utils::run::write_resolv_conf;
 
 #[deriving(Clone)]
 struct Volume {
@@ -120,13 +120,7 @@ pub fn run_chroot(env: &mut Environ, args: Vec<String>)
         try!(ensure_dir(&root.join(*dir)));
     }
     if resolv {
-        try!(ensure_dir(&root.join("etc")));
-        try!(copy(&Path::new("/etc/resolv.conf"),
-                  &root.join("etc/resolv.conf.tmp"))
-            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
-        try!(rename(&root.join("etc/resolv.conf.tmp"),
-                    &root.join("etc/resolv.conf"),)
-            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+        try!(write_resolv_conf(&root, &Path::new("/etc")));
     }
 
     let mut runenv = TreeMap::new();

@@ -26,6 +26,7 @@ pub struct Container {
     pub tmpfs_volumes: Vec<(Path, String)>,
     pub ensure_dirs: TreeMap<Path, cfg::Directory>,
     pub mutable_dirs: Vec<Path>,
+    pub resolv_conf_dir: Path,
 }
 
 pub struct Environ {
@@ -189,6 +190,7 @@ impl Environ {
                 .map(|(p, d)| (Path::new(p.as_slice()), d.clone()))
                 .collect(),
             mutable_dirs: src.mutable_dirs.clone(),
+            resolv_conf_dir: src.resolv_conf_dir.clone(),
         };
         for item in used.iter() {
             container.fullname.push_str("--");

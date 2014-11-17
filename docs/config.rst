@@ -131,6 +131,10 @@ Container parameters:
     If you later need to start from scratch, you need to run
     ``vagga _build --force container_name`` or ``vagga _clean --everything``.
 
+``resolv-conf-dir``
+    The directory where to place ``resolv.conf`` file to. By default it's
+    ``/etc``, but some tools prefer ``/etc/resolv.conf`` to be a symlink.
+
 .. _provision:
 
 ``provision``

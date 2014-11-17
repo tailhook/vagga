@@ -1,6 +1,6 @@
 use std::os::getenv;
-use std::io::{BufferedReader, IoResult, ALL_PERMISSIONS};
-use std::io::fs::{File, copy, rename, mkdir};
+use std::io::{BufferedReader, IoResult};
+use std::io::fs::{File};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
 use std::io::timer::sleep;
@@ -17,7 +17,7 @@ use super::monitor::Monitor;
 use super::env::{Environ, Container};
 use super::linux::{ensure_dir, RunOptions, run_container, CPipe};
 use super::linux::{BindRO, BindROTmp};
-use super::utils::run::{container_volumes};
+use super::utils::run::{container_volumes, write_resolv_conf};
 use super::options::env_options;
 use super::build::ensure_container;
 
@@ -178,17 +178,7 @@ pub fn internal_run(env: &Environ, container: &Container,
     try!(ensure_dir(&mount_dir));
 
     if resolv {
-        let etc = container_root.join("etc");
-        if !etc.exists() {
-            try!(mkdir(&etc, ALL_PERMISSIONS)
-                .map_err(|e| format!("Error creating /etc: {}", e)));
-        }
-        try!(copy(&Path::new("/etc/resolv.conf"),
-                  &etc.join("resolv.conf.tmp"))
-            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
-        try!(rename(&etc.join("resolv.conf.tmp"),
-                    &etc.join("resolv.conf"),)
-            .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+        try!(write_resolv_conf(container_root, &container.resolv_conf_dir));
     }
 
 

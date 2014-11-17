@@ -1,6 +1,6 @@
 use time::now;
 use libc::funcs::posix88::unistd::getpid;
-use std::io::fs::{mkdir_recursive, mkdir, link, readdir};
+use std::io::fs::{mkdir_recursive, mkdir, link, readdir, copy, rename};
 use std::io::fs::PathExtensions;
 use std::io::{FilePermission, TypeSymlink};
 use std::io;
@@ -9,7 +9,7 @@ use super::super::env::{Environ, Container};
 use super::super::config::{Command, WriteMode};
 use super::super::config::{ReadOnly, TransientHardLinkCopy};
 use super::super::clean::run_rmdirs;
-use super::super::linux::{Mount, Pseudo, Bind};
+use super::super::linux::{Mount, Pseudo, Bind, ensure_dir};
 
 
 pub fn check_command_workdir(env: &Environ, command: &Command)
@@ -135,4 +135,20 @@ pub fn container_volumes(env: &Environ, container: &Container) -> Vec<Mount> {
             Bind(dir.to_c_str(), dir.to_c_str())
         }));
     return mounts;
+}
+
+pub fn write_resolv_conf(root: &Path, subdir: &Path)
+    -> Result<(), String>
+{
+    assert!(subdir.is_absolute());
+    let dir = root.join(subdir.path_relative_from(&Path::new("/")).unwrap());
+    try!(ensure_dir(&dir));
+    println!("SUBDIR {}", dir.display());
+    try!(copy(&Path::new("/etc/resolv.conf"),
+              &dir.join("resolv.conf.tmp"))
+        .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+    try!(rename(&dir.join("resolv.conf.tmp"),
+                &dir.join("resolv.conf"),)
+        .map_err(|e| format!("Error copying resolv.conf: {}", e)));
+    return Ok(());
 }

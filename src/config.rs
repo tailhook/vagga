@@ -219,6 +219,7 @@ pub struct Container {
     pub parameters: TreeMap<String, String>,
     pub environ_file: Option<String>,
     pub environ: TreeMap<String, String>,
+    pub resolv_conf_dir: Path,
     pub ensure_dirs: TreeMap<String, Directory>,
     pub mutable_dirs: Vec<Path>,
     pub uids: Vec<Range>,
@@ -347,6 +348,9 @@ fn container_validator<'a>() -> Box<V::Validator + 'a> {
                 .. Default::default()} as Box<V::Validator>,
             value_element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("resolv_conf_dir".to_string(), box V::Scalar {
+            default: Some("/etc".to_string()),
             .. Default::default()} as Box<V::Validator>),
         ("ensure_dirs".to_string(), box V::Mapping {
             key_element: box V::Scalar {
