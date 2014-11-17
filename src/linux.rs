@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 
-use std::io;
 use std::ptr::null;
 use std::c_str::CString;
 use std::string::raw::from_buf;
 use std::os::{errno, error_string};
+use std::io::ALL_PERMISSIONS;
 use std::io::fs::mkdir;
 use std::io::fs::PathExtensions;
 use std::os::{Pipe, pipe};
@@ -477,7 +477,7 @@ pub fn ensure_dir(p: &Path) -> Result<(),String> {
     if p.exists() {
         return Ok(());
     }
-    return mkdir(p, io::USER_RWX).map_err(|e| { e.to_string() });
+    return mkdir(p, ALL_PERMISSIONS).map_err(|e| { e.to_string() });
 }
 
 pub fn exit(result: i32) -> ! {
