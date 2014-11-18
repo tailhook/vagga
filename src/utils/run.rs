@@ -143,7 +143,6 @@ pub fn write_resolv_conf(root: &Path, subdir: &Path)
     assert!(subdir.is_absolute());
     let dir = root.join(subdir.path_relative_from(&Path::new("/")).unwrap());
     try!(ensure_dir(&dir));
-    println!("SUBDIR {}", dir.display());
     try!(copy(&Path::new("/etc/resolv.conf"),
               &dir.join("resolv.conf.tmp"))
         .map_err(|e| format!("Error copying resolv.conf: {}", e)));
