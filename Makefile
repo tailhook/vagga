@@ -30,7 +30,7 @@ libcontainer.rlib: src/container/*.rs libcontainer.a
 
 rust_compile_static = \
 	$(RUSTC) -o $(1).o --emit obj $(2); \
-	rlibs=$$($(RUSTC) -Z print-link-args $(2) \
+	rlibs=$$($(RUSTC) -Z print-link-args $(2) -o/dev/null 2>/dev/null\
 		| tr -s " '" '\n' | grep rlib) \
 	&& gcc -static -static-libgcc $(1).o $$rlibs -lpthread -lm -ldl -lrt -o $(1)
 

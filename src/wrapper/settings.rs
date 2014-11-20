@@ -1,4 +1,4 @@
-use std::os::homedir;
+use std::os::getenv;
 use std::io::fs::PathExtensions;
 use std::default::Default;
 use std::collections::TreeMap;
@@ -67,7 +67,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
     ), .. Default::default()} as Box<V::Validator>;
 }
 
-struct MergedSettings {
+pub struct MergedSettings {
     pub allowed_dirs: TreeMap<String, Path>,
     pub allowed_files: TreeMap<String, Path>,
     pub storage_dir: Option<Path>,
@@ -89,15 +89,16 @@ pub fn read_settings(project_root: &Path)
         version_check: true,
     };
     let mut secure_files = vec!();
-    match homedir() {
-        Some(home) => {
-            secure_files.push(home.join(".config/vagga/settings.yaml"));
-            secure_files.push(home.join(".vagga/settings.yaml"));
-            secure_files.push(home.join(".vagga.yaml"));
-        }
-        None => {}
-    }
+    if let Some(home) = getenv("VAGGA_USER_HOME") {
+        let home = Path::new(home);
+        secure_files.push(home.join(".config/vagga/settings.yaml"));
+        secure_files.push(home.join(".vagga/settings.yaml"));
+        secure_files.push(home.join(".vagga.yaml"));
+    };
     for filename in secure_files.iter() {
+        if !filename.exists() {
+            continue;
+        }
         let cfg: SecureSettings = try!(parse_config(filename,
             &*secure_settings_validator(true), Default::default()));
         for (k, v) in cfg.allowed_dirs.iter() {

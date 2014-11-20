@@ -45,6 +45,9 @@ impl Executor for RunWrapper {
         if let Some(x) = getenv("RUST_BACKTRACE") {
             cmd.set_env("RUST_BACKTRACE".to_string(), x);
         }
+        if let Some(x) = getenv("HOME") {
+            cmd.set_env("VAGGA_USER_HOME".to_string(), x);
+        }
         cmd.container();
         cmd.set_max_uidmap();
         return cmd;

@@ -9,24 +9,22 @@ extern crate regex;
 extern crate config;
 #[phase(plugin, link)] extern crate container;
 
-use std::cell::Cell;
 use std::io::stderr;
-use std::io::{TypeSymlink, TypeDirectory, PathDoesntExist};
-use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
-use std::io::FilePermission;
-use std::io::fs::{mkdir, walk_dir, copy};
+use std::io::ALL_PERMISSIONS;
+use std::io::{TypeSymlink, TypeDirectory, PathDoesntExist, FileNotFound};
+use std::os::{getcwd, set_exit_status, self_exe_path};
+use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
-use std::io::fs::File;
+
 use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
-use container::mount::{mount_tmpfs, bind_mount, mount_private, unmount};
+use container::mount::{mount_tmpfs, bind_mount, unmount};
 use container::mount::{mount_ro_recursive, mount_pseudo};
-use container::mount::{get_submounts_of};
 use container::root::change_root;
-use settings::read_settings;
-use argparse::{ArgumentParser, Store, StoreOption, List};
+use settings::{read_settings, MergedSettings};
+use argparse::{ArgumentParser, Store, List};
 
 mod settings;
 
@@ -46,8 +44,7 @@ pub fn make_mountpoint(project_root: &Path) -> Result<(), String> {
                                "Please run `unlink .vagga`").to_string());
         }
         Err(ref e) if e.kind == PathDoesntExist => {
-            try!(mkdir(&vagga_dir,
-                FilePermission::from_bits_truncate(0o755))
+            try!(mkdir(&vagga_dir, ALL_PERMISSIONS)
                 .map_err(|e| format!("Can't create {}: {}",
                                      vagga_dir.display(), e)));
         }
@@ -69,8 +66,7 @@ pub fn make_mountpoint(project_root: &Path) -> Result<(), String> {
                                "Please run `unlink .vagga/.mnt`").to_string());
         }
         Err(ref e) if e.kind == PathDoesntExist => {
-            try!(mkdir(&mnt_dir,
-                FilePermission::from_bits_truncate(0o755))
+            try!(mkdir(&mnt_dir, ALL_PERMISSIONS)
                 .map_err(|e| format!("Can't create {}: {}",
                                      mnt_dir.display(), e)));
         }
@@ -81,49 +77,113 @@ pub fn make_mountpoint(project_root: &Path) -> Result<(), String> {
     return Ok(());
 }
 
+pub fn create_storage_dir(storage_dir: &Path, project_root: &Path)
+    -> Result<Path, String>
+{
+    let name = match project_root.filename_str() {
+        Some(name) => name,
+        None => return Err(format!(
+            "Project dir `{}` is either root or has bad characters",
+            project_root.display())),
+    };
+    let path = storage_dir.join(name);
+    if !path.exists() {
+        return Ok(path);
+    }
+    for i in range(1i, 101i) {
+        let result = format!("{}-{}", name, i);
+        let path = storage_dir.join(result);
+        if !path.exists() {
+            return Ok(path);
+        }
+    }
+    return Err(format!("Too many similar paths named {} in {}",
+        name, storage_dir.display()));
+}
 
-pub fn setup_filesystem(project_root: &Path) -> Result<(), String> {
+
+pub fn setup_filesystem(project_root: &Path, settings: &MergedSettings)
+    -> Result<(), String>
+{
     let mnt_dir = project_root.join(".vagga/.mnt");
     try!(make_mountpoint(project_root));
     try!(mount_tmpfs(&mnt_dir, "size=10m"));
-    let vagga_dir = mnt_dir.join("vagga");
 
     let proc_dir = mnt_dir.join("proc");
-    try_str!(mkdir(&proc_dir,
-        FilePermission::from_bits_truncate(0o755)));
+    try_str!(mkdir(&proc_dir, ALL_PERMISSIONS));
     try!(mount_pseudo(&proc_dir, "proc", "", false));
 
     let dev_dir = mnt_dir.join("dev");
-    try_str!(mkdir(&dev_dir,
-        FilePermission::from_bits_truncate(0o755)));
+    try_str!(mkdir(&dev_dir, ALL_PERMISSIONS));
     try!(bind_mount(&Path::new("/dev"), &dev_dir));
 
-    let work_dir = mnt_dir.join("work");
-    try_str!(mkdir(&work_dir,
-        FilePermission::from_bits_truncate(0o755)));
-    try!(bind_mount(project_root, &work_dir));
-
     let vagga_dir = mnt_dir.join("vagga");
-    try_str!(mkdir(&vagga_dir,
-        FilePermission::from_bits_truncate(0o755)));
+    try_str!(mkdir(&vagga_dir, ALL_PERMISSIONS));
 
     let bin_dir = vagga_dir.join("bin");
-    try_str!(mkdir(&bin_dir,
-        FilePermission::from_bits_truncate(0o755)));
+    try_str!(mkdir(&bin_dir, ALL_PERMISSIONS));
     try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
     try!(mount_ro_recursive(&bin_dir));
 
     let etc_dir = mnt_dir.join("etc");
-    try_str!(mkdir(&etc_dir,
-        FilePermission::from_bits_truncate(0o755)));
+    try_str!(mkdir(&etc_dir, ALL_PERMISSIONS));
     try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
         .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
     try!(copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
         .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
 
+    let roots_dir = vagga_dir.join("roots");
+    try_str!(mkdir(&roots_dir, ALL_PERMISSIONS));
+    if let Some(ref dir) = settings.storage_dir {
+        let lnkdir = project_root.join(".vagga/.lnk");
+        let local_roots = match readlink(&lnkdir) {
+            Ok(lnk) => {
+                if let Some(name) = lnk.filename() {
+                    let target = dir.join(name);
+                    if Path::new(lnk.dirname()) != *dir {
+                        return Err(concat!("You have set storage_dir to {}, ",
+                            "but .vagga/.lnk points to {}. You probably need ",
+                            "to run `ln -sfn {} .vagga/.lnk`").to_string());
+                    }
+                    if !lnkdir.exists() {
+                        return Err(concat!("Your .vagga/.lnk points to a ",
+                            "non-existent directory. Presumably you deleted ",
+                            "dir {}. Just remove .vagga/.lnk now."
+                            ).to_string());
+                    }
+                    target
+                } else {
+                    return Err(format!(concat!("Bad link .vagga/.lnk: {}.",
+                        " You are pobably need to remove it now"),
+                        lnk.display()));
+                }
+            }
+            Err(ref e) if e.kind == FileNotFound => {
+                let target = try!(create_storage_dir(dir, project_root));
+                try_str!(mkdir(&target, ALL_PERMISSIONS));
+                try_str!(symlink(&target, &lnkdir));
+                target
+            }
+            Err(ref e) => {
+                return Err(format!("Can't read link .vagga/.lnk: {}", e));
+            }
+        };
+        try!(bind_mount(&local_roots, &roots_dir));
+    } else {
+        let local_roots = project_root.join(".vagga/.roots");
+        if !local_roots.exists() {
+            try_str!(mkdir(&local_roots, ALL_PERMISSIONS));
+        }
+        try!(bind_mount(&local_roots, &roots_dir));
+    }
+
+    let work_dir = mnt_dir.join("work");
+    try_str!(mkdir(&work_dir, ALL_PERMISSIONS));
+    try!(bind_mount(project_root, &work_dir));
+
+
     let old_root = vagga_dir.join("old_root");
-    try_str!(mkdir(&old_root,
-        FilePermission::from_bits_truncate(0o755)));
+    try_str!(mkdir(&old_root, ALL_PERMISSIONS));
     try!(change_root(&mnt_dir, &old_root));
     try!(unmount(&Path::new("/vagga/old_root")));
 
@@ -176,7 +236,7 @@ pub fn run() -> int {
         }
     };
 
-    match setup_filesystem(&project_root) {
+    match setup_filesystem(&project_root, &ext_settings) {
         Ok(()) => {
             return 0;
         }
