@@ -25,7 +25,7 @@ fn makedirs(path: &Path) -> Result<(),String> {
         return Ok(());
     }
     try!(makedirs(&path.dir_path()));
-    return match mkdir(path, io::USER_RWX) {
+    return match mkdir(path, io::ALL_PERMISSIONS) {
         Ok(()) => Ok(()),
         Err(e) => Err(format!("Can't mkdir: {}", e)),
     };
