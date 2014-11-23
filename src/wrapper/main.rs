@@ -11,7 +11,7 @@ extern crate config;
 
 use std::io::stderr;
 use std::io::ALL_PERMISSIONS;
-use std::io::{TypeSymlink, TypeDirectory, PathDoesntExist, FileNotFound};
+use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
 use std::os::{getcwd, set_exit_status, self_exe_path};
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
@@ -29,51 +29,36 @@ use argparse::{ArgumentParser, Store, List};
 mod settings;
 
 
+fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
+    match dir.lstat() {
+        Ok(stat) if stat.kind == TypeSymlink => {
+            return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
+                               "Please run `unlink {0}`"), dir.display()));
+        }
+        Ok(stat) if stat.kind == TypeDirectory => {
+            // ok
+        }
+        Ok(_) => {
+            return Err(format!(concat!("The `{0}` must be a directory. ",
+                               "Please run `unlink {0}`"), dir.display()));
+        }
+        Err(ref e) if e.kind == FileNotFound => {
+            try!(mkdir(dir, ALL_PERMISSIONS)
+                .map_err(|e| format!("Can't create `{}`: {}",
+                                     dir.display(), e)));
+        }
+        Err(ref e) => {
+            return Err(format!("Can't stat `{}`: {}", dir.display(), e));
+        }
+    }
+    return Ok(());
+}
+
 fn make_mountpoint(project_root: &Path) -> Result<(), String> {
     let vagga_dir = project_root.join(".vagga");
-    match vagga_dir.lstat() {
-        Ok(stat) if stat.kind == TypeSymlink => {
-            return Err(concat!("The `.vagga` dir can't be a symlink. ",
-                               "Please run `unlink .vagga`").to_string());
-        }
-        Ok(stat) if stat.kind == TypeDirectory => {
-            // ok
-        }
-        Ok(_) => {
-            return Err(concat!("The `.vagga` must be a directory. ",
-                               "Please run `unlink .vagga`").to_string());
-        }
-        Err(ref e) if e.kind == PathDoesntExist => {
-            try!(mkdir(&vagga_dir, ALL_PERMISSIONS)
-                .map_err(|e| format!("Can't create {}: {}",
-                                     vagga_dir.display(), e)));
-        }
-        Err(ref e) => {
-            return Err(format!("Can't stat `.vagga`: {}", e));
-        }
-    }
+    try!(safe_ensure_dir(&vagga_dir));
     let mnt_dir = vagga_dir.join(".mnt");
-    match mnt_dir.lstat() {
-        Ok(stat) if stat.kind == TypeSymlink => {
-            return Err(concat!("The `.vagga/.mnt` dir can't be a symlink. ",
-                               "Please run `unlink .vagga/.mnt`").to_string());
-        }
-        Ok(stat) if stat.kind == TypeDirectory => {
-            // ok
-        }
-        Ok(_) => {
-            return Err(concat!("The `.vagga/.mnt` must be a directory. ",
-                               "Please run `unlink .vagga/.mnt`").to_string());
-        }
-        Err(ref e) if e.kind == PathDoesntExist => {
-            try!(mkdir(&mnt_dir, ALL_PERMISSIONS)
-                .map_err(|e| format!("Can't create {}: {}",
-                                     mnt_dir.display(), e)));
-        }
-        Err(ref e) => {
-            return Err(format!("Can't stat `.vagga/.mnt`: {}", e));
-        }
-    }
+    try!(safe_ensure_dir(&mnt_dir));
     return Ok(());
 }
 
@@ -101,7 +86,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
         name, storage_dir.display()));
 }
 
-fn make_local_roots(project_root: &Path, settings: &MergedSettings)
+fn vagga_base(project_root: &Path, settings: &MergedSettings)
     -> Result<Path, String>
 {
     if let Some(ref dir) = settings.storage_dir {
@@ -130,7 +115,7 @@ fn make_local_roots(project_root: &Path, settings: &MergedSettings)
             }
             Err(ref e) if e.kind == FileNotFound => {
                 let target = try!(create_storage_dir(dir, project_root));
-                try_str!(mkdir(&target, ALL_PERMISSIONS));
+                try!(safe_ensure_dir(&target));
                 try_str!(symlink(&target, &lnkdir));
                 return Ok(target)
             }
@@ -139,12 +124,29 @@ fn make_local_roots(project_root: &Path, settings: &MergedSettings)
             }
         };
     } else {
-        let local_roots = project_root.join(".vagga/.roots");
-        if !local_roots.exists() {
-            try_str!(mkdir(&local_roots, ALL_PERMISSIONS));
-        }
-        return Ok(local_roots);
+        return Ok(project_root.join(".vagga"));
     }
+}
+
+fn make_cache_dir(project_root: &Path, vagga_base: &Path,
+    settings: &MergedSettings)
+    -> Result<Path, String>
+{
+    match settings.cache_dir {
+        Some(ref dir) if settings.shared_cache => {
+            if !dir.exists() {
+                return Err(format!(concat!("Cache directory `{}` must exists.",
+                    " Please either create it or remove that configuration",
+                    " setting"), dir.display()));
+            }
+            return Ok(dir.clone());
+        }
+        _ => {
+            let dir = vagga_base.join(".cache");
+            try!(safe_ensure_dir(&dir));
+            return Ok(dir);
+        }
+   }
 }
 
 
@@ -180,10 +182,15 @@ fn setup_filesystem(project_root: &Path, settings: &MergedSettings)
 
     let roots_dir = vagga_dir.join("roots");
     try_str!(mkdir(&roots_dir, ALL_PERMISSIONS));
-    {
-        let local_roots = try!(make_local_roots(project_root, settings));
-        try!(bind_mount(&local_roots, &roots_dir));
-    }
+    let vagga_base = try!(vagga_base(project_root, settings));
+    let local_roots = vagga_base.join(".roots");
+    try!(safe_ensure_dir(&local_roots));
+    try!(bind_mount(&local_roots, &roots_dir));
+
+    let cache_dir = vagga_dir.join("cache");
+    try_str!(mkdir(&cache_dir, ALL_PERMISSIONS));
+    let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
+    try!(bind_mount(&locl_cache, &cache_dir));
 
     let work_dir = mnt_dir.join("work");
     try_str!(mkdir(&work_dir, ALL_PERMISSIONS));
