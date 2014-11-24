@@ -305,7 +305,7 @@ Vagga's way:
           container: python
           run: "python manage.py celery worker"
 
-No just run::
+Now just run::
 
     > vagga run_full_app
     # two python processes and a redis started here
