@@ -1,4 +1,6 @@
 #include <sys/prctl.h>
+#include <sys/signalfd.h>
+#include <sys/epoll.h>
 #include <alloca.h>
 #include <unistd.h>
 #include <signal.h>
@@ -87,6 +89,16 @@ void block_all_signals() {
     sigset_t mask;
     sigfillset(&mask);
     sigprocmask(SIG_BLOCK, &mask, NULL);
+}
+
+int create_signalfd() {
+    sigset_t mask;
+    sigfillset(&mask);
+    return signalfd(-1, &mask, SFD_CLOEXEC|SFD_NONBLOCK);
+}
+
+int create_epoll() {
+    return epoll_create1(EPOLL_CLOEXEC);
 }
 
 int wait_any_signal(CSignalInfo *sig, struct timespec *ts) {
