@@ -159,7 +159,7 @@ pub fn get_submounts_of(dir: &Path)
         let line = try_str!(line);
         match MountRecord::from_str(line.as_slice()) {
             Some(rec) => {
-                let mut path = Path::new(rec.mount_point);
+                let path = Path::new(rec.mount_point);
                 if dir.is_ancestor_of(&path) {
                     result.push(path);
                 }

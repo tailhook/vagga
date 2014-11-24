@@ -18,7 +18,7 @@ use config::find_config;
 use container::signal;
 use container::monitor::{Monitor, Executor};
 use container::container::{Command};
-use argparse::{ArgumentParser, Store, StoreOption, List};
+use argparse::{ArgumentParser, Store, List};
 
 mod list;
 
@@ -91,7 +91,7 @@ pub fn run() -> int {
 
     let workdir = getcwd();
 
-    let (config, project_root) = match find_config(&workdir) {
+    let (config, _) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
             err.write_line(e.as_slice()).ok();

@@ -1,6 +1,6 @@
 #![crate_name="config"]
 #![crate_type="lib"]
-#![feature(phase)]
+#![feature(phase, if_let, struct_variant)]
 
 extern crate serialize;
 extern crate quire;
@@ -9,9 +9,7 @@ extern crate regex;
 extern crate libc;
 
 use std::default::Default;
-use std::from_str::FromStr;
 use std::io::fs::PathExtensions;
-use libc::uid_t;
 
 use std::collections::treemap::TreeMap;
 use serialize::{Decoder, Decodable};
@@ -20,8 +18,13 @@ use quire::parse_config;
 use quire::validate as V;
 use quire::ast as A;
 pub use self::settings::Settings;
+pub use self::containers::Container;
+pub use self::range::Range;
 
 pub mod settings;
+pub mod containers;
+pub mod range;
+pub mod builders;
 
 
 #[deriving(Clone, PartialEq, Eq)]
@@ -209,58 +212,10 @@ impl PartialEq for Variant {
     fn eq(&self, _other: &Variant) -> bool { false }
 }
 
-#[deriving(Clone, Show)]
-pub struct Range {
-    pub start: uid_t,
-    pub end: uid_t,
-}
-
-impl<E, D:Decoder<E>> Decodable<D, E> for Range {
-    fn decode(d: &mut D) -> Result<Range, E> {
-        match d.read_str() {
-            Ok(val) => {
-                let num:Option<uid_t> = FromStr::from_str(val.as_slice());
-                match num {
-                    Some(num) => return Ok(Range::new(num, num)),
-                    None => {}
-                }
-                match regex!(r"^(\d+)-(\d+)$").captures(val.as_slice()) {
-                    Some(caps) => {
-                        return Ok(Range::new(
-                            from_str(caps.at(1)).unwrap(),
-                            from_str(caps.at(2)).unwrap()));
-                    }
-                    None => unimplemented!(),
-                }
-            }
-            Err(e) => Err(e),
-        }
-    }
-}
 
 #[deriving(Decodable, PartialEq, Clone)]
 pub struct Directory {
     pub mode: u32,
-}
-
-#[deriving(Decodable)]
-pub struct Container {
-    pub default_command: Option<Vec<String>>,
-    pub command_wrapper: Option<Vec<String>>,
-    pub shell: Vec<String>,
-    pub builder: String,
-    pub provision: Option<String>,
-    pub parameters: TreeMap<String, String>,
-    pub environ_file: Option<String>,
-    pub environ: TreeMap<String, String>,
-    pub ensure_dirs: TreeMap<String, Directory>,
-    pub uids: Vec<Range>,
-    pub gids: Vec<Range>,
-    pub tmpfs_volumes: TreeMap<String, String>,
-}
-
-impl PartialEq for Container {
-    fn eq(&self, _other: &Container) -> bool { false }
 }
 
 
@@ -452,19 +407,6 @@ pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
             value_element: variant_validator(),
             .. Default::default()} as Box<V::Validator>),
     ), .. Default::default()} as Box<V::Validator>;
-}
-
-impl Range {
-    pub fn new(start: uid_t, end: uid_t) -> Range {
-        return Range { start: start, end: end };
-    }
-    pub fn len(&self) -> uid_t {
-        return self.end - self.start + 1;
-    }
-    pub fn shift(&self, val: uid_t) -> Range {
-        assert!(self.end - self.start + 1 >= val);
-        return Range::new(self.start + val, self.end);
-    }
 }
 
 fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {

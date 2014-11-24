@@ -2,7 +2,6 @@ use std::io::{IoError, OtherIoError};
 use std::io::{File, Open, Write};
 use std::io::BufferedReader;
 use std::cmp::min;
-use std::iter::AdditiveIterator;
 use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
