@@ -12,7 +12,6 @@ extern crate container;
 use std::rc::Rc;
 use std::cell::Cell;
 use std::io::stderr;
-use std::time::duration::Duration;
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
 use config::find_config;
 use container::signal;
@@ -127,9 +126,8 @@ pub fn run() -> int {
             list::print_list(&config, wrapper.args)
         }
         _ => {
-            let mut mon = Monitor::new("launcher".to_string());
-            mon.add(Rc::new("wrapper".to_string()), box wrapper,
-                Duration::seconds(0), None);
+            let mut mon = Monitor::new();
+            mon.add(Rc::new("wrapper".to_string()), box wrapper);
             mon.run();
             Ok(result.get())
         }

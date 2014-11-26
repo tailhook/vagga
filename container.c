@@ -24,12 +24,6 @@ typedef struct {
     const char *workdir;
 } CCommand;
 
-typedef struct {
-    int signo;
-    pid_t pid;
-    int status;
-} CSignalInfo;
-
 static void _run_container(CCommand *cmd) {
     prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0);
 
@@ -101,33 +95,35 @@ int create_epoll() {
     return epoll_create1(EPOLL_CLOEXEC);
 }
 
-int wait_any_signal(CSignalInfo *sig, struct timespec *ts) {
-    sigset_t mask;
-    sigfillset(&mask);
-    while(1) {
-        siginfo_t native_info;
-        int rc;
-        if(ts) {
-            rc = sigtimedwait(&mask, &native_info, ts);
-        } else {
-            rc = sigwaitinfo(&mask, &native_info);
-        }
-        if(rc < 0){
-            if(errno == EINTR) {
-                return 1;
-            } else if(errno == EAGAIN) {
-                return 1;
-            } else {
-                fprintf(stderr, "Wrong error code for sigwaitinfo: %m\n");
-                abort();
-            }
-        }
-        sig->signo = native_info.si_signo;
-        sig->pid = native_info.si_pid;
-        sig->status = native_info.si_code == CLD_EXITED
-            ? native_info.si_status
-            : 128 + native_info.si_status;  // Wrapped signal
-        return 0;
+int epoll_wait_read(int epoll, int timeo) {
+    struct epoll_event ev;
+    int rc = epoll_wait(epoll, &ev, 1, timeo);
+    if(rc > 0) {
+        return ev.data.fd;
     }
+    if(rc == 0)
+        return -ETIMEDOUT;
+    return -errno;
 }
+
+int epoll_add_read(int epoll, int fd) {
+    struct epoll_event ev = {
+        .events = EPOLLIN,
+        .data = {
+            .fd = fd,
+        }
+    };
+    return epoll_ctl(epoll, EPOLL_CTL_ADD, fd, &ev);
+}
+
+int read_signal(int fd) {
+    struct signalfd_siginfo info;
+    int rc;
+    rc = read(fd, &info, sizeof(info));
+    if(rc > 0) {
+        return info.ssi_signo;
+    }
+    return -errno;
+}
+
 
