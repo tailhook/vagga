@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 
 typedef struct {
@@ -16,6 +18,9 @@ typedef struct {
     int pipe_reader;
     int user_id;
     int restore_sigmask;
+    int stdin;
+    int stdout;
+    int stderr;
     const char *logprefix;
     const char *fs_root;
     const char *exec_path;
@@ -26,6 +31,28 @@ typedef struct {
 
 static void _run_container(CCommand *cmd) {
     prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0);
+
+    if(cmd->stdin < 0) {
+        close(0);
+        if(open("/dev/null", O_RDONLY) != 0) {
+            fprintf(stderr, "%s Error opening /dev/null for stdin: %m\n",
+                cmd->logprefix);
+            abort();
+        }
+    } else if(cmd->stdin > 0) {
+        if(dup2(cmd->stdin, 0) < 0) {
+            fprintf(stderr, "%s Error opening stdin: %m\n", cmd->logprefix);
+            abort();
+        }
+    }
+    if(dup2(cmd->stdout, 1) < 0) {
+        fprintf(stderr, "%s Error setting up stdout: %m\n", cmd->logprefix);
+        abort();
+    }
+    if(dup2(cmd->stderr, 2) < 0) {
+        fprintf(stderr, "%s Error setting up stderr: %m\n", cmd->logprefix);
+        abort();
+    }
 
     //  Wait for user namespace to be set up
     int rc;
@@ -124,6 +151,19 @@ int read_signal(int fd) {
         return info.ssi_signo;
     }
     return -errno;
+}
+
+void set_cloexec(int fd, int flag) {
+    int flags = fcntl(fd, F_GETFD);
+    if(flags < 0) {
+        fprintf(stderr, "[vagga] Error getting flags: %m\n");
+        abort();
+    }
+    int rc = fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+    if(rc < 0) {
+        fprintf(stderr, "[vagga] Error setting flags: %m\n");
+        abort();
+    }
 }
 
 

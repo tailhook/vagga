@@ -79,6 +79,8 @@ impl Command {
     pub fn set_user_id(&mut self, uid: uint) {
         self.user_id = uid;
     }
+    pub fn set_stdio(&mut self) {
+    }
     pub fn chroot(&mut self, dir: &Path) {
         self.chroot = dir.to_c_str();
     }
@@ -143,6 +145,9 @@ impl Command {
             user_id: self.user_id as i32,
             restore_sigmask: if self.restore_sigmask { 1 } else { 0 },
             workdir: self.workdir.as_ptr(),
+            stdin: 0,
+            stdout: 1,
+            stderr: 2,
         }) };
         if pid < 0 {
             return Err(IoError::last_error());
@@ -184,6 +189,9 @@ pub struct CCommand {
     pipe_reader: c_int,
     user_id: c_int,
     restore_sigmask: c_int,
+    stdin: c_int,
+    stdout: c_int,
+    stderr: c_int,
     logprefix: *const u8,
     fs_root: *const u8,
     exec_path: *const u8,

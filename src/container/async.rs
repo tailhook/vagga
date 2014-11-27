@@ -24,13 +24,13 @@ struct FileDesc(c_int);
 struct Unordered<T>(T);
 
 impl<T> PartialOrd for Unordered<T> {
-    fn partial_cmp(&self, other: &Unordered<T>) -> Option<Ordering> { Some(Equal) }
+    fn partial_cmp(&self, _: &Unordered<T>) -> Option<Ordering> { Some(Equal) }
 }
 impl<T> Ord for Unordered<T> {
-    fn cmp(&self, other: &Unordered<T>) -> Ordering { Equal }
+    fn cmp(&self, _: &Unordered<T>) -> Ordering { Equal }
 }
 impl<T> PartialEq for Unordered<T> {
-    fn eq(&self, other: &Unordered<T>) -> bool { false }
+    fn eq(&self, _: &Unordered<T>) -> bool { false }
 }
 impl<T> Eq for Unordered<T> {}
 
@@ -115,7 +115,7 @@ impl<Name: Clone> Loop<Name> {
                 let rc =  unsafe { read_signal(sfd) };
                 if rc == EINTR || rc == EAGAIN {
                     continue;
-                } else if(rc <= 0) {
+                } else if rc <= 0 {
                     fail!(format!("Error in read_signal: {}",
                         IoError::last_error()));
                 } else {

@@ -32,7 +32,8 @@ rust_compile_static = \
 	$(RUSTC) -o $(1).o --emit obj $(2); \
 	rlibs=$$($(RUSTC) -Z print-link-args $(2) \
 		| tr -s " '" '\n' | grep rlib) \
-	&& gcc -static -static-libgcc $(1).o $$rlibs -lpthread -lm -ldl -lrt -o $(1)
+	&& gcc -static -static-libgcc $(1).o $$rlibs -o $(1) \
+		-lpthread -lm -ldl -lrt -lutil
 
 vagga_launcher: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
 vagga_launcher: libconfig.rlib libcontainer.rlib

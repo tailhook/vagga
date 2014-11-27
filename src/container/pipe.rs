@@ -1,11 +1,17 @@
+use std::ptr::null;
 use std::io::{IoError, EndOfFile};
 use std::os::{Pipe, pipe};
 use std::os::errno;
 
-use libc::{c_int, c_void};
+use libc::{c_int, c_void, c_char};
 use libc::funcs::posix88::unistd::{close, write};
 use libc::consts::os::posix88::{EINTR, EAGAIN};
 
+extern {
+    fn openpty(master: *mut c_int, slave: *mut c_int, name: *const c_void,
+        termp: *const c_void, winp: *const c_void) -> c_int;
+    fn set_cloexec(fd: c_int, flag: c_int);
+}
 
 pub struct CPipe(Pipe);
 
@@ -52,5 +58,36 @@ impl Drop for CPipe {
                 }
             }
         }
+    }
+}
+
+
+pub struct Pty {
+    master_fd: c_int,
+    slave_fd: c_int,
+}
+
+impl Pty {
+    pub fn new() -> Result<Pty, IoError> {
+        let mut master: c_int = 0;
+        let mut slave: c_int = 0;
+        if unsafe { openpty(&mut master, &mut slave,
+            null(), null(), null()) } < 0
+        {
+            return Err(IoError::last_error());
+        }
+        unsafe { set_cloexec(master, 1) };
+        unsafe { set_cloexec(slave, 1) };
+        return Ok(Pty {
+            master_fd: master,
+            slave_fd: slave,
+        });
+    }
+}
+
+impl Drop for Pty {
+    fn drop(&mut self) {
+        unsafe { close(self.master_fd) };
+        unsafe { close(self.slave_fd) };
     }
 }
