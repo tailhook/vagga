@@ -1,3 +1,4 @@
+#[deriving(Decodable)]
 pub enum Builder {
     // Generic
     Sh(String),
@@ -41,3 +42,4 @@ pub enum Builder {
     PipInstall(Vec<String>),
     GemInstall(Vec<String>),
 }
+

@@ -3,7 +3,9 @@
 /*.o
 /vagga_launcher
 /vagga_wrapper
+/vagga_version
 /vagga_test
+/main
 
 /apk
 /busybox

@@ -7,7 +7,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 
-all: vagga_launcher vagga_wrapper vagga_test
+all: vagga_launcher vagga_wrapper vagga_version
 
 rust-argparse/libargparse.rlib:
 	make -C rust-argparse libargparse.rlib
@@ -47,8 +47,17 @@ vagga_wrapper: src/wrapper/*.rs
 	$(call rust_compile_static,$@,src/wrapper/main.rs -g \
 		-L rust-quire -L rust-argparse -L .)
 
+vagga_version: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+vagga_version: libconfig.rlib libcontainer.rlib
+vagga_version: src/wrapper/*.rs
+	$(call rust_compile_static,$@,src/version/main.rs -g \
+		-L rust-quire -L rust-argparse -L .)
+
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
+
+test: vagga_test vagga_launcher vagga_wrapper vagga_version
+	./vagga_test
 
 
 .PHONY: all

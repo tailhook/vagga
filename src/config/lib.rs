@@ -313,77 +313,6 @@ fn command_validator<'a>(supports_supervise: bool) -> Box<V::Validator + 'a> {
         .. Default::default()} as Box<V::Validator>;
 }
 
-fn container_validator<'a>() -> Box<V::Validator + 'a> {
-    return box V::Structure { members: vec!(
-        ("default_command".to_string(), box V::Scalar {
-            optional: true,
-            .. Default::default()} as Box<V::Validator>),
-        ("command_wrapper".to_string(), box V::Scalar {
-            optional: true,
-            .. Default::default()} as Box<V::Validator>),
-        ("shell".to_string(), box V::Sequence {
-            element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ("builder".to_string(), box V::Scalar {
-            .. Default::default()} as Box<V::Validator>),
-        ("provision".to_string(), box V::Scalar {
-            optional: true,
-            .. Default::default()} as Box<V::Validator>),
-        ("parameters".to_string(), box V::Mapping {
-            key_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            value_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ("ensure_dirs".to_string(), box V::Mapping {
-            key_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            value_element: box V::Structure { members: vec!(
-                ("mode".to_string(), box V::Numeric {
-                    min: Some(0),
-                    max: Some(0o1777),
-                    default: Some(0o755u32),
-                    .. Default::default()} as Box<V::Validator>),
-                // TODO(tailhook) owner and group
-                // ("owner".to_string(), box V::Numeric {
-                //     min: Some(0),
-                //     max: Some(65534),
-                //     default: Some(0),
-                //     .. Default::default()} as Box<V::Validator>),
-                // ("group".to_string(), box V::Numeric {
-                //     min: Some(0),
-                //     max: Some(65534),
-                //     default: Some(0),
-                //     .. Default::default()} as Box<V::Validator>),
-                ), .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ("environ".to_string(), box V::Mapping {
-            key_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            value_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ("environ_file".to_string(), box V::Scalar {
-            optional: true,
-            .. Default::default()} as Box<V::Validator>),
-        ("uids".to_string(), box V::Sequence {
-            element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ("gids".to_string(), box V::Sequence {
-            element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ("tmpfs_volumes".to_string(), box V::Mapping {
-            key_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            value_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
-            .. Default::default()} as Box<V::Validator>),
-        ), .. Default::default()} as Box<V::Validator>;
-}
-
 fn variant_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Structure { members: vec!(
         ), .. Default::default()} as Box<V::Validator>;
@@ -394,7 +323,7 @@ pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
         ("containers".to_string(), box V::Mapping {
             key_element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
-            value_element: container_validator(),
+            value_element: containers::container_validator(),
             .. Default::default()} as Box<V::Validator>),
         ("commands".to_string(), box V::Mapping {
             key_element: box V::Scalar {

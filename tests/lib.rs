@@ -4,6 +4,7 @@ use std::io::process::{Command, ExitStatus};
 
 mod symlink_mnt { mod run; }
 mod symlink_vagga { mod run; }
+mod empty_container { mod run; }
 
 
 pub fn vagga_cmd() -> Command {
