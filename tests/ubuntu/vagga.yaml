@@ -1,0 +1,4 @@
+containers:
+  ubuntu:
+    build:
+    - !UbuntuCore trusty
