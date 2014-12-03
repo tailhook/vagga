@@ -355,15 +355,19 @@ fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
     }
 }
 
-pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
+pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String> {
     let (cfg_dir, filename) = match find_config_path(work_dir) {
         Some(pair) => pair,
         None => return Err(format!(
             "Config not found in path {}", work_dir.display())),
     };
     assert!(cfg_dir.is_absolute());
+    return Ok((try!(read_config(&filename)), cfg_dir));
+}
+
+pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut tmp: TmpConfig = match parse_config(
-        &filename, &*config_validator(), Default::default())
+        filename, &*config_validator(), Default::default())
     {
         Ok(cfg) => cfg,
         Err(e) => {
@@ -393,5 +397,5 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String>{
         config.commands.insert(name, cmd);
     }
 
-    return Ok((config, cfg_dir));
+    return Ok(config);
 }

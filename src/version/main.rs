@@ -11,6 +11,7 @@ extern crate config;
 
 use std::os::{set_exit_status};
 
+use config::read_config;
 use argparse::{ArgumentParser, Store, List};
 
 
@@ -32,7 +33,13 @@ pub fn run() -> int {
             Err(_) => return 122,
         }
     }
-    println!("Container {}", container);
+
+    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
+    let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
+        .expect("Error parsing configuration file");  // TODO
+    let cont = cfg.containers.find(&container)
+        .expect("Container not found");  // TODO
+
     return 2;
 }
 

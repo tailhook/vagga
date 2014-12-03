@@ -9,12 +9,14 @@ extern crate regex;
 extern crate config;
 #[phase(plugin, link)] extern crate container;
 
+use std::rc::Rc;
 use std::io::stderr;
 use std::io::ALL_PERMISSIONS;
 use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
-use std::os::{getcwd, set_exit_status, self_exe_path};
+use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
+use std::cell::Cell;
 
 use config::find_config;
 use container::signal;
@@ -27,6 +29,36 @@ use settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List};
 
 mod settings;
+
+
+struct RunBuilder {
+    cmd: String,
+    container: String,
+    result: Cell<int>,
+}
+
+
+impl Executor for RunBuilder {
+    fn command(&self) -> Command {
+        let mut cmd = Command::new(self.cmd.clone(),
+            Path::new("/vagga/bin").join(self.cmd.as_slice()));
+        cmd.arg(self.container.as_slice());
+        cmd.set_env("TERM".to_string(),
+                    getenv("TERM").unwrap_or("dumb".to_string()));
+        if let Some(x) = getenv("RUST_LOG") {
+            cmd.set_env("RUST_LOG".to_string(), x);
+        }
+        if let Some(x) = getenv("RUST_BACKTRACE") {
+            cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        }
+        return cmd;
+    }
+    fn finish(&self, status: int) -> bool {
+        self.result.set(status);
+        return false;
+    }
+}
+
 
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
@@ -213,10 +245,7 @@ pub fn run() -> int {
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            Runs a command in container, optionally builds container if that
-            does not exists or outdated.
-
-            Run `vagga` without arguments to see the list of commands.
+            Internal vagga tool to setup basic system sandbox
             ");
         ap.refer(&mut cmd)
           .add_argument("command", box Store::<String>,
@@ -251,15 +280,25 @@ pub fn run() -> int {
         }
     };
 
-    match setup_filesystem(&project_root, &ext_settings) {
-        Ok(()) => {
-            return 0;
-        }
-        Err(text) =>  {
-            err.write_line(text.as_slice()).ok();
-            return 121;
-        }
+    if let Err(text) = setup_filesystem(&project_root, &ext_settings) {
+        err.write_line(text.as_slice()).ok();
+        return 122;
     }
+
+    let result = Cell::new(-1);
+    let mut mon = Monitor::new();
+    if cmd.as_slice() == "_build" {
+        mon.add(Rc::new("version".to_string()), box RunBuilder {
+            cmd: "vagga_version".to_string(),
+            container: args[0].to_string(),
+            result: result,
+        });
+    } else {
+        unimplemented!();
+    }
+    mon.run();
+    println!("STATUS {}", result.get());
+    return result.get();
 }
 
 fn main() {

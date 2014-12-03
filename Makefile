@@ -49,7 +49,7 @@ vagga_wrapper: src/wrapper/*.rs
 
 vagga_version: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
 vagga_version: libconfig.rlib libcontainer.rlib
-vagga_version: src/wrapper/*.rs
+vagga_version: src/version/*.rs
 	$(call rust_compile_static,$@,src/version/main.rs -g \
 		-L rust-quire -L rust-argparse -L .)
 

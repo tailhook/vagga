@@ -1,31 +1,67 @@
+use std::default::Default;
+
+use quire::validate as V;
+
+#[deriving(Decodable)]
+pub struct DebianRepo {
+    url: String,
+    suite: String,
+    components: Vec<String>,
+}
+
+#[deriving(Decodable)]
+pub struct AptKey {
+    key_server: String,
+    keys: Vec<String>,
+}
+
+#[deriving(Decodable)]
+pub struct PacmanRepo {
+  name: String,
+  url: String,
+}
+
+#[deriving(Decodable)]
+pub struct TarInfo {
+    url: String,
+    sha256: String,
+    path: Path,
+}
+
+#[deriving(Decodable)]
+pub struct FileInfo {
+    name: Path,
+    contents: String,
+}
+
 #[deriving(Decodable)]
 pub enum Builder {
     // Generic
     Sh(String),
     Cmd(String),
     Depend(Path),
-    Tar { url: String, sha256: String, path: Path },
-    AddFile { name: Path, contents: String },
+    Tar(TarInfo),
+    AddFile(FileInfo),
     Remove(Path),
     EnsureDir(Path),
     EmptyDir(Path),
     Busybox,
 
     // Ubuntu
-    UbuntuBase(String),
+    UbuntuCore(String),
     AddUbuntuPPA(String),
 
     // Ubuntu/Debian
     AptGetInstall(Vec<String>),
-    AddDebianRepo { url: String, suite: String, components: Vec<String> },
-    AddAptKey { key_server: String, keys: Vec<String> },
+    AddDebianRepo(DebianRepo),
+    AddAptKey(AptKey),
 
     // Arch
     ArchBase,
     PacmanInstall(Vec<String>),
     PacmanRemove(Vec<String>),
     PacmanBuild(Path),
-    AddPacmanRepo { name: String, url: String },
+    AddPacmanRepo(PacmanRepo),
 
     // Alpine
     AlpineInstall(Vec<String>),
@@ -41,5 +77,12 @@ pub enum Builder {
     PipRequirement(Path),
     PipInstall(Vec<String>),
     GemInstall(Vec<String>),
+}
+
+pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
+    return box V::Enum { options: vec!(
+        ("UbuntuCore".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+    ), .. Default::default() } as Box<V::Validator>;
 }
 

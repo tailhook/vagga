@@ -3,7 +3,7 @@ use std::collections::treemap::TreeMap;
 
 use quire::validate as V;
 
-use super::builders::Builder;
+use super::builders::{Builder, builder_validator};
 use super::Range;
 
 
