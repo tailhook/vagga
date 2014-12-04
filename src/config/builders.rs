@@ -1,21 +1,22 @@
+use std::fmt::{Show, Formatter, FormatError};
 use std::default::Default;
 
 use quire::validate as V;
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Show)]
 pub struct DebianRepo {
     url: String,
     suite: String,
     components: Vec<String>,
 }
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Show)]
 pub struct AptKey {
     key_server: String,
     keys: Vec<String>,
 }
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Show)]
 pub struct PacmanRepo {
   name: String,
   url: String,
@@ -84,5 +85,18 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         ("UbuntuCore".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
+}
+
+impl Show for Builder {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
+        match self {
+            &UbuntuCore(ref name) => {
+                try!("!UbuntuCore ".fmt(fmt));
+                try!(name.fmt(fmt));
+            }
+            _ => unimplemented!(),
+        }
+        return Ok(());
+    }
 }
 

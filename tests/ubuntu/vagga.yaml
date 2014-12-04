@@ -1,4 +1,4 @@
 containers:
   ubuntu:
-    build:
+    setup:
     - !UbuntuCore trusty

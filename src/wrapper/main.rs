@@ -16,11 +16,11 @@ use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
 use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
-use std::cell::Cell;
 
 use config::find_config;
 use container::signal;
-use container::monitor::{Monitor, Executor};
+use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
+use container::monitor::{Killed, Exit};
 use container::container::{Command};
 use container::mount::{mount_tmpfs, bind_mount, unmount};
 use container::mount::{mount_ro_recursive, mount_pseudo};
@@ -34,7 +34,6 @@ mod settings;
 struct RunBuilder {
     cmd: String,
     container: String,
-    result: Cell<int>,
 }
 
 
@@ -53,9 +52,8 @@ impl Executor for RunBuilder {
         }
         return cmd;
     }
-    fn finish(&self, status: int) -> bool {
-        self.result.set(status);
-        return false;
+    fn finish(&self, status: int) -> MonitorStatus {
+        return Shutdown(status)
     }
 }
 
@@ -258,7 +256,9 @@ pub fn run() -> int {
         match ap.parse_args() {
             Ok(()) => {}
             Err(0) => return 0,
-            Err(_) => return 122,
+            Err(_) => {
+                return 122;
+            }
         }
     }
 
@@ -285,20 +285,32 @@ pub fn run() -> int {
         return 122;
     }
 
-    let result = Cell::new(-1);
     let mut mon = Monitor::new();
-    if cmd.as_slice() == "_build" {
-        mon.add(Rc::new("version".to_string()), box RunBuilder {
-            cmd: "vagga_version".to_string(),
-            container: args[0].to_string(),
-            result: result,
-        });
-    } else {
-        unimplemented!();
-    }
-    mon.run();
-    println!("STATUS {}", result.get());
-    return result.get();
+    match cmd.as_slice() {
+        "_build" => {
+            mon.add(Rc::new("version".to_string()), box RunBuilder {
+                cmd: "vagga_version".to_string(),
+                container: args[0].to_string(),
+            });
+            return match mon.run() {
+                Killed => 1,
+                Exit(val) => val,
+            };
+        }
+        "_version_hash" => {
+            mon.add(Rc::new("version".to_string()), box RunBuilder {
+                cmd: "vagga_version".to_string(),
+                container: args[0].to_string(),
+            });
+            match mon.run() {
+                Killed => return 1,
+                Exit(29) => {},
+                Exit(val) => return val,
+            };
+            return 254;
+        }
+        _ => unimplemented!(),
+    };
 }
 
 fn main() {

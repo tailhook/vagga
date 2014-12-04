@@ -10,12 +10,12 @@ extern crate config;
 extern crate container;
 
 use std::rc::Rc;
-use std::cell::Cell;
 use std::io::stderr;
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
 use config::find_config;
 use container::signal;
-use container::monitor::{Monitor, Executor};
+use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
+use container::monitor::{Killed, Exit};
 use container::container::{Command};
 use argparse::{ArgumentParser, Store, List};
 
@@ -25,7 +25,6 @@ mod list;
 struct RunWrapper {
     cmd: String,
     args: Vec<String>,
-    result: Cell<int>,
 }
 
 
@@ -51,20 +50,17 @@ impl Executor for RunWrapper {
         cmd.set_max_uidmap();
         return cmd;
     }
-    fn finish(&self, status: int) -> bool {
-        self.result.set(status);
-        return false;
+    fn finish(&self, status: int) -> MonitorStatus {
+        return Shutdown(status);
     }
 }
 
 
 pub fn run() -> int {
     let mut err = stderr();
-    let result = Cell::new(-1);
     let mut wrapper = RunWrapper {
         cmd: "".to_string(),
         args: vec!(),
-        result: result,
     };
     {
         let mut ap = ArgumentParser::new();
@@ -128,8 +124,10 @@ pub fn run() -> int {
         _ => {
             let mut mon = Monitor::new();
             mon.add(Rc::new("wrapper".to_string()), box wrapper);
-            mon.run();
-            Ok(result.get())
+            match mon.run() {
+                Killed => Ok(143),
+                Exit(val) => Ok(val),
+            }
         }
     };
 

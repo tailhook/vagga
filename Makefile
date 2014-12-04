@@ -56,7 +56,7 @@ vagga_version: src/version/*.rs
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
 
-test: vagga_test vagga_launcher vagga_wrapper vagga_version
+test: all vagga_test
 	./vagga_test
 
 

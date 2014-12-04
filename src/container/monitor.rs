@@ -17,19 +17,19 @@ type ProcRef<'a> = Rc<RefCell<Process<'a>>>;
 
 pub enum MonitorResult {
     Killed,
-    Reboot,
+    Exit(int),
 }
 
-pub enum PrepareResult {
+pub enum MonitorStatus {
     Run,
     Error(String),
-    Shutdown,
+    Shutdown(int),
 }
 
 pub trait Executor {
-    fn prepare(&self) -> PrepareResult { return Run; }
+    fn prepare(&self) -> MonitorStatus { return Run; }
     fn command(&self) -> Command;
-    fn finish(&self, _status: int) -> bool { return true; }
+    fn finish(&self, _status: int) -> MonitorStatus { return Run; }
 }
 
 pub struct Process<'a> {
@@ -51,6 +51,7 @@ pub struct Monitor<'a> {
     processes: Vec<ProcRef<'a>>,
     pids: HashMap<pid_t, ProcRef<'a>>,
     aio: Loop<ProcRef<'a>>,
+    status: Option<int>,
 }
 
 impl<'a> Show for Event<Rc<RefCell<Process<'a>>>> {
@@ -81,6 +82,7 @@ impl<'a> Monitor<'a> {
             processes: Vec::new(),
             pids: HashMap::new(),
             aio: Loop::new().unwrap(),
+            status: None,
         };
     }
     pub fn add(&mut self, name: Rc<String>, executor: Box<Executor>)
@@ -93,7 +95,7 @@ impl<'a> Monitor<'a> {
         self.processes.push(prc.clone());
         self.aio.add_timeout(Duration::seconds(0), prc);
     }
-    fn _start_process(&mut self, prc: ProcRef) -> PrepareResult {
+    fn _start_process(&mut self, prc: ProcRef) -> MonitorStatus {
         let prepare_result = prc.borrow().executor.prepare();
         match prepare_result {
             Run => {
@@ -106,25 +108,23 @@ impl<'a> Monitor<'a> {
                     Err(e) => {
                         error!("Can't run container {}: {}",
                             prc.borrow().name, e);
-                        prc.borrow().executor.finish(-1);
-                        return Shutdown;
+                        return prc.borrow().executor.finish(127);
                     }
                 }
             }
             Error(_) => {
-                return Shutdown;
+                return Shutdown(127);
             }
             _ => {}
         }
         return prepare_result;
     }
     fn _reap_child(&mut self, prc: ProcRef, pid: pid_t, status: int)
-        -> bool
+        -> MonitorStatus
     {
         warn!("Child {}:{} exited with status {}",
             prc.borrow().name, pid, status);
-        prc.borrow().executor.finish(status);
-        return false;
+        return prc.borrow().executor.finish(status);
     }
     pub fn run(&mut self) -> MonitorResult {
         debug!("Starting with {} processes",
@@ -138,7 +138,14 @@ impl<'a> Monitor<'a> {
                     unimplemented!();
                 }
                 Timeout(prc) => {
-                    self._start_process(prc);
+                    match self._start_process(prc) {
+                        Shutdown(x) => {
+                            self.status = Some(x);
+                            break;
+                        }
+                        Error(_) => unreachable!(),
+                        Run => {}
+                    }
                 }
                 Signal(signal::Terminate(sig)) => {
                     for prc in self.processes.iter() {
@@ -158,8 +165,13 @@ impl<'a> Monitor<'a> {
                             continue;
                         },
                     };
-                    if !self._reap_child(prc, pid, status) {
-                        break;
+                    match self._reap_child(prc, pid, status) {
+                        Shutdown(x) => {
+                            self.status = Some(x);
+                            break;
+                        }
+                        Error(_) => unreachable!(),
+                        Run => {}
                     }
                 }
             }
@@ -206,6 +218,9 @@ impl<'a> Monitor<'a> {
                 }
             }
         }
-        return Killed;
+        match self.status {
+            Some(val) => Exit(val),
+            None => Killed,
+        }
     }
 }
