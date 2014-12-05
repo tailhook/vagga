@@ -3,39 +3,39 @@ use std::default::Default;
 
 use quire::validate as V;
 
-#[deriving(Decodable, Show)]
+#[deriving(Decodable, Show, Clone)]
 pub struct DebianRepo {
-    url: String,
-    suite: String,
-    components: Vec<String>,
+    pub url: String,
+    pub suite: String,
+    pub components: Vec<String>,
 }
 
-#[deriving(Decodable, Show)]
+#[deriving(Decodable, Show, Clone)]
 pub struct AptKey {
-    key_server: String,
-    keys: Vec<String>,
+    pub key_server: String,
+    pub keys: Vec<String>,
 }
 
-#[deriving(Decodable, Show)]
+#[deriving(Decodable, Show, Clone)]
 pub struct PacmanRepo {
-  name: String,
-  url: String,
+    pub name: String,
+    pub url: String,
 }
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Clone)]
 pub struct TarInfo {
-    url: String,
-    sha256: String,
-    path: Path,
+    pub url: String,
+    pub sha256: String,
+    pub path: Path,
 }
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Clone)]
 pub struct FileInfo {
-    name: Path,
-    contents: String,
+    pub name: Path,
+    pub contents: String,
 }
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Clone)]
 pub enum Builder {
     // Generic
     Sh(String),

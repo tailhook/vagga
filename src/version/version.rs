@@ -1,6 +1,6 @@
 use config::builders as B;
 
-use super::sha256::Digest;
+use container::sha256::Digest;
 
 
 pub enum HashResult {

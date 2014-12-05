@@ -292,6 +292,16 @@ pub fn run() -> int {
                 cmd: "vagga_version".to_string(),
                 container: args[0].to_string(),
             });
+            match mon.run() {
+                Killed => return 1,
+                Exit(0) => {},
+                Exit(29) => {},
+                Exit(val) => return val,
+            };
+            mon.add(Rc::new("build".to_string()), box RunBuilder {
+                cmd: "vagga_build".to_string(),
+                container: args[0].to_string(),
+            });
             return match mon.run() {
                 Killed => 1,
                 Exit(val) => val,

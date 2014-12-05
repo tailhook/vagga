@@ -17,10 +17,15 @@ use libc::funcs::posix88::unistd::dup2;
 
 use config::read_config;
 use argparse::{ArgumentParser, Store};
-use container::sha256::{Sha256, Digest};
-use self::version::{VersionHash, Hashed, New, Error};
+use self::context::{BuildContext};
+use self::bld::{BuildCommand};
 
-mod version;
+mod context;
+mod bld;
+mod download;
+mod commands {
+    pub mod debian;
+}
 
 
 pub fn run() -> int {
@@ -46,34 +51,25 @@ pub fn run() -> int {
         .expect("Error parsing configuration file");  // TODO
     let cont = cfg.containers.find(&container)
         .expect("Container not found");  // TODO
+    let mut build_context = BuildContext {
+        container_name: container,
+        container_config: (*cont).clone(),
+    };
     debug!("Versioning items: {}", cont.setup.len());
-    let mut hash = Sha256::new();
     for b in cont.setup.iter() {
         debug!("Versioning setup: {}", b);
-        match b.hash(&mut hash) {
-            Hashed => continue,
-            New => return 29,  // Always rebuild
-            Error(e) => {
+        match b.build(&mut build_context) {
+            Ok(()) => {}
+            Err(e) => {
                 error!("Error versioning command {}: {}", b, e);
                 return 1;
             }
-        }
-    }
-    match PipeStream::open(3).write_str(hash.result_str().as_slice()) {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Error writing hash: {}", e);
-            return 1;
         }
     }
     return 0;
 }
 
 fn main() {
-    // let's make stdout safer
-    unsafe { dup2(1, 3) };
-    unsafe { dup2(2, 1) };
-
     let val = run();
     set_exit_status(val);
 }

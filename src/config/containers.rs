@@ -7,7 +7,7 @@ use super::builders::{Builder, builder_validator};
 use super::Range;
 
 
-#[deriving(Decodable)]
+#[deriving(Decodable, Clone)]
 pub struct Container {
     pub setup: Vec<Builder>,
 
