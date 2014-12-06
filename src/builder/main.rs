@@ -23,6 +23,7 @@ use self::bld::{BuildCommand};
 mod context;
 mod bld;
 mod download;
+mod tarcmd;
 mod commands {
     pub mod debian;
 }

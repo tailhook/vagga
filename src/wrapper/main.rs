@@ -5,6 +5,7 @@ extern crate argparse;
 extern crate serialize;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
+#[phase(plugin, link)] extern crate log;
 
 extern crate config;
 #[phase(plugin, link)] extern crate container;
@@ -29,6 +30,7 @@ use settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List};
 
 mod settings;
+mod debug;
 
 
 struct RunBuilder {
@@ -287,6 +289,9 @@ pub fn run() -> int {
 
     let mut mon = Monitor::new();
     match cmd.as_slice() {
+        "_build_shell" => {
+            return debug::run_interactive_build_shell();
+        }
         "_build" => {
             mon.add(Rc::new("version".to_string()), box RunBuilder {
                 cmd: "vagga_version".to_string(),
