@@ -12,8 +12,6 @@ extern crate config;
 #[phase(plugin, link)] extern crate container;
 
 use std::os::{set_exit_status};
-use std::io::pipe::PipeStream;
-use libc::funcs::posix88::unistd::dup2;
 
 use config::read_config;
 use argparse::{ArgumentParser, Store};

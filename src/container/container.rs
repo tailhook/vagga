@@ -58,6 +58,9 @@ pub struct Command {
     user_id: uint,
     workdir: CString,
     uidmap: Option<Uidmap>,
+    stdin: i32,
+    stdout: i32,
+    stderr: i32,
 }
 
 
@@ -74,12 +77,22 @@ impl Command {
             restore_sigmask: true,
             user_id: 0,
             uidmap: None,
+            stdin: 0,
+            stdout: 1,
+            stderr: 2,
         };
     }
     pub fn set_user_id(&mut self, uid: uint) {
         self.user_id = uid;
     }
-    pub fn set_stdio(&mut self) {
+    pub fn set_stdout_fd(&mut self, fd: i32) {
+        self.stdout = fd;
+    }
+    pub fn set_stderr_fd(&mut self, fd: i32) {
+        self.stderr = fd;
+    }
+    pub fn set_stdin_fd(&mut self, fd: i32) {
+        self.stdin = fd;
     }
     pub fn chroot(&mut self, dir: &Path) {
         self.chroot = dir.to_c_str();
@@ -145,9 +158,9 @@ impl Command {
             user_id: self.user_id as i32,
             restore_sigmask: if self.restore_sigmask { 1 } else { 0 },
             workdir: self.workdir.as_ptr(),
-            stdin: 0,
-            stdout: 1,
-            stderr: 2,
+            stdin: self.stdin,
+            stdout: self.stdout,
+            stderr: self.stderr,
         }) };
         if pid < 0 {
             return Err(IoError::last_error());

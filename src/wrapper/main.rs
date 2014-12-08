@@ -4,6 +4,7 @@ extern crate quire;
 extern crate argparse;
 extern crate serialize;
 extern crate regex;
+extern crate libc;
 #[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
 
@@ -12,11 +13,15 @@ extern crate config;
 
 use std::rc::Rc;
 use std::io::stderr;
+use std::os::{Pipe, pipe};
+use std::io::PipeStream;
 use std::io::ALL_PERMISSIONS;
 use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
 use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
+use std::cell::RefCell;
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
+use libc::funcs::posix88::unistd::close;
 
 use config::find_config;
 use container::signal;
@@ -31,18 +36,47 @@ use argparse::{ArgumentParser, Store, List};
 
 mod settings;
 mod debug;
+mod build;
 
 
 struct RunBuilder {
-    cmd: String,
     container: String,
 }
 
+struct RunVersion {
+    container: String,
+    pipe: Pipe,
+    result: Rc<RefCell<String>>,
+}
+
+impl Executor for RunVersion {
+    fn command(&self) -> Command {
+        let mut cmd = Command::new("vagga_version".to_string(),
+            Path::new("/vagga/bin/vagga_version"));
+        cmd.arg(self.container.as_slice());
+        cmd.set_env("TERM".to_string(), "dumb".to_string());
+        cmd.set_stdout_fd(self.pipe.writer);
+        if let Some(x) = getenv("RUST_LOG") {
+            cmd.set_env("RUST_LOG".to_string(), x);
+        }
+        if let Some(x) = getenv("RUST_BACKTRACE") {
+            cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        }
+        return cmd;
+    }
+    fn finish(&self, status: int) -> MonitorStatus {
+        unsafe { close(self.pipe.writer) };
+        let mut rd = PipeStream::open(self.pipe.reader);
+        *self.result.borrow_mut() = rd.read_to_string()
+                                      .unwrap_or("".to_string());
+        return Shutdown(status)
+    }
+}
 
 impl Executor for RunBuilder {
     fn command(&self) -> Command {
-        let mut cmd = Command::new(self.cmd.clone(),
-            Path::new("/vagga/bin").join(self.cmd.as_slice()));
+        let mut cmd = Command::new("vagga_build".to_string(),
+            Path::new("/vagga/bin/vagga_build"));
         cmd.arg(self.container.as_slice());
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
@@ -293,9 +327,11 @@ pub fn run() -> int {
             return debug::run_interactive_build_shell();
         }
         "_build" => {
-            mon.add(Rc::new("version".to_string()), box RunBuilder {
-                cmd: "vagga_version".to_string(),
+            let ver = Rc::new(RefCell::new("".to_string()));
+            mon.add(Rc::new("version".to_string()), box RunVersion {
                 container: args[0].to_string(),
+                pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
+                result: ver.clone(),
             });
             match mon.run() {
                 Killed => return 1,
@@ -303,8 +339,16 @@ pub fn run() -> int {
                 Exit(29) => {},
                 Exit(val) => return val,
             };
+            debug!("Container version: {}", ver.borrow());
+            let tmppath = Path::new(format!("/vagga/roots/.tmp.{}", args[0]));
+            match build::prepare_tmp_root_dir(&tmppath) {
+                Ok(()) => {}
+                Err(x) => {
+                    error!("Error preparing root dir: {}", x);
+                    return 124;
+                }
+            }
             mon.add(Rc::new("build".to_string()), box RunBuilder {
-                cmd: "vagga_build".to_string(),
                 container: args[0].to_string(),
             });
             return match mon.run() {
@@ -313,16 +357,20 @@ pub fn run() -> int {
             };
         }
         "_version_hash" => {
-            mon.add(Rc::new("version".to_string()), box RunBuilder {
-                cmd: "vagga_version".to_string(),
+            let ver = Rc::new(RefCell::new("".to_string()));
+            mon.add(Rc::new("version".to_string()), box RunVersion {
                 container: args[0].to_string(),
+                pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
+                result: ver.clone(),
             });
             match mon.run() {
                 Killed => return 1,
-                Exit(29) => {},
+                Exit(0) => {},
+                Exit(29) => return 29,
                 Exit(val) => return val,
             };
-            return 254;
+            println!("{}", ver.borrow());
+            return 0;
         }
         _ => unimplemented!(),
     };

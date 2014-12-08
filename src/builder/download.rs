@@ -8,7 +8,7 @@ use container::sha256::{Sha256, Digest};
 use super::context::BuildContext;
 
 
-pub fn download_file(ctx: &mut BuildContext, url: String)
+pub fn download_file(_ctx: &mut BuildContext, url: String)
     -> Result<Path, String>
 {
     let mut hash = Sha256::new();

@@ -1,24 +1,26 @@
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::PathExtensions;
-use std::io::fs::{unlink, rename, mkdir_recursive};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
-
-use container::sha256::{Sha256, Digest};
 
 use super::context::BuildContext;
 
 
-pub fn unpack_file(ctx: &mut BuildContext, src: &Path, tgt: &Path)
+pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path)
     -> Result<(), String>
 {
     info!("Unpacking {} -> {}", src.display(), tgt.display());
-    match Command::new("/vagga/bin/busybox")
-            .stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
-            .arg("tar")
-            .arg("-x")
-            .arg("-f").arg(src)
-            .arg("-C").arg(tgt)
-        .output()
+    let mut cmd = Command::new("/vagga/bin/busybox");
+    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
+        .arg("tar")
+        .arg("-x")
+        .arg("-f").arg(src)
+        .arg("-C").arg(tgt);
+    match src.extension_str() {
+        Some("gz")|Some("tgz") => { cmd.arg("-z"); }
+        Some("bz")|Some("tbz") => { cmd.arg("-j"); }
+        Some("xz")|Some("txz") => { cmd.arg("-J"); }
+        _ => {}
+    };
+    debug!("Running: {}", cmd);
+    match cmd.output()
         .map_err(|e| format!("Can't run tar: {}", e))
         .map(|o| o.status)
     {
