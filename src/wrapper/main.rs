@@ -335,7 +335,17 @@ pub fn run() -> int {
             });
             match mon.run() {
                 Killed => return 1,
-                Exit(0) => {},
+                Exit(0) => {
+                    let name = format!("{}.{}", args[0],
+                        ver.borrow().as_slice().slice_to(8));
+                    let finalpath = Path::new("/vagga/roots")
+                        .join(name.as_slice());
+                    if finalpath.exists() {
+                        debug!("Path {} is already built",
+                               finalpath.display());
+                        return 0;
+                    }
+                },
                 Exit(29) => {},
                 Exit(val) => return val,
             };
@@ -351,10 +361,42 @@ pub fn run() -> int {
             mon.add(Rc::new("build".to_string()), box RunBuilder {
                 container: args[0].to_string(),
             });
-            return match mon.run() {
-                Killed => 1,
-                Exit(val) => val,
+            match mon.run() {
+                Killed => return 1,
+                Exit(0) => {},
+                Exit(val) => return val,
             };
+            if ver.borrow().len() != 64 {
+                mon.add(Rc::new("version".to_string()), box RunVersion {
+                    container: args[0].to_string(),
+                    pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
+                    result: ver.clone(),
+                });
+                match mon.run() {
+                    Killed => return 1,
+                    Exit(0) => {},
+                    Exit(29) => {
+                        error!("Internal Error: \
+                                Can't version even after build");
+                        return 124;
+                    },
+                    Exit(val) => return val,
+                };
+            }
+            let name = format!("{}.{}", args[0],
+                ver.borrow().as_slice().slice_to(8));
+            let finalpath = Path::new("/vagga/roots").join(name.as_slice());
+            debug!("Committing {} -> {}", tmppath.display(),
+                                          finalpath.display());
+            match build::commit_root(&tmppath, &finalpath) {
+                Ok(()) => {}
+                Err(x) => {
+                    error!("Error committing root dir: {}", x);
+                    return 124;
+                }
+            }
+
+            return 0;
         }
         "_version_hash" => {
             let ver = Rc::new(RefCell::new("".to_string()));
