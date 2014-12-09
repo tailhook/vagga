@@ -1,4 +1,4 @@
-#![feature(phase, if_let)]
+#![feature(phase, if_let, slicing_syntax)]
 
 extern crate quire;
 extern crate argparse;
@@ -11,88 +11,26 @@ extern crate libc;
 extern crate config;
 #[phase(plugin, link)] extern crate container;
 
-use std::rc::Rc;
 use std::io::stderr;
-use std::os::{Pipe, pipe};
-use std::io::PipeStream;
 use std::io::ALL_PERMISSIONS;
 use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
 use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
-use std::cell::RefCell;
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
-use libc::funcs::posix88::unistd::close;
 
 use config::find_config;
 use container::signal;
-use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
-use container::monitor::{Killed, Exit};
-use container::container::{Command};
 use container::mount::{mount_tmpfs, bind_mount, unmount};
 use container::mount::{mount_ro_recursive, mount_pseudo};
 use container::root::change_root;
+use container::monitor::{Monitor};
 use settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List};
 
 mod settings;
 mod debug;
 mod build;
-
-
-struct RunBuilder {
-    container: String,
-}
-
-struct RunVersion {
-    container: String,
-    pipe: Pipe,
-    result: Rc<RefCell<String>>,
-}
-
-impl Executor for RunVersion {
-    fn command(&self) -> Command {
-        let mut cmd = Command::new("vagga_version".to_string(),
-            Path::new("/vagga/bin/vagga_version"));
-        cmd.arg(self.container.as_slice());
-        cmd.set_env("TERM".to_string(), "dumb".to_string());
-        cmd.set_stdout_fd(self.pipe.writer);
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
-        }
-        return cmd;
-    }
-    fn finish(&self, status: int) -> MonitorStatus {
-        unsafe { close(self.pipe.writer) };
-        let mut rd = PipeStream::open(self.pipe.reader);
-        *self.result.borrow_mut() = rd.read_to_string()
-                                      .unwrap_or("".to_string());
-        return Shutdown(status)
-    }
-}
-
-impl Executor for RunBuilder {
-    fn command(&self) -> Command {
-        let mut cmd = Command::new("vagga_build".to_string(),
-            Path::new("/vagga/bin/vagga_build"));
-        cmd.arg(self.container.as_slice());
-        cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
-        }
-        return cmd;
-    }
-    fn finish(&self, status: int) -> MonitorStatus {
-        return Shutdown(status)
-    }
-}
-
+mod run;
 
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
@@ -321,98 +259,31 @@ pub fn run() -> int {
         return 122;
     }
 
-    let mut mon = Monitor::new();
     match cmd.as_slice() {
         "_build_shell" => {
             return debug::run_interactive_build_shell();
         }
         "_build" => {
-            let ver = Rc::new(RefCell::new("".to_string()));
-            mon.add(Rc::new("version".to_string()), box RunVersion {
-                container: args[0].to_string(),
-                pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
-                result: ver.clone(),
-            });
-            match mon.run() {
-                Killed => return 1,
-                Exit(0) => {
-                    let name = format!("{}.{}", args[0],
-                        ver.borrow().as_slice().slice_to(8));
-                    let finalpath = Path::new("/vagga/roots")
-                        .join(name.as_slice());
-                    if finalpath.exists() {
-                        debug!("Path {} is already built",
-                               finalpath.display());
-                        return 0;
-                    }
-                },
-                Exit(29) => {},
-                Exit(val) => return val,
+            return match build::build_container(args[0].to_string()) {
+                Ok(_) => 0,
+                Err(x) => x,
             };
-            debug!("Container version: {}", ver.borrow());
-            let tmppath = Path::new(format!("/vagga/roots/.tmp.{}", args[0]));
-            match build::prepare_tmp_root_dir(&tmppath) {
-                Ok(()) => {}
-                Err(x) => {
-                    error!("Error preparing root dir: {}", x);
-                    return 124;
-                }
-            }
-            mon.add(Rc::new("build".to_string()), box RunBuilder {
-                container: args[0].to_string(),
-            });
-            match mon.run() {
-                Killed => return 1,
-                Exit(0) => {},
-                Exit(val) => return val,
-            };
-            if ver.borrow().len() != 64 {
-                mon.add(Rc::new("version".to_string()), box RunVersion {
-                    container: args[0].to_string(),
-                    pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
-                    result: ver.clone(),
-                });
-                match mon.run() {
-                    Killed => return 1,
-                    Exit(0) => {},
-                    Exit(29) => {
-                        error!("Internal Error: \
-                                Can't version even after build");
-                        return 124;
-                    },
-                    Exit(val) => return val,
-                };
-            }
-            let name = format!("{}.{}", args[0],
-                ver.borrow().as_slice().slice_to(8));
-            let finalpath = Path::new("/vagga/roots").join(name.as_slice());
-            debug!("Committing {} -> {}", tmppath.display(),
-                                          finalpath.display());
-            match build::commit_root(&tmppath, &finalpath) {
-                Ok(()) => {}
-                Err(x) => {
-                    error!("Error committing root dir: {}", x);
-                    return 124;
-                }
-            }
-
-            return 0;
         }
         "_version_hash" => {
-            let ver = Rc::new(RefCell::new("".to_string()));
-            mon.add(Rc::new("version".to_string()), box RunVersion {
-                container: args[0].to_string(),
-                pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
-                result: ver.clone(),
-            });
-            match mon.run() {
-                Killed => return 1,
-                Exit(0) => {},
-                Exit(29) => return 29,
-                Exit(val) => return val,
+            return match build::print_version_hash(args[0].to_string()) {
+                Ok(()) => 0,
+                Err(x) => x,
             };
-            println!("{}", ver.borrow());
-            return 0;
+        }
+        "_run" => {
+            let name = match build::build_container(args[0].to_string()) {
+                Ok(name) => name,
+                Err(x) => return x,
+            };
+            match run::run_command(name, args[1..]) {
+                Ok(x) => return x,
+                Err(()) => return 124,
+            }
         }
         _ => unimplemented!(),
     };
