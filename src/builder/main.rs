@@ -50,19 +50,24 @@ pub fn run() -> int {
         .expect("Error parsing configuration file");  // TODO
     let cont = cfg.containers.find(&container)
         .expect("Container not found");  // TODO
-    let mut build_context = BuildContext {
-        container_name: container,
-        container_config: (*cont).clone(),
-    };
+    let mut build_context = BuildContext::new(container, (*cont).clone());
     debug!("Versioning items: {}", cont.setup.len());
     for b in cont.setup.iter() {
         debug!("Versioning setup: {}", b);
         match b.build(&mut build_context) {
             Ok(()) => {}
             Err(e) => {
-                error!("Error versioning command {}: {}", b, e);
+                error!("Error build command {}: {}", b, e);
                 return 1;
             }
+        }
+    }
+
+    match build_context.finish() {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Error finalizing container: {}", e);
+            return 1;
         }
     }
     return 0;

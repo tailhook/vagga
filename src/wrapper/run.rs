@@ -38,8 +38,10 @@ impl Executor for RunCommand {
 pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
 
     let tgtroot = Path::new("/vagga/root");
-    try!(mkdir(&tgtroot, ALL_PERMISSIONS)
-         .map_err(|x| error!("Error creating directory: {}", x)));
+    if !tgtroot.exists() {
+        try!(mkdir(&tgtroot, ALL_PERMISSIONS)
+             .map_err(|x| error!("Error creating directory: {}", x)));
+    }
     try!(bind_mount(&Path::new("/vagga/roots").join(container).join("root"),
                     &tgtroot)
          .map_err(|e| error!("Error bind mount: {}", e)));
