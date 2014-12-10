@@ -5,7 +5,7 @@ use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 
 use container::root::change_root;
-use container::mount::{bind_mount, unmount};
+use container::mount::{bind_mount, unmount, mount_pseudo};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
@@ -35,6 +35,14 @@ impl Executor for RunCommand {
     }
 }
 
+pub fn mount_system_dirs() -> Result<(), String> {
+    try!(bind_mount(&Path::new("/dev"), &Path::new("/vagga/root/dev")));
+    try!(bind_mount(&Path::new("/sys"), &Path::new("/vagga/root/sys")));
+    try!(mount_pseudo(&Path::new("/vagga/root/proc"), "proc", "", false));
+    try!(bind_mount(&Path::new("/work"), &Path::new("/vagga/root/work")));
+    return Ok(());
+}
+
 pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
 
     let tgtroot = Path::new("/vagga/root");
@@ -45,11 +53,14 @@ pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
     try!(bind_mount(&Path::new("/vagga/roots").join(container).join("root"),
                     &tgtroot)
          .map_err(|e| error!("Error bind mount: {}", e)));
+    try!(mount_system_dirs()
+        .map_err(|e| error!("Error mounting system dirs: {}", e)));
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
          .map_err(|e| error!("Error changing root: {}", e)));
+    try!(unmount(&Path::new("/work/.vagga/.mnt"))
+         .map_err(|e| error!("Error unmounting `.vagga/.mnt`: {}", e)));
     try!(unmount(&Path::new("/tmp"))
          .map_err(|e| error!("Error unmounting old root: {}", e)));
-
 
     let mut mon = Monitor::new();
     let mut cmd = Path::new(args[0].as_slice());

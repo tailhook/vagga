@@ -169,6 +169,10 @@ fn setup_filesystem(project_root: &Path, settings: &MergedSettings)
     try_str!(mkdir(&dev_dir, ALL_PERMISSIONS));
     try!(bind_mount(&Path::new("/dev"), &dev_dir));
 
+    let sys_dir = mnt_dir.join("sys");
+    try_str!(mkdir(&sys_dir, ALL_PERMISSIONS));
+    try!(bind_mount(&Path::new("/sys"), &sys_dir));
+
     let vagga_dir = mnt_dir.join("vagga");
     try_str!(mkdir(&vagga_dir, ALL_PERMISSIONS));
 
