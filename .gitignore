@@ -1,6 +1,7 @@
 /*.rlib
 /*.a
 /*.o
+.vagga
 /vagga_launcher
 /vagga_wrapper
 /vagga_version
@@ -11,3 +12,4 @@
 /apk
 /busybox
 /alpine
+

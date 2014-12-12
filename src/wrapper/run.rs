@@ -44,7 +44,6 @@ pub fn mount_system_dirs() -> Result<(), String> {
 }
 
 pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
-
     let tgtroot = Path::new("/vagga/root");
     if !tgtroot.exists() {
         try!(mkdir(&tgtroot, ALL_PERMISSIONS)
