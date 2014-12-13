@@ -43,9 +43,9 @@ pub enum Builder {
     //Depend(Path),
     //Tar(TarInfo),
     //AddFile(FileInfo),
-    //Remove(Path),
-    //EnsureDir(Path),
-    //EmptyDir(Path),
+    Remove(Path),
+    EnsureDir(Path),
+    EmptyDir(Path),
     //Busybox,
 
     // -- Ubuntu --
@@ -90,6 +90,15 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
+        ("Remove".to_string(), box V::Directory {
+            absolute: Some(true),
+        .. Default::default() } as Box<V::Validator>),
+        ("EnsureDir".to_string(), box V::Directory {
+            absolute: Some(true),
+        .. Default::default() } as Box<V::Validator>),
+        ("EmptyDir".to_string(), box V::Directory {
+            absolute: Some(true),
+        .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
 
@@ -107,6 +116,18 @@ impl Show for Builder {
             &Sh(ref command) => {
                 try!("!Sh ".fmt(fmt));
                 try!(command.fmt(fmt));
+            }
+            &Remove(ref path) => {
+                try!("!Remove ".fmt(fmt));
+                try!(path.display().fmt(fmt));
+            }
+            &EmptyDir(ref path) => {
+                try!("!EmptyDir ".fmt(fmt));
+                try!(path.display().fmt(fmt));
+            }
+            &EnsureDir(ref path) => {
+                try!("!EnsureDir ".fmt(fmt));
+                try!(path.display().fmt(fmt));
             }
         }
         return Ok(());

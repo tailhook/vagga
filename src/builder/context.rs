@@ -1,10 +1,10 @@
-use std::io::{FileNotFound};
 use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir_recursive, mkdir, rmdir_recursive};
+use std::io::fs::{mkdir_recursive, mkdir};
 use std::io::fs::PathExtensions;
 use std::collections::{TreeMap, TreeSet};
 
 use container::mount::{bind_mount, unmount};
+use container::util::clean_dir;
 use config::Container;
 
 
@@ -60,7 +60,7 @@ impl BuildContext {
                      .map_err(|e| format!("Error creating cache dir: {}", e)));
             }
             let path = Path::new("/vagga/root").join(path);
-            try!(empty_dir(&path));
+            try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
         }
         return Ok(());
@@ -92,12 +92,12 @@ impl BuildContext {
         }
 
         for dir in self.remove_dirs.iter() {
-            try!(rmdir_recursive(&base.join(dir))
+            try!(clean_dir(&base.join(dir), false)
                 .map_err(|e| format!("Error removing dir: {}", e)));
         }
 
         for dir in self.empty_dirs.iter() {
-            try!(empty_dir(&base.join(dir)));
+            try!(clean_dir(&base.join(dir), false));
         }
 
         for dir in self.ensure_dirs.iter() {
@@ -107,21 +107,4 @@ impl BuildContext {
 
         return Ok(());
     }
-}
-
-fn empty_dir(dir: &Path) -> Result<(), String> {
-    let perm = match dir.stat() {
-        Ok(stat) => {
-            try!(rmdir_recursive(dir)
-                .map_err(|e| format!("Error removing dir: {}", e)));
-            stat.perm
-        }
-        Err(ref e) if e.kind == FileNotFound => {
-            ALL_PERMISSIONS
-        }
-        Err(e) => return Err(format!("Error stat: {}", e)),
-    };
-    try!(mkdir_recursive(dir, perm)
-        .map_err(|e| format!("Error creating dir: {}", e)));
-    return Ok(());
 }

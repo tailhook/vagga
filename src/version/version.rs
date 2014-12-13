@@ -1,3 +1,5 @@
+use std::path::BytesContainer;
+
 use config::builders as B;
 
 use container::sha256::Digest;
@@ -27,11 +29,22 @@ impl VersionHash for B::Builder {
                 Hashed
             }
             &B::Cmd(ref vec) => {
-                vec.iter().all(|cmd| { hash.input(cmd.as_bytes()); true });
+                vec.iter().all(|cmd| {
+                    hash.input(cmd.as_bytes());
+                    hash.input(&[0]);
+                    true
+                });
                 Hashed
             }
             &B::Sh(ref cmd) => {
                 hash.input(cmd.as_bytes());
+                hash.input(&[0]);
+                Hashed
+            }
+            &B::Remove(ref path) | &B::EnsureDir(ref path) |
+            &B::EmptyDir(ref path) => {
+                hash.input(path.container_as_bytes());
+                hash.input(&[0]);
                 Hashed
             }
         }

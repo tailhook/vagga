@@ -1,6 +1,10 @@
 use std::ptr::null;
 use std::string::raw::from_buf;
+use std::io::fs::{readdir, rmdir_recursive, unlink, rmdir};
+use std::io::fs::PathExtensions;
 use libc::{uid_t, gid_t, c_char};
+
+use super::root::temporary_change_root;
 
 // pwd.h
 #[repr(C)]
@@ -28,4 +32,34 @@ pub fn get_user_name(uid: uid_t) -> Result<String, String> {
         }
     }
     return Err(format!("User {} not found", uid));
+}
+
+pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    // We temporarily change root, so that symlinks inside the dir
+    // would do no harm. But note that dir itself can be a symlink
+    try!(temporary_change_root(dir, || {
+        let dirlist = try!(readdir(&Path::new("/"))
+             .map_err(|e| format!("Can't read directory {}: {}",
+                                  dir.display(), e)));
+        for path in dirlist.into_iter() {
+            if path.is_dir() {
+                try!(rmdir_recursive(&path)
+                    .map_err(|e| format!("Can't remove directory {}{}: {}",
+                        dir.display(), path.display(), e)));
+            } else {
+                try!(unlink(&path)
+                    .map_err(|e| format!("Can't remove file {}{}: {}",
+                        dir.display(), path.display(), e)));
+            }
+        }
+        Ok(())
+    }));
+    if remove_dir_itself {
+        try!(rmdir(dir).map_err(|e| format!("Can't remove dir {}: {}",
+                                            dir.display(), e)));
+    }
+    return Ok(());
 }
