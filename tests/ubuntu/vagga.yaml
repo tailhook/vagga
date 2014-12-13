@@ -1,4 +1,10 @@
 containers:
+
   ubuntu:
     setup:
     - !UbuntuCore trusty
+
+  ubuntu-echo:
+    setup:
+    - !UbuntuCore trusty
+    - !Sh echo ------ HELLO ------

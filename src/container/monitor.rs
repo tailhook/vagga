@@ -34,7 +34,6 @@ pub trait Executor {
 
 pub struct Process<'a> {
     name: Rc<String>,
-    current_pid: Option<pid_t>,
     start_time: Option<Timespec>,
     executor: Box<Executor + 'a>,
 }
@@ -89,7 +88,6 @@ impl<'a> Monitor<'a> {
     {
         let prc = Rc::new(RefCell::new(Process {
             name: name,
-            current_pid: None,
             start_time: None,
             executor: executor}));
         self.processes.push(prc.clone());
@@ -148,17 +146,14 @@ impl<'a> Monitor<'a> {
                     }
                 }
                 Signal(signal::Terminate(sig)) => {
-                    for prc in self.processes.iter() {
-                        match prc.borrow().current_pid {
-                            Some(pid) => signal::send_signal(pid, sig),
-                            None => {}
-                        }
+                    for (pid, _) in self.pids.iter() {
+                        signal::send_signal(*pid, sig);
                     }
                     break;
                 }
                 Signal(signal::Child(pid, status)) => {
                     let prc = match self.pids.pop(&pid) {
-                        Some(name) => name,
+                        Some(prc) => prc,
                         None => {
                             warn!("Unknown process {} dead with {}",
                                 pid, status);
@@ -178,15 +173,9 @@ impl<'a> Monitor<'a> {
         }
         // TODO(tailhook) self.start_queue.clear();
         // Shut down loop
-        let mut processes = Vec::new();
-        swap(&mut processes, &mut self.processes);
-        let mut left: TreeMap<pid_t, ProcRef> = processes.into_iter()
-            .filter(|prc| prc.borrow().current_pid.is_some())
-            .map(|prc| (prc.borrow().current_pid.unwrap(), prc))
-            .collect();
         info!("Shutting down, {} processes left",
-              left.len());
-        while left.len() > 0 {
+              self.pids.len());
+        while self.pids.len() > 0 {
             let sig = self.aio.poll();
             info!("Got signal {}", sig);
             match sig {
@@ -197,23 +186,27 @@ impl<'a> Monitor<'a> {
                     unimplemented!();
                 }
                 Signal(signal::Terminate(sig)) => {
-                    for (_name, prc) in left.iter() {
-                        match prc.borrow().current_pid {
-                            Some(pid) => signal::send_signal(pid, sig),
-                            None => {}
-                        }
+                    for (pid, _) in self.pids.iter() {
+                        signal::send_signal(*pid, sig);
                     }
                 }
                 Signal(signal::Child(pid, status)) => {
-                    match left.pop(&pid) {
-                        Some(prc) => {
-                            info!("Child {}:{} exited with status {}",
-                                prc.borrow().name, pid, status);
-                        }
+                    let prc = match self.pids.pop(&pid) {
+                        Some(prc) => prc,
                         None => {
                             warn!("Unknown process {} dead with {}",
                                 pid, status);
+                            continue;
                         }
+                    };
+                    info!("Child {}:{} exited with status {}",
+                        prc.borrow().name, pid, status);
+                    match self._reap_child(prc, pid, status) {
+                        Shutdown(x) => {
+                            self.status = Some(x);
+                        }
+                        Error(_) => unreachable!(),
+                        Run => {}
                     }
                 }
             }

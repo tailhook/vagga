@@ -15,6 +15,7 @@ pub struct BuildContext {
     empty_dirs: TreeSet<Path>,
     remove_dirs: TreeSet<Path>,
     cache_dirs: TreeMap<Path, String>,
+    pub environ: TreeMap<String, String>,
 }
 
 impl BuildContext {
@@ -36,6 +37,13 @@ impl BuildContext {
             remove_dirs: vec!(
                 ).into_iter().collect(),
             cache_dirs: vec!(
+                ).into_iter().collect(),
+            environ: vec!(
+                ("TERM".to_string(), "dumb".to_string()),
+                ("HOME".to_string(), "/tmp".to_string()),
+                ("PATH".to_string(),
+                 "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                 .to_string()),
                 ).into_iter().collect(),
         };
     }

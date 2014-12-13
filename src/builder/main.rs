@@ -14,6 +14,7 @@ extern crate config;
 use std::os::{set_exit_status};
 
 use config::read_config;
+use container::signal;
 use argparse::{ArgumentParser, Store};
 use self::context::{BuildContext};
 use self::bld::{BuildCommand};
@@ -24,10 +25,12 @@ mod download;
 mod tarcmd;
 mod commands {
     pub mod debian;
+    pub mod generic;
 }
 
 
 pub fn run() -> int {
+    signal::block_all();
     let mut container: String = "".to_string();
     {
         let mut ap = ArgumentParser::new();

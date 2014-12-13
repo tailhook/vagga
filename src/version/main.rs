@@ -16,6 +16,7 @@ use std::io::pipe::PipeStream;
 use libc::funcs::posix88::unistd::dup2;
 
 use config::read_config;
+use container::signal;
 use argparse::{ArgumentParser, Store};
 use container::sha256::{Sha256, Digest};
 use self::version::{VersionHash, Hashed, New, Error};
@@ -24,6 +25,7 @@ mod version;
 
 
 pub fn run() -> int {
+    signal::block_all();
     let mut container: String = "".to_string();
     {
         let mut ap = ArgumentParser::new();

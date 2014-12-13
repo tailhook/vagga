@@ -26,7 +26,14 @@ impl VersionHash for B::Builder {
                 hash.input(&[0]);
                 Hashed
             }
-            _ => unimplemented!(),
+            &B::Cmd(ref vec) => {
+                vec.iter().all(|cmd| { hash.input(cmd.as_bytes()); true });
+                Hashed
+            }
+            &B::Sh(ref cmd) => {
+                hash.input(cmd.as_bytes());
+                Hashed
+            }
         }
     }
 }

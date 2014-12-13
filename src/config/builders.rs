@@ -37,52 +37,58 @@ pub struct FileInfo {
 
 #[deriving(Decodable, Clone)]
 pub enum Builder {
-    // Generic
+    // -- Generic --
     Sh(String),
-    Cmd(String),
-    Depend(Path),
-    Tar(TarInfo),
-    AddFile(FileInfo),
-    Remove(Path),
-    EnsureDir(Path),
-    EmptyDir(Path),
-    Busybox,
+    Cmd(Vec<String>),
+    //Depend(Path),
+    //Tar(TarInfo),
+    //AddFile(FileInfo),
+    //Remove(Path),
+    //EnsureDir(Path),
+    //EmptyDir(Path),
+    //Busybox,
 
-    // Ubuntu
+    // -- Ubuntu --
     UbuntuCore(String),
-    AddUbuntuPPA(String),
+    //AddUbuntuPPA(String),
 
-    // Ubuntu/Debian
-    AptGetInstall(Vec<String>),
-    AddDebianRepo(DebianRepo),
-    AddAptKey(AptKey),
+    // -- Ubuntu/Debian --
+    //AptGetInstall(Vec<String>),
+    //AddDebianRepo(DebianRepo),
+    //AddAptKey(AptKey),
 
-    // Arch
-    ArchBase,
-    PacmanInstall(Vec<String>),
-    PacmanRemove(Vec<String>),
-    PacmanBuild(Path),
-    AddPacmanRepo(PacmanRepo),
+    // -- Arch --
+    //ArchBase,
+    //PacmanInstall(Vec<String>),
+    //PacmanRemove(Vec<String>),
+    //PacmanBuild(Path),
+    //AddPacmanRepo(PacmanRepo),
 
-    // Alpine
-    AlpineInstall(Vec<String>),
-    AlpineRemove(Vec<String>),
+    // -- Alpine --
+    //AlpineInstall(Vec<String>),
+    //AlpineRemove(Vec<String>),
 
-    // Docker
-    DockerImage(String),
-    DockerPrivate(String),
-    Dockerfile(Path),
+    // -- Docker --
+    //DockerImage(String),
+    //DockerPrivate(String),
+    //Dockerfile(Path),
 
-    // Languages
-    NpmInstall(Vec<String>),
-    PipRequirement(Path),
-    PipInstall(Vec<String>),
-    GemInstall(Vec<String>),
+    // -- Languages --
+    //NpmInstall(Vec<String>),
+    //PipRequirement(Path),
+    //PipInstall(Vec<String>),
+    //GemInstall(Vec<String>),
 }
 
 pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
     return box V::Enum { options: vec!(
         ("UbuntuCore".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("Sh".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("Cmd".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
@@ -94,7 +100,14 @@ impl Show for Builder {
                 try!("!UbuntuCore ".fmt(fmt));
                 try!(name.fmt(fmt));
             }
-            _ => unimplemented!(),
+            &Cmd(ref command) => {
+                try!("!Sh ".fmt(fmt));
+                try!(command.fmt(fmt));
+            }
+            &Sh(ref command) => {
+                try!("!Sh ".fmt(fmt));
+                try!(command.fmt(fmt));
+            }
         }
         return Ok(());
     }

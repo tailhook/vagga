@@ -28,6 +28,7 @@ impl Executor for RunVersion {
     fn command(&self) -> Command {
         let mut cmd = Command::new("vagga_version".to_string(),
             Path::new("/vagga/bin/vagga_version"));
+        cmd.keep_sigmask();
         cmd.arg(self.container.as_slice());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
         cmd.set_stdout_fd(self.pipe.writer);
@@ -52,6 +53,7 @@ impl Executor for RunBuilder {
     fn command(&self) -> Command {
         let mut cmd = Command::new("vagga_build".to_string(),
             Path::new("/vagga/bin/vagga_build"));
+        cmd.keep_sigmask();
         cmd.arg(self.container.as_slice());
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
@@ -132,6 +134,7 @@ pub fn build_container(container: String) -> Result<String, int> {
     match mon.run() {
         Killed => return Err(1),
         Exit(0) => {
+            debug!("Container version: {}", ver.borrow());
             let name = format!("{}.{}", container,
                 ver.borrow().as_slice().slice_to(8));
             let finalpath = Path::new("/vagga/roots")

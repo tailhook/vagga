@@ -2,6 +2,7 @@ use config::builders as B;
 
 use super::context::BuildContext;
 use super::commands::debian;
+use super::commands::generic;
 
 
 pub trait BuildCommand {
@@ -15,7 +16,15 @@ impl BuildCommand for B::Builder {
             &B::UbuntuCore(ref name) => {
                 debian::fetch_ubuntu_core(ctx, name)
             }
-            _ => unimplemented!(),
+            &B::Sh(ref text) => {
+                generic::run_command(ctx,
+                    &["/bin/sh".to_string(),
+                      "-c".to_string(),
+                      text.to_string()])
+            }
+            &B::Cmd(ref cmd) => {
+                generic::run_command(ctx, cmd.as_slice())
+            }
         }
     }
 }
