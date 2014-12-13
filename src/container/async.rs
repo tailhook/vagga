@@ -113,7 +113,7 @@ impl<Name: Clone> Loop<Name> {
             } else if fd == sfd { // Signal
                 debug!("Signal");
                 let rc =  unsafe { read_signal(sfd) };
-                if rc == EINTR || rc == EAGAIN {
+                if rc == -EINTR || rc == -EAGAIN {
                     continue;
                 } else if rc <= 0 {
                     fail!(format!("Error in read_signal: {}",
