@@ -1,5 +1,6 @@
 use std::fmt::{Show, Formatter, FormatError};
 use std::default::Default;
+use std::collections::TreeMap;
 
 use quire::validate as V;
 
@@ -40,6 +41,7 @@ pub enum Builder {
     // -- Generic --
     Sh(String),
     Cmd(Vec<String>),
+    Env(TreeMap<String, String>),
     //Depend(Path),
     //Tar(TarInfo),
     //AddFile(FileInfo),
@@ -99,6 +101,12 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         ("EmptyDir".to_string(), box V::Directory {
             absolute: Some(true),
         .. Default::default() } as Box<V::Validator>),
+        ("Env".to_string(), box V::Mapping {
+            key_element: box V::Scalar {
+                .. Default::default() } as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
 
@@ -116,6 +124,16 @@ impl Show for Builder {
             &Sh(ref command) => {
                 try!("!Sh ".fmt(fmt));
                 try!(command.fmt(fmt));
+            }
+            &Env(ref map) => {
+                try!("!Env {".fmt(fmt));
+                for (k, v) in map.iter() {
+                    try!(k.fmt(fmt));
+                    try!(": ".fmt(fmt));
+                    try!(v.fmt(fmt));
+                    try!(", ".fmt(fmt));
+                }
+                try!("}".fmt(fmt));
             }
             &Remove(ref path) => {
                 try!("!Remove ".fmt(fmt));

@@ -29,6 +29,12 @@ impl BuildCommand for B::Builder {
             &B::Cmd(ref cmd) => {
                 generic::run_command(ctx, cmd.as_slice())
             }
+            &B::Env(ref pairs) => {
+                for (k, v) in pairs.iter() {
+                    ctx.environ.insert(k.clone(), v.clone());
+                }
+                Ok(())
+            }
             &B::Remove(ref path) => {
                 try!(clean_dir(path, true));
                 ctx.add_remove_dir(path.clone());

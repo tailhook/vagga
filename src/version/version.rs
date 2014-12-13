@@ -41,6 +41,15 @@ impl VersionHash for B::Builder {
                 hash.input(&[0]);
                 Hashed
             }
+            &B::Env(ref pairs) => {
+                for (k, v) in pairs.iter() {
+                    hash.input(k.as_bytes());
+                    hash.input(&[0]);
+                    hash.input(v.as_bytes());
+                    hash.input(&[0]);
+                }
+                Hashed
+            }
             &B::Remove(ref path) | &B::EnsureDir(ref path) |
             &B::EmptyDir(ref path) => {
                 hash.input(path.container_as_bytes());
