@@ -66,17 +66,16 @@ commands:
       container
     container: ubuntu
     write-mode: transient-hard-link-copy
-    command:
-    - checkinstall
-    - --default
-    - --maintainer=paul@colomiets.name
-    - --pkglicense=MIT
-    - --pkgname=vagga
-    - --nodoc
-    - make
-    - -B
-    - all
-    - install
+    accepts-arguments: true
+    run: |
+      checkinstall \
+        --default \
+        --maintainer=paul@colomiets.name \
+        --pkglicense=MIT \
+        --pkgname=vagga \
+        --pkgver=${1:-$(git describe | cut -c2-)} \
+        --nodoc \
+      make -B all install
 
   vagga-in-vagga-test:
     description: Build docs with vagga in ubuntu in vagga
