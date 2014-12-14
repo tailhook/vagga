@@ -6,6 +6,8 @@ use config::builders as B;
 use super::context::BuildContext;
 use super::commands::debian;
 use super::commands::generic;
+use super::download::download_file;
+use super::tarcmd::unpack_file;
 use container::util::clean_dir;
 
 
@@ -54,6 +56,14 @@ impl BuildCommand for B::Builder {
                 Ok(())
             }
             &B::Depends(_) => {
+                Ok(())
+            }
+            &B::Tar(ref tar) => {
+                let fpath = Path::new("/vagga/root").join(
+                    tar.path.path_relative_from(&Path::new("/")).unwrap());
+                let filename = try!(download_file(ctx, &tar.url));
+                // TODO(tailhook) check sha256 sum
+                try!(unpack_file(ctx, &filename, &fpath));
                 Ok(())
             }
         }

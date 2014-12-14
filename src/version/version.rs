@@ -78,6 +78,15 @@ impl VersionHash for B::Builder {
                     Ok(()) => return Hashed,
                 }
             }
+            &B::Tar(ref tar) => {
+                hash.input(tar.url.as_bytes());
+                hash.input(&[0]);
+                tar.sha256.as_ref().map(|x| hash.input(x.as_bytes()));
+                hash.input(&[0]);
+                hash.input(tar.path.container_as_bytes());
+                hash.input(&[0]);
+                Hashed
+            }
         }
     }
 }

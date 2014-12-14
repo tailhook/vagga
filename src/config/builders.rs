@@ -26,7 +26,7 @@ pub struct PacmanRepo {
 #[deriving(Decodable, Clone)]
 pub struct TarInfo {
     pub url: String,
-    pub sha256: String,
+    pub sha256: Option<String>,
     pub path: Path,
 }
 
@@ -43,7 +43,7 @@ pub enum Builder {
     Cmd(Vec<String>),
     Env(TreeMap<String, String>),
     Depends(Path),
-    //Tar(TarInfo),
+    Tar(TarInfo),
     //AddFile(FileInfo),
     Remove(Path),
     EnsureDir(Path),
@@ -109,6 +109,18 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
         ("Depends".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
+        ("Tar".to_string(), box V::Structure {
+            members: vec!(
+                ("url".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("sha256".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("path".to_string(), box V::Directory {
+                    default: Some(Path::new("/")),
+                    .. Default::default() } as Box<V::Validator>),
+            ),
+        .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
 
@@ -152,6 +164,15 @@ impl Show for Builder {
             &Depends(ref path) => {
                 try!("!Depends ".fmt(fmt));
                 try!(path.display().fmt(fmt));
+            }
+            &Tar(ref tar) => {
+                try!("!Tar { url: ".fmt(fmt));
+                try!(tar.url.fmt(fmt));
+                try!(", sha256: ".fmt(fmt));
+                try!(tar.sha256.fmt(fmt));
+                try!(", path: ".fmt(fmt));
+                try!(tar.path.display().fmt(fmt));
+                try!("}".fmt(fmt));
             }
         }
         return Ok(());

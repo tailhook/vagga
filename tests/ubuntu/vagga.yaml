@@ -4,6 +4,10 @@ containers:
     setup:
     - !UbuntuCore trusty
 
+  from_tar:
+    setup:
+    - !Tar url: "http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz"
+
   ubuntu-echo:
     setup:
     - !UbuntuCore trusty

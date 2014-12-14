@@ -8,7 +8,7 @@ use container::sha256::{Sha256, Digest};
 use super::context::BuildContext;
 
 
-pub fn download_file(_ctx: &mut BuildContext, url: String)
+pub fn download_file(_ctx: &mut BuildContext, url: &String)
     -> Result<Path, String>
 {
     let mut hash = Sha256::new();
@@ -35,7 +35,7 @@ pub fn download_file(_ctx: &mut BuildContext, url: String)
             .arg("wget")
             .arg("-O")
             .arg(&tmpfilename)
-            .arg(url)
+            .arg(url.as_slice())
         .output()
         .map_err(|e| format!("Can't run wget: {}", e))
         .map(|o| o.status)
