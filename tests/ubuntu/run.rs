@@ -20,7 +20,7 @@ fn test_hashsum_echo() {
     vagga.arg("_version_hash");
     vagga.arg("ubuntu-echo");
     check_status_output(vagga, 0,
-        "f364b9b83259484173c15da8b475d499fae8ca22c30e496af9a23653702b06ce\n",
+        "30ff6e7bfb547502e9c9d1061b778bde24393b58da316805a943610beee129fe\n",
         "");
 }
 
