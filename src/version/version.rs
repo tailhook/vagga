@@ -1,8 +1,10 @@
+use std::io::EndOfFile;
 use std::path::BytesContainer;
+use std::io::fs::File;
 
 use config::builders as B;
-
 use container::sha256::Digest;
+use container::root::temporary_change_root;
 
 
 pub enum HashResult {
@@ -55,6 +57,26 @@ impl VersionHash for B::Builder {
                 hash.input(path.container_as_bytes());
                 hash.input(&[0]);
                 Hashed
+            }
+            &B::Depends(ref filename) => {
+                match
+                    File::open(&Path::new("/work").join(filename))
+                    .and_then(|mut f| {
+                        loop {
+                            let mut chunk = [0u8, .. 128*1024];
+                            let bytes = match f.read(chunk) {
+                                Ok(bytes) => bytes,
+                                Err(ref e) if e.kind == EndOfFile => break,
+                                Err(e) => return Err(e),
+                            };
+                            hash.input(chunk[..bytes]);
+                        }
+                        Ok(())
+                    })
+                {
+                    Err(e) => return Error(format!("Can't read file: {}", e)),
+                    Ok(()) => return Hashed,
+                }
             }
         }
     }

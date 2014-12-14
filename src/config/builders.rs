@@ -42,7 +42,7 @@ pub enum Builder {
     Sh(String),
     Cmd(Vec<String>),
     Env(TreeMap<String, String>),
-    //Depend(Path),
+    Depends(Path),
     //Tar(TarInfo),
     //AddFile(FileInfo),
     Remove(Path),
@@ -107,6 +107,8 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             value_element: box V::Scalar {
                 .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
+        ("Depends".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
 
@@ -145,6 +147,10 @@ impl Show for Builder {
             }
             &EnsureDir(ref path) => {
                 try!("!EnsureDir ".fmt(fmt));
+                try!(path.display().fmt(fmt));
+            }
+            &Depends(ref path) => {
+                try!("!Depends ".fmt(fmt));
                 try!(path.display().fmt(fmt));
             }
         }

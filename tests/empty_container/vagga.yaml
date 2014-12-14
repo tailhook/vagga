@@ -6,3 +6,7 @@ containers:
   empty-echo:
     setup:
     - !Sh echo hello
+
+  empty-depend:
+    setup:
+    - !Depends test.txt

@@ -53,6 +53,9 @@ impl BuildCommand for B::Builder {
                 ctx.add_ensure_dir(path.clone());
                 Ok(())
             }
+            &B::Depends(_) => {
+                Ok(())
+            }
         }
     }
 }

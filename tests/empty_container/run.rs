@@ -14,6 +14,17 @@ fn test_hashsum() {
 }
 
 #[test]
+fn test_hashsum_depend() {
+    let mut vagga = vagga_cmd();
+    vagga.cwd(&Path::new("tests/empty_container"));
+    vagga.arg("_version_hash");
+    vagga.arg("empty-depend");
+    check_status_output(vagga, 0,
+        "ecf701f727d9e2d77c4aa49ac6fbbcc997278aca010bddeeb961c10cf54d435a\n",
+        "");
+}
+
+#[test]
 fn test_build() {
     let mut vagga = vagga_cmd();
     vagga.cwd(&Path::new("tests/empty_container"));
