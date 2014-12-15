@@ -85,6 +85,8 @@ impl VersionHash for B::Builder {
                 hash.input(&[0]);
                 hash.input(tar.path.container_as_bytes());
                 hash.input(&[0]);
+                hash.input(tar.subdir.container_as_bytes());
+                hash.input(&[0]);
                 Hashed
             }
         }

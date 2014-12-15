@@ -28,6 +28,7 @@ pub struct TarInfo {
     pub url: String,
     pub sha256: Option<String>,
     pub path: Path,
+    pub subdir: Path,
 }
 
 #[deriving(Decodable, Clone)]
@@ -119,6 +120,10 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                 ("path".to_string(), box V::Directory {
                     default: Some(Path::new("/")),
                     .. Default::default() } as Box<V::Validator>),
+                ("subdir".to_string(), box V::Directory {
+                    default: Some(Path::new("")),
+                    absolute: Some(false),
+                    .. Default::default() } as Box<V::Validator>),
             ),
         .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
@@ -172,6 +177,8 @@ impl Show for Builder {
                 try!(tar.sha256.fmt(fmt));
                 try!(", path: ".fmt(fmt));
                 try!(tar.path.display().fmt(fmt));
+                try!(", subdir: ".fmt(fmt));
+                try!(tar.subdir.display().fmt(fmt));
                 try!("}".fmt(fmt));
             }
         }

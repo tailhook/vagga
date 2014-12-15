@@ -3,7 +3,8 @@ use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 use super::context::BuildContext;
 
 
-pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path)
+pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
+    includes: &[Path])
     -> Result<(), String>
 {
     info!("Unpacking {} -> {}", src.display(), tgt.display());
@@ -13,6 +14,10 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path)
         .arg("-x")
         .arg("-f").arg(src)
         .arg("-C").arg(tgt);
+    for i in includes.iter() {
+        cmd.arg(i);
+    }
+
     match src.extension_str() {
         Some("gz")|Some("tgz") => { cmd.arg("-z"); }
         Some("bz")|Some("tbz") => { cmd.arg("-j"); }

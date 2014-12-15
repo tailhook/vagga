@@ -1,5 +1,5 @@
 use std::io::ALL_PERMISSIONS;
-use std::io::fs::mkdir_recursive;
+use std::io::fs::{mkdir_recursive};
 
 use config::builders as B;
 
@@ -9,6 +9,7 @@ use super::commands::generic;
 use super::download::download_file;
 use super::tarcmd::unpack_file;
 use container::util::clean_dir;
+use container::mount::{bind_mount, unmount};
 
 
 pub trait BuildCommand {
@@ -63,7 +64,20 @@ impl BuildCommand for B::Builder {
                     tar.path.path_relative_from(&Path::new("/")).unwrap());
                 let filename = try!(download_file(ctx, &tar.url));
                 // TODO(tailhook) check sha256 sum
-                try!(unpack_file(ctx, &filename, &fpath));
+                if tar.subdir.as_vec().len() == 0 {
+                    try!(unpack_file(ctx, &filename, &fpath, &[]));
+                } else {
+                    let tmppath = Path::new("/vagga/root/tmp")
+                        .join(filename.filename_str().unwrap());
+                    let tmpsub = tmppath.join(&tar.subdir);
+                    try!(mkdir_recursive(&tmpsub, ALL_PERMISSIONS)
+                         .map_err(|e| format!("Error making dir: {}", e)));
+                    try!(bind_mount(&fpath, &tmpsub));
+                    let res = unpack_file(ctx, &filename, &tmppath,
+                        &[tar.subdir.clone()]);
+                    try!(unmount(&tmpsub));
+                    try!(res);
+                }
                 Ok(())
             }
         }

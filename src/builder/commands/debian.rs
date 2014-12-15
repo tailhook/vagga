@@ -13,7 +13,7 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
         "daily/current/{release}-{kind}-{arch}.tar.gz",
         ), kind=kind, arch=arch, release=release);
     let filename = try!(download_file(ctx, &url));
-    try!(unpack_file(ctx, &filename, &Path::new("/vagga/root")));
+    try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[]));
     try!(init_debian_build(ctx));
     return Ok(());
 }
