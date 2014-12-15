@@ -30,12 +30,14 @@ pub fn download_file(_ctx: &mut BuildContext, url: &String)
     }
     info!("Downloading image {} -> {}", url, filename.display());
     let tmpfilename = filename.with_filename(name + ".part");
-    match Command::new("/vagga/bin/busybox")
-            .stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
-            .arg("wget")
-            .arg("-O")
-            .arg(&tmpfilename)
-            .arg(url.as_slice())
+    let mut cmd = Command::new("/vagga/bin/busybox");
+    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
+       .arg("wget")
+       .arg("-O")
+       .arg(&tmpfilename)
+       .arg(url.as_slice());
+    debug!("Running: {}", cmd);
+    match cmd
         .output()
         .map_err(|e| format!("Can't run wget: {}", e))
         .map(|o| o.status)
