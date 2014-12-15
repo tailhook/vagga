@@ -1,5 +1,6 @@
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir_recursive};
+use std::io::fs::PathExtensions;
 
 use config::builders as B;
 
@@ -72,6 +73,10 @@ impl BuildCommand for B::Builder {
                     let tmpsub = tmppath.join(&tar.subdir);
                     try!(mkdir_recursive(&tmpsub, ALL_PERMISSIONS)
                          .map_err(|e| format!("Error making dir: {}", e)));
+                    if !fpath.exists() {
+                        try!(mkdir_recursive(&fpath, ALL_PERMISSIONS)
+                             .map_err(|e| format!("Error making dir: {}", e)));
+                    }
                     try!(bind_mount(&fpath, &tmpsub));
                     let res = unpack_file(ctx, &filename, &tmppath,
                         &[tar.subdir.clone()], &[]);
