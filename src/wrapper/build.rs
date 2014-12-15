@@ -84,6 +84,14 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     try!(mkdir(&tgtroot, ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));
     try!(bind_mount(&rootdir, &tgtroot));
+    try!(mkdir(&tgtroot.join("dev"), ALL_PERMISSIONS)
+         .map_err(|x| format!("Error creating directory: {}", x)));
+    try!(mkdir(&tgtroot.join("sys"), ALL_PERMISSIONS)
+         .map_err(|x| format!("Error creating directory: {}", x)));
+    try!(mkdir(&tgtroot.join("proc"), ALL_PERMISSIONS)
+         .map_err(|x| format!("Error creating directory: {}", x)));
+    try!(mkdir(&tgtroot.join("work"), ALL_PERMISSIONS)
+         .map_err(|x| format!("Error creating directory: {}", x)));
     return Ok(());
 }
 

@@ -5,7 +5,7 @@ use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 
 use container::root::change_root;
-use container::mount::{bind_mount, unmount, mount_pseudo};
+use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
@@ -33,14 +33,6 @@ impl Executor for RunCommand {
     fn finish(&self, status: int) -> MonitorStatus {
         return Shutdown(status)
     }
-}
-
-pub fn mount_system_dirs() -> Result<(), String> {
-    try!(bind_mount(&Path::new("/dev"), &Path::new("/vagga/root/dev")));
-    try!(bind_mount(&Path::new("/sys"), &Path::new("/vagga/root/sys")));
-    try!(mount_pseudo(&Path::new("/vagga/root/proc"), "proc", "", false));
-    try!(bind_mount(&Path::new("/work"), &Path::new("/vagga/root/work")));
-    return Ok(());
 }
 
 pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {

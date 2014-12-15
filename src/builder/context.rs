@@ -3,7 +3,7 @@ use std::io::fs::{mkdir_recursive, mkdir};
 use std::io::fs::PathExtensions;
 use std::collections::{TreeMap, TreeSet};
 
-use container::mount::{bind_mount, unmount};
+use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::util::clean_dir;
 use config::Container;
 
@@ -62,6 +62,7 @@ impl BuildContext {
             let path = Path::new("/vagga/root").join(path);
             try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
+            try!(mount_system_dirs());
         }
         return Ok(());
     }
