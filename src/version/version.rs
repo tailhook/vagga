@@ -89,6 +89,15 @@ impl VersionHash for B::Builder {
                 hash.input(&[0]);
                 Hashed
             }
+            &B::AptInstall(ref pkgs) => {
+                hash.input("AptInstall".as_bytes());
+                pkgs.iter().all(|x| {
+                    hash.input(x.as_bytes());
+                    hash.input(&[0]);
+                    true
+                });
+                Hashed
+            }
         }
     }
 }

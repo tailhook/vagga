@@ -1,6 +1,7 @@
 use super::super::context::BuildContext;
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
+use super::generic::run_command;
 
 
 pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
@@ -26,4 +27,16 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
     ctx.add_remove_dir(Path::new("/var/lib/apt"));
     ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
     return Ok(());
+}
+
+pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
+    -> Result<(), String>
+{
+    let mut args = vec!(
+        "/usr/bin/apt-get".to_string(),
+        "install".to_string(),
+        "-y".to_string(),
+        );
+    args.extend(pkgs.clone().into_iter());
+    run_command(ctx, args.as_slice())
 }

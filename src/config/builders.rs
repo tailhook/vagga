@@ -56,7 +56,7 @@ pub enum Builder {
     //AddUbuntuPPA(String),
 
     // -- Ubuntu/Debian --
-    //AptGetInstall(Vec<String>),
+    AptInstall(Vec<String>),
     //AddDebianRepo(DebianRepo),
     //AddAptKey(AptKey),
 
@@ -126,6 +126,10 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     .. Default::default() } as Box<V::Validator>),
             ),
         .. Default::default() } as Box<V::Validator>),
+        ("AptInstall".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
 
@@ -179,7 +183,15 @@ impl Show for Builder {
                 try!(tar.path.display().fmt(fmt));
                 try!(", subdir: ".fmt(fmt));
                 try!(tar.subdir.display().fmt(fmt));
-                try!("}".fmt(fmt));
+                try!(" }".fmt(fmt));
+            }
+            &AptInstall(ref pkgs) => {
+                try!("!AptInstall [ ".fmt(fmt));
+                for pkg in pkgs.iter() {
+                    try!(pkg.fmt(fmt));
+                    try!(", ".fmt(fmt));
+                }
+                try!(" ]".fmt(fmt));
             }
         }
         return Ok(());

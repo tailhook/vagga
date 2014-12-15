@@ -1,6 +1,13 @@
+use std::io::ALL_PERMISSIONS;
+use std::io::fs::{mkdir_recursive};
+use std::io::fs::PathExtensions;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
+use container::mount::{bind_mount, unmount};
+use config::builders::TarInfo;
+
 use super::context::BuildContext;
+use super::download::download_file;
 
 
 pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
@@ -36,4 +43,31 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
         Ok(val) => Err(format!("Tar exited with status: {}", val)),
         Err(x) => Err(format!("Error running tar: {}", x)),
     }
+}
+
+pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
+{
+    let fpath = Path::new("/vagga/root").join(
+        tar.path.path_relative_from(&Path::new("/")).unwrap());
+    let filename = try!(download_file(ctx, &tar.url));
+    // TODO(tailhook) check sha256 sum
+    if tar.subdir == Path::new(".") {
+        try!(unpack_file(ctx, &filename, &fpath, &[], &[]));
+    } else {
+        let tmppath = Path::new("/vagga/root/tmp")
+            .join(filename.filename_str().unwrap());
+        let tmpsub = tmppath.join(&tar.subdir);
+        try!(mkdir_recursive(&tmpsub, ALL_PERMISSIONS)
+             .map_err(|e| format!("Error making dir: {}", e)));
+        if !fpath.exists() {
+            try!(mkdir_recursive(&fpath, ALL_PERMISSIONS)
+                 .map_err(|e| format!("Error making dir: {}", e)));
+        }
+        try!(bind_mount(&fpath, &tmpsub));
+        let res = unpack_file(ctx, &filename, &tmppath,
+            &[tar.subdir.clone()], &[]);
+        try!(unmount(&tmpsub));
+        try!(res);
+    }
+    Ok(())
 }
