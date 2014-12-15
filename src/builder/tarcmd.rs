@@ -4,7 +4,7 @@ use super::context::BuildContext;
 
 
 pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
-    includes: &[Path])
+    includes: &[Path], excludes: &[Path])
     -> Result<(), String>
 {
     info!("Unpacking {} -> {}", src.display(), tgt.display());
@@ -16,6 +16,9 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
         .arg("-C").arg(tgt);
     for i in includes.iter() {
         cmd.arg(i);
+    }
+    for i in excludes.iter() {
+        cmd.arg("--exclude").arg(i);
     }
 
     match src.extension_str() {

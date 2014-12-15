@@ -64,8 +64,8 @@ impl BuildCommand for B::Builder {
                     tar.path.path_relative_from(&Path::new("/")).unwrap());
                 let filename = try!(download_file(ctx, &tar.url));
                 // TODO(tailhook) check sha256 sum
-                if tar.subdir.as_vec().len() == 0 {
-                    try!(unpack_file(ctx, &filename, &fpath, &[]));
+                if tar.subdir == Path::new(".") {
+                    try!(unpack_file(ctx, &filename, &fpath, &[], &[]));
                 } else {
                     let tmppath = Path::new("/vagga/root/tmp")
                         .join(filename.filename_str().unwrap());
@@ -74,7 +74,7 @@ impl BuildCommand for B::Builder {
                          .map_err(|e| format!("Error making dir: {}", e)));
                     try!(bind_mount(&fpath, &tmpsub));
                     let res = unpack_file(ctx, &filename, &tmppath,
-                        &[tar.subdir.clone()]);
+                        &[tar.subdir.clone()], &[]);
                     try!(unmount(&tmpsub));
                     try!(res);
                 }
