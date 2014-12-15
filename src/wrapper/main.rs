@@ -14,7 +14,7 @@ extern crate config;
 use std::io::stderr;
 use std::io::ALL_PERMISSIONS;
 use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
-use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
+use std::os::{getcwd, set_exit_status, self_exe_path};
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
 
@@ -23,7 +23,6 @@ use container::signal;
 use container::mount::{mount_tmpfs, bind_mount, unmount};
 use container::mount::{mount_ro_recursive, mount_pseudo};
 use container::root::change_root;
-use container::monitor::{Monitor};
 use settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List};
 
@@ -105,10 +104,10 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
                             "to run `ln -sfn {} .vagga/.lnk`").to_string());
                     }
                     if !lnkdir.exists() {
-                        return Err(concat!("Your .vagga/.lnk points to a ",
-                            "non-existent directory. Presumably you deleted ",
-                            "dir {}. Just remove .vagga/.lnk now."
-                            ).to_string());
+                        return Err(format!("Your .vagga/.lnk points to a \
+                            non-existent directory. Presumably you deleted \
+                            dir {}. Just remove .vagga/.lnk now.",
+                            lnk.display()));
                     }
                     return Ok(target);
                 } else {
@@ -121,6 +120,7 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
                 let target = try!(create_storage_dir(dir, project_root));
                 try!(safe_ensure_dir(&target));
                 try_str!(symlink(&target, &lnkdir));
+                try_str!(symlink(project_root, &target.join(".lnk")));
                 return Ok(target)
             }
             Err(ref e) => {
