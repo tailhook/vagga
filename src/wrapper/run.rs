@@ -3,12 +3,19 @@ use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
+use std::io::stdio::{stdout, stderr};
+
+use argparse::{ArgumentParser, Store, List};
 
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
+use config::Settings;
+
+use super::build;
+use super::run;
 
 
 struct RunCommand {
@@ -35,23 +42,26 @@ impl Executor for RunCommand {
     }
 }
 
-pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
+pub fn run_command(container: &String, args: &[String])
+    -> Result<int, String>
+{
     let tgtroot = Path::new("/vagga/root");
     if !tgtroot.exists() {
         try!(mkdir(&tgtroot, ALL_PERMISSIONS)
-             .map_err(|x| error!("Error creating directory: {}", x)));
+             .map_err(|x| format!("Error creating directory: {}", x)));
     }
-    try!(bind_mount(&Path::new("/vagga/roots").join(container).join("root"),
+    try!(bind_mount(&Path::new("/vagga/roots")
+                     .join(container.as_slice()).join("root"),
                     &tgtroot)
-         .map_err(|e| error!("Error bind mount: {}", e)));
+         .map_err(|e| format!("Error bind mount: {}", e)));
     try!(mount_system_dirs()
-        .map_err(|e| error!("Error mounting system dirs: {}", e)));
+        .map_err(|e| format!("Error mounting system dirs: {}", e)));
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
-         .map_err(|e| error!("Error changing root: {}", e)));
+         .map_err(|e| format!("Error changing root: {}", e)));
     try!(unmount(&Path::new("/work/.vagga/.mnt"))
-         .map_err(|e| error!("Error unmounting `.vagga/.mnt`: {}", e)));
+         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
     try!(unmount(&Path::new("/tmp"))
-         .map_err(|e| error!("Error unmounting old root: {}", e)));
+         .map_err(|e| format!("Error unmounting old root: {}", e)));
 
     let mut mon = Monitor::new();
     let mut cmd = Path::new(args[0].as_slice());
@@ -75,9 +85,8 @@ pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
             }
         }
         if !cmd.is_absolute() {
-            error!("Command {} not found in {}",
-                cmd.display(), paths.as_slice());
-            return Err(());
+            return Err(format!("Command {} not found in {}",
+                cmd.display(), paths.as_slice()));
         }
     }
 
@@ -89,4 +98,37 @@ pub fn run_command(container: String, args: &[String]) -> Result<int, ()> {
         Killed => return Ok(1),
         Exit(val) => return Ok(val),
     };
+}
+
+pub fn run_command_cmd(_settings: &Settings, cmdline: Vec<String>)
+    -> Result<int, String>
+{
+    let mut container: String = "".to_string();
+    let mut command: String = "".to_string();
+    let mut args = Vec::new();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Runs arbitrary command inside the container
+            ");
+        ap.refer(&mut container)
+            .add_argument("container_name", box Store::<String>,
+                "Container name to build");
+        ap.refer(&mut command)
+            .add_argument("command", box Store::<String>,
+                "Command to run inside the container");
+        ap.refer(&mut args)
+            .add_argument("args", box List::<String>,
+                "Arguments for the command");
+        ap.stop_on_first_argument(true);
+        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    return build::build_container(container, false)
+            .and_then(|_| run::run_command(&command, args.as_slice()));
 }

@@ -262,34 +262,21 @@ pub fn run() -> int {
         err.write_line(text.as_slice()).ok();
         return 122;
     }
+    args.insert(0, format!("vagga {}", cmd));
 
-    match cmd.as_slice() {
-        "_build_shell" => {
-            return debug::run_interactive_build_shell();
-        }
-        "_build" => {
-            return match build::build_container(args[0].to_string()) {
-                Ok(_) => 0,
-                Err(x) => x,
-            };
-        }
-        "_version_hash" => {
-            return match build::print_version_hash(args[0].to_string()) {
-                Ok(()) => 0,
-                Err(x) => x,
-            };
-        }
-        "_run" => {
-            let name = match build::build_container(args[0].to_string()) {
-                Ok(name) => name,
-                Err(x) => return x,
-            };
-            match run::run_command(name, args[1..]) {
-                Ok(x) => return x,
-                Err(()) => return 124,
-            }
-        }
+    let result = match cmd.as_slice() {
+        "_build_shell" => Ok(debug::run_interactive_build_shell()),
+        "_build" => build::build_container_cmd(&int_settings, args),
+        "_version_hash" => build::print_version_hash_cmd(&int_settings, args),
+        "_run" => run::run_command_cmd(&int_settings, args),
         _ => unimplemented!(),
+    };
+    match result {
+        Ok(x) => return x,
+        Err(e) => {
+            error!("Error executing {}: {}", cmd, e);
+            return 124;
+        }
     };
 }
 

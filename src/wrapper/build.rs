@@ -6,12 +6,16 @@ use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
 use std::cell::RefCell;
 use std::io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename};
 use std::io::fs::PathExtensions;
+use std::io::stdio::{stdout, stderr};
 use libc::funcs::posix88::unistd::close;
+
+use argparse::{ArgumentParser, Store};
 
 use container::mount::{bind_mount};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
+use config::settings::Settings;
 
 
 struct RunBuilder {
@@ -113,7 +117,7 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     return Ok(());
 }
 
-pub fn print_version_hash(container: String) -> Result<(), int> {
+pub fn get_version_hash(container: String) -> Result<Option<String>, String> {
     let mut mon = Monitor::new();
     let ver = Rc::new(RefCell::new("".to_string()));
     mon.add(Rc::new("version".to_string()), box RunVersion {
@@ -122,16 +126,17 @@ pub fn print_version_hash(container: String) -> Result<(), int> {
         result: ver.clone(),
     });
     match mon.run() {
-        Killed => return Err(1),
+        Killed => return Err(format!("Versioner has died")),
         Exit(0) => {},
-        Exit(29) => return Err(29),
-        Exit(val) => return Err(val),
+        Exit(29) => return Ok(None),
+        Exit(val) => return Err(format!("Versioner exited with code {}", val)),
     };
-    println!("{}", ver.borrow());
-    return Ok(());
+    return Ok(Some(ver.borrow().to_string()));
 }
 
-pub fn build_container(container: String) -> Result<String, int> {
+pub fn build_container(container: String, force: bool)
+    -> Result<String, String>
+{
     let mut mon = Monitor::new();
     let ver = Rc::new(RefCell::new("".to_string()));
     mon.add(Rc::new("version".to_string()), box RunVersion {
@@ -140,7 +145,8 @@ pub fn build_container(container: String) -> Result<String, int> {
         result: ver.clone(),
     });
     match mon.run() {
-        Killed => return Err(1),
+        Killed => return Err(format!("Builder has died")),
+        Exit(0) if force => {}
         Exit(0) => {
             debug!("Container version: {}", ver.borrow());
             let name = format!("{}.{}", container,
@@ -154,24 +160,23 @@ pub fn build_container(container: String) -> Result<String, int> {
             }
         },
         Exit(29) => {},
-        Exit(val) => return Err(val),
+        Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
     debug!("Container version: {}", ver.borrow());
     let tmppath = Path::new(format!("/vagga/roots/.tmp.{}", container));
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
         Err(x) => {
-            error!("Error preparing root dir: {}", x);
-            return Err(124);
+            return Err(format!("Error preparing root dir: {}", x));
         }
     }
     mon.add(Rc::new("build".to_string()), box RunBuilder {
         container: container.to_string(),
     });
     match mon.run() {
-        Killed => return Err(1),
+        Killed => return Err(format!("Builder has died")),
         Exit(0) => {},
-        Exit(val) => return Err(val),
+        Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
     if ver.borrow().len() != 64 {
         mon.add(Rc::new("version".to_string()), box RunVersion {
@@ -180,14 +185,14 @@ pub fn build_container(container: String) -> Result<String, int> {
             result: ver.clone(),
         });
         match mon.run() {
-            Killed => return Err(1),
+            Killed => return Err(format!("Builder has died")),
             Exit(0) => {},
             Exit(29) => {
-                error!("Internal Error: \
-                        Can't version even after build");
-                return Err(124);
+                return Err(format!("Internal Error: \
+                        Can't version even after build"));
             },
-            Exit(val) => return Err(val),
+            Exit(val) => return Err(format!("Builder exited with code {}",
+                                    val)),
         };
     }
     let name = format!("{}.{}", container,
@@ -198,9 +203,66 @@ pub fn build_container(container: String) -> Result<String, int> {
     match commit_root(&tmppath, &finalpath) {
         Ok(()) => {}
         Err(x) => {
-            error!("Error committing root dir: {}", x);
-            return Err(124);
+            return Err(format!("Error committing root dir: {}", x));
         }
     }
     return Ok(name);
 }
+
+pub fn build_container_cmd(settings: &Settings, cmdline: Vec<String>)
+    -> Result<int, String>
+{
+    let mut name: String = "".to_string();
+    let mut force: bool = false;
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Internal vagga tool to setup basic system sandbox
+            ");
+        ap.refer(&mut name)
+            .add_argument("container_name", box Store::<String>,
+                "Container name to build");
+        ap.refer(&mut force)
+            .add_option(&["--force"], box Store::<bool>,
+                "Force build even if container is considered up to date");
+        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    return build_container(name, force)
+        .map(|x| debug!("Built container with name {}", x))
+        .map(|()| 0);
+}
+
+pub fn print_version_hash_cmd(settings: &Settings, cmdline: Vec<String>)
+    -> Result<int, String>
+{
+    let mut name: String = "".to_string();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Prints version hash of the container without building it. If
+            this command exits with code 29, then container can't be versioned
+            before the build.
+            ");
+        ap.refer(&mut name)
+            .add_argument("container_name", box Store::<String>,
+                "Container name to build");
+        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    return get_version_hash(name)
+        .map(|ver| ver
+            .map(|x| println!("{}", x)).map(|()| 0)
+            .unwrap_or(29));
+}
+

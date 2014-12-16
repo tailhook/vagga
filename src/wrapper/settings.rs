@@ -87,6 +87,7 @@ pub fn read_settings(project_root: &Path)
     };
     let mut int_settings = Settings {
         version_check: true,
+        uid_map: None,
     };
     let mut secure_files = vec!();
     if let Some(home) = getenv("VAGGA_USER_HOME") {
