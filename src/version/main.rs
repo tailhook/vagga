@@ -12,10 +12,13 @@ extern crate config;
 #[phase(plugin, link)] extern crate container;
 
 use std::os::{set_exit_status};
+use std::io::fs::File;
+use std::default::Default;
 use std::io::pipe::PipeStream;
 use libc::funcs::posix88::unistd::dup2;
 
 use config::read_config;
+use config::Settings;
 use container::signal;
 use argparse::{ArgumentParser, Store};
 use container::sha256::{Sha256, Digest};
@@ -27,6 +30,7 @@ mod version;
 pub fn run() -> int {
     signal::block_all();
     let mut container: String = "".to_string();
+    let mut settings: Settings = Default::default();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -36,6 +40,9 @@ pub fn run() -> int {
           .add_argument("container", box Store::<String>,
                 "A container to version")
           .required();
+        ap.refer(&mut settings)
+          .add_option(&["--settings"], box Store::<Settings>,
+                "User settings for the container build");
         match ap.parse_args() {
             Ok(()) => {}
             Err(0) => return 0,
@@ -50,6 +57,14 @@ pub fn run() -> int {
         .expect("Container not found");  // TODO
     debug!("Versioning items: {}", cont.setup.len());
     let mut hash = Sha256::new();
+    hash.input(File::open(&Path::new("/proc/self/uid_map"))
+               .and_then(|mut f| f.read_to_end())
+               .ok().expect("Can't read uid_map")
+               .as_slice());
+    hash.input(File::open(&Path::new("/proc/self/gid_map"))
+               .and_then(|mut f| f.read_to_end())
+               .ok().expect("Can't read gid_map")
+               .as_slice());
     for b in cont.setup.iter() {
         debug!("Versioning setup: {}", b);
         match b.hash(&mut hash) {

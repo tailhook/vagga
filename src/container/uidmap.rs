@@ -1,13 +1,15 @@
 use std::io::{IoError, OtherIoError};
 use std::io::{File, Open, Write};
-use std::io::BufferedReader;
+use std::io::{BufferedReader, MemWriter};
 use std::cmp::min;
+use std::from_str::FromStr;
 use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
 use libc::{pid_t, uid_t, gid_t};
 
 use config::Range;
+use config::Settings;
 use super::util::get_user_name;
 
 pub enum Uidmap {
@@ -77,10 +79,14 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
     loop {
         if reqval.start == 0 {
             reqval = reqval.shift(1);
-            continue;
+        }
+        if allowval.start == 0 {
+            allowval = allowval.shift(1);
         }
         let clen = min(reqval.len(), allowval.len());
-        res.push((reqval.start, allowval.start, clen));
+        if clen > 0 {
+            res.push((reqval.start, allowval.start, clen));
+        }
         reqval = reqval.shift(clen);
         allowval = allowval.shift(clen);
         if reqval.len() == 0 {
@@ -242,9 +248,66 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                         }),
                 }
             } else {
-                unimplemented!();
+                let mut membuf = MemWriter::new();
+                for &(ins, outs, cnt) in uids.iter() {
+                    try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
+                }
+                let mut file = try!(File::create(&Path::new(
+                    format!("/proc/{}/uid_map", pid))));
+                let value = membuf.unwrap();
+                debug!("Writing uid map ```{}```",
+                    String::from_utf8_lossy(value.as_slice()));
+                try!(file.write(value.as_slice()));
+
+                let mut membuf = MemWriter::new();
+                for &(ins, outs, cnt) in gids.iter() {
+                    try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
+                }
+                let mut file = try!(File::create(&Path::new(
+                    format!("/proc/{}/gid_map", pid))));
+                let value = membuf.unwrap();
+                debug!("Writing gid map ```{}```",
+                    String::from_utf8_lossy(value.as_slice()));
+                try!(file.write(value.as_slice()));
             }
         }
     }
     return Ok(());
+}
+
+fn read_outside_ranges(path: &str) -> Result<Vec<Range>, String> {
+    let mut file = BufferedReader::new(try!(File::open(&Path::new(path))
+        .map_err(|e| format!("Error reading uid/gid map: {}", e))));
+    let mut result = vec!();
+    for line in file.lines() {
+        let line = try!(line
+            .map_err(|e| format!("Error reading uid/gid map: {}", e)));
+        let mut words = line.as_slice().words();
+        let outside = try!(words.next().and_then(FromStr::from_str)
+            .ok_or(format!("uid/gid map format error")));
+        try!(words.next()
+            .ok_or(format!("uid/gid map format error")));
+        let count = try!(words.next().and_then(FromStr::from_str)
+            .ok_or(format!("uid/gid map format error")));
+        result.push(Range { start: outside, end: outside+count-1 });
+    }
+    return Ok(result);
+}
+
+pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
+    -> Result<Settings, String>
+{
+    let mut result = settings.clone();
+    let default_uids = vec!(Range { start: 0, end: 0 });
+    let default_gids = vec!(Range { start: 0, end: 0 });
+    let uids = if uids.len() > 0 { uids } else { &default_uids };
+    let gids = if gids.len() > 0 { gids } else { &default_gids };
+    if result.uid_map.is_none() {
+        let ranges = try!(read_outside_ranges("/proc/self/uid_map"));
+        let uid_map = match_ranges(uids, &ranges, 0);
+        let ranges = try!(read_outside_ranges("/proc/self/gid_map"));
+        let gid_map = match_ranges(gids, &ranges, 0);
+        result.uid_map = Some((uid_map, gid_map));
+    }
+    return Ok(result);
 }

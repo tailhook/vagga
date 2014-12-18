@@ -11,6 +11,7 @@ use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 
 use libc::{c_int, c_char, pid_t};
+use libc::{uid_t, gid_t};
 
 
 #[deriving(Show)]
@@ -123,6 +124,10 @@ impl Command {
     pub fn set_max_uidmap(&mut self) {
         self.namespaces.add(NewUser);
         self.uidmap = Some(get_max_uidmap().unwrap());
+    }
+    pub fn set_uidmap(&mut self, uidmap: Uidmap) {
+        self.namespaces.add(NewUser);
+        self.uidmap = Some(uidmap);
     }
     pub fn container(&mut self) {
         // Mount and user namespaces are set separately

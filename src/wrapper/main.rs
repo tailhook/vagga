@@ -266,9 +266,12 @@ pub fn run() -> int {
 
     let result = match cmd.as_slice() {
         "_build_shell" => Ok(debug::run_interactive_build_shell()),
-        "_build" => build::build_container_cmd(&int_settings, args),
-        "_version_hash" => build::print_version_hash_cmd(&int_settings, args),
-        "_run" => run::run_command_cmd(&int_settings, args),
+        "_build" => build::build_container_cmd(
+            &config, &int_settings, args),
+        "_version_hash" => build::print_version_hash_cmd(
+            &config, &int_settings, args),
+        "_run" => run::run_command_cmd(
+            &config, &int_settings, args),
         _ => unimplemented!(),
     };
     match result {

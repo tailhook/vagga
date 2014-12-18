@@ -9,24 +9,29 @@ use argparse::{ArgumentParser, Store, List};
 
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs};
+use container::uidmap::{map_users, Ranges, Singleton};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
-use config::Settings;
+use config::{Settings, Config};
 
 use super::build;
 use super::run;
 
 
-struct RunCommand {
+struct RunCommand<'a> {
     cmd: Path,
     args: Vec<String>,
+    settings: &'a Settings,
 }
 
-impl Executor for RunCommand {
+impl<'a> Executor for RunCommand<'a> {
     fn command(&self) -> Command {
         let mut cmd = Command::new("run".to_string(), &self.cmd);
         cmd.args(self.args.as_slice());
+        cmd.set_uidmap(self.settings.uid_map.as_ref()
+            .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
+            .unwrap_or(Singleton(0, 0)));
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
         if let Some(x) = getenv("RUST_LOG") {
@@ -42,7 +47,8 @@ impl Executor for RunCommand {
     }
 }
 
-pub fn run_command(container: &String, command: &String, args: &[String])
+pub fn run_command(settings: &Settings, container: &String,
+    command: &String, args: &[String])
     -> Result<int, String>
 {
     let tgtroot = Path::new("/vagga/root");
@@ -93,6 +99,7 @@ pub fn run_command(container: &String, command: &String, args: &[String])
     mon.add(Rc::new("run".to_string()), box RunCommand {
         cmd: cmd,
         args: args,
+        settings: settings,
     });
     match mon.run() {
         Killed => return Ok(1),
@@ -100,7 +107,8 @@ pub fn run_command(container: &String, command: &String, args: &[String])
     };
 }
 
-pub fn run_command_cmd(_settings: &Settings, cmdline: Vec<String>)
+pub fn run_command_cmd(config: &Config, settings: &Settings,
+    cmdline: Vec<String>)
     -> Result<int, String>
 {
     let mut container: String = "".to_string();
@@ -129,6 +137,10 @@ pub fn run_command_cmd(_settings: &Settings, cmdline: Vec<String>)
             }
         }
     }
-    return build::build_container(container, false)
-            .and_then(|cont| run_command(&cont, &command, args.as_slice()));
+    let cconfig = try!(config.containers.find(&container)
+        .ok_or(format!("Container {} not found", container)));
+    let settings = try!(map_users(settings, &cconfig.uids, &cconfig.gids));
+    return build::build_container(container, false, &settings)
+        .and_then(|cont|
+            run_command(&settings, &cont, &command, args.as_slice()));
 }

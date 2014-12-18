@@ -8,6 +8,7 @@ use std::io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
 use libc::funcs::posix88::unistd::close;
+use serialize::json;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
@@ -15,25 +16,33 @@ use container::mount::{bind_mount};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
-use config::settings::Settings;
+use container::uidmap::{map_users, Ranges, Singleton};
+use config::{Settings, Config};
 
 
-struct RunBuilder {
+struct RunBuilder<'a> {
     container: String,
+    settings: &'a Settings,
 }
 
-struct RunVersion {
+struct RunVersion<'a> {
     container: String,
     pipe: Pipe,
     result: Rc<RefCell<String>>,
+    settings: &'a Settings,
 }
 
-impl Executor for RunVersion {
+impl<'a> Executor for RunVersion<'a> {
     fn command(&self) -> Command {
         let mut cmd = Command::new("vagga_version".to_string(),
             Path::new("/vagga/bin/vagga_version"));
         cmd.keep_sigmask();
+        cmd.set_uidmap(self.settings.uid_map.as_ref()
+            .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
+            .unwrap_or(Singleton(0, 0)));
         cmd.arg(self.container.as_slice());
+        cmd.arg("--settings");
+        cmd.arg(json::encode(self.settings));
         cmd.set_env("TERM".to_string(), "dumb".to_string());
         cmd.set_stdout_fd(self.pipe.writer);
         if let Some(x) = getenv("RUST_LOG") {
@@ -53,12 +62,18 @@ impl Executor for RunVersion {
     }
 }
 
-impl Executor for RunBuilder {
+impl<'a> Executor for RunBuilder<'a> {
     fn command(&self) -> Command {
         let mut cmd = Command::new("vagga_build".to_string(),
             Path::new("/vagga/bin/vagga_build"));
         cmd.keep_sigmask();
+        cmd.set_uidmap(self.settings.uid_map.as_ref()
+            .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
+            .unwrap_or(Singleton(0, 0)));
+        cmd.container();
         cmd.arg(self.container.as_slice());
+        cmd.arg("--settings");
+        cmd.arg(json::encode(self.settings));
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
         if let Some(x) = getenv("RUST_LOG") {
@@ -117,13 +132,16 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     return Ok(());
 }
 
-pub fn get_version_hash(container: String) -> Result<Option<String>, String> {
+pub fn get_version_hash(container: String, settings: &Settings)
+    -> Result<Option<String>, String>
+{
     let mut mon = Monitor::new();
     let ver = Rc::new(RefCell::new("".to_string()));
     mon.add(Rc::new("version".to_string()), box RunVersion {
         container: container,
         pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
         result: ver.clone(),
+        settings: settings,
     });
     match mon.run() {
         Killed => return Err(format!("Versioner has died")),
@@ -134,7 +152,7 @@ pub fn get_version_hash(container: String) -> Result<Option<String>, String> {
     return Ok(Some(ver.borrow().to_string()));
 }
 
-pub fn build_container(container: String, force: bool)
+pub fn build_container(container: String, force: bool, settings: &Settings)
     -> Result<String, String>
 {
     let mut mon = Monitor::new();
@@ -143,6 +161,7 @@ pub fn build_container(container: String, force: bool)
         container: container.clone(),
         pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
         result: ver.clone(),
+        settings: settings,
     });
     match mon.run() {
         Killed => return Err(format!("Builder has died")),
@@ -172,6 +191,7 @@ pub fn build_container(container: String, force: bool)
     }
     mon.add(Rc::new("build".to_string()), box RunBuilder {
         container: container.to_string(),
+        settings: settings,
     });
     match mon.run() {
         Killed => return Err(format!("Builder has died")),
@@ -183,6 +203,7 @@ pub fn build_container(container: String, force: bool)
             container: container.to_string(),
             pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
             result: ver.clone(),
+            settings: settings,
         });
         match mon.run() {
             Killed => return Err(format!("Builder has died")),
@@ -209,7 +230,8 @@ pub fn build_container(container: String, force: bool)
     return Ok(name);
 }
 
-pub fn build_container_cmd(settings: &Settings, cmdline: Vec<String>)
+pub fn build_container_cmd(config: &Config, settings: &Settings,
+    cmdline: Vec<String>)
     -> Result<int, String>
 {
     let mut name: String = "".to_string();
@@ -233,12 +255,16 @@ pub fn build_container_cmd(settings: &Settings, cmdline: Vec<String>)
             }
         }
     }
-    return build_container(name, force)
+    let container = try!(config.containers.find(&name)
+        .ok_or(format!("Container {} not found", name)));
+    let settings = try!(map_users(settings, &container.uids, &container.gids));
+    return build_container(name, force, &settings)
         .map(|x| debug!("Built container with name {}", x))
         .map(|()| 0);
 }
 
-pub fn print_version_hash_cmd(settings: &Settings, cmdline: Vec<String>)
+pub fn print_version_hash_cmd(config: &Config, settings: &Settings,
+    cmdline: Vec<String>)
     -> Result<int, String>
 {
     let mut name: String = "".to_string();
@@ -260,7 +286,10 @@ pub fn print_version_hash_cmd(settings: &Settings, cmdline: Vec<String>)
             }
         }
     }
-    return get_version_hash(name)
+    let container = try!(config.containers.find(&name)
+        .ok_or(format!("Container {} not found", name)));
+    let settings = try!(map_users(settings, &container.uids, &container.gids));
+    return get_version_hash(name, &settings)
         .map(|ver| ver
             .map(|x| println!("{}", x)).map(|()| 0)
             .unwrap_or(29));

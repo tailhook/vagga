@@ -11,9 +11,11 @@ extern crate libc;
 extern crate config;
 #[phase(plugin, link)] extern crate container;
 
+use std::default::Default;
 use std::os::{set_exit_status};
 
 use config::read_config;
+use config::Settings;
 use container::signal;
 use argparse::{ArgumentParser, Store};
 use self::context::{BuildContext};
@@ -32,6 +34,7 @@ mod commands {
 pub fn run() -> int {
     signal::block_all();
     let mut container: String = "".to_string();
+    let mut settings: Settings = Default::default();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -41,6 +44,9 @@ pub fn run() -> int {
           .add_argument("container", box Store::<String>,
                 "A container to version")
           .required();
+        ap.refer(&mut settings)
+          .add_option(&["--settings"], box Store::<Settings>,
+                "User settings for the container build");
         match ap.parse_args() {
             Ok(()) => {}
             Err(0) => return 0,
