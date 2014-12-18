@@ -1,3 +1,6 @@
+use std::io::fs::File;
+
+
 use super::super::context::BuildContext;
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
@@ -21,6 +24,19 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
 }
 
 fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
+
+    // Do not attempt to start init scripts
+    try!(File::create(
+            &Path::new("/vagga/root/usr/sbin/policy-rc.d"))
+        .and_then(|mut f| f.write(b"#!/bin/sh\nexit 101\n"))
+        .map_err(|e| format!("Error writing policy-rc.d file: {}", e)));
+
+    // Do not need to fsync() after package installation
+    try!(File::create(
+            &Path::new("/vagga/root/etc/dpkg/dpkg.cfg.d/02apt-speedup"))
+        .and_then(|mut f| f.write(b"force-unsafe-io"))
+        .map_err(|e| format!("Error writing dpkg config: {}", e)));
+
     try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
                            "apt-cache".to_string()));
     // TODO(tailhook) remove apt and dpkg
