@@ -9,7 +9,7 @@ use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
 use libc::funcs::posix88::unistd::close;
 
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, StoreTrue};
 
 use container::mount::{bind_mount};
 use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
@@ -223,7 +223,7 @@ pub fn build_container_cmd(settings: &Settings, cmdline: Vec<String>)
             .add_argument("container_name", box Store::<String>,
                 "Container name to build");
         ap.refer(&mut force)
-            .add_option(&["--force"], box Store::<bool>,
+            .add_option(&["--force"], box StoreTrue,
                 "Force build even if container is considered up to date");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

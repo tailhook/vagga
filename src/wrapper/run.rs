@@ -42,7 +42,7 @@ impl Executor for RunCommand {
     }
 }
 
-pub fn run_command(container: &String, args: &[String])
+pub fn run_command(container: &String, command: &String, args: &[String])
     -> Result<int, String>
 {
     let tgtroot = Path::new("/vagga/root");
@@ -64,8 +64,8 @@ pub fn run_command(container: &String, args: &[String])
          .map_err(|e| format!("Error unmounting old root: {}", e)));
 
     let mut mon = Monitor::new();
-    let mut cmd = Path::new(args[0].as_slice());
-    let args = args[1..].clone().to_vec();
+    let mut cmd = Path::new(command.as_slice());
+    let args = args.clone().to_vec();
     if cmd.is_absolute() {
     } else {
         let paths = [
@@ -130,5 +130,5 @@ pub fn run_command_cmd(_settings: &Settings, cmdline: Vec<String>)
         }
     }
     return build::build_container(container, false)
-            .and_then(|_| run::run_command(&command, args.as_slice()));
+            .and_then(|cont| run_command(&cont, &command, args.as_slice()));
 }
