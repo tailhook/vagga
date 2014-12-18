@@ -50,9 +50,6 @@ impl Executor for RunWrapper {
         cmd.set_max_uidmap();
         return cmd;
     }
-    fn finish(&self, status: int) -> MonitorStatus {
-        return Shutdown(status);
-    }
 }
 
 

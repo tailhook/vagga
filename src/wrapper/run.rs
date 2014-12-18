@@ -42,9 +42,6 @@ impl<'a> Executor for RunCommand<'a> {
         }
         return cmd;
     }
-    fn finish(&self, status: int) -> MonitorStatus {
-        return Shutdown(status)
-    }
 }
 
 pub fn run_command(settings: &Settings, container: &String,

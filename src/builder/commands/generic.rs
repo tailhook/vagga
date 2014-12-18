@@ -21,9 +21,6 @@ impl<'a> Executor for RunCommand<'a> {
         }
         return cmd;
     }
-    fn finish(&self, status: int) -> MonitorStatus {
-        return Shutdown(status)
-    }
 }
 
 fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {

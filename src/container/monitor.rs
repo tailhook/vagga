@@ -29,7 +29,7 @@ pub enum MonitorStatus {
 pub trait Executor {
     fn prepare(&self) -> MonitorStatus { return Run; }
     fn command(&self) -> Command;
-    fn finish(&self, _status: int) -> MonitorStatus { return Run; }
+    fn finish(&self, status: int) -> MonitorStatus { return Shutdown(status); }
 }
 
 pub struct Process<'a> {

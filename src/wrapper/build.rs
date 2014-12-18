@@ -55,9 +55,13 @@ impl<'a> Executor for RunVersion<'a> {
     }
     fn finish(&self, status: int) -> MonitorStatus {
         unsafe { close(self.pipe.writer) };
-        let mut rd = PipeStream::open(self.pipe.reader);
-        *self.result.borrow_mut() = rd.read_to_string()
-                                      .unwrap_or("".to_string());
+        if status == 0 {
+            let mut rd = PipeStream::open(self.pipe.reader);
+            *self.result.borrow_mut() = rd.read_to_string()
+                                          .unwrap_or("".to_string());
+        } else {
+            unsafe { close(self.pipe.reader) };
+        }
         return Shutdown(status)
     }
 }
@@ -83,9 +87,6 @@ impl<'a> Executor for RunBuilder<'a> {
             cmd.set_env("RUST_BACKTRACE".to_string(), x);
         }
         return cmd;
-    }
-    fn finish(&self, status: int) -> MonitorStatus {
-        return Shutdown(status)
     }
 }
 
