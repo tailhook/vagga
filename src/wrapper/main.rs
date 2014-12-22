@@ -19,6 +19,7 @@ use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
 
 use config::find_config;
+use config::command::main::{Command, Supervise};
 use container::signal;
 use container::mount::{mount_tmpfs, bind_mount, unmount};
 use container::mount::{mount_ro_recursive, mount_pseudo};
@@ -30,6 +31,8 @@ mod settings;
 mod debug;
 mod build;
 mod run;
+mod supervise;
+mod commandline;
 
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
@@ -272,7 +275,22 @@ pub fn run() -> int {
             &config, &int_settings, args),
         "_run" => run::run_command_cmd(
             &config, &int_settings, args),
-        _ => unimplemented!(),
+        _ => {
+            match config.commands.find(&cmd) {
+                Some(&Command(ref cmd_info)) => {
+                    commandline::commandline_cmd(cmd_info,
+                        &config, &int_settings, args)
+                }
+                Some(&Supervise(ref svc_info)) => {
+                    supervise::supervise_cmd(svc_info,
+                        &config, &int_settings, args)
+                }
+                None => {
+                    error!("Unknown command {}", cmd);
+                    return 127;
+                }
+            }
+        }
     };
     match result {
         Ok(x) => return x,

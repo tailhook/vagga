@@ -77,7 +77,7 @@ pub struct SuperviseInfo {
     pub children: TreeMap<String, ChildCommand>,
 }
 
-mod main {
+pub mod main {
     use super::{CommandInfo, SuperviseInfo};
 
     #[deriving(Decodable, PartialEq, Eq, Clone)]
@@ -96,7 +96,7 @@ mod main {
     }
 }
 
-mod child {
+pub mod child {
     use super::{ChildCommandInfo};
 
     #[deriving(Decodable, PartialEq, Eq, Clone)]
