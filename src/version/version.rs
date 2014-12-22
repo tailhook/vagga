@@ -4,7 +4,6 @@ use std::io::fs::File;
 
 use config::builders as B;
 use container::sha256::Digest;
-use container::root::temporary_change_root;
 
 
 pub enum HashResult {

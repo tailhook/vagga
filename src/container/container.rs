@@ -11,7 +11,6 @@ use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 
 use libc::{c_int, c_char, pid_t};
-use libc::{uid_t, gid_t};
 
 
 #[deriving(Show)]

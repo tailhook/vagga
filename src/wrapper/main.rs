@@ -132,7 +132,7 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
     }
 }
 
-fn make_cache_dir(project_root: &Path, vagga_base: &Path,
+fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
     settings: &MergedSettings)
     -> Result<Path, String>
 {

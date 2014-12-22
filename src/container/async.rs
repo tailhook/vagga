@@ -1,12 +1,10 @@
 use std::io::IoError;
-use std::os::errno;
-use std::ptr::null;
 use std::time::Duration;
 use std::collections::PriorityQueue;
 use std::collections::HashMap;
 use time::{Timespec, get_time};
-use libc::{c_int, c_void};
-use libc::consts::os::posix88::{EINTR, ETIMEDOUT, EAGAIN, ECHILD};
+use libc::{c_int};
+use libc::consts::os::posix88::{EINTR, ETIMEDOUT, EAGAIN};
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 
 use super::signal;

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
+use std::os::{getenv};
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
@@ -10,13 +10,12 @@ use argparse::{ArgumentParser, Store, List};
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::uidmap::{map_users, Ranges, Singleton};
-use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
+use container::monitor::{Monitor, Executor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 use config::{Settings, Config};
 
 use super::build;
-use super::run;
 
 
 struct RunCommand<'a> {
@@ -79,7 +78,6 @@ pub fn run_command(settings: &Settings, container: &String,
             "/usr/sbin",
             "/usr/local/sbin",
         ];
-        let prefix = Path::new("/vagga/root");
         for path in paths.iter() {
             let path = Path::new(*path).join(&cmd);
             if path.exists() {

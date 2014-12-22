@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::os::{Pipe, pipe};
 use std::io::PipeStream;
 use std::io::ALL_PERMISSIONS;
-use std::os::{getcwd, set_exit_status, self_exe_path, getenv};
+use std::os::{getenv};
 use std::cell::RefCell;
 use std::io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename};
 use std::io::fs::PathExtensions;

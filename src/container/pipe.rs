@@ -3,7 +3,7 @@ use std::io::{IoError, EndOfFile};
 use std::os::{Pipe, pipe};
 use std::os::errno;
 
-use libc::{c_int, c_void, c_char};
+use libc::{c_int, c_void};
 use libc::funcs::posix88::unistd::{close, write};
 use libc::consts::os::posix88::{EINTR, EAGAIN};
 

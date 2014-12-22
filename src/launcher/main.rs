@@ -14,7 +14,7 @@ use std::io::stderr;
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
 use config::find_config;
 use container::signal;
-use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
+use container::monitor::{Monitor, Executor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 use argparse::{ArgumentParser, Store, List};
@@ -97,7 +97,7 @@ pub fn run() -> int {
             for (k, cmd) in config.commands.iter() {
                 err.write_str("    ").ok();
                 err.write_str(k.as_slice()).ok();
-                match cmd.description {
+                match cmd.description() {
                     Some(ref val) => {
                         if k.len() > 19 {
                             err.write_str("\n                        ").ok();

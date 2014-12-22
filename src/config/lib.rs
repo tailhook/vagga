@@ -19,5 +19,6 @@ pub mod containers;
 pub mod range;
 pub mod builders;
 pub mod config;
+pub mod command;
 
 

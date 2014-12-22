@@ -30,7 +30,7 @@ pub fn print_list(config: &Config, args: Vec<String>)
     let mut out = stdout();
     for (k, cmd) in config.commands.iter() {
         out.write_str(k.as_slice()).ok();
-        match cmd.description {
+        match cmd.description() {
             Some(ref val) => {
                 if k.len() > 19 {
                     out.write_str("\n                    ").ok();

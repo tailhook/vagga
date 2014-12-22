@@ -1,18 +1,9 @@
-use std::os::errno;
-use std::io::IoError;
-use std::ptr::null;
-use std::num::zero;
-use std::time::duration::Duration;
-use std::default::Default;
 use std::io::process::Process;
-use libc::types::os::common::posix01::timespec;
-use time::{Timespec, get_time};
 
 pub use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT, EINTR, ECHILD};
 use libc::{c_int, pid_t};
 
 
-static SIGCHLD: c_int = 17;
 static WNOHANG: c_int = 1;
 
 #[deriving(Show)]
@@ -31,7 +22,6 @@ struct CSignalInfo {
 
 extern {
     fn block_all_signals();
-    fn read_signal(fd: c_int) -> c_int;
     fn waitpid(pid: pid_t, status: *mut c_int, options: c_int) -> pid_t;
 }
 

@@ -15,7 +15,7 @@ rust-argparse/libargparse.rlib:
 rust-quire/libquire.rlib:
 	make -C rust-quire libquire.rlib
 
-libconfig.rlib: src/config/*.rs
+libconfig.rlib: src/config/*.rs rust-quire/libquire.rlib
 	$(RUSTC) src/config/lib.rs -g -o $@ \
 		-L rust-quire -L rust-argparse
 
@@ -66,4 +66,4 @@ test: all vagga_test
 	./vagga_test
 
 
-.PHONY: all
+.PHONY: all rust-argparse/libargparse.rlib rust-quire/libquire.rlib

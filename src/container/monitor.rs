@@ -1,13 +1,10 @@
 use std::rc::Rc;
 use std::fmt::{Show, Formatter, FormatError};
 use std::cell::RefCell;
-use std::collections::TreeMap;
 use std::collections::HashMap;
-use std::collections::PriorityQueue;
-use std::mem::swap;
 use std::time::Duration;
 use libc::pid_t;
-use time::{Timespec, get_time};
+use time::{Timespec};
 
 use super::container::Command;
 use super::signal;
@@ -182,7 +179,7 @@ impl<'a> Monitor<'a> {
                 Input(_) => {
                     unimplemented!();
                 }
-                Timeout(prc) => {
+                Timeout(_) => {
                     unimplemented!();
                 }
                 Signal(signal::Terminate(sig)) => {

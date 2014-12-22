@@ -2,7 +2,7 @@ use std::rc::Rc;
 use std::io::fs::PathExtensions;
 
 use super::super::context::BuildContext;
-use container::monitor::{Monitor, Exit, Killed, Shutdown, Executor, MonitorStatus};
+use container::monitor::{Monitor, Exit, Killed, Executor};
 use container::container::{Command};
 
 struct RunCommand<'a> {
