@@ -33,6 +33,7 @@ mod build;
 mod run;
 mod supervise;
 mod commandline;
+mod setup;
 
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {

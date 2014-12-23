@@ -4,24 +4,27 @@ use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
+use std::collections::TreeMap;
 
 use argparse::{ArgumentParser, Store, List};
 
+use config::{Container, Settings, Config};
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::uidmap::{map_users, Ranges, Singleton};
 use container::monitor::{Monitor, Executor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
-use config::{Settings, Config};
 
 use super::build;
+use super::setup;
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
 
 struct RunCommand<'a> {
+    env: &'a TreeMap<String, String>,
     cmd: Path,
     args: Vec<String>,
     settings: &'a Settings,
@@ -36,18 +39,15 @@ impl<'a> Executor for RunCommand<'a> {
             .unwrap_or(Singleton(0, 0)));
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        for (ref k, ref v) in self.env.iter() {
+            cmd.set_env(k.to_string(), v.to_string());
         }
         return cmd;
     }
 }
 
-pub fn run_command(settings: &Settings, container: &String,
-    command: &String, args: &[String])
+pub fn run_command(settings: &Settings, cname: &String,
+    container: &Container, command: &String, args: &[String])
     -> Result<int, String>
 {
     let tgtroot = Path::new("/vagga/root");
@@ -56,7 +56,7 @@ pub fn run_command(settings: &Settings, container: &String,
              .map_err(|x| format!("Error creating directory: {}", x)));
     }
     try!(bind_mount(&Path::new("/vagga/roots")
-                     .join(container.as_slice()).join("root"),
+                     .join(cname.as_slice()).join("root"),
                     &tgtroot)
          .map_err(|e| format!("Error bind mount: {}", e)));
     try!(mount_system_dirs()
@@ -68,6 +68,7 @@ pub fn run_command(settings: &Settings, container: &String,
     try!(unmount(&Path::new("/tmp"))
          .map_err(|e| format!("Error unmounting old root: {}", e)));
 
+    let env = try!(setup::get_environment(container));
     let mut mon = Monitor::new();
     let mut cmd = Path::new(command.as_slice());
     let args = args.clone().to_vec();
@@ -96,6 +97,7 @@ pub fn run_command(settings: &Settings, container: &String,
 
     mon.add(Rc::new("run".to_string()), box RunCommand {
         cmd: cmd,
+        env: &env,
         args: args,
         settings: settings,
     });
@@ -117,6 +119,16 @@ pub fn run_command_cmd(config: &Config, settings: &Settings,
         ap.set_description("
             Runs arbitrary command inside the container
             ");
+        /* TODO(tailhook) implement environment settings
+        ap.refer(&mut env.set_env)
+          .add_option(&["-E", "--env", "--environ"], box Collect::<String>,
+                "Set environment variable for running command")
+          .metavar("NAME=VALUE");
+        ap.refer(&mut env.propagate_env)
+          .add_option(&["-e", "--use-env"], box Collect::<String>,
+                "Propagate variable VAR into command environment")
+          .metavar("VAR");
+        */
         ap.refer(&mut container)
             .add_argument("container_name", box Store::<String>,
                 "Container name to build");
@@ -139,6 +151,6 @@ pub fn run_command_cmd(config: &Config, settings: &Settings,
         .ok_or(format!("Container {} not found", container)));
     let settings = try!(map_users(settings, &cconfig.uids, &cconfig.gids));
     return build::build_container(&container, false, &settings)
-        .and_then(|cont|
-            run_command(&settings, &cont, &command, args.as_slice()));
+        .and_then(|cont| run_command(&settings, &cont, cconfig,
+                                     &command, args.as_slice()));
 }

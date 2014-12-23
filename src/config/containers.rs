@@ -14,7 +14,7 @@ pub struct Container {
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
 
-    pub environ_file: Option<String>,
+    pub environ_file: Option<Path>,
     pub environ: TreeMap<String, String>,
     pub resolv_conf: Option<Path>,
 }

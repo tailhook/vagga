@@ -4,6 +4,7 @@ use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
+use std::collections::TreeMap;
 
 use argparse::{ArgumentParser, List};
 
@@ -17,8 +18,10 @@ use container::monitor::{Killed, Exit};
 use container::container::{Command};
 
 use super::build;
+use super::setup;
 
 struct RunCommand<'a> {
+    env: &'a TreeMap<String, String>,
     cmd: Path,
     args: Vec<String>,
     settings: &'a Settings,
@@ -40,11 +43,8 @@ impl<'a> Executor for RunCommand<'a> {
         }
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        for (ref k, ref v) in self.env.iter() {
+            cmd.set_env(k.to_string(), v.to_string());
         }
         return cmd;
     }
@@ -102,6 +102,7 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
     try!(unmount(&Path::new("/tmp"))
          .map_err(|e| format!("Error unmounting old root: {}", e)));
 
+    let env = try!(setup::get_environment(cconfig));
     let mut mon = Monitor::new();
     let mut cmd = Path::new(cmdline.remove(0).unwrap().as_slice());
     if cmd.is_absolute() {
@@ -128,6 +129,7 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
     }
 
     mon.add(Rc::new("run".to_string()), box RunCommand {
+        env: &env,
         cmd: cmd,
         args: cmdline,
         settings: &settings,
