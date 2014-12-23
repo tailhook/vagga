@@ -66,4 +66,4 @@ test: all vagga_test
 	./vagga_test
 
 
-.PHONY: all rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+.PHONY: all

@@ -2,6 +2,10 @@
 /*.a
 /*.o
 .vagga
+docs/_build
+
+todo.txt
+
 /vagga_launcher
 /vagga_wrapper
 /vagga_version

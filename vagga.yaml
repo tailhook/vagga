@@ -1,0 +1,33 @@
+containers:
+  rust:
+    setup:
+    - !UbuntuCore trusty
+    - !Tar
+      url: http://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+      subdir: rust-0.12.0-x86_64-unknown-linux-gnu
+      path: /tmp/rust
+    - !Sh |
+        cd /tmp/rust
+        ./install.sh --prefix=/usr
+
+  docs:
+    uids: [0-1000, 65535]
+    gids: [0-1000, 65535]
+    setup:
+    - !UbuntuCore trusty
+    - !AptInstall [python-sphinx, make]
+
+commands:
+
+  build-docs: !Command
+    description: Build vagga documentation
+    container: docs
+    run: [make]
+    work-dir: docs
+
+  html-docs: !Command
+    description: Build vagga documentation (html version)
+    container: docs
+    run: make html
+    work-dir: docs
+

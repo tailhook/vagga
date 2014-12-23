@@ -17,6 +17,9 @@ use config::{Settings, Config};
 
 use super::build;
 
+pub static DEFAULT_PATH: &'static str =
+    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
 
 struct RunCommand<'a> {
     cmd: Path,
@@ -135,7 +138,7 @@ pub fn run_command_cmd(config: &Config, settings: &Settings,
     let cconfig = try!(config.containers.find(&container)
         .ok_or(format!("Container {} not found", container)));
     let settings = try!(map_users(settings, &cconfig.uids, &cconfig.gids));
-    return build::build_container(container, false, &settings)
+    return build::build_container(&container, false, &settings)
         .and_then(|cont|
             run_command(&settings, &cont, &command, args.as_slice()));
 }

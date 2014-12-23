@@ -153,7 +153,7 @@ pub fn get_version_hash(container: String, settings: &Settings)
     return Ok(Some(ver.borrow().to_string()));
 }
 
-pub fn build_container(container: String, force: bool, settings: &Settings)
+pub fn build_container(container: &String, force: bool, settings: &Settings)
     -> Result<String, String>
 {
     let mut mon = Monitor::new();
@@ -259,7 +259,7 @@ pub fn build_container_cmd(config: &Config, settings: &Settings,
     let container = try!(config.containers.find(&name)
         .ok_or(format!("Container {} not found", name)));
     let settings = try!(map_users(settings, &container.uids, &container.gids));
-    return build_container(name, force, &settings)
+    return build_container(&name, force, &settings)
         .map(|x| debug!("Built container with name {}", x))
         .map(|()| 0);
 }
