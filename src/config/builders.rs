@@ -3,27 +3,28 @@ use std::default::Default;
 use std::collections::TreeMap;
 
 use quire::validate as V;
+use serialize::json;
 
-#[deriving(Decodable, Show, Clone)]
+#[deriving(Encodable, Decodable, Show, Clone)]
 pub struct DebianRepo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[deriving(Decodable, Show, Clone)]
+#[deriving(Encodable, Decodable, Show, Clone)]
 pub struct AptKey {
     pub key_server: String,
     pub keys: Vec<String>,
 }
 
-#[deriving(Decodable, Show, Clone)]
+#[deriving(Encodable, Decodable, Show, Clone)]
 pub struct PacmanRepo {
     pub name: String,
     pub url: String,
 }
 
-#[deriving(Decodable, Clone)]
+#[deriving(Encodable, Decodable, Clone)]
 pub struct TarInfo {
     pub url: String,
     pub sha256: Option<String>,
@@ -31,13 +32,28 @@ pub struct TarInfo {
     pub subdir: Path,
 }
 
-#[deriving(Decodable, Clone)]
+#[deriving(Encodable, Decodable, Clone)]
+pub struct TarInstallInfo {
+    pub url: String,
+    pub sha256: Option<String>,
+    pub subdir: Option<Path>,
+    pub script: String,
+}
+
+#[deriving(Encodable, Decodable, Clone)]
 pub struct FileInfo {
     pub name: Path,
     pub contents: String,
 }
 
-#[deriving(Decodable, Clone)]
+#[deriving(Encodable, Decodable, Clone)]
+pub struct UbuntuRepoInfo {
+    pub url: String,
+    pub suite: String,
+    pub components: Vec<String>,
+}
+
+#[deriving(Encodable, Decodable, Clone)]
 pub enum Builder {
     // -- Generic --
     Sh(String),
@@ -45,6 +61,7 @@ pub enum Builder {
     Env(TreeMap<String, String>),
     Depends(Path),
     Tar(TarInfo),
+    TarInstall(TarInstallInfo),
     //AddFile(FileInfo),
     Remove(Path),
     EnsureDir(Path),
@@ -53,6 +70,8 @@ pub enum Builder {
 
     // -- Ubuntu --
     UbuntuCore(String),
+    UbuntuRepo(UbuntuRepoInfo),
+    UbuntuUniverse,
     //AddUbuntuPPA(String),
 
     // -- Ubuntu/Debian --
@@ -87,6 +106,23 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
     return box V::Enum { options: vec!(
         ("UbuntuCore".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
+        ("AptInstall".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+        ("UbuntuRepo".to_string(), box V::Structure {
+            members: vec!(
+                ("url".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("suite".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("components".to_string(), box V::Sequence {
+                    element: box V::Scalar {
+                        .. Default::default() } as Box<V::Validator>,
+                    .. Default::default() } as Box<V::Validator>),
+            ),
+        .. Default::default() } as Box<V::Validator>),
+        ("UbuntuUniverse".to_string(), box V::Nothing as Box<V::Validator>),
         ("Sh".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
         ("Cmd".to_string(), box V::Sequence {
@@ -126,75 +162,31 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     .. Default::default() } as Box<V::Validator>),
             ),
         .. Default::default() } as Box<V::Validator>),
-        ("AptInstall".to_string(), box V::Sequence {
-            element: box V::Scalar {
-            .. Default::default() } as Box<V::Validator>,
+        ("TarInstall".to_string(), box V::Structure {
+            members: vec!(
+                ("url".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("sha256".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("subdir".to_string(), box V::Directory {
+                    optional: true,
+                    absolute: Some(false),
+                    .. Default::default() } as Box<V::Validator>),
+                ("script".to_string(), box V::Scalar {
+                    default: Some("./configure --prefix=/usr\n\
+                                   make\n\
+                                   make install\n\
+                                   ".to_string()),
+                    .. Default::default() } as Box<V::Validator>),
+            ),
         .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }
 
 impl Show for Builder {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
-        match self {
-            &UbuntuCore(ref name) => {
-                try!("!UbuntuCore ".fmt(fmt));
-                try!(name.fmt(fmt));
-            }
-            &Cmd(ref command) => {
-                try!("!Sh ".fmt(fmt));
-                try!(command.fmt(fmt));
-            }
-            &Sh(ref command) => {
-                try!("!Sh ".fmt(fmt));
-                try!(command.fmt(fmt));
-            }
-            &Env(ref map) => {
-                try!("!Env {".fmt(fmt));
-                for (k, v) in map.iter() {
-                    try!(k.fmt(fmt));
-                    try!(": ".fmt(fmt));
-                    try!(v.fmt(fmt));
-                    try!(", ".fmt(fmt));
-                }
-                try!("}".fmt(fmt));
-            }
-            &Remove(ref path) => {
-                try!("!Remove ".fmt(fmt));
-                try!(path.display().fmt(fmt));
-            }
-            &EmptyDir(ref path) => {
-                try!("!EmptyDir ".fmt(fmt));
-                try!(path.display().fmt(fmt));
-            }
-            &EnsureDir(ref path) => {
-                try!("!EnsureDir ".fmt(fmt));
-                try!(path.display().fmt(fmt));
-            }
-            &Depends(ref path) => {
-                try!("!Depends ".fmt(fmt));
-                try!(path.display().fmt(fmt));
-            }
-            &Tar(ref tar) => {
-                try!("!Tar { url: ".fmt(fmt));
-                try!(tar.url.fmt(fmt));
-                try!(", sha256: ".fmt(fmt));
-                try!(tar.sha256.fmt(fmt));
-                try!(", path: ".fmt(fmt));
-                try!(tar.path.display().fmt(fmt));
-                try!(", subdir: ".fmt(fmt));
-                try!(tar.subdir.display().fmt(fmt));
-                try!(" }".fmt(fmt));
-            }
-            &AptInstall(ref pkgs) => {
-                try!("!AptInstall [ ".fmt(fmt));
-                for pkg in pkgs.iter() {
-                    try!(pkg.fmt(fmt));
-                    try!(", ".fmt(fmt));
-                }
-                try!(" ]".fmt(fmt));
-            }
-        }
-        return Ok(());
+        json::encode(self).fmt(fmt)
     }
 }
 

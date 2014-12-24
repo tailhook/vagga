@@ -22,7 +22,7 @@ use config::find_config;
 use config::command::main::{Command, Supervise};
 use container::signal;
 use container::mount::{mount_tmpfs, bind_mount, unmount};
-use container::mount::{mount_ro_recursive, mount_pseudo};
+use container::mount::{remount_ro, mount_pseudo};
 use container::root::change_root;
 use settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List};
@@ -183,7 +183,7 @@ fn setup_filesystem(project_root: &Path, settings: &MergedSettings)
     let bin_dir = vagga_dir.join("bin");
     try_str!(mkdir(&bin_dir, ALL_PERMISSIONS));
     try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
-    try!(mount_ro_recursive(&bin_dir));
+    try!(remount_ro(&bin_dir));
 
     let etc_dir = mnt_dir.join("etc");
     try_str!(mkdir(&etc_dir, ALL_PERMISSIONS));

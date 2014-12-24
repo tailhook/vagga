@@ -1,13 +1,15 @@
 use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir_recursive};
+use std::io::fs::{mkdir_recursive, readdir};
 use std::io::fs::PathExtensions;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;
+use config::builders::TarInstallInfo;
 
 use super::context::BuildContext;
 use super::download::download_file;
+use super::commands::generic::run_command_at;
 
 
 pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
@@ -70,4 +72,39 @@ pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
         try!(res);
     }
     Ok(())
+}
+
+pub fn tar_install(ctx: &mut BuildContext, tar: &TarInstallInfo)
+    -> Result<(), String>
+{
+    let filename = try!(download_file(ctx, &tar.url));
+    // TODO(tailhook) check sha256 sum
+    let tmppath = Path::new("/vagga/root/tmp")
+        .join(filename.filename_str().unwrap());
+    try!(mkdir_recursive(&tmppath, ALL_PERMISSIONS)
+         .map_err(|e| format!("Error making dir: {}", e)));
+    try!(unpack_file(ctx, &filename, &tmppath, &[], &[]));
+    let workdir = if let Some(ref subpath) = tar.subdir {
+        tmppath.join(subpath)
+    } else {
+        let items = try!(readdir(&tmppath)
+            .map_err(|e| format!("Error reading dir: {}", e)));
+        if items.len() != 1 {
+            if items.len() == 0 {
+                return Err("Tar archive was empty".to_string());
+            } else {
+                return Err("Multiple directories was unpacked. \
+                    If thats expected use `subdir: \".\"` or any \
+                    other directory".to_string());
+            }
+        }
+        items.into_iter().next().unwrap()
+    };
+    let workdir = Path::new("/").join(
+        workdir.path_relative_from(&Path::new("/vagga/root")).unwrap());
+    return run_command_at(ctx, &[
+        "/bin/sh".to_string(),
+        "-exc".to_string(),
+        tar.script.to_string()],
+        &workdir);
 }

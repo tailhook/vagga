@@ -16,6 +16,10 @@ pub struct BuildContext {
     remove_dirs: TreeSet<Path>,
     cache_dirs: TreeMap<Path, String>,
     pub environ: TreeMap<String, String>,
+
+    // Ubuntu/Debian
+    pub ubuntu_release: Option<String>,
+    pub apt_update: bool,
 }
 
 impl BuildContext {
@@ -45,6 +49,10 @@ impl BuildContext {
                  "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
                  .to_string()),
                 ).into_iter().collect(),
+
+            // Ubuntu/Debian
+            ubuntu_release: None,
+            apt_update: false,
         };
     }
 

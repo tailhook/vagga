@@ -172,54 +172,17 @@ pub fn get_submounts_of(dir: &Path)
     return Ok(result);
 }
 
-pub fn mount_ro_recursive(target: &Path) -> Result<(), String> {
+pub fn remount_ro(target: &Path) -> Result<(), String> {
     let none = "none".to_c_str();
-    //  Must recursively remount readonly
-    //  TODO(tailhook) fix double and overlapping bind mounts
-    let file = try_str!(File::open(&Path::new("/proc/mounts")));
-    let mut buf = BufferedReader::new(file);
-    loop {
-        let line = match buf.read_line() {
-            Ok(line) => line,
-            Err(ref e) if e.kind == EndOfFile => break,
-            Err(e) => {
-                return Err(format!("Error reading /proc/mounts: {}", e));
-            }
-        };
-        let mut iter = line.as_slice().splitn(2, ' ');
-        let cur_source = match iter.next() {
-            Some(src) => src,
-            None => {
-                warn!("Wrong line in /proc/mounts: {}", line);
-                continue;
-            }
-        };
-        let cur_target = match iter.next() {
-            Some(target) => Path::new(target),
-            None => {
-                warn!("Wrong line in /proc/mounts: {}", line);
-                continue;
-            }
-        };
-        if cur_source.as_slice() == "cgroup" {
-            // Can't remount readonly cgroup filesystem
-            continue;
-        }
-        if target.is_ancestor_of(&cur_target) {
-            let c_target = cur_target.to_c_str();
-            debug!("Remount readonly {} ({})",
-                cur_target.display(), cur_source);
-            let rc = unsafe { mount(
-               none.as_bytes().as_ptr(),
-               c_target.as_bytes().as_ptr(),
-               null(), MS_BIND|MS_REMOUNT|MS_RDONLY, null()) };
-            if rc != 0 {
-                let err = IoError::last_error();
-                return Err(format!("Remount readonly {}: {}",
-                    cur_target.display(), err));
-            }
-            try_str!(mount_private(&cur_target));
-        }
+    debug!("Remount readonly: {}", target.display());
+    let c_target = target.to_c_str();
+    let rc = unsafe { mount(
+       none.as_bytes().as_ptr(),
+       c_target.as_bytes().as_ptr(),
+       null(), MS_BIND|MS_REMOUNT|MS_RDONLY, null()) };
+    if rc != 0 {
+        let err = IoError::last_error();
+        return Err(format!("Remount readonly {}: {}", target.display(), err));
     }
     return Ok(());
 }

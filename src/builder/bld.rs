@@ -21,6 +21,15 @@ impl BuildCommand for B::Builder {
             &B::UbuntuCore(ref name) => {
                 debian::fetch_ubuntu_core(ctx, name)
             }
+            &B::UbuntuRepo(ref repo) => {
+                debian::add_debian_repo(ctx, repo)
+            }
+            &B::UbuntuUniverse => {
+                debian::ubuntu_add_universe(ctx)
+            }
+            &B::AptInstall(ref pkgs) => {
+                debian::apt_install(ctx, pkgs)
+            }
             &B::Sh(ref text) => {
                 generic::run_command(ctx,
                     &["/bin/sh".to_string(),
@@ -60,8 +69,8 @@ impl BuildCommand for B::Builder {
             &B::Tar(ref tar) => {
                 tarcmd::tar_command(ctx, tar)
             }
-            &B::AptInstall(ref pkgs) => {
-                debian::apt_install(ctx, pkgs)
+            &B::TarInstall(ref tar_inst) => {
+                tarcmd::tar_install(ctx, tar_inst)
             }
         }
     }

@@ -6,6 +6,7 @@ use container::monitor::{Monitor, Exit, Killed, Executor};
 use container::container::{Command};
 
 struct RunCommand<'a> {
+    work_dir: &'a Path,
     cmd: Path,
     args: &'a [String],
     ctx: &'a BuildContext,
@@ -14,6 +15,7 @@ struct RunCommand<'a> {
 impl<'a> Executor for RunCommand<'a> {
     fn command(&self) -> Command {
         let mut cmd = Command::new("run".to_string(), &self.cmd);
+        cmd.set_workdir(self.work_dir);
         cmd.chroot(&Path::new("/vagga/root"));
         cmd.args(self.args.as_slice());
         for (k, v) in self.ctx.environ.iter() {
@@ -41,7 +43,7 @@ fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {
     return Err(format!("Command {} not found", cmd));
 }
 
-pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
+pub fn run_command_at(ctx: &mut BuildContext, cmd: &[String], path: &Path)
     -> Result<(), String>
 {
     let mut mon = Monitor::new();
@@ -54,6 +56,7 @@ pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
 
     mon.add(Rc::new("command".to_string()), box RunCommand {
         cmd: cmdpath,
+        work_dir: path,
         args: cmd[1..],
         ctx: ctx,
     });
@@ -68,4 +71,10 @@ pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
             return Err(format!("Command {} exited with status {}", cmd, val));
         }
     }
+}
+
+pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
+    -> Result<(), String>
+{
+    return run_command_at(ctx, cmd, &Path::new("/work"));
 }
