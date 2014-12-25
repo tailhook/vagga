@@ -78,7 +78,7 @@ void mount_all(int num, struct mount *mounts) {
             if(rc < 0) {
                 fprintf(stderr, "WARNING: Can't remount readonly %s: (%d) %s\n"
                     "Usually it happens when folder is already mounted "
-                    "readonly, but YMMV",
+                    "readonly\n",
                     mnt->target, errno, strerror(errno));
             }
         } else {
