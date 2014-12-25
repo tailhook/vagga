@@ -99,8 +99,8 @@ If your ubuntu is older, or you upgraded it without recreating a user, you
 need to fill in ``/etc/subuid`` and ``/etc/subgid``. Command should be similar
 to the following::
 
-    echo '$(id -un):100000:65536' | sudo tee /etc/subuid
-    echo '$(id -un):100000:65536' | sudo tee /etc/subgid
+    echo "$(id -un):100000:65536" | sudo tee /etc/subuid
+    echo "$(id -un):100000:65536" | sudo tee /etc/subgid
 
 Or alternatively you may edit files by hand.
 
