@@ -74,6 +74,39 @@ The process of installation looks like the following:
 
 Now vagga is ready to go.
 
+Ubuntu: Old Releases (precise, 12.04)
+=====================================
+
+For most packages you need `uidmap`. It has no dependencies. So if your
+ubuntu release doesn't have `uidmap` package (as 12.04 does), just fetch it
+from newer ubuntu release::
+
+    wget http://gr.archive.ubuntu.com/ubuntu/pool/main/s/shadow/uidmap_4.1.5.1-1ubuntu9_amd64.deb
+    sudo dpkg -i uidmap_4.1.5.1-1ubuntu9_amd64.deb
+
+Then run same sequence of commands, you run for more recent releases:
+
+.. code-block:: console
+
+    $ echo 'deb http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
+    $ sudo apt-get update
+    $ sudo apt-get install vagga
+
+You need to ignore error in ``apt-get update`` as it tries to fetch i386
+version of index for some reason. Still it fetches needed ``amd64`` too.
+
+If your ubuntu is older, or you upgraded it without recreating a user, you
+need to fill in ``/etc/subuid`` and ``/etc/subgid``. Command should be similar
+to the following::
+
+    echo '$(id -un):100000:65536' | sudo tee /etc/subuid
+    echo '$(id -un):100000:65536' | sudo tee /etc/subgid
+
+Or alternatively you may edit files by hand.
+
+Now your vagga is ready to go.
+
+
 Ubuntu: Building From Source
 ============================
 
