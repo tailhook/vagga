@@ -16,6 +16,7 @@ Build-time dependencies:
 Run-time dependencies (basically none):
 
 * ``glibc``
+* ``uidmap``
 
 
 .. note:: Vagga uses linux_ namespaces, so works on linux system only.

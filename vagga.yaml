@@ -74,6 +74,7 @@ commands:
         --pkglicense=MIT \
         --pkgname=vagga \
         --pkgver=${1:-$(git describe | cut -c2-)} \
+        --requires="uidmap" \
         --nodoc \
       make -B all install
 
