@@ -60,7 +60,13 @@ pub fn run() -> int {
     let cont = cfg.containers.find(&container)
         .expect("Container not found");  // TODO
     let mut build_context = BuildContext::new(container, (*cont).clone());
-    debug!("Versioning items: {}", cont.setup.len());
+    match build_context.start() {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Error preparing for build: {}", e);
+            return 1;
+        }
+    }
     for b in cont.setup.iter() {
         debug!("Versioning setup: {}", b);
         match b.build(&mut build_context) {

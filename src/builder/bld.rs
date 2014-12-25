@@ -1,5 +1,6 @@
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir_recursive};
+use std::io::fs::PathExtensions;
 
 use config::builders as B;
 
@@ -61,6 +62,18 @@ impl BuildCommand for B::Builder {
                     &Path::new("/vagga/root").join(fpath), ALL_PERMISSIONS)
                     .map_err(|e| format!("Error creating dir: {}", e)));
                 ctx.add_ensure_dir(path.clone());
+                Ok(())
+            }
+            &B::CacheDir(ref pairs) => {
+                for (k, v) in pairs.iter() {
+                    let path = Path::new("/vagga/root").join(
+                        k.path_relative_from(&Path::new("/")).unwrap());
+                    if !path.exists() {
+                        try!(mkdir_recursive(&path, ALL_PERMISSIONS)
+                            .map_err(|e| format!("Can't create dir: {}", e)));
+                    }
+                    try!(ctx.add_cache_dir(k.clone(), v.clone()));
+                }
                 Ok(())
             }
             &B::Depends(_) => {

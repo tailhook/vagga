@@ -66,6 +66,7 @@ pub enum Builder {
     Remove(Path),
     EnsureDir(Path),
     EmptyDir(Path),
+    CacheDir(TreeMap<Path, String>),
     //Busybox,
 
     // -- Ubuntu --
@@ -137,6 +138,13 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
         ("EmptyDir".to_string(), box V::Directory {
             absolute: Some(true),
+        .. Default::default() } as Box<V::Validator>),
+        ("CacheDir".to_string(), box V::Mapping {
+            key_element: box V::Directory {
+                absolute: Some(true),
+                .. Default::default() } as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
         ("Env".to_string(), box V::Mapping {
             key_element: box V::Scalar {

@@ -91,6 +91,10 @@ impl BuildContext {
         let path = path.path_relative_from(&Path::new("/")).unwrap();
         self.ensure_dirs.insert(path);
     }
+    pub fn start(&self) -> Result<(), String> {
+        try!(mount_system_dirs());
+        Ok(())
+    }
 
     pub fn finish(&self) -> Result<(), String> {
         let base = Path::new("/vagga/root");
