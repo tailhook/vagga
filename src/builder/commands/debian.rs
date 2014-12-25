@@ -42,7 +42,9 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
 
     try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
                            "apt-cache".to_string()));
-    // TODO(tailhook) remove apt and dpkg
+    ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
+                       "noninteractive".to_string());
+
     ctx.add_remove_dir(Path::new("/var/lib/apt"));
     ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
     ctx.apt_update = true;
