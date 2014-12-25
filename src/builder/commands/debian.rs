@@ -42,8 +42,16 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
 
     try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
                            "apt-cache".to_string()));
+    try!(ctx.add_cache_dir(Path::new("/var/lib/apt/lists"),
+                          "apt-lists".to_string()));
     ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
                        "noninteractive".to_string());
+    ctx.environ.insert("LANG".to_string(),
+                       "en_US.UTF-8".to_string());
+    try!(run_command(ctx, &[
+        "/usr/sbin/locale-gen".to_string(),
+        "en_US.UTF-8".to_string(),
+        ]));
 
     ctx.add_remove_dir(Path::new("/var/lib/apt"));
     ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
