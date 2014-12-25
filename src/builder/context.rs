@@ -70,7 +70,6 @@ impl BuildContext {
             let path = Path::new("/vagga/root").join(path);
             try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
-            try!(mount_system_dirs());
         }
         return Ok(());
     }
