@@ -11,7 +11,7 @@ use argparse::{ArgumentParser, List};
 use config::{Config, Settings, Container};
 use config::command::CommandInfo;
 use container::root::change_root;
-use container::mount::{bind_mount, unmount, mount_system_dirs};
+use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::uidmap::{map_users, Ranges, Singleton};
 use container::monitor::{Monitor, Executor};
 use container::monitor::{Killed, Exit};
@@ -93,6 +93,7 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
                      .join(container.as_slice()).join("root"),
                     &tgtroot)
          .map_err(|e| format!("Error bind mount: {}", e)));
+    try!(remount_ro(&tgtroot));
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))

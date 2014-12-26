@@ -42,6 +42,10 @@ commands:
     container: docs
     run: [env]
 
+  docs-bash: !Command
+    container: docs
+    run: [bash]
+
   build-docs: !Command
     description: Build vagga documentation
     container: docs
