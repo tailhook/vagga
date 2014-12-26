@@ -17,11 +17,40 @@ containers:
     - !UbuntuCore trusty
     - !AptInstall [python-sphinx, make]
 
+  alpine-docs:
+    uids: [0-1000, 65535]
+    gids: [0-1000, 65535]
+    setup:
+    - !AlpineBase v3.1
+    - !AlpineInstall [alpine-base, py-sphinx, make]
+
+  package:
+    uids: [0-1000, 65535]
+    gids: [0-1000, 65535]
+    setup:
+    - !UbuntuCore trusty
+    - !UbuntuUniverse ~
+    - !TarInstall
+      url: http://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+      script: |
+        ./install.sh --prefix=/usr
+    - !AptInstall [make, checkinstall]
+
 commands:
+
+  print-env: !Command
+    container: docs
+    run: [env]
 
   build-docs: !Command
     description: Build vagga documentation
     container: docs
+    run: [make]
+    work-dir: docs
+
+  build-docs-apline: !Command
+    description: Build vagga documentation (by alpine linux)
+    container: alpine-docs
     run: [make]
     work-dir: docs
 

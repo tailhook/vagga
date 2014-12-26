@@ -6,6 +6,7 @@ use config::builders as B;
 
 use super::context::BuildContext;
 use super::commands::debian;
+use super::commands::alpine;
 use super::commands::generic;
 use super::tarcmd;
 use container::util::clean_dir;
@@ -84,6 +85,12 @@ impl BuildCommand for B::Builder {
             }
             &B::TarInstall(ref tar_inst) => {
                 tarcmd::tar_install(ctx, tar_inst)
+            }
+            &B::AlpineBase(ref name) => {
+                alpine::setup_base(ctx, name)
+            }
+            &B::AlpineInstall(ref pkgs) => {
+                alpine::install(ctx, pkgs)
             }
         }
     }

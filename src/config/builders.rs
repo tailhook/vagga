@@ -88,7 +88,8 @@ pub enum Builder {
     //AddPacmanRepo(PacmanRepo),
 
     // -- Alpine --
-    //AlpineInstall(Vec<String>),
+    AlpineBase(String),
+    AlpineInstall(Vec<String>),
     //AlpineRemove(Vec<String>),
 
     // -- Docker --
@@ -188,6 +189,12 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                                    ".to_string()),
                     .. Default::default() } as Box<V::Validator>),
             ),
+        .. Default::default() } as Box<V::Validator>),
+        ("AlpineBase".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("AlpineInstall".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
     ), .. Default::default() } as Box<V::Validator>;
 }

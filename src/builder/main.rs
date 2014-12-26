@@ -28,6 +28,7 @@ mod tarcmd;
 mod commands {
     pub mod debian;
     pub mod generic;
+    pub mod alpine;
 }
 
 
