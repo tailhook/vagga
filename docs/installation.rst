@@ -92,9 +92,6 @@ Then run same sequence of commands, you run for more recent releases:
     $ sudo apt-get update
     $ sudo apt-get install vagga
 
-You need to ignore error in ``apt-get update`` as it tries to fetch i386
-version of index for some reason. Still it fetches needed ``amd64`` too.
-
 If your ubuntu is older, or you upgraded it without recreating a user, you
 need to fill in ``/etc/subuid`` and ``/etc/subgid``. Command should be similar
 to the following::
