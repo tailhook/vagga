@@ -9,7 +9,7 @@ struct RunCommand<'a> {
     work_dir: &'a Path,
     cmd: Path,
     args: &'a [String],
-    ctx: &'a BuildContext,
+    ctx: &'a BuildContext<'a>,
 }
 
 impl<'a> Executor for RunCommand<'a> {

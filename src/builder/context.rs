@@ -6,9 +6,17 @@ use std::collections::{TreeMap, TreeSet};
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::util::clean_dir;
 use config::Container;
+use super::commands::debian::UbuntuInfo;
+use super::commands::alpine::AlpineInfo;
 
+#[deriving(Show)]
+pub enum Distribution {
+    Unknown,
+    Ubuntu(UbuntuInfo),
+    Alpine(AlpineInfo),
+}
 
-pub struct BuildContext {
+pub struct BuildContext<'a> {
     pub container_name: String,
     pub container_config: Container,
     ensure_dirs: TreeSet<Path>,
@@ -17,13 +25,11 @@ pub struct BuildContext {
     cache_dirs: TreeMap<Path, String>,
     pub environ: TreeMap<String, String>,
 
-    // Ubuntu/Debian
-    pub ubuntu_release: Option<String>,
-    pub apt_update: bool,
+    pub distribution: Distribution,
 }
 
-impl BuildContext {
-    pub fn new(name: String, container: Container) -> BuildContext {
+impl<'a> BuildContext<'a> {
+    pub fn new<'x>(name: String, container: Container) -> BuildContext<'x> {
         return BuildContext {
             container_name: name,
             container_config: container,
@@ -49,10 +55,7 @@ impl BuildContext {
                  "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
                  .to_string()),
                 ).into_iter().collect(),
-
-            // Ubuntu/Debian
-            ubuntu_release: None,
-            apt_update: false,
+            distribution: Unknown,
         };
     }
 

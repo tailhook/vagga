@@ -3,9 +3,16 @@ use std::rand::{task_rng, Rng};
 use std::io::fs::{File, mkdir_recursive};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
-use super::super::context::BuildContext;
+use super::super::context::{BuildContext, Alpine, Unknown};
 
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
+
+
+#[deriving(Show)]
+pub struct AlpineInfo {
+    mirror: String,
+    version: String,
+}
 
 
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
@@ -28,6 +35,10 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
 pub fn setup_base(ctx: &mut BuildContext, version: &String)
     -> Result<(), String>
 {
+    if let Unknown = ctx.distribution {
+    } else {
+        return Err(format!("Conflicting distribution"));
+    };
     let apk_dir = Path::new("/vagga/root/etc/apk");
     let repos = MIRRORS.split('\n').collect::<Vec<&str>>();
     let mirror = task_rng().choose(repos.as_slice())
@@ -54,6 +65,10 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
         "add",
         "alpine-base",
         ], &[]));
+    ctx.distribution = Alpine(AlpineInfo {
+        mirror: mirror.to_string(),
+        version: version.to_string(),
+    });
     Ok(())
 }
 
