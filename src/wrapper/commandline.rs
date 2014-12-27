@@ -41,8 +41,6 @@ impl<'a> Executor for RunCommand<'a> {
         } else {
             // TODO(tailhook) set workdir to current one
         }
-        cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
         for (ref k, ref v) in self.env.iter() {
             cmd.set_env(k.to_string(), v.to_string());
         }
@@ -108,24 +106,27 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
     let mut cmd = Path::new(cmdline.remove(0).unwrap().as_slice());
     if cmd.is_absolute() {
     } else {
-        let paths = [
-            "/bin",
-            "/usr/bin",
-            "/usr/local/bin",
-            "/sbin",
-            "/usr/sbin",
-            "/usr/local/sbin",
-        ];
-        for path in paths.iter() {
-            let path = Path::new(*path).join(&cmd);
-            if path.exists() {
-                cmd = path;
-                break;
+        if let Some(paths) = env.find(&"PATH".to_string()) {
+            let rpath = Path::new("/");
+            for dir in paths.as_slice().split(':') {
+                let path = Path::new(dir);
+                if !path.is_absolute() {
+                    warn!("All items in PATH must be absolute, not {}",
+                          path.display());
+                    continue;
+                }
+                let path = path.join(&cmd);
+                if path.exists() {
+                    cmd = path;
+                }
             }
-        }
-        if !cmd.is_absolute() {
-            return Err(format!("Command {} not found in {}",
-                cmd.display(), paths.as_slice()));
+            if !cmd.is_absolute() {
+                return Err(format!("Command {} not found in {}",
+                    cmd.display(), paths.as_slice()));
+            }
+        } else {
+            return Err(format!("Command {} is not absolute and no PATH set",
+                cmd.display()));
         }
     }
 

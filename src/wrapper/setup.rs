@@ -1,14 +1,20 @@
+use std::os::{getenv};
 use std::io::BufferedReader;
 use std::io::fs::File;
 use std::collections::TreeMap;
 
 use config::Container;
+use super::run::DEFAULT_PATH;
 
 
 pub fn get_environment(container: &Container)
     -> Result<TreeMap<String, String>, String>
 {
     let mut result = TreeMap::new();
+    result.insert("TERM".to_string(),
+                  getenv("TERM").unwrap_or("dumb".to_string()));
+    result.insert("PATH".to_string(),
+                  DEFAULT_PATH.to_string());
     if let Some(ref filename) = container.environ_file {
         let mut f = BufferedReader::new(try!(
                 File::open(filename)
