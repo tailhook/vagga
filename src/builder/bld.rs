@@ -10,6 +10,7 @@ use super::commands::generic;
 use super::commands::pip;
 use super::tarcmd;
 use container::util::clean_dir;
+use super::context as distr;
 
 
 pub trait BuildCommand {
@@ -20,7 +21,17 @@ pub trait BuildCommand {
 impl BuildCommand for B::Builder {
     fn build(&self, ctx: &mut BuildContext) -> Result<(), String> {
         match self {
-            &B::UbuntuCore(ref name) => {
+
+            &B::Install(ref pkgs) => {
+                match ctx.distribution {
+                    distr::Unknown => Err(format!("Unknown distribution")),
+                    distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),
+                    distr::Alpine(_) => alpine::install(ctx, pkgs),
+                }
+            }
+
+
+            &B::Ubuntu(ref name) => {
                 debian::fetch_ubuntu_core(ctx, name)
             }
             &B::UbuntuRepo(ref repo) => {
@@ -28,9 +39,6 @@ impl BuildCommand for B::Builder {
             }
             &B::UbuntuUniverse => {
                 debian::ubuntu_add_universe(ctx)
-            }
-            &B::AptInstall(ref pkgs) => {
-                debian::apt_install(ctx, pkgs)
             }
             &B::Sh(ref text) => {
                 generic::run_command(ctx,
@@ -80,13 +88,9 @@ impl BuildCommand for B::Builder {
             &B::TarInstall(ref tar_inst) => {
                 tarcmd::tar_install(ctx, tar_inst)
             }
-            &B::AlpineBase(ref name) => {
+            &B::Alpine(ref name) => {
                 alpine::setup_base(ctx, name)
             }
-            &B::AlpineInstall(ref pkgs) => {
-                alpine::install(ctx, pkgs)
-            }
-
             &B::PipEnableDependencies => {
                 pip::enable_deps(ctx);
                 Ok(())

@@ -69,14 +69,16 @@ pub enum Builder {
     CacheDir(TreeMap<Path, String>),
     //Busybox,
 
+    // -- Generic --
+    Install(Vec<String>),
+
     // -- Ubuntu --
-    UbuntuCore(String),
+    Ubuntu(String),
     UbuntuRepo(UbuntuRepoInfo),
     UbuntuUniverse,
     //AddUbuntuPPA(String),
 
     // -- Ubuntu/Debian --
-    AptInstall(Vec<String>),
     //AddDebianRepo(DebianRepo),
     //AddAptKey(AptKey),
 
@@ -88,8 +90,7 @@ pub enum Builder {
     //AddPacmanRepo(PacmanRepo),
 
     // -- Alpine --
-    AlpineBase(String),
-    AlpineInstall(Vec<String>),
+    Alpine(String),
     //AlpineRemove(Vec<String>),
 
     // -- Docker --
@@ -100,20 +101,23 @@ pub enum Builder {
     // -- Languages --
     //NpmInstall(Vec<String>),
     //PipRequirement(Path),
+    //GemInstall(Vec<String>),
+
+    // -- Python --
     PipEnableDependencies,
     PipLinks(String),
     Py2Install(Vec<String>),
     Py3Install(Vec<String>),
-    //GemInstall(Vec<String>),
 }
 
 pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
     return box V::Enum { options: vec!(
-        ("UbuntuCore".to_string(), box V::Scalar {
-        .. Default::default() } as Box<V::Validator>),
-        ("AptInstall".to_string(), box V::Sequence {
+        ("Install".to_string(), box V::Sequence {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+
+        ("Ubuntu".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
         ("UbuntuRepo".to_string(), box V::Structure {
             members: vec!(
@@ -194,11 +198,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             ),
         .. Default::default() } as Box<V::Validator>),
 
-        ("AlpineBase".to_string(), box V::Scalar {
-        .. Default::default() } as Box<V::Validator>),
-        ("AlpineInstall".to_string(), box V::Sequence {
-            element: box V::Scalar {
-            .. Default::default() } as Box<V::Validator>,
+        ("Alpine".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
 
         ("PipLinks".to_string(), box V::Scalar {
