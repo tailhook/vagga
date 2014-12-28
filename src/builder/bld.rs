@@ -1,6 +1,5 @@
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir_recursive};
-use std::io::fs::PathExtensions;
 
 use config::builders as B;
 
@@ -8,6 +7,7 @@ use super::context::BuildContext;
 use super::commands::debian;
 use super::commands::alpine;
 use super::commands::generic;
+use super::commands::pip;
 use super::tarcmd;
 use container::util::clean_dir;
 
@@ -67,12 +67,6 @@ impl BuildCommand for B::Builder {
             }
             &B::CacheDir(ref pairs) => {
                 for (k, v) in pairs.iter() {
-                    let path = Path::new("/vagga/root").join(
-                        k.path_relative_from(&Path::new("/")).unwrap());
-                    if !path.exists() {
-                        try!(mkdir_recursive(&path, ALL_PERMISSIONS)
-                            .map_err(|e| format!("Can't create dir: {}", e)));
-                    }
                     try!(ctx.add_cache_dir(k.clone(), v.clone()));
                 }
                 Ok(())
@@ -91,6 +85,21 @@ impl BuildCommand for B::Builder {
             }
             &B::AlpineInstall(ref pkgs) => {
                 alpine::install(ctx, pkgs)
+            }
+
+            &B::PipEnableDependencies => {
+                pip::enable_deps(ctx);
+                Ok(())
+            }
+            &B::PipLinks(ref link) => {
+                pip::add_link(ctx, link);
+                Ok(())
+            }
+            &B::Py2Install(ref pkgs) => {
+                pip::pip_install(ctx, 2, pkgs)
+            }
+            &B::Py3Install(ref pkgs) => {
+                pip::pip_install(ctx, 3, pkgs)
             }
         }
     }

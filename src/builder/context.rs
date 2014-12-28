@@ -1,6 +1,7 @@
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir_recursive, mkdir};
 use std::io::fs::PathExtensions;
+use std::default::Default;
 use std::collections::{TreeMap, TreeSet};
 
 use container::mount::{bind_mount, unmount, mount_system_dirs};
@@ -8,6 +9,7 @@ use container::util::clean_dir;
 use config::Container;
 use super::commands::debian::UbuntuInfo;
 use super::commands::alpine::AlpineInfo;
+use super::commands::pip::PipSettings;
 
 #[deriving(Show)]
 pub enum Distribution {
@@ -26,6 +28,7 @@ pub struct BuildContext<'a> {
     pub environ: TreeMap<String, String>,
 
     pub distribution: Distribution,
+    pub pip_settings: PipSettings,
 }
 
 impl<'a> BuildContext<'a> {
@@ -55,7 +58,9 @@ impl<'a> BuildContext<'a> {
                  "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
                  .to_string()),
                 ).into_iter().collect(),
+
             distribution: Unknown,
+            pip_settings: Default::default(),
         };
     }
 
@@ -71,6 +76,8 @@ impl<'a> BuildContext<'a> {
                      .map_err(|e| format!("Error creating cache dir: {}", e)));
             }
             let path = Path::new("/vagga/root").join(path);
+            try!(mkdir_recursive(&path, ALL_PERMISSIONS)
+                 .map_err(|e| format!("Error creating cache dir: {}", e)));
             try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
         }

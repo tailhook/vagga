@@ -100,7 +100,10 @@ pub enum Builder {
     // -- Languages --
     //NpmInstall(Vec<String>),
     //PipRequirement(Path),
-    //PipInstall(Vec<String>),
+    PipEnableDependencies,
+    PipLinks(String),
+    Py2Install(Vec<String>),
+    Py3Install(Vec<String>),
     //GemInstall(Vec<String>),
 }
 
@@ -190,12 +193,27 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     .. Default::default() } as Box<V::Validator>),
             ),
         .. Default::default() } as Box<V::Validator>),
+
         ("AlpineBase".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
         ("AlpineInstall".to_string(), box V::Sequence {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
+
+        ("PipLinks".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("PipEnableDependencies".to_string(),
+            box V::Nothing as Box<V::Validator>),
+        ("Py2Install".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+        ("Py3Install".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+
     ), .. Default::default() } as Box<V::Validator>;
 }
 

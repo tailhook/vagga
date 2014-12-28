@@ -29,6 +29,7 @@ mod commands {
     pub mod debian;
     pub mod generic;
     pub mod alpine;
+    pub mod pip;
 }
 
 

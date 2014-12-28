@@ -76,10 +76,23 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
 pub fn install(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     -> Result<(), String>
 {
+    apk_run(&[
+        "--allow-untrusted",
+        "--root", "/vagga/root",
+        "add",
+        ], pkgs.as_slice())
+}
+
+pub fn ensure_pip(_ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
+    if ver != 2 {
+        return Err(format!("Python {} is not supported", ver));
+    }
     try!(apk_run(&[
         "--allow-untrusted",
         "--root", "/vagga/root",
         "add",
-        ], pkgs.as_slice()));
-    Ok(())
+        "python",
+        "py-pip",
+        ], &[]));
+    return Ok(Path::new("/usr/bin/pip"));
 }

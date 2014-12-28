@@ -12,6 +12,7 @@ use container::sha256::{Sha256, Digest};
 pub struct UbuntuInfo {
     pub release: String,
     pub apt_update: bool,
+    pub has_universe: bool,
 }
 
 
@@ -35,6 +36,7 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
     ctx.distribution = Ubuntu(UbuntuInfo {
         release: release.to_string(),
         apt_update: true,
+        has_universe: false,
     });
     try!(init_debian_build(ctx));
 
@@ -137,24 +139,46 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     -> Result<(), String>
 {
     let target = "/vagga/root/etc/apt/sources.list.d/universe.list";
-    let release = if let Ubuntu(ref ubuntu) = ctx.distribution {
-        &ubuntu.release
+    if let Ubuntu(ref ubuntu) = ctx.distribution {
+        try!(File::create(&Path::new(target))
+            .and_then(|mut f| {
+            try!(writeln!(f,
+                "deb http://archive.ubuntu.com/ubuntu/ {} universe",
+                ubuntu.release));
+            try!(writeln!(f,
+                "deb http://archive.ubuntu.com/ubuntu/ {}-updates universe",
+                ubuntu.release));
+            try!(writeln!(f,
+                "deb http://archive.ubuntu.com/ubuntu/ {}-security universe",
+                ubuntu.release));
+                Ok(())
+            })
+            .map_err(|e| format!("Error writing universe.list file: {}", e)));
     } else {
         return Err(format!("Incompatible distribution: {}", ctx.distribution));
     };
+    match ctx.distribution {
+        Ubuntu(ref mut ubuntu) => { ubuntu.has_universe = true; }
+        _ => unreachable!(),
+    }
+    Ok(())
+}
 
-    File::create(&Path::new(target))
-        .and_then(|mut f| {
-            try!(writeln!(f,
-                "deb http://archive.ubuntu.com/ubuntu/ {} universe",
-                release));
-            try!(writeln!(f,
-                "deb http://archive.ubuntu.com/ubuntu/ {}-updates universe",
-                release));
-            try!(writeln!(f,
-                "deb http://archive.ubuntu.com/ubuntu/ {}-security universe",
-                release));
-            Ok(())
-        })
-        .map_err(|e| format!("Error writing universe.list file: {}", e))
+pub fn ensure_pip(ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
+    let needs_universe = match ctx.distribution {
+        Ubuntu(ref ubuntu) => !ubuntu.has_universe,
+        _ => unreachable!(),
+    };
+    if needs_universe {
+        try!(ubuntu_add_universe(ctx));
+    }
+    let args = vec!(
+        "/usr/bin/apt-get".to_string(),
+        "install".to_string(),
+        "-y".to_string(),
+        (if ver == 2 { "python" } else { "python3" }).to_string(),
+        (if ver == 2 { "python-pip" } else { "python3-pip" }).to_string(),
+        );
+    try!(run_command(ctx, args.as_slice()))
+    return Ok(Path::new(format!("/usr/bin/pip{}", ver)));
 }
