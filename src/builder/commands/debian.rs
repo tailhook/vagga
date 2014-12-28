@@ -100,6 +100,29 @@ pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
     run_command(ctx, args.as_slice())
 }
 
+pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
+    -> Result<(), String>
+{
+    let mut args = vec!(
+        "/usr/bin/apt-get".to_string(),
+        "remove".to_string(),
+        "-y".to_string(),
+        );
+    args.extend(pkgs.clone().into_iter());
+    run_command(ctx, args.as_slice())
+}
+
+pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
+{
+    let pkgs = ctx.build_deps.clone().into_iter().collect();
+    try!(apt_remove(ctx, &pkgs));
+    run_command(ctx, &[
+        "/usr/bin/apt-get".to_string(),
+        "autoremove".to_string(),
+        "-y".to_string(),
+        ])
+}
+
 pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)
     -> Result<(), String>
 {
@@ -170,15 +193,12 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
         _ => unreachable!(),
     };
     if needs_universe {
+        debug!("Add Universe");
         try!(ubuntu_add_universe(ctx));
     }
-    let args = vec!(
-        "/usr/bin/apt-get".to_string(),
-        "install".to_string(),
-        "-y".to_string(),
+    try!(apt_install(ctx, &vec!(
         (if ver == 2 { "python" } else { "python3" }).to_string(),
         (if ver == 2 { "python-pip" } else { "python3-pip" }).to_string(),
-        );
-    try!(run_command(ctx, args.as_slice()))
+        )));
     return Ok(Path::new(format!("/usr/bin/pip{}", ver)));
 }

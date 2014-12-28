@@ -10,6 +10,8 @@ use config::Container;
 use super::commands::debian::UbuntuInfo;
 use super::commands::alpine::AlpineInfo;
 use super::commands::pip::PipSettings;
+use super::commands::debian;
+use super::commands::alpine;
 
 #[deriving(Show)]
 pub enum Distribution {
@@ -29,6 +31,8 @@ pub struct BuildContext<'a> {
 
     pub distribution: Distribution,
     pub pip_settings: PipSettings,
+    pub packages: TreeSet<String>,
+    pub build_deps: TreeSet<String>,
 }
 
 impl<'a> BuildContext<'a> {
@@ -61,6 +65,8 @@ impl<'a> BuildContext<'a> {
 
             distribution: Unknown,
             pip_settings: Default::default(),
+            packages: TreeSet::new(),
+            build_deps: TreeSet::new(),
         };
     }
 
@@ -101,12 +107,23 @@ impl<'a> BuildContext<'a> {
         let path = path.path_relative_from(&Path::new("/")).unwrap();
         self.ensure_dirs.insert(path);
     }
-    pub fn start(&self) -> Result<(), String> {
+    pub fn start(&mut self) -> Result<(), String> {
         try!(mount_system_dirs());
         Ok(())
     }
 
-    pub fn finish(&self) -> Result<(), String> {
+    pub fn finish(&mut self) -> Result<(), String> {
+
+        match self.distribution {
+            Unknown => {}
+            Ubuntu(_) => {
+                try!(debian::finish(self));
+            }
+            Alpine(_) => {
+                try!(alpine::finish(self));
+            }
+        }
+
         let base = Path::new("/vagga/root");
 
         for (dir, _) in self.cache_dirs.rev_iter() {

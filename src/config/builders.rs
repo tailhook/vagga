@@ -71,6 +71,7 @@ pub enum Builder {
 
     // -- Generic --
     Install(Vec<String>),
+    BuildDeps(Vec<String>),
 
     // -- Ubuntu --
     Ubuntu(String),
@@ -113,6 +114,10 @@ pub enum Builder {
 pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
     return box V::Enum { options: vec!(
         ("Install".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+        ("BuildDeps".to_string(), box V::Sequence {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),

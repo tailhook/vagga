@@ -23,6 +23,22 @@ impl BuildCommand for B::Builder {
         match self {
 
             &B::Install(ref pkgs) => {
+                ctx.packages.extend(pkgs.clone().into_iter());
+                for i in pkgs.iter() {
+                    ctx.build_deps.remove(i);
+                }
+                match ctx.distribution {
+                    distr::Unknown => Err(format!("Unknown distribution")),
+                    distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),
+                    distr::Alpine(_) => alpine::install(ctx, pkgs),
+                }
+            }
+            &B::BuildDeps(ref pkgs) => {
+                for i in pkgs.iter() {
+                    if !ctx.packages.contains(i) {
+                        ctx.build_deps.insert(i.clone());
+                    }
+                }
                 match ctx.distribution {
                     distr::Unknown => Err(format!("Unknown distribution")),
                     distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),

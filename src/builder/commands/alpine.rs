@@ -83,6 +83,22 @@ pub fn install(_ctx: &mut BuildContext, pkgs: &Vec<String>)
         ], pkgs.as_slice())
 }
 
+pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
+    -> Result<(), String>
+{
+    apk_run(&[
+        "--allow-untrusted",
+        "--root", "/vagga/root",
+        "del",
+        ], pkgs.as_slice())
+}
+
+pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
+{
+    let pkgs = ctx.build_deps.clone().into_iter().collect();
+    remove(ctx, &pkgs)
+}
+
 pub fn ensure_pip(_ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
     if ver != 2 {
         return Err(format!("Python {} is not supported", ver));
