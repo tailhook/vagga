@@ -1,9 +1,11 @@
 use std::io::ALL_PERMISSIONS;
 use std::rand::{task_rng, Rng};
 use std::io::fs::{File, mkdir_recursive};
+use std::collections::EnumSet;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use super::super::context::{BuildContext, Alpine, Unknown};
+use super::pip;
 
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
@@ -99,16 +101,36 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     remove(ctx, &pkgs)
 }
 
-pub fn ensure_pip(_ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
+pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
+    features: &EnumSet<pip::PipFeatures>)
+    -> Result<Path, String>
+{
     if ver != 2 {
         return Err(format!("Python {} is not supported", ver));
+    }
+    let mut packages = vec!(
+        (if ver == 2 { "python" } else { "python3" }).to_string(),
+        );
+    ctx.packages.extend(packages.clone().into_iter());
+    for i in features.iter() {
+        let dep = match i {
+            pip::Dev => (if ver == 2 { "python-dev" }
+                         else { "python3-dev" }).to_string(),
+            pip::Pip => (if ver == 2 { "py-pip" }
+                         else { "py3-pip" }).to_string(),
+            pip::Git => "git".to_string(),
+            pip::Hg => "hg".to_string(),
+        };
+        if !ctx.packages.contains(&dep) {
+            if ctx.build_deps.insert(dep.clone()) {
+                packages.push(dep);
+            }
+        }
     }
     try!(apk_run(&[
         "--allow-untrusted",
         "--root", "/vagga/root",
         "add",
-        "python",
-        "py-pip",
-        ], &[]));
+        ], packages.as_slice()));
     return Ok(Path::new("/usr/bin/pip"));
 }

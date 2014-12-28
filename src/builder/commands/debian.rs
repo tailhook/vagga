@@ -1,10 +1,12 @@
 use std::io::fs::File;
+use std::collections::EnumSet;
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext, Ubuntu, Unknown};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
 use super::generic::run_command;
+use super::pip;
 use container::sha256::{Sha256, Digest};
 
 
@@ -187,7 +189,10 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     Ok(())
 }
 
-pub fn ensure_pip(ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
+pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
+    features: &EnumSet<pip::PipFeatures>)
+    -> Result<Path, String>
+{
     let needs_universe = match ctx.distribution {
         Ubuntu(ref ubuntu) => !ubuntu.has_universe,
         _ => unreachable!(),
@@ -196,9 +201,27 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8) -> Result<Path, String> {
         debug!("Add Universe");
         try!(ubuntu_add_universe(ctx));
     }
-    try!(apt_install(ctx, &vec!(
+    let mut packages = vec!(
         (if ver == 2 { "python" } else { "python3" }).to_string(),
-        (if ver == 2 { "python-pip" } else { "python3-pip" }).to_string(),
-        )));
+        );
+    ctx.packages.extend(packages.clone().into_iter());
+    for i in features.iter() {
+        let dep = match i {
+            pip::Dev => (if ver == 2 { "python-dev" }
+                         else { "python3-dev" }).to_string(),
+            pip::Pip => (if ver == 2 { "python-pip" }
+                         else { "python3-pip" }).to_string(),
+            pip::Git => "git".to_string(),
+            pip::Hg => "hg".to_string(),
+        };
+        if !ctx.packages.contains(&dep) {
+            if ctx.build_deps.insert(dep.clone()) {
+                packages.push(dep);
+            }
+        }
+    }
+    if packages.len() > 0 {
+        try!(apt_install(ctx, &packages));
+    }
     return Ok(Path::new(format!("/usr/bin/pip{}", ver)));
 }
