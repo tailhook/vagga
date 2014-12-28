@@ -9,12 +9,11 @@ extern crate regex;
 extern crate config;
 extern crate container;
 
-use std::rc::Rc;
 use std::io::stderr;
 use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
 use config::find_config;
 use container::signal;
-use container::monitor::{Monitor, Executor};
+use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 use argparse::{ArgumentParser, Store, List};
@@ -22,43 +21,10 @@ use argparse::{ArgumentParser, Store, List};
 mod list;
 
 
-struct RunWrapper {
-    cmd: String,
-    args: Vec<String>,
-}
-
-
-impl Executor for RunWrapper {
-    fn command(&self) -> Command {
-        let mut cmd = Command::new("wrapper".to_string(),
-            self_exe_path().unwrap().join("vagga_wrapper"));
-        cmd.keep_sigmask();
-        cmd.arg(self.cmd.as_slice());
-        cmd.args(self.args.as_slice());
-        cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
-        }
-        if let Some(x) = getenv("HOME") {
-            cmd.set_env("VAGGA_USER_HOME".to_string(), x);
-        }
-        cmd.container();
-        cmd.set_max_uidmap();
-        return cmd;
-    }
-}
-
-
 pub fn run() -> int {
     let mut err = stderr();
-    let mut wrapper = RunWrapper {
-        cmd: "".to_string(),
-        args: vec!(),
-    };
+    let mut cname = "".to_string();
+    let mut args = vec!();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -67,10 +33,10 @@ pub fn run() -> int {
 
             Run `vagga` without arguments to see the list of commands.
             ");
-        ap.refer(&mut wrapper.cmd)
+        ap.refer(&mut cname)
           .add_argument("command", box Store::<String>,
                 "A vagga command to run");
-        ap.refer(&mut wrapper.args)
+        ap.refer(&mut args)
           .add_argument("args", box List::<String>,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
@@ -91,7 +57,7 @@ pub fn run() -> int {
         }
     };
 
-    let result:Result<int, String> = match wrapper.cmd.as_slice() {
+    let result:Result<int, String> = match cname.as_slice() {
         "" => {
             err.write_line("Available commands:").ok();
             for (k, cmd) in config.commands.iter() {
@@ -116,12 +82,28 @@ pub fn run() -> int {
             return 127;
         }
         "_list" => {
-            list::print_list(&config, wrapper.args)
+            list::print_list(&config, args)
         }
         _ => {
-            let mut mon = Monitor::new();
-            mon.add(Rc::new("wrapper".to_string()), box wrapper);
-            match mon.run() {
+            let mut cmd = Command::new("wrapper".to_string(),
+                self_exe_path().unwrap().join("vagga_wrapper"));
+            cmd.keep_sigmask();
+            cmd.arg(cname.as_slice());
+            cmd.args(args.as_slice());
+            cmd.set_env("TERM".to_string(),
+                        getenv("TERM").unwrap_or("dumb".to_string()));
+            if let Some(x) = getenv("RUST_LOG") {
+                cmd.set_env("RUST_LOG".to_string(), x);
+            }
+            if let Some(x) = getenv("RUST_BACKTRACE") {
+                cmd.set_env("RUST_BACKTRACE".to_string(), x);
+            }
+            if let Some(x) = getenv("HOME") {
+                cmd.set_env("VAGGA_USER_HOME".to_string(), x);
+            }
+            cmd.container();
+            cmd.set_max_uidmap();
+            match Monitor::run_command(cmd) {
                 Killed => Ok(143),
                 Exit(val) => Ok(val),
             }

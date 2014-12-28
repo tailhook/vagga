@@ -1,52 +1,22 @@
-use std::rc::Rc;
-use std::os::{getenv};
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
-use std::collections::TreeMap;
 
 use argparse::{ArgumentParser, List};
 
-use config::{Config, Settings, Container};
+use config::{Config, Settings};
 use config::command::CommandInfo;
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::uidmap::{map_users, Ranges, Singleton};
-use container::monitor::{Monitor, Executor};
+use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 
 use super::build;
 use super::setup;
 
-struct RunCommand<'a> {
-    env: &'a TreeMap<String, String>,
-    cmd: Path,
-    args: Vec<String>,
-    settings: &'a Settings,
-    container: &'a Container,
-    command: &'a CommandInfo,
-}
-
-impl<'a> Executor for RunCommand<'a> {
-    fn command(&self) -> Command {
-        let mut cmd = Command::new("run".to_string(), &self.cmd);
-        cmd.args(self.args.as_slice());
-        cmd.set_uidmap(self.settings.uid_map.as_ref()
-            .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
-            .unwrap_or(Singleton(0, 0)));
-        if let Some(ref wd) = self.command.work_dir {
-            cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
-        } else {
-            // TODO(tailhook) set workdir to current one
-        }
-        for (ref k, ref v) in self.env.iter() {
-            cmd.set_env(k.to_string(), v.to_string());
-        }
-        return cmd;
-    }
-}
 
 pub fn commandline_cmd(command: &CommandInfo, config: &Config,
     settings: &Settings, mut cmdline: Vec<String>)
@@ -102,12 +72,10 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
          .map_err(|e| format!("Error unmounting old root: {}", e)));
 
     let env = try!(setup::get_environment(cconfig));
-    let mut mon = Monitor::new();
-    let mut cmd = Path::new(cmdline.remove(0).unwrap().as_slice());
-    if cmd.is_absolute() {
+    let mut cpath = Path::new(cmdline.remove(0).unwrap().as_slice());
+    if cpath.is_absolute() {
     } else {
         if let Some(paths) = env.find(&"PATH".to_string()) {
-            let rpath = Path::new("/");
             for dir in paths.as_slice().split(':') {
                 let path = Path::new(dir);
                 if !path.is_absolute() {
@@ -115,30 +83,36 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
                           path.display());
                     continue;
                 }
-                let path = path.join(&cmd);
+                let path = path.join(&cpath);
                 if path.exists() {
-                    cmd = path;
+                    cpath = path;
                 }
             }
-            if !cmd.is_absolute() {
+            if !cpath.is_absolute() {
                 return Err(format!("Command {} not found in {}",
-                    cmd.display(), paths.as_slice()));
+                    cpath.display(), paths.as_slice()));
             }
         } else {
             return Err(format!("Command {} is not absolute and no PATH set",
-                cmd.display()));
+                cpath.display()));
         }
     }
 
-    mon.add(Rc::new("run".to_string()), box RunCommand {
-        env: &env,
-        cmd: cmd,
-        args: cmdline,
-        settings: &settings,
-        container: cconfig,
-        command: command,
-    });
-    match mon.run() {
+    let mut cmd = Command::new("run".to_string(), &cpath);
+    cmd.args(cmdline.as_slice());
+    cmd.set_uidmap(settings.uid_map.as_ref()
+        .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
+        .unwrap_or(Singleton(0, 0)));
+    if let Some(ref wd) = command.work_dir {
+        cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
+    } else {
+        // TODO(tailhook) set workdir to current one
+    }
+    for (ref k, ref v) in env.iter() {
+        cmd.set_env(k.to_string(), v.to_string());
+    }
+
+    match Monitor::run_command(cmd) {
         Killed => return Ok(1),
         Exit(val) => return Ok(val),
     };

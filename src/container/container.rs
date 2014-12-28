@@ -47,8 +47,9 @@ impl CLike for Namespace {
     }
 }
 
+
 pub struct Command {
-    name: String,
+    pub name: String,
     chroot: CString,
     executable: CString,
     arguments: Vec<CString>,

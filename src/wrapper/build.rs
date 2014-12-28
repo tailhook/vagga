@@ -33,7 +33,7 @@ struct RunVersion<'a> {
 }
 
 impl<'a> Executor for RunVersion<'a> {
-    fn command(&self) -> Command {
+    fn command(&mut self) -> Command {
         let mut cmd = Command::new("vagga_version".to_string(),
             Path::new("/vagga/bin/vagga_version"));
         cmd.keep_sigmask();
@@ -53,7 +53,7 @@ impl<'a> Executor for RunVersion<'a> {
         }
         return cmd;
     }
-    fn finish(&self, status: int) -> MonitorStatus {
+    fn finish(&mut self, status: int) -> MonitorStatus {
         unsafe { close(self.pipe.writer) };
         if status == 0 {
             let mut rd = PipeStream::open(self.pipe.reader);
@@ -67,7 +67,7 @@ impl<'a> Executor for RunVersion<'a> {
 }
 
 impl<'a> Executor for RunBuilder<'a> {
-    fn command(&self) -> Command {
+    fn command(&mut self) -> Command {
         let mut cmd = Command::new("vagga_build".to_string(),
             Path::new("/vagga/bin/vagga_build"));
         cmd.keep_sigmask();

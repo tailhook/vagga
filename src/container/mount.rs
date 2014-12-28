@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::io::{IoError, EndOfFile};
+use std::io::{IoError};
 use std::io::BufferedReader;
 use std::ptr::null;
 use std::io::fs::File;

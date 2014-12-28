@@ -1,10 +1,8 @@
-use std::rc::Rc;
 use std::os::{getenv};
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
-use std::collections::TreeMap;
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -12,7 +10,7 @@ use config::{Container, Settings, Config};
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::uidmap::{map_users, Ranges, Singleton};
-use container::monitor::{Monitor, Executor};
+use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 
@@ -22,29 +20,6 @@ use super::setup;
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
-
-struct RunCommand<'a> {
-    env: &'a TreeMap<String, String>,
-    cmd: Path,
-    args: Vec<String>,
-    settings: &'a Settings,
-}
-
-impl<'a> Executor for RunCommand<'a> {
-    fn command(&self) -> Command {
-        let mut cmd = Command::new("run".to_string(), &self.cmd);
-        cmd.args(self.args.as_slice());
-        cmd.set_uidmap(self.settings.uid_map.as_ref()
-            .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
-            .unwrap_or(Singleton(0, 0)));
-        cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
-        for (ref k, ref v) in self.env.iter() {
-            cmd.set_env(k.to_string(), v.to_string());
-        }
-        return cmd;
-    }
-}
 
 pub fn run_command(settings: &Settings, cname: &String,
     container: &Container, command: &String, args: &[String])
@@ -70,10 +45,9 @@ pub fn run_command(settings: &Settings, cname: &String,
          .map_err(|e| format!("Error unmounting old root: {}", e)));
 
     let env = try!(setup::get_environment(container));
-    let mut mon = Monitor::new();
-    let mut cmd = Path::new(command.as_slice());
+    let mut cpath = Path::new(command.as_slice());
     let args = args.clone().to_vec();
-    if cmd.is_absolute() {
+    if cpath.is_absolute() {
     } else {
         let paths = [
             "/bin",
@@ -84,25 +58,30 @@ pub fn run_command(settings: &Settings, cname: &String,
             "/usr/local/sbin",
         ];
         for path in paths.iter() {
-            let path = Path::new(*path).join(&cmd);
+            let path = Path::new(*path).join(&cpath);
             if path.exists() {
-                cmd = path;
+                cpath = path;
                 break;
             }
         }
-        if !cmd.is_absolute() {
+        if !cpath.is_absolute() {
             return Err(format!("Command {} not found in {}",
-                cmd.display(), paths.as_slice()));
+                cpath.display(), paths.as_slice()));
         }
     }
 
-    mon.add(Rc::new("run".to_string()), box RunCommand {
-        cmd: cmd,
-        env: &env,
-        args: args,
-        settings: settings,
-    });
-    match mon.run() {
+    let mut cmd = Command::new("run".to_string(), &cpath);
+    cmd.args(args.as_slice());
+    cmd.set_uidmap(settings.uid_map.as_ref()
+        .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
+        .unwrap_or(Singleton(0, 0)));
+    cmd.set_env("TERM".to_string(),
+                getenv("TERM").unwrap_or("dumb".to_string()));
+    for (ref k, ref v) in env.iter() {
+        cmd.set_env(k.to_string(), v.to_string());
+    }
+
+    match Monitor::run_command(cmd) {
         Killed => return Ok(1),
         Exit(val) => return Ok(val),
     };

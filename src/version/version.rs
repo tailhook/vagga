@@ -1,5 +1,4 @@
 use std::io::EndOfFile;
-use std::path::BytesContainer;
 use std::io::fs::File;
 
 use serialize::json;

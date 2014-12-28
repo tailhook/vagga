@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
 use libc::pid_t;
-use time::{Timespec};
+use time::{Timespec, get_time};
 
 use super::container::Command;
 use super::signal;
@@ -24,10 +24,21 @@ pub enum MonitorStatus {
 }
 
 pub trait Executor {
-    fn prepare(&self) -> MonitorStatus { return Run; }
-    fn command(&self) -> Command;
-    fn finish(&self, status: int) -> MonitorStatus { return Shutdown(status); }
+    fn prepare(&mut self) -> MonitorStatus { Run }
+    fn command(&mut self) -> Command;
+    fn finish(&mut self, status: int) -> MonitorStatus { Shutdown(status) }
 }
+
+struct RunOnce {
+    command: Option<Command>,
+}
+
+impl Executor for RunOnce {
+    fn command(&mut self) -> Command {
+        return self.command.take().expect("Command can't be run twice");
+    }
+}
+
 
 pub struct Process<'a> {
     name: Rc<String>,
@@ -91,19 +102,21 @@ impl<'a> Monitor<'a> {
         self.aio.add_timeout(Duration::seconds(0), prc);
     }
     fn _start_process(&mut self, prc: ProcRef) -> MonitorStatus {
-        let prepare_result = prc.borrow().executor.prepare();
+        let prepare_result = prc.borrow_mut().executor.prepare();
         match prepare_result {
             Run => {
-                match prc.borrow().executor.command().spawn() {
+                let mut pref = prc.borrow_mut();
+                pref.start_time = Some(get_time());
+                let spawn_result = pref.executor.command().spawn();
+                match spawn_result {
                     Ok(pid) => {
                         info!("Process {} started with pid {}",
-                            prc.borrow().name, pid);
+                            pref.name, pid);
                         self.pids.insert(pid, prc.clone());
                     }
                     Err(e) => {
-                        error!("Can't run container {}: {}",
-                            prc.borrow().name, e);
-                        return prc.borrow().executor.finish(127);
+                        error!("Can't run container {}: {}", pref.name, e);
+                        return pref.executor.finish(127);
                     }
                 }
             }
@@ -117,9 +130,11 @@ impl<'a> Monitor<'a> {
     fn _reap_child(&mut self, prc: ProcRef, pid: pid_t, status: int)
         -> MonitorStatus
     {
-        warn!("Child {}:{} exited with status {}",
-            prc.borrow().name, pid, status);
-        return prc.borrow().executor.finish(status);
+        let mut prc = prc.borrow_mut();
+        let start_time = prc.start_time.take().unwrap();
+        warn!("Child {}:{} exited with status {} in {}s",
+            prc.name, pid, status, get_time() - start_time);
+        return prc.executor.finish(status);
     }
     pub fn run(&mut self) -> MonitorResult {
         debug!("Starting with {} processes",
@@ -212,5 +227,12 @@ impl<'a> Monitor<'a> {
             Some(val) => Exit(val),
             None => Killed,
         }
+    }
+
+    pub fn run_command(cmd: Command) -> MonitorResult {
+        let mut mon = Monitor::new();
+        mon.add(Rc::new(cmd.name.to_string()),
+                box RunOnce { command: Some(cmd) });
+        return mon.run();
     }
 }
