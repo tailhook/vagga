@@ -72,6 +72,7 @@ pub fn run_command(settings: &Settings, cname: &String,
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(args.as_slice());
+    cmd.set_workdir(&Path::new(getenv("PWD").unwrap_or("/work".to_string())));
     cmd.set_uidmap(settings.uid_map.as_ref()
         .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
         .unwrap_or(Singleton(0, 0)));

@@ -49,7 +49,7 @@ pub fn run() -> int {
 
     let workdir = getcwd();
 
-    let (config, _) = match find_config(&workdir) {
+    let (config, cfg_dir) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
             err.write_line(e.as_slice()).ok();
@@ -101,6 +101,10 @@ pub fn run() -> int {
             if let Some(x) = getenv("HOME") {
                 cmd.set_env("VAGGA_USER_HOME".to_string(), x);
             }
+            cmd.set_env("PWD".to_string(), Path::new("/work")
+                .join(workdir.path_relative_from(&cfg_dir)
+                    .unwrap_or(Path::new(".")))
+                .display().to_string());
             cmd.container();
             cmd.set_max_uidmap();
             match Monitor::run_command(cmd) {

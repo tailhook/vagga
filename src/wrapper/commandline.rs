@@ -1,3 +1,4 @@
+use std::os::getenv;
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
@@ -106,7 +107,8 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {
-        // TODO(tailhook) set workdir to current one
+        cmd.set_workdir(&Path::new(
+            getenv("PWD").unwrap_or("/work".to_string())));
     }
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());
