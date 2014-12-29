@@ -72,7 +72,10 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
     try!(unmount(&Path::new("/tmp"))
          .map_err(|e| format!("Error unmounting old root: {}", e)));
 
-    let env = try!(setup::get_environment(cconfig));
+    let mut env = try!(setup::get_environment(cconfig));
+    for (k, v) in command.environ.iter() {
+        env.insert(k.clone(), v.clone());
+    }
     let mut cpath = Path::new(cmdline.remove(0).unwrap().as_slice());
     if cpath.is_absolute() {
     } else {
