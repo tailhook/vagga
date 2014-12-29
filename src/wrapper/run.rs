@@ -6,22 +6,23 @@ use std::io::stdio::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, List};
 
-use config::{Container, Settings, Config};
+use config::{Container};
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
-use container::uidmap::{map_users, Ranges, Singleton};
+use container::uidmap::{map_users, Uidmap};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 
 use super::build;
 use super::setup;
+use super::Wrapper;
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
 
-pub fn run_command(settings: &Settings, cname: &String,
+pub fn run_command(uid_map: &Uidmap, cname: &String,
     container: &Container, command: &String, args: &[String])
     -> Result<int, String>
 {
@@ -73,9 +74,7 @@ pub fn run_command(settings: &Settings, cname: &String,
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(args.as_slice());
     cmd.set_workdir(&Path::new(getenv("PWD").unwrap_or("/work".to_string())));
-    cmd.set_uidmap(settings.uid_map.as_ref()
-        .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
-        .unwrap_or(Singleton(0, 0)));
+    cmd.set_uidmap(uid_map.clone());
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
     for (ref k, ref v) in env.iter() {
@@ -88,8 +87,7 @@ pub fn run_command(settings: &Settings, cname: &String,
     };
 }
 
-pub fn run_command_cmd(config: &Config, settings: &Settings,
-    cmdline: Vec<String>)
+pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<int, String>
 {
     let mut container: String = "".to_string();
@@ -128,10 +126,11 @@ pub fn run_command_cmd(config: &Config, settings: &Settings,
             }
         }
     }
-    let cconfig = try!(config.containers.find(&container)
+    let cconfig = try!(wrapper.config.containers.find(&container)
         .ok_or(format!("Container {} not found", container)));
-    let settings = try!(map_users(settings, &cconfig.uids, &cconfig.gids));
-    return build::build_container(&container, false, &settings)
-        .and_then(|cont| run_command(&settings, &cont, cconfig,
+    let uid_map = try!(map_users(wrapper.settings,
+        &cconfig.uids, &cconfig.gids));
+    return build::build_container(&container, false, wrapper)
+        .and_then(|cont| run_command(&uid_map, &cont, cconfig,
                                      &command, args.as_slice()));
 }

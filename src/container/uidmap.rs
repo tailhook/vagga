@@ -12,6 +12,7 @@ use config::Range;
 use config::Settings;
 use super::util::get_user_name;
 
+#[deriving(Clone)]
 pub enum Uidmap {
     Singleton(uid_t, gid_t),
     Ranges(Vec<(uid_t, uid_t, uid_t)>, Vec<(gid_t, gid_t, gid_t)>),
@@ -295,19 +296,20 @@ fn read_outside_ranges(path: &str) -> Result<Vec<Range>, String> {
 }
 
 pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
-    -> Result<Settings, String>
+    -> Result<Uidmap, String>
 {
-    let mut result = settings.clone();
     let default_uids = vec!(Range { start: 0, end: 0 });
     let default_gids = vec!(Range { start: 0, end: 0 });
     let uids = if uids.len() > 0 { uids } else { &default_uids };
     let gids = if gids.len() > 0 { gids } else { &default_gids };
-    if result.uid_map.is_none() {
+    if settings.uid_map.is_none() {
         let ranges = try!(read_outside_ranges("/proc/self/uid_map"));
         let uid_map = match_ranges(uids, &ranges, 0);
         let ranges = try!(read_outside_ranges("/proc/self/gid_map"));
         let gid_map = match_ranges(gids, &ranges, 0);
-        result.uid_map = Some((uid_map, gid_map));
+        return Ok(Ranges(uid_map, gid_map));
+    } else {
+        let &(ref uids, ref gids) = settings.uid_map.as_ref().unwrap();
+        return Ok(Ranges(uids.clone(), gids.clone()));
     }
-    return Ok(result);
 }

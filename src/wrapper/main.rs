@@ -18,7 +18,7 @@ use std::os::{getcwd, set_exit_status, self_exe_path};
 use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::io::fs::PathExtensions;
 
-use config::find_config;
+use config::{find_config, Config, Settings};
 use config::command::main::{Command, Supervise};
 use container::signal;
 use container::mount::{mount_tmpfs, bind_mount, unmount};
@@ -34,6 +34,12 @@ mod run;
 mod supervise;
 mod commandline;
 mod setup;
+
+struct Wrapper<'a> {
+    config: &'a Config,
+    settings: &'a Settings,
+    ext_settings: &'a MergedSettings,
+}
 
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
@@ -262,6 +268,12 @@ pub fn run() -> int {
         }
     };
 
+    let wrapper = Wrapper {
+        config: &config,
+        settings: &int_settings,
+        ext_settings: &ext_settings,
+    };
+
     if let Err(text) = setup_filesystem(&project_root, &ext_settings) {
         err.write_line(text.as_slice()).ok();
         return 122;
@@ -270,21 +282,16 @@ pub fn run() -> int {
 
     let result = match cmd.as_slice() {
         "_build_shell" => Ok(debug::run_interactive_build_shell()),
-        "_build" => build::build_container_cmd(
-            &config, &int_settings, args),
-        "_version_hash" => build::print_version_hash_cmd(
-            &config, &int_settings, args),
-        "_run" => run::run_command_cmd(
-            &config, &int_settings, args),
+        "_build" => build::build_container_cmd(&wrapper, args),
+        "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
+        "_run" => run::run_command_cmd(&wrapper, args),
         _ => {
             match config.commands.find(&cmd) {
                 Some(&Command(ref cmd_info)) => {
-                    commandline::commandline_cmd(cmd_info,
-                        &config, &int_settings, args)
+                    commandline::commandline_cmd(cmd_info, &wrapper, args)
                 }
                 Some(&Supervise(ref svc_info)) => {
-                    supervise::supervise_cmd(svc_info,
-                        &config, &int_settings, args)
+                    supervise::supervise_cmd(svc_info, &wrapper, args)
                 }
                 None => {
                     error!("Unknown command {}", cmd);

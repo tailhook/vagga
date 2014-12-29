@@ -6,21 +6,21 @@ use std::io::stdio::{stdout, stderr};
 
 use argparse::{ArgumentParser, List};
 
-use config::{Config, Settings};
 use config::command::CommandInfo;
 use container::root::change_root;
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
-use container::uidmap::{map_users, Ranges, Singleton};
+use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
 use container::container::{Command};
 
 use super::build;
 use super::setup;
+use super::Wrapper;
 
 
-pub fn commandline_cmd(command: &CommandInfo, config: &Config,
-    settings: &Settings, mut cmdline: Vec<String>)
+pub fn commandline_cmd(command: &CommandInfo,
+    wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<int, String>
 {
     // TODO(tailhook) detect other shells too
@@ -47,11 +47,12 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
         args.extend(cmdline.into_iter());
     }
     let mut cmdline = command.run + args;
-    let cconfig = try!(config.containers.find(&command.container)
+    let cconfig = try!(wrapper.config.containers.find(&command.container)
         .ok_or(format!("Container {} not found", command.container)));
-    let settings = try!(map_users(settings, &cconfig.uids, &cconfig.gids));
+    let uid_map = try!(map_users(wrapper.settings,
+        &cconfig.uids, &cconfig.gids));
     let container = try!(build::build_container(&command.container,
-                                                false, &settings));
+                                                false, wrapper));
 
     let tgtroot = Path::new("/vagga/root");
     if !tgtroot.exists() {
@@ -104,9 +105,7 @@ pub fn commandline_cmd(command: &CommandInfo, config: &Config,
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(cmdline.as_slice());
-    cmd.set_uidmap(settings.uid_map.as_ref()
-        .map(|&(ref x, ref y)| Ranges(x.clone(), y.clone()))
-        .unwrap_or(Singleton(0, 0)));
+    cmd.set_uidmap(uid_map.clone());
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {
