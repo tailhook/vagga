@@ -72,7 +72,8 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
         ]));
 
     ctx.add_remove_dir(Path::new("/var/lib/apt"));
-    ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
+    // TODO(tailhook) decide if we want to delete package databases
+    // ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
     return Ok(());
 }
 
