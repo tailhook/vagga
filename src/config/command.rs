@@ -29,7 +29,7 @@ pub enum SuperviseMode {
 pub enum WriteMode {
     read_only,
     transient_reflink_copy,
-    transient_hard_link_copy,
+    transient_hardlink_copy,
 }
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
