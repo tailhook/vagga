@@ -54,6 +54,8 @@ pub fn run() -> int {
             return 126;
         }
     };
+    let int_workdir = workdir.path_relative_from(&cfg_dir)
+                             .unwrap_or(Path::new("."));
 
     let result:Result<int, String> = match cname.as_slice() {
         "" => {
@@ -82,10 +84,11 @@ pub fn run() -> int {
         "_list" => {
             list::print_list(&config, args)
         }
+        "_run" | "_build" => {
+            user::run_simple_command(&int_workdir, cname, args)
+        }
         _ => {
-            let workdir = workdir.path_relative_from(&cfg_dir)
-                           .unwrap_or(Path::new("."));
-            user::run_user_command(&config, &workdir, cname, args)
+            user::run_user_command(&config, &int_workdir, cname, args)
         }
     };
 

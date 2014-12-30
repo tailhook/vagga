@@ -18,9 +18,6 @@ pub fn run_user_command(config: &Config, workdir: &Path,
     cmd: String, args: Vec<String>)
     -> Result<int, String>
 {
-    if cmd.as_slice() == "_run" {
-        return run_simple_command(workdir, cmd, args);
-    }
     match config.commands.find(&cmd) {
         None => Err(format!("Command {} not found. \
                     Run vagga without arguments to see the list.", cmd)),
@@ -47,7 +44,8 @@ fn _common(cmd: &mut Command, workdir: &Path) {
         .display().to_string());
 }
 
-fn run_simple_command(workdir: &Path, cmdname: String, args: Vec<String>)
+// TODO(tailhook) run not only for simple commands
+pub fn run_simple_command(workdir: &Path, cmdname: String, args: Vec<String>)
     -> Result<int, String>
 {
     let mut cmd = Command::new("wrapper".to_string(),
