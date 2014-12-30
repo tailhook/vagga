@@ -29,13 +29,21 @@ pub trait Executor {
     fn finish(&mut self, status: int) -> MonitorStatus { Shutdown(status) }
 }
 
-struct RunOnce {
+pub struct RunOnce {
     command: Option<Command>,
 }
 
 impl Executor for RunOnce {
     fn command(&mut self) -> Command {
         return self.command.take().expect("Command can't be run twice");
+    }
+}
+
+impl RunOnce {
+    pub fn new(cmd: Command) -> RunOnce {
+        RunOnce {
+            command: Some(cmd),
+        }
     }
 }
 
@@ -151,6 +159,10 @@ impl<'a> Monitor<'a> {
                     match self._start_process(prc) {
                         Shutdown(x) => {
                             self.status = Some(x);
+                            for (pid, _) in self.pids.iter() {
+                                signal::send_signal(*pid,
+                                    signal::SIGTERM as int);
+                            }
                             break;
                         }
                         Error(_) => unreachable!(),
@@ -175,6 +187,10 @@ impl<'a> Monitor<'a> {
                     match self._reap_child(prc, pid, status) {
                         Shutdown(x) => {
                             self.status = Some(x);
+                            for (pid, _) in self.pids.iter() {
+                                signal::send_signal(*pid,
+                                    signal::SIGTERM as int);
+                            }
                             break;
                         }
                         Error(_) => unreachable!(),

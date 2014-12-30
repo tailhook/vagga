@@ -10,15 +10,13 @@ extern crate config;
 extern crate container;
 
 use std::io::stderr;
-use std::os::{getcwd, getenv, set_exit_status, self_exe_path};
+use std::os::{getcwd, set_exit_status};
 use config::find_config;
 use container::signal;
-use container::monitor::{Monitor};
-use container::monitor::{Killed, Exit};
-use container::container::{Command};
 use argparse::{ArgumentParser, Store, List};
 
 mod list;
+mod user;
 
 
 pub fn run() -> int {
@@ -85,32 +83,9 @@ pub fn run() -> int {
             list::print_list(&config, args)
         }
         _ => {
-            let mut cmd = Command::new("wrapper".to_string(),
-                self_exe_path().unwrap().join("vagga_wrapper"));
-            cmd.keep_sigmask();
-            cmd.arg(cname.as_slice());
-            cmd.args(args.as_slice());
-            cmd.set_env("TERM".to_string(),
-                        getenv("TERM").unwrap_or("dumb".to_string()));
-            if let Some(x) = getenv("RUST_LOG") {
-                cmd.set_env("RUST_LOG".to_string(), x);
-            }
-            if let Some(x) = getenv("RUST_BACKTRACE") {
-                cmd.set_env("RUST_BACKTRACE".to_string(), x);
-            }
-            if let Some(x) = getenv("HOME") {
-                cmd.set_env("VAGGA_USER_HOME".to_string(), x);
-            }
-            cmd.set_env("PWD".to_string(), Path::new("/work")
-                .join(workdir.path_relative_from(&cfg_dir)
-                    .unwrap_or(Path::new(".")))
-                .display().to_string());
-            cmd.container();
-            cmd.set_max_uidmap();
-            match Monitor::run_command(cmd) {
-                Killed => Ok(143),
-                Exit(val) => Ok(val),
-            }
+            let workdir = workdir.path_relative_from(&cfg_dir)
+                           .unwrap_or(Path::new("."));
+            user::run_user_command(&config, &workdir, cname, args)
         }
     };
 

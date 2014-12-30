@@ -103,6 +103,14 @@ pub mod child {
     pub enum ChildCommand {
         Command(ChildCommandInfo),
     }
+
+    impl ChildCommand {
+        pub fn get_container<'x>(&'x self) -> &String {
+            match *self {
+                Command(ref info) => &info.container,
+            }
+        }
+    }
 }
 
 fn shell_command(ast: A::Ast) -> Vec<A::Ast> {
@@ -178,7 +186,7 @@ fn command_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
 fn subcommand_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Enum { options: vec!(
         ("Command".to_string(), box V::Structure {
-            members: command_fields(),
+            members: run_fields(),
             .. Default::default()} as Box<V::Validator>),
     ), .. Default::default()} as Box<V::Validator>;
 }
@@ -190,6 +198,7 @@ pub fn command_validator<'a>() -> Box<V::Validator + 'a> {
 
     let mut supervise_members = vec!(
         ("mode".to_string(), box V::Scalar {
+            default: Some("stop-on-failure".to_string()),
             .. Default::default()} as Box<V::Validator>),
         ("children".to_string(), box V::Mapping {
             key_element: box V::Scalar {

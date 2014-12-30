@@ -34,6 +34,7 @@ mod run;
 mod supervise;
 mod commandline;
 mod setup;
+mod util;
 
 struct Wrapper<'a> {
     config: &'a Config,

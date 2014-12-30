@@ -17,6 +17,7 @@ use container::container::{Command};
 use super::build;
 use super::setup;
 use super::Wrapper;
+use super::util::find_cmd;
 
 
 pub fn commandline_cmd(command: &CommandInfo,
@@ -77,31 +78,7 @@ pub fn commandline_cmd(command: &CommandInfo,
     for (k, v) in command.environ.iter() {
         env.insert(k.clone(), v.clone());
     }
-    let mut cpath = Path::new(cmdline.remove(0).unwrap().as_slice());
-    if cpath.is_absolute() {
-    } else {
-        if let Some(paths) = env.find(&"PATH".to_string()) {
-            for dir in paths.as_slice().split(':') {
-                let path = Path::new(dir);
-                if !path.is_absolute() {
-                    warn!("All items in PATH must be absolute, not {}",
-                          path.display());
-                    continue;
-                }
-                let path = path.join(&cpath);
-                if path.exists() {
-                    cpath = path;
-                }
-            }
-            if !cpath.is_absolute() {
-                return Err(format!("Command {} not found in {}",
-                    cpath.display(), paths.as_slice()));
-            }
-        } else {
-            return Err(format!("Command {} is not absolute and no PATH set",
-                cpath.display()));
-        }
-    }
+    let cpath = try!(find_cmd(cmdline.remove(0).unwrap().as_slice(), &env));
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(cmdline.as_slice());
