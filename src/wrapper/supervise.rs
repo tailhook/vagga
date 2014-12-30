@@ -1,6 +1,4 @@
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir, readlink};
-use std::io::fs::PathExtensions;
+use std::io::fs::{readlink};
 use std::os::getenv;
 use std::io::stdio::{stdout, stderr};
 
@@ -8,8 +6,6 @@ use argparse::{ArgumentParser, Store};
 
 use config::command::{SuperviseInfo, ChildCommandInfo};
 use config::command::child::Command;
-use container::root::change_root;
-use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
@@ -55,11 +51,6 @@ fn supervise_child_command(command: &ChildCommandInfo, wrapper: &Wrapper,
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
 
-    let tgtroot = Path::new("/vagga/root");
-    if !tgtroot.exists() {
-        try!(mkdir(&tgtroot, ALL_PERMISSIONS)
-             .map_err(|x| format!("Error creating directory: {}", x)));
-    }
     let lnk = try!(readlink(&Path::new("/work/.vagga")
                    .join(command.container.as_slice()))
         .map_err(|e| format!("Error reading link: {}", e)));
@@ -67,19 +58,9 @@ fn supervise_child_command(command: &ChildCommandInfo, wrapper: &Wrapper,
     if lnkcmp.len() < 3 || lnkcmp[lnkcmp.len()-2].is_none() {
         return Err(format!("Broken container link"));
     }
-    try!(bind_mount(&Path::new("/vagga/roots")
-                    .join(lnkcmp[lnkcmp.len()-2].unwrap()).join("root"),
-                    &tgtroot)
-         .map_err(|e| format!("Error bind mount: {}", e)));
-    try!(remount_ro(&tgtroot));
-    try!(mount_system_dirs()
-        .map_err(|e| format!("Error mounting system dirs: {}", e)));
-    try!(change_root(&tgtroot, &tgtroot.join("tmp"))
-         .map_err(|e| format!("Error changing root: {}", e)));
-    try!(unmount(&Path::new("/work/.vagga/.mnt"))
-         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
-    try!(unmount(&Path::new("/tmp"))
-         .map_err(|e| format!("Error unmounting old root: {}", e)));
+
+    try!(setup::setup_filesystem(cconfig, &uid_map,
+                                 lnkcmp[lnkcmp.len()-2].unwrap()));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {

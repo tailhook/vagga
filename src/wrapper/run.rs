@@ -1,14 +1,10 @@
 use std::os::{getenv};
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
 use std::io::stdio::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, List};
 
 use config::{Container};
-use container::root::change_root;
-use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::uidmap::{map_users, Uidmap};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
@@ -26,24 +22,7 @@ pub fn run_command(uid_map: &Uidmap, cname: &String,
     container: &Container, command: &String, args: &[String])
     -> Result<int, String>
 {
-    let tgtroot = Path::new("/vagga/root");
-    if !tgtroot.exists() {
-        try!(mkdir(&tgtroot, ALL_PERMISSIONS)
-             .map_err(|x| format!("Error creating directory: {}", x)));
-    }
-    try!(bind_mount(&Path::new("/vagga/roots")
-                     .join(cname.as_slice()).join("root"),
-                    &tgtroot)
-         .map_err(|e| format!("Error bind mount: {}", e)));
-    try!(remount_ro(&tgtroot));
-    try!(mount_system_dirs()
-        .map_err(|e| format!("Error mounting system dirs: {}", e)));
-    try!(change_root(&tgtroot, &tgtroot.join("tmp"))
-         .map_err(|e| format!("Error changing root: {}", e)));
-    try!(unmount(&Path::new("/work/.vagga/.mnt"))
-         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
-    try!(unmount(&Path::new("/tmp"))
-         .map_err(|e| format!("Error unmounting old root: {}", e)));
+    try!(setup::setup_filesystem(container, uid_map, cname.as_slice()));
 
     let env = try!(setup::get_environment(container));
     let mut cpath = Path::new(command.as_slice());
