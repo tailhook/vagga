@@ -6,7 +6,9 @@ use std::io::fs::{mkdir};
 use std::collections::TreeMap;
 
 use config::Container;
+use config::containers::{Tmpfs};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
+use container::mount::{mount_tmpfs};
 use container::root::change_root;
 use container::uidmap::{Uidmap};
 use super::run::DEFAULT_PATH;
@@ -46,10 +48,11 @@ pub fn get_environment(container: &Container)
     return Ok(result);
 }
 
-pub fn setup_filesystem(_container: &Container, _uid_map: &Uidmap,
+pub fn setup_filesystem(container: &Container, _uid_map: &Uidmap,
     container_ver: &str)
     -> Result<(), String>
 {
+    let root_path = Path::new("/");
     let tgtroot = Path::new("/vagga/root");
     if !tgtroot.exists() {
         try!(mkdir(&tgtroot, ALL_PERMISSIONS)
@@ -62,6 +65,16 @@ pub fn setup_filesystem(_container: &Container, _uid_map: &Uidmap,
     try!(remount_ro(&tgtroot));
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
+    for (path, vol) in container.volumes.iter() {
+        match vol {
+            &Tmpfs(params) => {
+                try!(mount_tmpfs(&tgtroot
+                    .join(path.path_relative_from(&root_path).unwrap()),
+                    format!("size={:u},mode=0{:o}", params.size, params.mode)
+                    .as_slice()));
+            }
+        }
+    }
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
          .map_err(|e| format!("Error changing root: {}", e)));
     try!(unmount(&Path::new("/work/.vagga/.mnt"))
