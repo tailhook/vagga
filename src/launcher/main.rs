@@ -5,6 +5,7 @@ extern crate argparse;
 extern crate serialize;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
+#[phase(plugin, link)] extern crate log;
 
 extern crate config;
 extern crate container;
@@ -17,6 +18,7 @@ use argparse::{ArgumentParser, Store, List};
 
 mod list;
 mod user;
+mod network;
 
 
 pub fn run() -> int {
@@ -80,6 +82,9 @@ pub fn run() -> int {
                 err.write_char('\n').ok();
             }
             return 127;
+        }
+        "_create_netns" => {
+            network::create_netns(&config, args)
         }
         "_list" => {
             list::print_list(&config, args)
