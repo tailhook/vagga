@@ -3,6 +3,7 @@
 extern crate quire;
 extern crate argparse;
 extern crate serialize;
+extern crate libc;
 extern crate regex;
 #[phase(plugin)] extern crate regex_macros;
 #[phase(plugin, link)] extern crate log;
@@ -89,7 +90,7 @@ pub fn run() -> int {
         "_list" => {
             list::print_list(&config, args)
         }
-        "_run" | "_build" => {
+        "_run" | "_build" | "_build_shell" => {
             user::run_simple_command(&int_workdir, cname, args)
         }
         _ => {
