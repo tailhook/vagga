@@ -2,6 +2,7 @@
 /*.a
 /*.o
 .vagga
+/tmp
 docs/_build
 
 todo.txt
@@ -10,6 +11,7 @@ todo.txt
 /vagga_wrapper
 /vagga_version
 /vagga_build
+/vagga_setup_netns
 /vagga_test
 /main
 

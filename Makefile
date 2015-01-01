@@ -7,7 +7,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 
-all: vagga_launcher vagga_wrapper vagga_version vagga_build
+all: vagga_launcher vagga_wrapper vagga_version vagga_build vagga_setup_netns
 
 rust-argparse/libargparse.rlib:
 	make -C rust-argparse libargparse.rlib
@@ -58,6 +58,10 @@ vagga_build: libconfig.rlib libcontainer.rlib
 vagga_build: src/builder/*.rs src/builder/commands/*.rs
 	$(call rust_compile_static,$@,src/builder/main.rs -g \
 		-L rust-quire -L rust-argparse -L .)
+
+vagga_setup_netns: rust-argparse/libargparse.rlib
+vagga_setup_netns: src/setup_netns/*.rs
+	$(call rust_compile_static,$@,src/setup_netns/main.rs -g -L rust-argparse)
 
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire

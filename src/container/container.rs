@@ -129,6 +129,9 @@ impl Command {
         self.namespaces.add(NewUser);
         self.uidmap = Some(uidmap);
     }
+    pub fn network_ns(&mut self) {
+        self.namespaces.add(NewNet);
+    }
     pub fn container(&mut self) {
         // Mount and user namespaces are set separately
         self.namespaces.add(NewMount);

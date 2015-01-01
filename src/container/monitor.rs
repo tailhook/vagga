@@ -144,6 +144,25 @@ impl<'a> Monitor<'a> {
             prc.name, pid, status, get_time() - start_time);
         return prc.executor.finish(status);
     }
+    fn _find_by_name(&self, name: &Rc<String>) -> Option<ProcRef> {
+        for prc in self.processes.iter() {
+            if prc.borrow().name == *name {
+                return Some(prc.clone());
+            }
+        }
+        return None;
+    }
+    pub fn force_start(&mut self, name: Rc<String>) -> Result<pid_t, String> {
+        let prc = try!(self._find_by_name(&name)
+            .ok_or("Process not found".to_string()));
+        self._start_process(prc.clone());
+        for (pid, pprc) in self.pids.iter() {
+            if pprc.borrow().name == name {
+                return Ok(*pid);
+            }
+        }
+        return Err("Can't run command".to_string());
+    }
     pub fn run(&mut self) -> MonitorResult {
         debug!("Starting with {} processes",
             self.processes.len());
@@ -156,6 +175,9 @@ impl<'a> Monitor<'a> {
                     unimplemented!();
                 }
                 Timeout(prc) => {
+                    if prc.borrow().start_time.is_some() {
+                        continue;  // Already started, e.g. by force_start
+                    }
                     match self._start_process(prc) {
                         Shutdown(x) => {
                             self.status = Some(x);

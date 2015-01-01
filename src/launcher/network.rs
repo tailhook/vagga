@@ -1,21 +1,27 @@
+use std::rc::Rc;
 use std::io::{stdout, stderr};
-use std::io::fs::File;
+use std::os::{getenv, self_exe_path};
+use std::io::{USER_RWX};
+use std::io::fs::{File, PathExtensions};
+use std::io::fs::{mkdir};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use libc::funcs::posix88::unistd::{geteuid};
 
-use argparse::{ArgumentParser, StoreTrue};
+use argparse::{ArgumentParser, StoreTrue, StoreFalse};
 
 use config::Config;
+use container::util::get_user_name;
+use container::monitor::{Monitor, Exit, Killed, RunOnce};
 
 
-pub fn create_netns(config: &Config, mut args: Vec<String>)
+pub fn create_netns(_config: &Config, mut args: Vec<String>)
     -> Result<int, String>
 {
-    let netns_name = "vagga".to_string();
     let interface_name = "vagga".to_string();
-    let network = "172.18.0.0/30".to_string();
-    let host_ip_net = "172.18.0.1/30".to_string();
-    let host_ip = "172.18.0.1".to_string();
-    let guest_ip = "172.18.0.2/30".to_string();
+    let network = "172.18.255.0/30".to_string();
+    let host_ip_net = "172.18.255.1/30".to_string();
+    let host_ip = "172.18.255.1".to_string();
+    let guest_ip = "172.18.255.2/30".to_string();
     let mut dry_run = false;
     let mut iptables = true;
     {
@@ -27,8 +33,8 @@ pub fn create_netns(config: &Config, mut args: Vec<String>)
         ap.refer(&mut dry_run)
             .add_option(&["--dry-run"], box StoreTrue,
                 "Do not run commands, only show");
-        ap.refer(&mut dry_run)
-            .add_option(&["--no-iptables"], box StoreTrue,
+        ap.refer(&mut iptables)
+            .add_option(&["--no-iptables"], box StoreFalse,
                 "Do not update iptables rules (useful you have firewall \
                  other than iptables). You need to update your firewall rules \
                  manually to have functional networking.");
@@ -40,6 +46,41 @@ pub fn create_netns(config: &Config, mut args: Vec<String>)
             }
         }
     }
+
+    let uid = unsafe { geteuid() };
+    let runtime_dir = getenv("XDG_RUNTIME_DIR")
+        .map(|v| Path::new(v).join("vagga"))
+        .unwrap_or(Path::new(format!("/tmp/vagga-{}", get_user_name(uid))));
+    if !runtime_dir.exists() {
+        try!(mkdir(&runtime_dir, USER_RWX)
+            .map_err(|e| format!("Can't create runtime_dir: {}", e)));
+    }
+
+    let netns_file = runtime_dir.join("netns");
+    let userns_file = runtime_dir.join("userns");
+
+    if netns_file.exists() || userns_file.exists() {
+        return Err("Namespaces already created".to_string());
+    }
+
+    let mut mon = Monitor::new();
+    let vsn = Rc::new("vagga_setup_netns".to_string());
+    {
+        use container::container::Command;
+        let mut cmd = Command::new("setup_netns".to_string(),
+            self_exe_path().unwrap().join("vagga_setup_netns"));
+        cmd.set_max_uidmap();
+        cmd.network_ns();
+        cmd.arg("--guest-ip");
+        cmd.arg(guest_ip.as_slice());
+        cmd.arg("--gateway-ip");
+        cmd.arg(host_ip.as_slice());
+        cmd.arg("--network");
+        cmd.arg(network.as_slice());
+        mon.add(vsn.clone(), box RunOnce::new(cmd));
+    }
+    let child_pid = if dry_run { 123456 } else { try!(mon.force_start(vsn)) };
+
     println!("We will run network setup commands with sudo.");
     println!("You may need to enter your password.");
 
@@ -51,40 +92,18 @@ pub fn create_netns(config: &Config, mut args: Vec<String>)
     ip_cmd.arg("ip");
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(["netns", "add", netns_name.as_slice()]);
-    commands.push(cmd);
-
-    let mut ns_cmd = ip_cmd.clone();
-    ns_cmd.args(["netns", "exec", netns_name.as_slice()]);
-
-    let mut cmd = ns_cmd.clone();
-    cmd.args(["ip", "link", "set", "dev", "lo", "up"]);
-    commands.push(cmd);
-
-    let mut cmd = ns_cmd.clone();
-    cmd.args(["ip", "link", "add", "vagga_guest", "type", "veth",
+    cmd.args(["link", "add", "vagga_guest", "type", "veth",
               "peer", "name", interface_name.as_slice()]);
     commands.push(cmd);
 
-    let mut cmd = ns_cmd.clone();
-    cmd.args(["ip", "link", "set", "dev", "vagga_guest", "up"]);
-    commands.push(cmd);
-
-    let mut cmd = ns_cmd.clone();
-    cmd.args(["ip", "link", "set", interface_name.as_slice(), "netns", "1"]);
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["link", "set", "vagga_guest", "netns"]);
+    cmd.arg(format!("{}", child_pid));
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
     cmd.args(["addr", "add", host_ip_net.as_slice(),
               "dev", interface_name.as_slice()]);
-    commands.push(cmd);
-
-    let mut cmd = ns_cmd.clone();
-    cmd.args(["ip", "addr", "add", guest_ip.as_slice(), "dev", "vagga_guest"]);
-    commands.push(cmd);
-
-    let mut cmd = ns_cmd.clone();
-    cmd.args(["ip", "route", "add", "default", "via", host_ip.as_slice()]);
     commands.push(cmd);
 
     let nforward = try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
@@ -100,6 +119,30 @@ pub fn create_netns(config: &Config, mut args: Vec<String>)
     } else {
         info!("Sysctl is ok [{}]", nforward.as_slice().trim());
     }
+
+    if !dry_run {
+        try!(File::create(&netns_file)
+            .map_err(|e| format!("Error creating netns file: {}", e)));
+        try!(File::create(&userns_file)
+            .map_err(|e| format!("Error creating userns file: {}", e)));
+    }
+
+    // If we are root we may skip sudo
+    let mut mount_cmd = Command::new("sudo");
+    mount_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    mount_cmd.arg("mount");
+
+    let mut cmd = mount_cmd.clone();
+    cmd.arg("--bind");
+    cmd.arg(format!("/proc/{}/ns/net", child_pid));
+    cmd.arg(netns_file);
+    commands.push(cmd);
+
+    let mut cmd = mount_cmd.clone();
+    cmd.arg("--bind");
+    cmd.arg(format!("/proc/{}/ns/user", child_pid));
+    cmd.arg(userns_file);
+    commands.push(cmd);
 
     println!("");
     println!("The following commands will be run:");
@@ -144,11 +187,22 @@ pub fn create_netns(config: &Config, mut args: Vec<String>)
                       "-s", network.as_slice(), "-j", "MASQUERADE"]);
             println!("Not existent, creating:");
             println!("    {}", cmd);
-            match cmd.status() {
-                Ok(ExitStatus(0)) => {},
-                val => return Err(
-                    format!("Error setting up iptables {}: {}", cmd, val)),
+            if !dry_run {
+                match cmd.status() {
+                    Ok(ExitStatus(0)) => {},
+                    val => return Err(
+                        format!("Error setting up iptables {}: {}",
+                            cmd, val)),
+                }
             }
+        }
+    }
+    if !dry_run {
+        match mon.run() {
+            Exit(0) => {}
+            Killed => return Err(format!("vagga_setup_netns is dead")),
+            Exit(c) => return Err(
+                format!("vagga_setup_netns exited with code: {}", c)),
         }
     }
 
