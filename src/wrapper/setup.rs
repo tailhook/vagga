@@ -10,7 +10,6 @@ use config::containers::{Tmpfs};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs};
 use container::root::change_root;
-use container::uidmap::{Uidmap};
 use super::run::DEFAULT_PATH;
 
 
@@ -48,8 +47,7 @@ pub fn get_environment(container: &Container)
     return Ok(result);
 }
 
-pub fn setup_filesystem(container: &Container, _uid_map: &Uidmap,
-    container_ver: &str)
+pub fn setup_filesystem(container: &Container, container_ver: &str)
     -> Result<(), String>
 {
     let root_path = Path::new("/");

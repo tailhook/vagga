@@ -59,8 +59,7 @@ fn supervise_child_command(command: &ChildCommandInfo, wrapper: &Wrapper,
         return Err(format!("Broken container link"));
     }
 
-    try!(setup::setup_filesystem(cconfig, &uid_map,
-                                 lnkcmp[lnkcmp.len()-2].unwrap()));
+    try!(setup::setup_filesystem(cconfig, lnkcmp[lnkcmp.len()-2].unwrap()));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {

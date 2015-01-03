@@ -9,9 +9,10 @@ use argparse::{ArgumentParser};
 use container::monitor::{Monitor, RunOnce, Exit, Killed};
 use container::container::{Command};
 use config::Config;
-use config::command::main;
-use config::command::{SuperviseInfo, stop_on_failure};
+use config::command::{main, child};
+use config::command::{CommandInfo, SuperviseInfo, stop_on_failure};
 
+use super::network::{join_netns, is_netns_set_up};
 
 
 pub fn run_user_command(config: &Config, workdir: &Path,
@@ -21,7 +22,8 @@ pub fn run_user_command(config: &Config, workdir: &Path,
     match config.commands.find(&cmd) {
         None => Err(format!("Command {} not found. \
                     Run vagga without arguments to see the list.", cmd)),
-        Some(&main::Command(_)) => run_simple_command(workdir, cmd, args),
+        Some(&main::Command(ref info))
+        => run_simple_command(info, workdir, cmd, args),
         Some(&main::Supervise(ref sup))
         => run_supervise_command(config, workdir, sup, cmd, args),
     }
@@ -44,8 +46,19 @@ fn _common(cmd: &mut Command, workdir: &Path) {
         .display().to_string());
 }
 
+pub fn run_simple_command(cfg: &CommandInfo,
+    workdir: &Path, cmdname: String, args: Vec<String>)
+    -> Result<int, String>
+{
+    if let Some(_) = cfg.network.ip {
+        try!(join_netns());
+    }
+    run_wrapper(workdir, cmdname, args, cfg.network.ip.is_none())
+}
+
 // TODO(tailhook) run not only for simple commands
-pub fn run_simple_command(workdir: &Path, cmdname: String, args: Vec<String>)
+pub fn run_wrapper(workdir: &Path, cmdname: String, args: Vec<String>,
+    userns: bool)
     -> Result<int, String>
 {
     let mut cmd = Command::new("wrapper".to_string(),
@@ -55,7 +68,9 @@ pub fn run_simple_command(workdir: &Path, cmdname: String, args: Vec<String>)
     cmd.args(args.as_slice());
     _common(&mut cmd, workdir);
     cmd.container();
-    cmd.set_max_uidmap();
+    if userns {
+        cmd.set_max_uidmap();
+    }
     match Monitor::run_command(cmd) {
         Killed => Ok(143),
         Exit(val) => Ok(val),
@@ -84,20 +99,36 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         }
     }
     let mut containers = TreeSet::new();
-    for (_, child) in sup.children.iter() {
+    let mut containers_in_netns = vec!();
+    let mut containers_host_net = vec!();
+    for (name, child) in sup.children.iter() {
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            match run_simple_command(workdir,
-                "_build".to_string(), vec!(cont.to_string()))
+            match run_wrapper(workdir,
+                "_build".to_string(), vec!(cont.to_string()),
+                true)
             {
                 Ok(0) => {}
                 x => return x,
             }
+            match child {
+                &child::Command(ref cfg) => {
+                    if cfg.network.ip.is_some() {
+                        containers_in_netns.push(name.to_string());
+                    } else {
+                        containers_host_net.push(name.to_string());
+                    }
+                }
+            }
         }
     }
+    if containers_in_netns.len() > 0 && !is_netns_set_up() {
+        return Err(format!("Network namespace is not set up. You need to run \
+            vagga _create_netns first"));
+    }
     let mut mon = Monitor::new();
-    for (name, _) in sup.children.iter() {
+    for name in containers_host_net.iter() {
         let mut cmd = Command::new("wrapper".to_string(),
             self_exe_path().unwrap().join("vagga_wrapper"));
         cmd.keep_sigmask();
@@ -107,6 +138,19 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         cmd.container();
         cmd.set_max_uidmap();
         mon.add(Rc::new(name.clone()), box RunOnce::new(cmd));
+    }
+    if containers_in_netns.len() > 0 {
+        try!(join_netns());
+        for name in containers_in_netns.iter() {
+            let mut cmd = Command::new("wrapper".to_string(),
+                self_exe_path().unwrap().join("vagga_wrapper"));
+            cmd.keep_sigmask();
+            cmd.arg(cmdname.as_slice());
+            cmd.arg(name.as_slice());
+            _common(&mut cmd, workdir);
+            cmd.container();
+            mon.add(Rc::new(name.clone()), box RunOnce::new(cmd));
+        }
     }
     match mon.run() {
         Killed => Ok(143),

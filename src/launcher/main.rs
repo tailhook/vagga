@@ -91,7 +91,10 @@ pub fn run() -> int {
             list::print_list(&config, args)
         }
         "_run" | "_build" | "_build_shell" => {
-            user::run_simple_command(&int_workdir, cname, args)
+            user::run_wrapper(&int_workdir, cname, args, true)
+        }
+        "_run_in_netns" => {
+            network::run_in_netns(&int_workdir, cname, args)
         }
         _ => {
             user::run_user_command(&config, &int_workdir, cname, args)

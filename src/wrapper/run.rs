@@ -18,11 +18,11 @@ pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
 
-pub fn run_command(uid_map: &Uidmap, cname: &String,
+pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
     container: &Container, command: &String, args: &[String])
     -> Result<int, String>
 {
-    try!(setup::setup_filesystem(container, uid_map, cname.as_slice()));
+    try!(setup::setup_filesystem(container, cname.as_slice()));
 
     let env = try!(setup::get_environment(container));
     let mut cpath = Path::new(command.as_slice());
@@ -53,7 +53,7 @@ pub fn run_command(uid_map: &Uidmap, cname: &String,
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(args.as_slice());
     cmd.set_workdir(&Path::new(getenv("PWD").unwrap_or("/work".to_string())));
-    cmd.set_uidmap(uid_map.clone());
+    uid_map.as_ref().map(|v| cmd.set_uidmap(v.clone()));
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
     for (ref k, ref v) in env.iter() {
@@ -66,7 +66,7 @@ pub fn run_command(uid_map: &Uidmap, cname: &String,
     };
 }
 
-pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
+pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     -> Result<int, String>
 {
     let mut container: String = "".to_string();
@@ -107,8 +107,12 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     }
     let cconfig = try!(wrapper.config.containers.find(&container)
         .ok_or(format!("Container {} not found", container)));
-    let uid_map = try!(map_users(wrapper.settings,
-        &cconfig.uids, &cconfig.gids));
+    let uid_map = if user_ns {
+            Some(try!(map_users(wrapper.settings,
+                &cconfig.uids, &cconfig.gids)))
+        } else {
+            None
+        };
     return build::build_container(&container, false, wrapper)
         .and_then(|cont| run_command(&uid_map, &cont, cconfig,
                                      &command, args.as_slice()));

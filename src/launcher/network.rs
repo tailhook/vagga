@@ -11,7 +11,19 @@ use argparse::{ArgumentParser, StoreTrue, StoreFalse};
 
 use config::Config;
 use container::util::get_user_name;
+use container::nsutil::set_namespace;
+use container::container::{NewUser, NewNet};
 use container::monitor::{Monitor, Exit, Killed, RunOnce};
+
+use super::user;
+
+
+pub fn namespace_dir() -> Path {
+    let uid = unsafe { geteuid() };
+    getenv("XDG_RUNTIME_DIR")
+        .map(|v| Path::new(v).join("vagga"))
+        .unwrap_or(Path::new(format!("/tmp/vagga-{}", get_user_name(uid))))
+}
 
 
 pub fn create_netns(_config: &Config, mut args: Vec<String>)
@@ -47,10 +59,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         }
     }
 
-    let uid = unsafe { geteuid() };
-    let runtime_dir = getenv("XDG_RUNTIME_DIR")
-        .map(|v| Path::new(v).join("vagga"))
-        .unwrap_or(Path::new(format!("/tmp/vagga-{}", get_user_name(uid))));
+    let runtime_dir = namespace_dir();
     if !runtime_dir.exists() {
         try!(mkdir(&runtime_dir, USER_RWX)
             .map_err(|e| format!("Can't create runtime_dir: {}", e)));
@@ -207,4 +216,25 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     }
 
     Ok(0)
+}
+
+pub fn is_netns_set_up() -> bool {
+    let nsdir = namespace_dir();
+    return nsdir.join("userns").exists() && nsdir.join("netns").exists();
+}
+
+pub fn join_netns() -> Result<(), String> {
+    let nsdir = namespace_dir();
+    try!(set_namespace(&nsdir.join("userns"), NewUser)
+        .map_err(|e| format!("Error setting userns: {}", e)));
+    try!(set_namespace(&nsdir.join("netns"), NewNet)
+        .map_err(|e| format!("Error setting networkns: {}", e)));
+    Ok(())
+}
+
+pub fn run_in_netns(workdir: &Path, cname: String, args: Vec<String>)
+    -> Result<int, String>
+{
+    try!(join_netns());
+    user::run_wrapper(workdir, cname, args, false)
 }

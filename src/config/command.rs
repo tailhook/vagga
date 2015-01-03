@@ -33,6 +33,11 @@ pub enum WriteMode {
 }
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
+pub struct Network {
+    pub ip: Option<String>,
+}
+
+#[deriving(Decodable, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common
     pub description: Option<String>,
@@ -41,6 +46,7 @@ pub struct CommandInfo {
     pub epilog: Option<String>,
 
     // Command
+    pub network: Network,
     pub pid1mode: Pid1Mode,
     pub work_dir: Option<String>,
     pub container: String,
@@ -54,6 +60,7 @@ pub struct CommandInfo {
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 pub struct ChildCommandInfo {
     // Command
+    pub network: Network,
     pub pid1mode: Pid1Mode,
     pub work_dir: Option<String>,
     pub container: String,
@@ -132,6 +139,11 @@ fn shell_command(ast: A::Ast) -> Vec<A::Ast> {
 
 fn run_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
     return vec!(
+        ("network".to_string(), box V::Structure { members: vec!(
+            ("ip".to_string(), box V::Scalar {
+                optional: true,
+                .. Default::default()} as Box<V::Validator>),
+            ),.. Default::default()} as Box<V::Validator>),
         ("pid1mode".to_string(), box V::Scalar {
             default: Some("wait".to_string()),
             .. Default::default()} as Box<V::Validator>),

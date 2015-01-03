@@ -14,7 +14,7 @@ use libc::{c_int, c_char, pid_t};
 
 
 #[deriving(Show)]
-enum Namespace {
+pub enum Namespace {
     NewMount,
     NewUts,
     NewIpc,
@@ -181,18 +181,22 @@ impl Command {
     }
 }
 
+pub fn convert_namespace(value: Namespace) -> c_int {
+    match value {
+        NewMount => CLONE_NEWNS,
+        NewUts => CLONE_NEWUTS,
+        NewIpc => CLONE_NEWIPC,
+        NewUser => CLONE_NEWUSER,
+        NewPid => CLONE_NEWPID,
+        NewNet => CLONE_NEWNET,
+    }
+}
+
 
 fn convert_namespaces(set: EnumSet<Namespace>) -> c_int {
     let mut ns = 0;
     for i in set.iter() {
-        ns |= match i {
-            NewMount => CLONE_NEWNS,
-            NewUts => CLONE_NEWUTS,
-            NewIpc => CLONE_NEWIPC,
-            NewUser => CLONE_NEWUSER,
-            NewPid => CLONE_NEWPID,
-            NewNet => CLONE_NEWNET,
-        };
+        ns |= convert_namespace(i);
     }
     return ns;
 }

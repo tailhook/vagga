@@ -285,7 +285,8 @@ pub fn run() -> int {
         "_build_shell" => Ok(debug::run_interactive_build_shell()),
         "_build" => build::build_container_cmd(&wrapper, args),
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
-        "_run" => run::run_command_cmd(&wrapper, args),
+        "_run" => run::run_command_cmd(&wrapper, args, true),
+        "_run_in_netns" => run::run_command_cmd(&wrapper, args, false),
         _ => {
             match config.commands.find(&cmd) {
                 Some(&Command(ref cmd_info)) => {
