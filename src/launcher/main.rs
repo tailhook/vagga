@@ -1,4 +1,4 @@
-#![feature(phase, if_let)]
+#![feature(phase, if_let, slicing_syntax)]
 
 extern crate quire;
 extern crate argparse;

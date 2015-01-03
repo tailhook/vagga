@@ -2,6 +2,7 @@ use std::rc::Rc;
 use std::io::{stdout, stderr};
 use std::os::{getenv, self_exe_path};
 use std::io::{USER_RWX};
+use std::io::{BufferedReader};
 use std::io::fs::{File, PathExtensions};
 use std::io::fs::{mkdir, unlink};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
@@ -100,6 +101,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
     ip_cmd.arg("ip");
 
+    // If we are root we may skip sudo
+    let mut sysctl = Command::new("sudo");
+    sysctl.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    sysctl.arg("sysctl");
+
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "add", "vagga_guest", "type", "veth",
               "peer", "name", interface_name.as_slice()]);
@@ -120,14 +126,21 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         .map_err(|e| format!("Can't read sysctl: {}", e)));
 
     if nforward.as_slice().trim() == "0" {
-        // If we are root we may skip sudo
-        let mut cmd = Command::new("sudo");
-        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-        cmd.args(["sysctl", "net.ipv4.ip_forward=1"]);
+        let mut cmd = sysctl.clone();
+        cmd.args(["net.ipv4.ip_forward=1"]);
         commands.push(cmd);
     } else {
         info!("Sysctl is ok [{}]", nforward.as_slice().trim());
     }
+
+    let mut cmd = sysctl.clone();
+    cmd.args(["net.ipv4.conf.vagga.route_localnet=1"]);
+    commands.push(cmd);
+
+    let nameservers = try!(get_nameservers());
+    info!("Detected nameservers: {}", nameservers);
+
+    let local_dns = nameservers.as_slice() == ["127.0.0.1".to_string()];
 
     if !dry_run {
         try!(File::create(&netns_file)
@@ -153,10 +166,40 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg(userns_file);
     commands.push(cmd);
 
+    let mut iprules = vec!();
+    if local_dns {
+        iprules.push(vec!("-I", "INPUT",
+                          "-i", interface_name.as_slice(),
+                          "-d", "127.0.0.1",
+                          "-j", "ACCEPT"));
+        iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
+                          "-p", "tcp", "-i", "vagga",
+                          "-d", host_ip.as_slice(), "--dport", "53",
+                          "-j", "DNAT", "--to-destination", "127.0.0.1"));
+        iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
+                          "-p", "udp", "-i", "vagga",
+                          "-d", host_ip.as_slice(), "--dport", "53",
+                          "-j", "DNAT", "--to-destination", "127.0.0.1"));
+    }
+    iprules.push(vec!("-t", "nat", "-A", "POSTROUTING",
+                      "-s", network.as_slice(), "-j", "MASQUERADE"));
+
+
     println!("");
     println!("The following commands will be run:");
     for cmd in commands.iter() {
         println!("    {}", cmd);
+    }
+
+
+
+    if iptables {
+        println!("");
+        println!("The following iptables rules will be established:");
+
+        for rule in iprules.iter() {
+            println!("    {}", rule);
+        }
     }
 
     if !dry_run {
@@ -167,51 +210,50 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                     format!("Error running command {}: {}", cmd, val)),
             }
         }
-    }
 
-    if iptables {
-        println!("");
-        println!("Checking firewall rules:");
-        let mut iptables = Command::new("sudo");
-        iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-        iptables.arg("iptables");
-
-        let mut cmd = iptables.clone();
-        iptables.stderr(InheritFd(1));  // Message not an error actually
-        cmd.args(["-t", "nat", "-C", "POSTROUTING",
-                  "-s", network.as_slice(), "-j", "MASQUERADE"]);
-        println!("    {}", cmd);
-        let exists = match cmd.status() {
-            Ok(ExitStatus(0)) => true,
-            Ok(ExitStatus(1)) => false,
-            val => return Err(
-                format!("Error running command {}: {}", cmd, val)),
-        };
-
-        if exists {
-            println!("Already setup. Skipping...");
-        } else {
-            let mut cmd = iptables.clone();
-            cmd.args(["-t", "nat", "-A", "POSTROUTING",
-                      "-s", network.as_slice(), "-j", "MASQUERADE"]);
-            println!("Not existent, creating:");
-            println!("    {}", cmd);
-            if !dry_run {
-                match cmd.status() {
-                    Ok(ExitStatus(0)) => {},
-                    val => return Err(
-                        format!("Error setting up iptables {}: {}",
-                            cmd, val)),
-                }
-            }
-        }
-    }
-    if !dry_run {
         match mon.run() {
             Exit(0) => {}
             Killed => return Err(format!("vagga_setup_netns is dead")),
             Exit(c) => return Err(
                 format!("vagga_setup_netns exited with code: {}", c)),
+        }
+        if iptables {
+            let mut iptables = Command::new("sudo");
+            iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+            iptables.arg("iptables");
+
+            for rule in iprules.iter() {
+                let mut cmd = iptables.clone();
+                iptables.stderr(InheritFd(1));  // Message not an error actually
+                let mut check_rule = rule.clone();
+                for item in check_rule.iter_mut() {
+                    if *item == "-A" || *item == "-I" {
+                        *item = "-C";
+                    }
+                }
+                cmd.args(check_rule.as_slice());
+                let exists = match cmd.status() {
+                    Ok(ExitStatus(0)) => true,
+                    Ok(ExitStatus(1)) => false,
+                    val => return Err(
+                        format!("Error running command {}: {}", cmd, val)),
+                };
+                debug!("Checked {} -> {}", check_rule, exists);
+
+                if exists {
+                    info!("Rule {} already setup. Skipping...", rule);
+                } else {
+                    let mut cmd = iptables.clone();
+                    cmd.args(rule.as_slice());
+                    debug!("Running {}", rule);
+                    match cmd.status() {
+                        Ok(ExitStatus(0)) => {},
+                        val => return Err(
+                            format!("Error setting up iptables {}: {}",
+                                cmd, val)),
+                    }
+                }
+            }
         }
     }
 
@@ -221,7 +263,9 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     -> Result<int, String>
 {
+    let interface_name = "vagga".to_string();
     let network = "172.18.255.0/30".to_string();
+    let host_ip = "172.18.255.1".to_string();
     let mut dry_run = false;
     let mut iptables = true;
     {
@@ -274,6 +318,27 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
         cmd.args(["-t", "nat", "-D", "POSTROUTING",
                   "-s", network.as_slice(), "-j", "MASQUERADE"]);
         commands.push(cmd);
+
+        let mut cmd = iptcmd.clone();
+        cmd.args(["-D", "INPUT",
+                  "-i", interface_name.as_slice(),
+                  "-d", "127.0.0.1",
+                  "-j", "ACCEPT"]);
+        commands.push(cmd);
+
+        let mut cmd = iptcmd.clone();
+        cmd.args(["-t", "nat", "-D", "PREROUTING",
+                  "-p", "tcp", "-i", "vagga",
+                  "-d", host_ip.as_slice(), "--dport", "53",
+                  "-j", "DNAT", "--to-destination", "127.0.0.1"]);
+        commands.push(cmd);
+
+        let mut cmd = iptcmd.clone();
+        cmd.args(["-t", "nat", "-D", "PREROUTING",
+                  "-p", "udp", "-i", "vagga",
+                  "-d", host_ip.as_slice(), "--dport", "53",
+                  "-j", "DNAT", "--to-destination", "127.0.0.1"]);
+        commands.push(cmd);
     }
 
     println!("We will run network setup commands with sudo.");
@@ -324,4 +389,20 @@ pub fn run_in_netns(workdir: &Path, cname: String, args: Vec<String>)
 {
     try!(join_netns());
     user::run_wrapper(workdir, cname, args, false)
+}
+
+pub fn get_nameservers() -> Result<Vec<String>, String> {
+    File::open(&Path::new("/etc/resolv.conf"))
+        .map(BufferedReader::new)
+        .and_then(|mut f| {
+            let mut ns = vec!();
+            for line in f.lines() {
+                let line = try!(line);
+                if line.as_slice().starts_with("nameserver ") {
+                    ns.push(line[11..].trim().to_string());
+                }
+            }
+            Ok(ns)
+        })
+        .map_err(|e| format!("Can't read resolf.conf: {}", e))
 }
