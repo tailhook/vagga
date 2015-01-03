@@ -87,6 +87,9 @@ pub fn run() -> int {
         "_create_netns" => {
             network::create_netns(&config, args)
         }
+        "_destroy_netns" => {
+            network::destroy_netns(&config, args)
+        }
         "_list" => {
             list::print_list(&config, args)
         }

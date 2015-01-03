@@ -93,11 +93,6 @@ fn main() {
     cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
     commands.push(cmd);
 
-    let mut cmd = Command::new("ping");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-    cmd.args(&["google.com"]);
-    commands.push(cmd);
-
     for cmd in commands.iter() {
         match cmd.status() {
             Ok(ExitStatus(0)) => {},

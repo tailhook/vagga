@@ -3,7 +3,7 @@ use std::io::{stdout, stderr};
 use std::os::{getenv, self_exe_path};
 use std::io::{USER_RWX};
 use std::io::fs::{File, PathExtensions};
-use std::io::fs::{mkdir};
+use std::io::fs::{mkdir, unlink};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 use libc::funcs::posix88::unistd::{geteuid};
 
@@ -214,6 +214,93 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 format!("vagga_setup_netns exited with code: {}", c)),
         }
     }
+
+    Ok(0)
+}
+
+pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
+    -> Result<int, String>
+{
+    let network = "172.18.255.0/30".to_string();
+    let mut dry_run = false;
+    let mut iptables = true;
+    {
+        args.insert(0, "vagga _create_netns".to_string());
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Set's up network namespace for subsequent container runs
+            ");
+        ap.refer(&mut dry_run)
+            .add_option(&["--dry-run"], box StoreTrue,
+                "Do not run commands, only show");
+        ap.refer(&mut iptables)
+            .add_option(&["--no-iptables"], box StoreFalse,
+                "Do not remove iptables rules (useful you have firewall \
+                 other than iptables). You need to update your firewall rules \
+                 manually to have functional networking.");
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    let runtime_dir = namespace_dir();
+    let netns_file = runtime_dir.join("netns");
+    let userns_file = runtime_dir.join("userns");
+
+    let mut commands = vec!();
+
+    // If we are root we may skip sudo
+    let mut umount_cmd = Command::new("sudo");
+    umount_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    umount_cmd.arg("umount");
+
+    let mut iptcmd = Command::new("sudo");
+    iptcmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    iptcmd.arg("iptables");
+
+    let mut cmd = umount_cmd.clone();
+    cmd.arg(&netns_file);
+    commands.push(cmd);
+
+    let mut cmd = umount_cmd.clone();
+    cmd.arg(&userns_file);
+    commands.push(cmd);
+
+    if iptables {
+        let mut cmd = iptcmd.clone();
+        cmd.args(["-t", "nat", "-D", "POSTROUTING",
+                  "-s", network.as_slice(), "-j", "MASQUERADE"]);
+        commands.push(cmd);
+    }
+
+    println!("We will run network setup commands with sudo.");
+    println!("You may need to enter your password.");
+    println!("");
+    println!("The following commands will be run:");
+    for cmd in commands.iter() {
+        println!("    {}", cmd);
+    }
+
+    if !dry_run {
+        for cmd in commands.iter() {
+            match cmd.status() {
+                Ok(ExitStatus(0)) => {}
+                val => {
+                    error!("Error running command {}: {}", cmd, val);
+                }
+            }
+        }
+        if let Err(e) = unlink(&netns_file) {
+            error!("Error removing file: {}", e);
+        }
+        if let Err(e) = unlink(&userns_file) {
+            error!("Error removing file: {}", e);
+        }
+    }
+
 
     Ok(0)
 }
