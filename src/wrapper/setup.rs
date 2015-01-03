@@ -77,5 +77,7 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
          .map_err(|e| format!("Error changing root: {}", e)));
     try!(unmount(&Path::new("/work/.vagga/.mnt"))
          .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
+    try!(unmount(&Path::new("/tmp"))
+         .map_err(|e| format!("Error unmounting `/tmp`: {}", e)));
     Ok(())
 }

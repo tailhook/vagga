@@ -11,7 +11,6 @@ use config::command::Network;
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 use super::network::apply_network;
-use super::mount::unmount;
 
 use libc::{c_int, c_char, pid_t};
 
@@ -65,7 +64,6 @@ pub struct Command {
     stdin: i32,
     stdout: i32,
     stderr: i32,
-    unmount: Vec<Path>,
     network: Option<Network>,
 }
 
@@ -86,7 +84,6 @@ impl Command {
             stdin: 0,
             stdout: 1,
             stderr: 2,
-            unmount: vec!(),
             network: None,
         };
     }
@@ -104,9 +101,6 @@ impl Command {
     }
     pub fn chroot(&mut self, dir: &Path) {
         self.chroot = dir.to_c_str();
-    }
-    pub fn unmount(&mut self, dir: Path) {
-        self.unmount.push(dir);
     }
     pub fn set_workdir(&mut self, dir: &Path) {
         self.workdir = dir.to_c_str();
@@ -194,10 +188,6 @@ impl Command {
         }
         if let Some(netw) = self.network.as_ref() {
             try!(apply_network(netw, pid));
-        }
-        for dir in self.unmount.iter() {
-            try!(unmount(dir)
-                 .map_err(|e| format!("Error unmounting old root: {}", e)));
         }
         try!(pipe.wakeup()
             .map_err(|e| format!("Error waking up process: {}. \

@@ -84,7 +84,6 @@ fn supervise_child_command(name: &String, command: &ChildCommandInfo,
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());
     }
-    cmd.unmount(Path::new("/tmp"));
 
     match Monitor::run_command(cmd) {
         Killed => return Ok(1),
