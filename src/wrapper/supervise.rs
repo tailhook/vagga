@@ -38,12 +38,13 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
     let childtype = try!(command.children.find(&child)
         .ok_or(format!("Child {} not found", child)));
     match childtype {
-        &Command(ref info) => supervise_child_command(info, wrapper, command),
+        &Command(ref info) => supervise_child_command(
+            &child, info, wrapper, command),
     }
 }
 
-fn supervise_child_command(command: &ChildCommandInfo, wrapper: &Wrapper,
-    _supervise: &SuperviseInfo)
+fn supervise_child_command(name: &String, command: &ChildCommandInfo,
+    wrapper: &Wrapper, _supervise: &SuperviseInfo)
     -> Result<int, String>
 {
     let cconfig = try!(wrapper.config.containers.find(&command.container)
@@ -68,9 +69,12 @@ fn supervise_child_command(command: &ChildCommandInfo, wrapper: &Wrapper,
     let mut cmdline = command.run.clone();
     let cpath = try!(find_cmd(cmdline.remove(0).unwrap().as_slice(), &env));
 
-    let mut cmd = Command::new("run".to_string(), &cpath);
+    let mut cmd = Command::new(name.to_string(), &cpath);
     cmd.args(cmdline.as_slice());
     cmd.set_uidmap(uid_map.clone());
+    if command.network.ip.is_some() {  // TODO(tailhook) network Option'al
+        cmd.set_network(command.network.clone());
+    }
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {
@@ -80,6 +84,7 @@ fn supervise_child_command(command: &ChildCommandInfo, wrapper: &Wrapper,
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());
     }
+    cmd.unmount(Path::new("/tmp"));
 
     match Monitor::run_command(cmd) {
         Killed => return Ok(1),

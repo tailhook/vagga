@@ -7,8 +7,11 @@ use std::os::getcwd;
 use std::collections::TreeMap;
 use std::collections::enum_set::{EnumSet, CLike};
 
+use config::command::Network;
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
+use super::network::apply_network;
+use super::mount::unmount;
 
 use libc::{c_int, c_char, pid_t};
 
@@ -62,6 +65,8 @@ pub struct Command {
     stdin: i32,
     stdout: i32,
     stderr: i32,
+    unmount: Vec<Path>,
+    network: Option<Network>,
 }
 
 
@@ -81,6 +86,8 @@ impl Command {
             stdin: 0,
             stdout: 1,
             stderr: 2,
+            unmount: vec!(),
+            network: None,
         };
     }
     pub fn set_user_id(&mut self, uid: uint) {
@@ -97,6 +104,9 @@ impl Command {
     }
     pub fn chroot(&mut self, dir: &Path) {
         self.chroot = dir.to_c_str();
+    }
+    pub fn unmount(&mut self, dir: Path) {
+        self.unmount.push(dir);
     }
     pub fn set_workdir(&mut self, dir: &Path) {
         self.workdir = dir.to_c_str();
@@ -129,6 +139,10 @@ impl Command {
         self.namespaces.add(NewUser);
         self.uidmap = Some(uidmap);
     }
+    pub fn set_network(&mut self, network: Network) {
+        self.namespaces.add(NewNet);
+        self.network = Some(network);
+    }
     pub fn network_ns(&mut self) {
         self.namespaces.add(NewNet);
     }
@@ -139,7 +153,7 @@ impl Command {
         self.namespaces.add(NewIpc);
         self.namespaces.add(NewPid);
     }
-    pub fn spawn(&self) -> Result<pid_t, IoError> {
+    pub fn spawn(&self) -> Result<pid_t, String> {
         let mut exec_args: Vec<*const u8> = self.arguments.iter()
             .map(|a| a.as_bytes().as_ptr()).collect();
         exec_args.push(null());
@@ -154,7 +168,8 @@ impl Command {
             "ERROR:lithos::container.c: [{}]", self.name
             ).to_c_str();
 
-        let pipe = try!(CPipe::new());
+        let pipe = try!(CPipe::new()
+                        .map_err(|e| format!("Error creating pipe: {}", e)));
         let pid = unsafe { execute_command(&CCommand {
             pipe_reader: pipe.reader_fd(),
             logprefix: logprefix.as_bytes().as_ptr(),
@@ -171,12 +186,22 @@ impl Command {
             stderr: self.stderr,
         }) };
         if pid < 0 {
-            return Err(IoError::last_error());
+            return Err(format!("Error executing: {}", IoError::last_error()));
         }
         if let Some(uidmap) = self.uidmap.as_ref() {
-            try!(apply_uidmap(pid, uidmap));
+            try!(apply_uidmap(pid, uidmap)
+                .map_err(|e| format!("Error writing uid_map: {}", e)));
         }
-        try!(pipe.wakeup());
+        if let Some(netw) = self.network.as_ref() {
+            try!(apply_network(netw, pid));
+        }
+        for dir in self.unmount.iter() {
+            try!(unmount(dir)
+                 .map_err(|e| format!("Error unmounting old root: {}", e)));
+        }
+        try!(pipe.wakeup()
+            .map_err(|e| format!("Error waking up process: {}. \
+                Probably child already dead", e)));
         return Ok(pid)
     }
 }

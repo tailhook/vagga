@@ -112,13 +112,13 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
                 Ok(0) => {}
                 x => return x,
             }
-            match child {
-                &child::Command(ref cfg) => {
-                    if cfg.network.ip.is_some() {
-                        containers_in_netns.push(name.to_string());
-                    } else {
-                        containers_host_net.push(name.to_string());
-                    }
+        }
+        match child {
+            &child::Command(ref cfg) => {
+                if cfg.network.ip.is_some() {
+                    containers_in_netns.push(name.to_string());
+                } else {
+                    containers_host_net.push(name.to_string());
                 }
             }
         }
@@ -127,6 +127,8 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         return Err(format!("Network namespace is not set up. You need to run \
             vagga _create_netns first"));
     }
+    debug!("Containers {} with host neworking, {} in netns",
+        containers_host_net.len(), containers_in_netns.len());
     let mut mon = Monitor::new();
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("wrapper".to_string(),
