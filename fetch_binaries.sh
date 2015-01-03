@@ -4,12 +4,12 @@ cd alpine
 rm MIRRORS.txt 2>/dev/null || true
 wget http://nl.alpinelinux.org/alpine/MIRRORS.txt
 mirror=$(sort --random-sort MIRRORS.txt | head -n 1)
-wget -c $mirror/v3.0/main/x86_64/apk-tools-static-2.4.4-r0.apk
-wget -c $mirror/v3.0/main/x86_64/busybox-static-1.22.1-r9.apk
+wget -c $mirror/v3.1/main/x86_64/apk-tools-static-2.5.0_rc1-r0.apk
+wget -c $mirror/v3.1/main/x86_64/busybox-static-1.22.1-r14.apk
 
 sha1sum -c <<SHA1SUMS
-ee72e8675096d820a2d12f156015e81ac078b271  apk-tools-static-2.4.4-r0.apk
-dfd715ebf74132b262249a3f3efde33d071cafb6  busybox-static-1.22.1-r9.apk
+24900dd5945e0c3d5bc6ee8ce1b8f3d3e21430d6  apk-tools-static-2.5.0_rc1-r0.apk
+744354c9edd8fd855b8c40724da9922a6f434fd1  busybox-static-1.22.1-r14.apk
 SHA1SUMS
 cd ..
 
