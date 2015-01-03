@@ -81,6 +81,14 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             self_exe_path().unwrap().join("vagga_setup_netns"));
         cmd.set_max_uidmap();
         cmd.network_ns();
+        cmd.set_env("TERM".to_string(),
+                    getenv("TERM").unwrap_or("dumb".to_string()));
+        if let Some(x) = getenv("RUST_LOG") {
+            cmd.set_env("RUST_LOG".to_string(), x);
+        }
+        if let Some(x) = getenv("RUST_BACKTRACE") {
+            cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        }
         cmd.arg("--guest-ip");
         cmd.arg(guest_ip.as_slice());
         cmd.arg("--gateway-ip");

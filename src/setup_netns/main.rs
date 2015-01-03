@@ -5,6 +5,7 @@ extern crate argparse;
 
 use std::io::BufferedReader;
 use std::os::set_exit_status;
+use std::os::self_exe_path;
 use std::io::fs::File;
 use std::io::timer::sleep;
 use std::time::duration::Duration;
@@ -72,10 +73,17 @@ fn main() {
         sleep(Duration::milliseconds(100));
     }
 
-    let mut ip_cmd = Command::new("ip");
+    let busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+
+    let mut ip_cmd = busybox.clone();
+    ip_cmd.arg("ip");
     ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
 
     let mut commands = vec!();
+
+    let mut cmd = busybox.clone();
+    cmd.args(&["brctl", "addbr", "children"]);
+    commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["addr", "add", guest_ip.as_slice(), "dev", "vagga_guest"]);
@@ -93,7 +101,19 @@ fn main() {
     cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
     commands.push(cmd);
 
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["addr", "add", "172.18.0.254/24", "dev", "children"]);
+    commands.push(cmd);
+
+    // Unfortunately there is no iptables in busybox so use iptables from host
+    let mut cmd = Command::new("iptables");
+    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.args(["-t", "nat", "-A", "POSTROUTING",
+              "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
+    commands.push(cmd);
+
     for cmd in commands.iter() {
+        debug!("Running {}", cmd);
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
