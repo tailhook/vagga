@@ -8,10 +8,11 @@ use std::os::set_exit_status;
 use std::os::self_exe_path;
 use std::io::fs::File;
 use std::io::timer::sleep;
+use std::io::stdio::{stdout, stderr};
 use std::time::duration::Duration;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, List};
 
 fn has_interface() -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
@@ -33,14 +34,14 @@ fn has_interface() -> Result<bool, String> {
         .map_err(|e| format!("Can't read interfaces: {}", e))
 }
 
-fn main() {
+fn setup_bridge_namespace(args: Vec<String>) {
     let mut guest_ip = "".to_string();
     let mut gateway_ip = "".to_string();
     let mut network = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            Set's up network namespace for subsequent container runs
+            Set up intermediate (bridge) network namespace
             ");
         ap.refer(&mut guest_ip)
             .add_option(&["--guest-ip"], box Store::<String>,
@@ -51,7 +52,7 @@ fn main() {
         ap.refer(&mut gateway_ip)
             .add_option(&["--gateway-ip"], box Store::<String>,
                 "Gateway address");
-        match ap.parse_args() {
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
@@ -122,5 +123,39 @@ fn main() {
                 return;
             }
         };
+    }
+}
+
+fn main() {
+    let mut kind = "".to_string();
+    let mut args: Vec<String> = vec!();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Set up network namespace for containers
+            ");
+        ap.refer(&mut kind)
+            .add_argument("kind", box Store::<String>,
+                "Kind of namespace to set up (bridge or container)");
+        ap.refer(&mut args)
+            .add_argument("options", box List::<String>,
+                "Options specific for this kind");
+        ap.stop_on_first_argument(true);
+        match ap.parse_args() {
+            Ok(()) => {}
+            Err(0) => return,
+            Err(x) => {
+                set_exit_status(x);
+                return;
+            }
+        }
+    }
+    args.insert(0, format!("vagga_setup_netns {}", kind));
+    match kind.as_slice() {
+        "bridge" => setup_bridge_namespace(args),
+        _ => {
+            set_exit_status(1);
+            error!("Unknown command {}", kind);
+        }
     }
 }

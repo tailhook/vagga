@@ -89,6 +89,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         if let Some(x) = getenv("RUST_BACKTRACE") {
             cmd.set_env("RUST_BACKTRACE".to_string(), x);
         }
+        cmd.arg("bridge");
         cmd.arg("--guest-ip");
         cmd.arg(guest_ip.as_slice());
         cmd.arg("--gateway-ip");
