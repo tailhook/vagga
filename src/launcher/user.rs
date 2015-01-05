@@ -32,6 +32,9 @@ pub fn run_user_command(config: &Config, workdir: &Path,
 fn _common(cmd: &mut Command, workdir: &Path) {
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("PATH") {
+        cmd.set_env("HOST_PATH".to_string(), x);
+    }
     if let Some(x) = getenv("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }

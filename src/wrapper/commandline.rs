@@ -43,6 +43,10 @@ pub fn commandline_cmd(command: &CommandInfo,
         args.extend(cmdline.into_iter());
     }
     let mut cmdline = command.run + args;
+
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
+
     let cconfig = try!(wrapper.config.containers.find(&command.container)
         .ok_or(format!("Container {} not found", command.container)));
     let uid_map = try!(map_users(wrapper.settings,

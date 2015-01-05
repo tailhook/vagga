@@ -20,6 +20,7 @@ use container::container::{Command};
 use container::uidmap::{Uidmap, map_users};
 use config::{Settings};
 use super::Wrapper;
+use super::setup;
 
 
 struct RunBuilder<'a> {
@@ -291,6 +292,8 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             }
         }
     }
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
     return build_container(&name, force, wrapper)
         .map(|x| debug!("Built container with name {}", x))
         .map(|()| 0);
@@ -318,6 +321,8 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             }
         }
     }
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
     return get_version_hash(name, wrapper)
         .map(|ver| ver
             .map(|x| println!("{}", x)).map(|()| 0)

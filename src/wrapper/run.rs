@@ -105,6 +105,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
             }
         }
     }
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
     let cconfig = try!(wrapper.config.containers.find(&container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = if user_ns {

@@ -1,7 +1,16 @@
 use std::io::process::{Command, InheritFd, ExitStatus, ExitSignal};
 
+use super::Wrapper;
+use super::setup::setup_base_filesystem;
 
-pub fn run_interactive_build_shell() -> int {
+
+pub fn run_interactive_build_shell(wrapper: &Wrapper) -> int {
+    if let Err(text) = setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)
+    {
+        error!("Error setting base file system: {}", text.as_slice());
+        return 122;
+    }
     match Command::new("/vagga/bin/busybox")
             .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
             .arg("sh")

@@ -35,6 +35,9 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
             }
         }
     }
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
+
     let childtype = try!(command.children.find(&child)
         .ok_or(format!("Child {} not found", child)));
     match childtype {
