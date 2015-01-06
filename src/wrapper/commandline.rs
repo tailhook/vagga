@@ -49,11 +49,9 @@ pub fn commandline_cmd(command: &CommandInfo,
     }
     let mut cmdline = command.run + args;
 
-    let netns_fd = if let Some(ip_address) = ip_addr {
-        Some(try!(network::setup_ip_address(ip_address)))
-    } else {
-        None
-    };
+    if let Some(ip_address) = ip_addr {
+        try!(network::setup_ip_address(ip_address));
+    }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
@@ -75,7 +73,6 @@ pub fn commandline_cmd(command: &CommandInfo,
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(cmdline.as_slice());
     cmd.set_uidmap(uid_map.clone());
-    netns_fd.map(|fd| cmd.set_netns_fd(fd));
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {

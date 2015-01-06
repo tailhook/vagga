@@ -1,7 +1,6 @@
 use std::io::fs::{readlink};
 use std::os::getenv;
 use std::io::stdio::{stdout, stderr};
-use libc::c_int;
 
 use argparse::{ArgumentParser, Store, StoreOption};
 
@@ -41,11 +40,9 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
             }
         }
     }
-    let netns_fd = if let Some(ip_address) = ip_addr {
-        Some(try!(network::setup_ip_address(ip_address)))
-    } else {
-        None
-    };
+    if let Some(ip_address) = ip_addr {
+        try!(network::setup_ip_address(ip_address));
+    }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
@@ -53,12 +50,12 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
         .ok_or(format!("Child {} not found", child)));
     match childtype {
         &Command(ref info) => supervise_child_command(
-            &child, info, wrapper, command, netns_fd),
+            &child, info, wrapper, command),
     }
 }
 
 fn supervise_child_command(name: &String, command: &ChildCommandInfo,
-    wrapper: &Wrapper, _supervise: &SuperviseInfo, netns_fd: Option<c_int>)
+    wrapper: &Wrapper, _supervise: &SuperviseInfo)
     -> Result<int, String>
 {
     let cconfig = try!(wrapper.config.containers.find(&command.container)
@@ -86,7 +83,6 @@ fn supervise_child_command(name: &String, command: &ChildCommandInfo,
     let mut cmd = Command::new(name.to_string(), &cpath);
     cmd.args(cmdline.as_slice());
     cmd.set_uidmap(uid_map.clone());
-    netns_fd.map(|fd| cmd.set_netns_fd(fd));
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {

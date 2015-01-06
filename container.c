@@ -21,7 +21,6 @@ typedef struct {
     int stdin;
     int stdout;
     int stderr;
-    int netns_fd;
     const char *logprefix;
     const char *fs_root;
     const char *exec_path;
@@ -87,14 +86,6 @@ static void _run_container(CCommand *cmd) {
         fprintf(stderr, "%s Error setting userid %d: %m\n",
             cmd->logprefix, cmd->user_id);
         abort();
-    }
-    if(cmd->netns_fd >= 0) {
-        if(setns(cmd->netns_fd, CLONE_NEWNET) < 0) {
-            fprintf(stderr, "%s Error setting network namespace: %m\n",
-                cmd->logprefix);
-            abort();
-        }
-        close(cmd->netns_fd);
     }
     if(cmd->restore_sigmask) {
         sigset_t mask;

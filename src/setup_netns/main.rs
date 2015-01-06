@@ -82,8 +82,16 @@ fn setup_bridge_namespace(args: Vec<String>) {
 
     let mut commands = vec!();
 
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", "lo", "up"]);
+    commands.push(cmd);
+
     let mut cmd = busybox.clone();
     cmd.args(&["brctl", "addbr", "children"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", "children", "up"]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
@@ -92,10 +100,6 @@ fn setup_bridge_namespace(args: Vec<String>) {
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "set", "dev", "vagga_guest", "up"]);
-    commands.push(cmd);
-
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
@@ -128,6 +132,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
 
 fn setup_container_namespace(args: Vec<String>) {
     let mut interface = "".to_string();
+    let mut ip = "".to_string();
+    let mut gateway = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -135,7 +141,15 @@ fn setup_container_namespace(args: Vec<String>) {
             ");
         ap.refer(&mut interface)
             .add_option(&["--interface"], box Store::<String>,
-                "IP to use on the vagga_guest interface")
+                "Network interface name")
+            .required();
+        ap.refer(&mut ip)
+            .add_option(&["--ip"], box Store::<String>,
+                "IP to use on the interface")
+            .required();
+        ap.refer(&mut gateway)
+            .add_option(&["--gateway"], box Store::<String>,
+                "Gateway to use on the interface")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -157,6 +171,42 @@ fn setup_container_namespace(args: Vec<String>) {
             }
         }
         sleep(Duration::milliseconds(100));
+    }
+    let mut commands = vec!();
+
+    let busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+
+    let mut ip_cmd = busybox.clone();
+    ip_cmd.arg("ip");
+    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", "lo", "up"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["addr", "add", format!("{}/24", ip).as_slice(),
+                       "dev", interface.as_slice()]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["route", "add", "default", "via", gateway.as_slice()]);
+    commands.push(cmd);
+
+    for cmd in commands.iter() {
+        debug!("Running {}", cmd);
+        match cmd.status() {
+            Ok(ExitStatus(0)) => {},
+            err => {
+                error!("Error running command {}: {}", cmd, err);
+                set_exit_status(1);
+                return;
+            }
+        };
     }
 }
 
