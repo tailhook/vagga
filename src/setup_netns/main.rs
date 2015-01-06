@@ -14,7 +14,7 @@ use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use argparse::{ArgumentParser, Store, List};
 
-fn has_interface() -> Result<bool, String> {
+fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
         .map(BufferedReader::new)
         .and_then(|mut f| {
@@ -25,7 +25,7 @@ fn has_interface() -> Result<bool, String> {
                 let line = try!(line);
                 let mut splits = line.as_slice().splitn(1, ':');
                 let interface = splits.next().unwrap();
-                if interface == "vagga_guest" {
+                if interface == name {
                     return Ok(true);
                 }
             }
@@ -62,7 +62,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
         }
     }
     loop {
-        match has_interface() {
+        match has_interface("vagga_guest") {
             Ok(true) => break,
             Ok(false) => {}
             Err(x) => {
@@ -126,6 +126,40 @@ fn setup_bridge_namespace(args: Vec<String>) {
     }
 }
 
+fn setup_container_namespace(args: Vec<String>) {
+    let mut interface = "".to_string();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Set up intermediate (bridge) network namespace
+            ");
+        ap.refer(&mut interface)
+            .add_option(&["--interface"], box Store::<String>,
+                "IP to use on the vagga_guest interface")
+            .required();
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return,
+            Err(x) => {
+                set_exit_status(x);
+                return;
+            }
+        }
+    }
+    loop {
+        match has_interface(interface.as_slice()) {
+            Ok(true) => break,
+            Ok(false) => {}
+            Err(x) => {
+                error!("Error setting interface {}: {}", interface, x);
+                set_exit_status(1);
+                return;
+            }
+        }
+        sleep(Duration::milliseconds(100));
+    }
+}
+
 fn main() {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
@@ -153,6 +187,7 @@ fn main() {
     args.insert(0, format!("vagga_setup_netns {}", kind));
     match kind.as_slice() {
         "bridge" => setup_bridge_namespace(args),
+        "container" => setup_container_namespace(args),
         _ => {
             set_exit_status(1);
             error!("Unknown command {}", kind);

@@ -28,6 +28,8 @@ mod supervise;
 mod commandline;
 mod setup;
 mod util;
+mod network;
+
 
 struct Wrapper<'a> {
     config: &'a Config,

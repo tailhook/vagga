@@ -147,10 +147,19 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
     if containers_in_netns.len() > 0 {
         try!(join_netns());
         for name in containers_in_netns.iter() {
+            let child = sup.children.find(name).unwrap();
             let mut cmd = Command::new("wrapper".to_string(),
                 self_exe_path().unwrap().join("vagga_wrapper"));
             cmd.keep_sigmask();
             cmd.arg(cmdname.as_slice());
+            match child {
+                &child::Command(ref cfg) => {
+                    cfg.network.ip.as_ref().map(|ip| {
+                        cmd.arg("--set-ip");
+                        cmd.arg(ip.as_slice());
+                    });
+                }
+            }
             cmd.arg(name.as_slice());
             _common(&mut cmd, workdir);
             cmd.container();

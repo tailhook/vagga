@@ -7,10 +7,8 @@ use std::os::getcwd;
 use std::collections::TreeMap;
 use std::collections::enum_set::{EnumSet, CLike};
 
-use config::command::Network;
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
-use super::network::apply_network;
 
 use libc::{c_int, c_char, pid_t};
 
@@ -64,7 +62,7 @@ pub struct Command {
     stdin: i32,
     stdout: i32,
     stderr: i32,
-    network: Option<Network>,
+    netns_fd: Option<i32>,
 }
 
 
@@ -84,7 +82,7 @@ impl Command {
             stdin: 0,
             stdout: 1,
             stderr: 2,
-            network: None,
+            netns_fd: None,
         };
     }
     pub fn set_user_id(&mut self, uid: uint) {
@@ -133,9 +131,9 @@ impl Command {
         self.namespaces.add(NewUser);
         self.uidmap = Some(uidmap);
     }
-    pub fn set_network(&mut self, network: Network) {
-        self.namespaces.add(NewNet);
-        self.network = Some(network);
+    pub fn set_netns_fd(&mut self, fd: i32) {
+        assert!(!self.namespaces.contains_elem(NewNet));
+        self.netns_fd = Some(fd);
     }
     pub fn network_ns(&mut self) {
         self.namespaces.add(NewNet);
@@ -178,6 +176,7 @@ impl Command {
             stdin: self.stdin,
             stdout: self.stdout,
             stderr: self.stderr,
+            netns_fd: self.netns_fd.unwrap_or(-1),
         }) };
         if pid < 0 {
             return Err(format!("Error executing: {}", IoError::last_error()));
@@ -185,9 +184,6 @@ impl Command {
         if let Some(uidmap) = self.uidmap.as_ref() {
             try!(apply_uidmap(pid, uidmap)
                 .map_err(|e| format!("Error writing uid_map: {}", e)));
-        }
-        if let Some(netw) = self.network.as_ref() {
-            try!(apply_network(netw, pid));
         }
         try!(pipe.wakeup()
             .map_err(|e| format!("Error waking up process: {}. \
@@ -232,6 +228,7 @@ pub struct CCommand {
     stdin: c_int,
     stdout: c_int,
     stderr: c_int,
+    netns_fd: c_int,
     logprefix: *const u8,
     fs_root: *const u8,
     exec_path: *const u8,

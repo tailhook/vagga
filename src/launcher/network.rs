@@ -15,6 +15,7 @@ use container::util::get_user_name;
 use container::nsutil::set_namespace;
 use container::container::{NewUser, NewNet};
 use container::monitor::{Monitor, Exit, Killed, RunOnce};
+use container::container::Command as ContainerCommand;
 
 use super::user;
 
@@ -75,29 +76,26 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     let mut mon = Monitor::new();
     let vsn = Rc::new("vagga_setup_netns".to_string());
-    {
-        use container::container::Command;
-        let mut cmd = Command::new("setup_netns".to_string(),
-            self_exe_path().unwrap().join("vagga_setup_netns"));
-        cmd.set_max_uidmap();
-        cmd.network_ns();
-        cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
-        }
-        cmd.arg("bridge");
-        cmd.arg("--guest-ip");
-        cmd.arg(guest_ip.as_slice());
-        cmd.arg("--gateway-ip");
-        cmd.arg(host_ip.as_slice());
-        cmd.arg("--network");
-        cmd.arg(network.as_slice());
-        mon.add(vsn.clone(), box RunOnce::new(cmd));
+    let mut cmd = ContainerCommand::new("setup_netns".to_string(),
+        self_exe_path().unwrap().join("vagga_setup_netns"));
+    cmd.set_max_uidmap();
+    cmd.network_ns();
+    cmd.set_env("TERM".to_string(),
+                getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("RUST_LOG") {
+        cmd.set_env("RUST_LOG".to_string(), x);
     }
+    if let Some(x) = getenv("RUST_BACKTRACE") {
+        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+    }
+    cmd.arg("bridge");
+    cmd.arg("--guest-ip");
+    cmd.arg(guest_ip.as_slice());
+    cmd.arg("--gateway-ip");
+    cmd.arg(host_ip.as_slice());
+    cmd.arg("--network");
+    cmd.arg(network.as_slice());
+    mon.add(vsn.clone(), box RunOnce::new(cmd));
     let child_pid = if dry_run { 123456 } else { try!(mon.force_start(vsn)) };
 
     println!("We will run network setup commands with sudo.");
