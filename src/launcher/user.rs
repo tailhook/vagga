@@ -53,10 +53,10 @@ pub fn run_simple_command(cfg: &CommandInfo,
     workdir: &Path, cmdname: String, args: Vec<String>)
     -> Result<int, String>
 {
-    if let Some(_) = cfg.network.ip {
+    if let Some(_) = cfg.network {
         try!(join_netns());
     }
-    run_wrapper(workdir, cmdname, args, cfg.network.ip.is_none())
+    run_wrapper(workdir, cmdname, args, cfg.network.is_none())
 }
 
 // TODO(tailhook) run not only for simple commands
@@ -118,7 +118,7 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         }
         match child {
             &child::Command(ref cfg) => {
-                if cfg.network.ip.is_some() {
+                if cfg.network.is_some() {
                     containers_in_netns.push(name.to_string());
                 } else {
                     containers_host_net.push(name.to_string());
@@ -154,9 +154,9 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
             cmd.arg(cmdname.as_slice());
             match child {
                 &child::Command(ref cfg) => {
-                    cfg.network.ip.as_ref().map(|ip| {
+                    cfg.network.as_ref().map(|netw| {
                         cmd.arg("--set-ip");
-                        cmd.arg(ip.as_slice());
+                        cmd.arg(netw.ip.as_slice());
                     });
                 }
             }

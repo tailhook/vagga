@@ -34,7 +34,7 @@ pub enum WriteMode {
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 pub struct Network {
-    pub ip: Option<String>,
+    pub ip: String,
 }
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
@@ -46,7 +46,7 @@ pub struct CommandInfo {
     pub epilog: Option<String>,
 
     // Command
-    pub network: Network,
+    pub network: Option<Network>,
     pub pid1mode: Pid1Mode,
     pub work_dir: Option<String>,
     pub container: String,
@@ -60,7 +60,7 @@ pub struct CommandInfo {
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 pub struct ChildCommandInfo {
     // Command
-    pub network: Network,
+    pub network: Option<Network>,
     pub pid1mode: Pid1Mode,
     pub work_dir: Option<String>,
     pub container: String,
