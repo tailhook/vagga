@@ -8,11 +8,13 @@ use argparse::{ArgumentParser};
 
 use container::monitor::{Monitor, RunOnce, Exit, Killed};
 use container::container::{Command};
+use container::nsutil::set_namespace_fd;
+use container::container::{NewNet};
 use config::Config;
 use config::command::{main, child};
 use config::command::{CommandInfo, SuperviseInfo, stop_on_failure};
 
-use super::network::{join_netns, is_netns_set_up};
+use super::network;
 
 
 pub fn run_user_command(config: &Config, workdir: &Path,
@@ -54,7 +56,8 @@ pub fn run_simple_command(cfg: &CommandInfo,
     -> Result<int, String>
 {
     if let Some(_) = cfg.network {
-        try!(join_netns());
+        return Err(format!(
+            "Network is not supported for !Command use !Supervise"))
     }
     run_wrapper(workdir, cmdname, args, cfg.network.is_none())
 }
@@ -126,7 +129,7 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
             }
         }
     }
-    if containers_in_netns.len() > 0 && !is_netns_set_up() {
+    if containers_in_netns.len() > 0 && !network::is_netns_set_up() {
         return Err(format!("Network namespace is not set up. You need to run \
             vagga _create_netns first"));
     }
@@ -145,26 +148,47 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         mon.add(Rc::new(name.clone()), box RunOnce::new(cmd));
     }
     if containers_in_netns.len() > 0 {
-        try!(join_netns());
+        try!(network::join_gateway_namespaces());
+        let bridge = try!(network::setup_bridge());
+
         for name in containers_in_netns.iter() {
             let child = sup.children.find(name).unwrap();
+
+            try!(set_namespace_fd(bridge, NewNet)
+                .map_err(|e| format!("Error setting netns: {}", e)));
+            match child {
+                &child::Command(ref cfg) => {
+                    if let Some(ref netw) = cfg.network {
+                        if netw.ip.as_slice() != "172.18.0.254" {
+                            let fd = try!(network::setup_container(
+                                name.as_slice(), netw.ip.as_slice()));
+                            try!(set_namespace_fd(fd, NewNet)
+                                .map_err(|e| format!(
+                                            "Error setting netns: {}", e)));
+                            println!("SET UP NAMESPACE {}", fd)
+                        }
+                    }
+                }
+            }
+
+
             let mut cmd = Command::new("wrapper".to_string(),
                 self_exe_path().unwrap().join("vagga_wrapper"));
             cmd.keep_sigmask();
             cmd.arg(cmdname.as_slice());
-            match child {
-                &child::Command(ref cfg) => {
-                    cfg.network.as_ref().map(|netw| {
-                        cmd.arg("--set-ip");
-                        cmd.arg(netw.ip.as_slice());
-                    });
-                }
-            }
             cmd.arg(name.as_slice());
             _common(&mut cmd, workdir);
             cmd.container();
-            mon.add(Rc::new(name.clone()), box RunOnce::new(cmd));
+            let name = Rc::new(name.clone());
+            mon.add(name.clone(), box RunOnce::new(cmd));
+            try!(mon.force_start(name));
         }
+
+        // Need to set network namespace back to bridge, to keep namespace
+        // alive. Otherwise bridge is dropped, and no connectivity between
+        // containers.
+        try!(set_namespace_fd(bridge, NewNet)
+            .map_err(|e| format!("Error setting netns: {}", e)));
     }
     match mon.run() {
         Killed => Ok(143),

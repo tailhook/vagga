@@ -3,22 +3,30 @@ use std::io::{stdout, stderr};
 use std::os::{getenv, self_exe_path};
 use std::io::{USER_RWX};
 use std::io::{BufferedReader};
+use std::rand::task_rng;
 use std::io::fs::{File, PathExtensions};
 use std::io::fs::{mkdir, unlink};
+use std::from_str::FromStr;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::collections::BitvSet;
+use std::rand::distributions::{Range, IndependentSample};
 use libc::funcs::posix88::unistd::{geteuid};
+use libc::{pid_t, c_int};
 
-use argparse::{ArgumentParser, StoreTrue, StoreFalse};
+use argparse::{ArgumentParser};
+use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
 
 use config::Config;
 use container::util::get_user_name;
-use container::nsutil::set_namespace;
+use container::nsutil::{set_namespace, nsopen};
 use container::container::{NewUser, NewNet};
 use container::monitor::{Monitor, Exit, Killed, RunOnce};
 use container::container::Command as ContainerCommand;
+use container::sha256::{Sha256, Digest};
 
 use super::user;
 
+static MAX_INTERFACES: uint = 2048;
 
 pub fn namespace_dir() -> Path {
     let uid = unsafe { geteuid() };
@@ -88,7 +96,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     if let Some(x) = getenv("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
-    cmd.arg("bridge");
+    cmd.arg("gateway");
     cmd.arg("--guest-ip");
     cmd.arg(guest_ip.as_slice());
     cmd.arg("--gateway-ip");
@@ -179,6 +187,9 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                           "-i", interface_name.as_slice(),
                           "-d", "127.0.0.1",
                           "-j", "ACCEPT"));
+        //  The "tcp" rule doesn't actually work for now for dnsmasq
+        //  because dnsmasq tries to find out real source IP.
+        //  It may work for bind though.
         iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
                           "-p", "tcp", "-i", "vagga",
                           "-d", host_ip.as_slice(), "--dport", "53",
@@ -382,7 +393,7 @@ pub fn is_netns_set_up() -> bool {
     return nsdir.join("userns").exists() && nsdir.join("netns").exists();
 }
 
-pub fn join_netns() -> Result<(), String> {
+pub fn join_gateway_namespaces() -> Result<(), String> {
     let nsdir = namespace_dir();
     try!(set_namespace(&nsdir.join("userns"), NewUser)
         .map_err(|e| format!("Error setting userns: {}", e)));
@@ -391,11 +402,47 @@ pub fn join_netns() -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_in_netns(workdir: &Path, cname: String, args: Vec<String>)
+pub fn run_in_netns(workdir: &Path, cname: String, mut args: Vec<String>)
     -> Result<int, String>
 {
-    try!(join_netns());
-    user::run_wrapper(workdir, cname, args, false)
+    let mut cmdargs = vec!();
+    let mut container = "".to_string();
+    let mut pid = None;
+    {
+        args.insert(0, "vagga ".to_string() + cname);
+        let mut ap = ArgumentParser::new();
+        ap.set_description(
+            "Run command (or shell) in one of the vagga's network namespaces");
+        ap.refer(&mut pid)
+            .add_option(&["--pid"], box StoreOption::<pid_t>, "
+                Run in the namespace of the process with PID.
+                By default you get shell in the \"gateway\" namespace.
+                ");
+        ap.refer(&mut container)
+            .add_argument("container", box Store::<String>,
+                "Container to run command in")
+            .required();
+        ap.refer(&mut cmdargs)
+            .add_argument("command", box List::<String>,
+                "Command (with arguments) to run inside container")
+            .required();
+
+        ap.stop_on_first_argument(true);
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    cmdargs.insert(0, container);
+    try!(join_gateway_namespaces());
+    if let Some(pid) = pid {
+        try!(set_namespace(&Path::new(format!("/proc/{}/ns/net", pid)), NewNet)
+            .map_err(|e| format!("Error setting networkns: {}", e)));
+    }
+    user::run_wrapper(workdir, cname, cmdargs, false)
 }
 
 pub fn get_nameservers() -> Result<Vec<String>, String> {
@@ -412,4 +459,190 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
             Ok(ns)
         })
         .map_err(|e| format!("Can't read resolf.conf: {}", e))
+}
+
+fn get_interfaces() -> Result<BitvSet, String> {
+    let child_re = regex!(r"^\s*ch(\d+):");
+    File::open(&Path::new("/proc/net/dev"))
+        .map(BufferedReader::new)
+        .and_then(|mut f| {
+            let mut lineiter = f.lines();
+            let mut result = BitvSet::with_capacity(MAX_INTERFACES);
+            try!(lineiter.next().unwrap());  // Two header lines
+            try!(lineiter.next().unwrap());
+            for line in lineiter {
+                let line = try!(line);
+                child_re.captures(line.as_slice())
+                    .and_then(|capt| FromStr::from_str(capt.at(1)))
+                    .map(|num| result.insert(num));
+            }
+            return Ok(result);
+        })
+        .map_err(|e| format!("Can't read interfaces: {}", e))
+}
+
+fn get_unused_inteface_no() -> Result<uint, String> {
+    // Algorithm is not perfect but should be good enough as there are 2048
+    // slots in total, and average user only runs a couple of commands
+    // simultaneously. It fails miserably only if there are > 100 or they
+    // are spawning too often.
+    let busy = try!(get_interfaces());
+    let start = Range::new(0u, MAX_INTERFACES - 100)
+                .ind_sample(&mut task_rng());
+    for index in range(start, MAX_INTERFACES) {
+        if busy.contains(&index) {
+            continue;
+        }
+        return Ok(index);
+    }
+    return Err(format!("Can't find unused inteface"));
+}
+
+fn _run_command(cmd: Command) -> Result<(), String> {
+    debug!("Running {}", cmd);
+    match cmd.status() {
+        Ok(ExitStatus(0)) => Ok(()),
+        code => Err(format!("Error running {}: {}",  cmd, code)),
+    }
+}
+
+pub fn setup_bridge() -> Result<c_int, String> {
+    let index = try!(get_unused_inteface_no());
+
+    let eif = format!("ch{}", index);
+    let iif = format!("ch{}c", index);
+    let eip = format!("172.17.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
+    let iip = format!("172.17.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
+
+    let mut ip_cmd = Command::new("ip");
+    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["link", "add", eif.as_slice(), "type", "veth",
+              "peer", "name", iif.as_slice()]);
+    try!(_run_command(cmd));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["addr", "add"]);
+    cmd.arg(eip+"/30").arg("dev").arg(eif.as_slice());
+    try!(_run_command(cmd));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["link", "set", "dev", eif.as_slice(), "up"]);
+    try!(_run_command(cmd));
+
+    let cmdname = Rc::new("setup_netns".to_string());
+    let mut mon = Monitor::new();
+    let mut cmd = ContainerCommand::new(cmdname.to_string(),
+        self_exe_path().unwrap().join("vagga_setup_netns"));
+    cmd.args(["bridge", "--interface", iif.as_slice(),
+                        "--ip", iip.as_slice(),
+                        "--gateway-ip", eip.as_slice()]);
+    cmd.network_ns();
+    cmd.set_env("TERM".to_string(),
+                getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("RUST_LOG") {
+        cmd.set_env("RUST_LOG".to_string(), x);
+    }
+    if let Some(x) = getenv("RUST_BACKTRACE") {
+        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+    }
+    mon.add(cmdname.clone(), box RunOnce::new(cmd));
+    let pid = try!(mon.force_start(cmdname));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["link", "set", "dev", iif.as_slice(),
+              "netns", format!("{}", pid).as_slice()]);
+    let result = _run_command(cmd)
+        .and_then(|()| nsopen(pid, "net")
+                       .map_err(|e| format!("Can't open ns: {}", e)));
+    match mon.run() {
+        Exit(0) => {}
+        Killed => return Err(format!("vagga_setup_netns is dead")),
+        Exit(c) => return Err(
+            format!("vagga_setup_netns exited with code: {}", c)),
+    }
+    match result {
+        Ok(fd) => Ok(fd),
+        Err(e) => {
+            let mut cmd = ip_cmd.clone();
+            cmd.args(["link", "del", eif.as_slice()]);
+            try!(_run_command(cmd));
+            Err(e)
+        }
+    }
+}
+
+pub fn setup_container(name: &str, ip: &str) -> Result<c_int, String> {
+
+    let eif = if name.as_bytes().len() > 14 {
+        let mut hash = Sha256::new();
+        hash.input(name.as_bytes());
+        "eh".to_string() + hash.result_str().as_slice().slice_to(12)
+    } else {
+        name.to_string()
+    };
+    let iif = eif + "g";
+
+    let mut ip_cmd = Command::new("ip");
+    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["link", "add", eif.as_slice(), "type", "veth",
+              "peer", "name", iif.as_slice()]);
+    try!(_run_command(cmd));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", eif.as_slice(), "up"]);
+    try!(_run_command(cmd));
+
+    let mut cmd = busybox.clone();
+    cmd.args(&["brctl", "addif", "children", eif.as_slice()]);
+    try!(_run_command(cmd));
+
+    let cmdname = Rc::new("setup_netns".to_string());
+    let mut mon = Monitor::new();
+    let mut cmd = ContainerCommand::new(cmdname.to_string(),
+        self_exe_path().unwrap().join("vagga_setup_netns"));
+    cmd.args(["guest", "--interface", iif.as_slice(),
+                       "--ip", ip.as_slice(),
+                       "--gateway-ip", "172.18.0.254"]);
+    cmd.network_ns();
+    cmd.set_env("TERM".to_string(),
+                getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("RUST_LOG") {
+        cmd.set_env("RUST_LOG".to_string(), x);
+    }
+    if let Some(x) = getenv("RUST_BACKTRACE") {
+        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+    }
+    mon.add(cmdname.clone(), box RunOnce::new(cmd));
+    let pid = try!(mon.force_start(cmdname));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(["link", "set", "dev", iif.as_slice(),
+              "netns", format!("{}", pid).as_slice()]);
+    let result = _run_command(cmd)
+        .and_then(|()| nsopen(pid, "net")
+                       .map_err(|e| format!("Can't open ns: {}", e)));
+
+    match mon.run() {
+        Exit(0) => {}
+        Killed => return Err(format!("vagga_setup_netns is dead")),
+        Exit(c) => return Err(
+            format!("vagga_setup_netns exited with code: {}", c)),
+    }
+
+    match result {
+        Ok(fd) => Ok(fd),
+        Err(e) => {
+            let mut cmd = ip_cmd.clone();
+            cmd.args(["link", "del", eif.as_slice()]);
+            try!(_run_command(cmd));
+            Err(e)
+        }
+    }
 }

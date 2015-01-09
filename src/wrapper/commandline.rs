@@ -1,7 +1,7 @@
 use std::os::getenv;
 use std::io::stdio::{stdout, stderr};
 
-use argparse::{ArgumentParser, List, StoreOption};
+use argparse::{ArgumentParser, List};
 
 use config::command::CommandInfo;
 use container::uidmap::{map_users};
@@ -11,7 +11,6 @@ use container::container::{Command};
 
 use super::build;
 use super::setup;
-use super::network;
 use super::Wrapper;
 use super::util::find_cmd;
 
@@ -24,14 +23,10 @@ pub fn commandline_cmd(command: &CommandInfo,
     let has_args = command.accepts_arguments
             .unwrap_or(command.run[0].as_slice() != "/bin/sh");
     let mut args = Vec::new();
-    let mut ip_addr = None;
     if !has_args {
         let mut ap = ArgumentParser::new();
         ap.set_description(command.description.as_ref()
             .map(|x| x.as_slice()).unwrap_or(""));
-        ap.refer(&mut ip_addr)
-            .add_option(["--set-ip"], box StoreOption::<String>,
-                "IP Address for child");
         ap.refer(&mut args)
             .add_argument("args", box List::<String>,
                 "Arguments for the command");
@@ -49,9 +44,6 @@ pub fn commandline_cmd(command: &CommandInfo,
     }
     let mut cmdline = command.run + args;
 
-    if let Some(ip_address) = ip_addr {
-        try!(network::setup_ip_address(ip_address));
-    }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 

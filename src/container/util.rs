@@ -1,11 +1,8 @@
-use std::io::IoError;
 use std::ptr::null;
 use std::string::raw::from_buf;
 use std::io::fs::{readdir, rmdir_recursive, unlink, rmdir};
 use std::io::fs::PathExtensions;
-use libc::{uid_t, gid_t, c_char, pid_t, c_int};
-use libc::funcs::posix88::fcntl::open;
-use libc::consts::os::posix88::O_RDONLY;
+use libc::{uid_t, gid_t, c_char};
 
 use super::root::temporary_change_root;
 
@@ -64,13 +61,4 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
                                             dir.display(), e)));
     }
     return Ok(());
-}
-
-pub fn nsopen(pid: pid_t, ns_name: &str) -> Result<c_int, IoError> {
-    let filename = format!("/proc/{}/ns/{}", pid, ns_name).to_c_str();
-    let fd = unsafe { open(filename.as_ptr(), O_RDONLY, 0) };
-    if fd < 0 {
-        return Err(IoError::last_error());
-    }
-    return Ok(fd);
 }

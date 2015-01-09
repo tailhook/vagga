@@ -25,7 +25,7 @@ fn has_interface(name: &str) -> Result<bool, String> {
                 let line = try!(line);
                 let mut splits = line.as_slice().splitn(1, ':');
                 let interface = splits.next().unwrap();
-                if interface == name {
+                if interface.trim() == name {
                     return Ok(true);
                 }
             }
@@ -34,14 +34,14 @@ fn has_interface(name: &str) -> Result<bool, String> {
         .map_err(|e| format!("Can't read interfaces: {}", e))
 }
 
-fn setup_bridge_namespace(args: Vec<String>) {
+fn setup_gateway_namespace(args: Vec<String>) {
     let mut guest_ip = "".to_string();
     let mut gateway_ip = "".to_string();
     let mut network = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            Set up intermediate (bridge) network namespace
+            Set up intermediate (gateway) network namespace
             ");
         ap.refer(&mut guest_ip)
             .add_option(&["--guest-ip"], box Store::<String>,
@@ -74,7 +74,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
         sleep(Duration::milliseconds(100));
     }
 
-    let busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
 
     let mut ip_cmd = busybox.clone();
     ip_cmd.arg("ip");
@@ -86,13 +87,6 @@ fn setup_bridge_namespace(args: Vec<String>) {
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
-    let mut cmd = busybox.clone();
-    cmd.args(&["brctl", "addbr", "children"]);
-    commands.push(cmd);
-
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", "children", "up"]);
-    commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["addr", "add", guest_ip.as_slice(), "dev", "vagga_guest"]);
@@ -106,15 +100,12 @@ fn setup_bridge_namespace(args: Vec<String>) {
     cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", "172.18.0.254/24", "dev", "children"]);
-    commands.push(cmd);
-
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
     cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
     cmd.args(["-t", "nat", "-A", "POSTROUTING",
-              "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
+              "-o", "vagga_guest",
+              "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for cmd in commands.iter() {
@@ -130,10 +121,10 @@ fn setup_bridge_namespace(args: Vec<String>) {
     }
 }
 
-fn setup_container_namespace(args: Vec<String>) {
+fn setup_bridge_namespace(args: Vec<String>) {
     let mut interface = "".to_string();
     let mut ip = "".to_string();
-    let mut gateway = "".to_string();
+    let mut gateway_ip = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -147,8 +138,8 @@ fn setup_container_namespace(args: Vec<String>) {
             .add_option(&["--ip"], box Store::<String>,
                 "IP to use on the interface")
             .required();
-        ap.refer(&mut gateway)
-            .add_option(&["--gateway"], box Store::<String>,
+        ap.refer(&mut gateway_ip)
+            .add_option(&["--gateway-ip"], box Store::<String>,
                 "Gateway to use on the interface")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -185,6 +176,106 @@ fn setup_container_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
+    cmd.args(&["addr", "add", format!("{}/30", ip).as_slice(),
+                       "dev", interface.as_slice()]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    commands.push(cmd);
+
+    let mut cmd = busybox.clone();
+    cmd.args(&["brctl", "addbr", "children"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["addr", "add", "172.18.0.254/24", "dev", "children"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", "children", "up"]);
+    commands.push(cmd);
+
+    // Unfortunately there is no iptables in busybox so use iptables from host
+    let mut cmd = Command::new("iptables");
+    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.args(["-t", "nat", "-A", "POSTROUTING",
+              "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
+    commands.push(cmd);
+
+    for cmd in commands.iter() {
+        debug!("Running {}", cmd);
+        match cmd.status() {
+            Ok(ExitStatus(0)) => {},
+            err => {
+                error!("Error running command {}: {}", cmd, err);
+                set_exit_status(1);
+                return;
+            }
+        };
+    }
+}
+
+fn setup_guest_namespace(args: Vec<String>) {
+    let mut interface = "".to_string();
+    let mut ip = "".to_string();
+    let mut gateway_ip = "".to_string();
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Set up guest network namespace
+            ");
+        ap.refer(&mut interface)
+            .add_option(&["--interface"], box Store::<String>,
+                "Network interface name")
+            .required();
+        ap.refer(&mut ip)
+            .add_option(&["--ip"], box Store::<String>,
+                "IP to use on the interface")
+            .required();
+        ap.refer(&mut gateway_ip)
+            .add_option(&["--gateway-ip"], box Store::<String>,
+                "Gateway to use on the interface")
+            .required();
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return,
+            Err(x) => {
+                set_exit_status(x);
+                return;
+            }
+        }
+    }
+    loop {
+        match has_interface(interface.as_slice()) {
+            Ok(true) => break,
+            Ok(false) => {}
+            Err(x) => {
+                error!("Error setting interface {}: {}", interface, x);
+                set_exit_status(1);
+                return;
+            }
+        }
+        sleep(Duration::milliseconds(100));
+    }
+    let mut commands = vec!();
+
+    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut ip_cmd = busybox.clone();
+    ip_cmd.arg("ip");
+    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut cmd = ip_cmd.clone();
+    cmd.args(&["link", "set", "dev", "lo", "up"]);
+    commands.push(cmd);
+
+    let mut cmd = ip_cmd.clone();
     cmd.args(&["addr", "add", format!("{}/24", ip).as_slice(),
                        "dev", interface.as_slice()]);
     commands.push(cmd);
@@ -194,7 +285,7 @@ fn setup_container_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway.as_slice()]);
+    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
     commands.push(cmd);
 
     for cmd in commands.iter() {
@@ -236,8 +327,9 @@ fn main() {
     }
     args.insert(0, format!("vagga_setup_netns {}", kind));
     match kind.as_slice() {
+        "gateway" => setup_gateway_namespace(args),
         "bridge" => setup_bridge_namespace(args),
-        "container" => setup_container_namespace(args),
+        "guest" => setup_guest_namespace(args),
         _ => {
             set_exit_status(1);
             error!("Unknown command {}", kind);

@@ -2,7 +2,7 @@ use std::io::fs::{readlink};
 use std::os::getenv;
 use std::io::stdio::{stdout, stderr};
 
-use argparse::{ArgumentParser, Store, StoreOption};
+use argparse::{ArgumentParser, Store};
 
 use config::command::{SuperviseInfo, ChildCommandInfo};
 use config::command::child::Command;
@@ -13,14 +13,12 @@ use container::container::{Command};
 use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
-use super::network;
 
 
 pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
     cmdline: Vec<String>)
     -> Result<int, String>
 {
-    let mut ip_addr = None;
     let mut child = "".to_string();
     {
         let mut ap = ArgumentParser::new();
@@ -29,9 +27,6 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
             .add_argument("child", box Store::<String>,
                 "Child to run")
             .required();
-        ap.refer(&mut ip_addr)
-            .add_option(["--set-ip"], box StoreOption::<String>,
-                "IP Address for child");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -39,9 +34,6 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
                 return Ok(122);
             }
         }
-    }
-    if let Some(ip_address) = ip_addr {
-        try!(network::setup_ip_address(ip_address));
     }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
