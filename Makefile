@@ -8,6 +8,8 @@ DESTDIR ?=
 
 
 all: vagga_launcher vagga_wrapper vagga_version vagga_build vagga_setup_netns
+all: vagga_partition
+
 
 rust-argparse/libargparse.rlib:
 	make -C rust-argparse libargparse.rlib
@@ -62,6 +64,12 @@ vagga_build: src/builder/*.rs src/builder/commands/*.rs
 vagga_setup_netns: rust-argparse/libargparse.rlib
 vagga_setup_netns: src/setup_netns/*.rs
 	$(call rust_compile_static,$@,src/setup_netns/main.rs -g -L rust-argparse)
+
+vagga_wrapper: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+vagga_wrapper: libconfig.rlib
+vagga_partition: src/partition/*.rs
+	$(call rust_compile_static,$@,src/partition/main.rs -g\
+		-L rust-argparse -L quire)
 
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
