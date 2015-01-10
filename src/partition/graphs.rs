@@ -90,6 +90,15 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             return Err(Err(format!("Node {} has no network", v)));
         }
     }
+    for (name, child) in sup.children.iter() {
+        if let Some(netw) = child.network() {
+            if !visited.contains(&netw.ip) {
+                return Err(Err(format!("Node {} is missing. \
+                    You may use 'split' command if you want to skip some nodes\
+                    ", name)));
+            }
+        }
+    }
     if cluster.len() > 0 {
         clusters.push(cluster);
     }
@@ -97,13 +106,17 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
     let mut pairs = HashSet::new();
     for i in visited.iter() {
         for j in visited.iter() {
-            pairs.insert((i.clone(), j.clone()));
+            if i != j {
+                pairs.insert((i.clone(), j.clone()));
+            }
         }
     }
     for cluster in clusters.iter() {
         for i in cluster.iter() {
             for j in cluster.iter() {
-                pairs.remove(&(i.to_string(), j.to_string()));
+                if i != j {
+                    pairs.remove(&(i.to_string(), j.to_string()));
+                }
             }
         }
     }
@@ -182,13 +195,17 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
     let mut pairs = HashSet::new();
     for i in visited.iter() {
         for j in visited.iter() {
-            pairs.insert((i.clone(), j.clone()));
+            if i != j {
+                pairs.insert((i.clone(), j.clone()));
+            }
         }
     }
     for cluster in clusters.iter() {
         for i in cluster.iter() {
             for j in cluster.iter() {
-                pairs.remove(&(i.to_string(), j.to_string()));
+                if i != j {
+                    pairs.remove(&(i.to_string(), j.to_string()));
+                }
             }
         }
     }
