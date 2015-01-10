@@ -15,8 +15,8 @@ use super::util::find_cmd;
 use super::setup;
 
 
-pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
-    cmdline: Vec<String>)
+pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
+    wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<int, String>
 {
     let mut child = "".to_string();
@@ -41,12 +41,13 @@ pub fn supervise_cmd(command: &SuperviseInfo, wrapper: &Wrapper,
     let childtype = try!(command.children.find(&child)
         .ok_or(format!("Child {} not found", child)));
     match childtype {
-        &Command(ref info) => supervise_child_command(
+        &Command(ref info) => supervise_child_command(cname,
             &child, info, wrapper, command),
     }
 }
 
-fn supervise_child_command(name: &String, command: &ChildCommandInfo,
+fn supervise_child_command(cmdname: &String, name: &String,
+    command: &ChildCommandInfo,
     wrapper: &Wrapper, _supervise: &SuperviseInfo)
     -> Result<int, String>
 {
@@ -74,6 +75,8 @@ fn supervise_child_command(name: &String, command: &ChildCommandInfo,
 
     let mut cmd = Command::new(name.to_string(), &cpath);
     cmd.args(cmdline.as_slice());
+    cmd.set_env("VAGGA_COMMAND".to_string(), cmdname.to_string());
+    cmd.set_env("VAGGA_SUBCOMMAND".to_string(), name.to_string());
     cmd.set_uidmap(uid_map.clone());
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));

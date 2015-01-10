@@ -11,8 +11,8 @@ use container::container::{Command};
 use container::nsutil::set_namespace_fd;
 use container::container::{NewNet};
 use config::Config;
-use config::command::{main, child};
-use config::command::{CommandInfo, SuperviseInfo, stop_on_failure};
+use config::command::{main};
+use config::command::{CommandInfo, SuperviseInfo, Networking, stop_on_failure};
 
 use super::network;
 
@@ -119,14 +119,10 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
                 x => return x,
             }
         }
-        match child {
-            &child::Command(ref cfg) => {
-                if cfg.network.is_some() {
-                    containers_in_netns.push(name.to_string());
-                } else {
-                    containers_host_net.push(name.to_string());
-                }
-            }
+        if child.network().is_some() {
+            containers_in_netns.push(name.to_string());
+        } else {
+            containers_host_net.push(name.to_string());
         }
     }
     if containers_in_netns.len() > 0 && !network::is_netns_set_up() {
@@ -156,21 +152,14 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
 
             try!(set_namespace_fd(bridge, NewNet)
                 .map_err(|e| format!("Error setting netns: {}", e)));
-            match child {
-                &child::Command(ref cfg) => {
-                    if let Some(ref netw) = cfg.network {
-                        if netw.ip.as_slice() != "172.18.0.254" {
-                            let fd = try!(network::setup_container(
-                                name.as_slice(), netw.ip.as_slice()));
-                            try!(set_namespace_fd(fd, NewNet)
-                                .map_err(|e| format!(
-                                            "Error setting netns: {}", e)));
-                            println!("SET UP NAMESPACE {}", fd)
-                        }
-                    }
-                }
+            let netw = child.network().unwrap();
+            if netw.ip.as_slice() != "172.18.0.254" {
+                let fd = try!(network::setup_container(
+                    name.as_slice(), netw.ip.as_slice()));
+                try!(set_namespace_fd(fd, NewNet)
+                    .map_err(|e| format!(
+                                "Error setting netns: {}", e)));
             }
-
 
             let mut cmd = Command::new("wrapper".to_string(),
                 self_exe_path().unwrap().join("vagga_wrapper"));

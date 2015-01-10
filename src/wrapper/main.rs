@@ -103,7 +103,7 @@ pub fn run() -> int {
                     commandline::commandline_cmd(cmd_info, &wrapper, args)
                 }
                 Some(&Supervise(ref svc_info)) => {
-                    supervise::supervise_cmd(svc_info, &wrapper, args)
+                    supervise::supervise_cmd(&cmd, svc_info, &wrapper, args)
                 }
                 None => {
                     error!("Unknown command {}", cmd);

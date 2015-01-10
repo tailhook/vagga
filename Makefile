@@ -65,11 +65,11 @@ vagga_setup_netns: rust-argparse/libargparse.rlib
 vagga_setup_netns: src/setup_netns/*.rs
 	$(call rust_compile_static,$@,src/setup_netns/main.rs -g -L rust-argparse)
 
-vagga_wrapper: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
-vagga_wrapper: libconfig.rlib
+vagga_partition: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+vagga_partition: libconfig.rlib libcontainer.rlib
 vagga_partition: src/partition/*.rs
-	$(call rust_compile_static,$@,src/partition/main.rs -g\
-		-L rust-argparse -L quire)
+	$(call rust_compile_static,$@,src/partition/main.rs -g \
+		-L rust-argparse -L rust-quire -L .)
 
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire

@@ -3,9 +3,13 @@
 extern crate argparse;
 #[phase(plugin, link)] extern crate log;
 
+extern crate config;
+
 use std::os::set_exit_status;
 
 use argparse::{ArgumentParser, Store, List};
+
+use config::read_config;
 
 use iptables::apply_graph;
 
@@ -51,11 +55,18 @@ fn run() -> Result<(), Result<int, String>> {
             }
         }
     }
+
+
+    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
+    let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
+        .expect("Error parsing configuration file");  // TODO
+
     args.insert(0, format!("vagga_partition {}", kind));
     let graph = match kind.as_slice() {
-        "disjoint" => try!(graphs::disjoint_graph_cmd(args)),
-        "split" => try!(graphs::split_graph_cmd(args)),
-        "isolate" => try!(graphs::isolate_graph_cmd(args)),
+        "fullmesh" => try!(graphs::full_mesh_cmd(&cfg, args)),
+        "disjoint" => try!(graphs::disjoint_graph_cmd(&cfg, args)),
+        "split" => try!(graphs::split_graph_cmd(&cfg, args)),
+        "isolate" => try!(graphs::isolate_graph_cmd(&cfg, args)),
         _ => {
             return Err(Err(format!("Unknown command {}", kind)));
         }

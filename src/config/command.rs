@@ -229,3 +229,15 @@ pub fn command_validator<'a>() -> Box<V::Validator + 'a> {
             .. Default::default()} as Box<V::Validator>),
     ), .. Default::default()} as Box<V::Validator>;
 }
+
+pub trait Networking {
+    fn network<'x>(&'x self) -> Option<&'x Network>;
+}
+
+impl Networking for child::ChildCommand {
+    fn network<'x>(&'x self) -> Option<&'x Network> {
+        match self {
+            &child::Command(ref cmd) => cmd.network.as_ref(),
+        }
+    }
+}
