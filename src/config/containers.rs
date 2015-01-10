@@ -9,6 +9,7 @@ use super::Range;
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 pub enum Volume {
     Tmpfs(TmpfsInfo),
+    VaggaBin,
 }
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
@@ -47,6 +48,7 @@ pub fn volume_validator<'a>() -> Box<V::Validator + 'a> {
                 default: Some(0o766),
                 .. Default::default()} as Box<V::Validator>),
             ),.. Default::default()} as Box<V::Validator>),
+        ("VaggaBin".to_string(),  box V::Nothing),
         ), .. Default::default()} as Box<V::Validator>;
 }
 

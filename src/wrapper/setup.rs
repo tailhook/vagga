@@ -8,7 +8,7 @@ use std::io::fs::{mkdir, copy, readlink, symlink};
 use std::collections::TreeMap;
 
 use config::Container;
-use config::containers::{Tmpfs};
+use config::containers::{Tmpfs, VaggaBin};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_pseudo};
@@ -248,12 +248,15 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
     for (path, vol) in container.volumes.iter() {
+        let dest = tgtroot.join(path.path_relative_from(&root_path).unwrap());
         match vol {
             &Tmpfs(params) => {
-                try!(mount_tmpfs(&tgtroot
-                    .join(path.path_relative_from(&root_path).unwrap()),
+                try!(mount_tmpfs(&dest,
                     format!("size={:u},mode=0{:o}", params.size, params.mode)
                     .as_slice()));
+            }
+            &VaggaBin => {
+                try!(bind_mount(&Path::new("/vagga/bin"), &dest));
             }
         }
     }
