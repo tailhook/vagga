@@ -71,7 +71,7 @@ fn run() -> Result<(), Result<int, String>> {
             return Err(Err(format!("Unknown command {}", kind)));
         }
     };
-    try!(apply_graph(graph));
+    try!(apply_graph(graph).map_err(Err));
     Ok(())
 }
 
