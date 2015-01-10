@@ -13,6 +13,7 @@ use container::container::{NewNet};
 use config::Config;
 use config::command::{main};
 use config::command::{CommandInfo, SuperviseInfo, Networking, stop_on_failure};
+use config::command::child::{BridgeCommand};
 
 use super::network;
 
@@ -119,10 +120,14 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
                 x => return x,
             }
         }
-        if child.network().is_some() {
+        if let &BridgeCommand(_) = child {
             containers_in_netns.push(name.to_string());
         } else {
-            containers_host_net.push(name.to_string());
+            if child.network().is_some() {
+                containers_in_netns.push(name.to_string());
+            } else {
+                containers_host_net.push(name.to_string());
+            }
         }
     }
     if containers_in_netns.len() > 0 && !network::is_netns_set_up() {
@@ -152,8 +157,10 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
 
             try!(set_namespace_fd(bridge, NewNet)
                 .map_err(|e| format!("Error setting netns: {}", e)));
-            let netw = child.network().unwrap();
-            if netw.ip.as_slice() != "172.18.0.254" {
+            if let &BridgeCommand(_) = child {
+                // already setup by set_namespace_fd
+            } else {
+                let netw = child.network().unwrap();
                 let fd = try!(network::setup_container(
                     name.as_slice(), netw.ip.as_slice()));
                 try!(set_namespace_fd(fd, NewNet)

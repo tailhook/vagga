@@ -15,9 +15,9 @@ pub fn apply_graph(graph: Graph) -> Result<(), String> {
     cmd.stdout(InheritFd(1)).stderr(InheritFd(2));
     debug!("Running {}", cmd);
     let mut prc = try!(cmd.spawn()
-        .map_err(|e| format!("Can't run iptables-save: {}", e)));
+        .map_err(|e| format!("Can't run iptables-restore: {}", e)));
     {
-        let pipe = prc.stdout.as_mut().unwrap();
+        let pipe = prc.stdin.as_mut().unwrap();
 
         try!(_rule(pipe, "*filter"));
 

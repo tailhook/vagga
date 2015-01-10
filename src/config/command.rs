@@ -39,28 +39,14 @@ pub struct Network {
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
-    // Common
+    // Common for toplevel commands
     pub description: Option<String>,
     pub banner: Option<String>,
-    pub banner_delay: i64,
+    pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
 
     // Command
-    pub network: Option<Network>,
-    pub pid1mode: Pid1Mode,
-    pub work_dir: Option<String>,
-    pub container: String,
-    pub accepts_arguments: Option<bool>,
-    pub environ: TreeMap<String, String>,
-    pub inherit_environ: Vec<String>,
-    pub write_mode: WriteMode,
-    pub run: Vec<String>,
-}
-
-#[deriving(Decodable, Clone, PartialEq, Eq)]
-pub struct ChildCommandInfo {
-    // Command
-    pub network: Option<Network>,
+    pub network: Option<Network>, // Only for top-levels
     pub pid1mode: Pid1Mode,
     pub work_dir: Option<String>,
     pub container: String,
@@ -76,7 +62,7 @@ pub struct SuperviseInfo {
     // Common
     pub description: Option<String>,
     pub banner: Option<String>,
-    pub banner_delay: i64,
+    pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
 
     // Supervise
@@ -104,17 +90,19 @@ pub mod main {
 }
 
 pub mod child {
-    use super::{ChildCommandInfo};
+    use super::CommandInfo;
 
     #[deriving(Decodable, PartialEq, Eq, Clone)]
     pub enum ChildCommand {
-        Command(ChildCommandInfo),
+        Command(CommandInfo),
+        BridgeCommand(CommandInfo),
     }
 
     impl ChildCommand {
         pub fn get_container<'x>(&'x self) -> &String {
             match *self {
                 Command(ref info) => &info.container,
+                BridgeCommand(ref info) => &info.container,
             }
         }
     }
@@ -137,13 +125,8 @@ fn shell_command(ast: A::Ast) -> Vec<A::Ast> {
 }
 
 
-fn run_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
-    return vec!(
-        ("network".to_string(), box V::Structure { members: vec!(
-            ("ip".to_string(), box V::Scalar {
-                optional: true,
-                .. Default::default()} as Box<V::Validator>),
-            ),.. Default::default()} as Box<V::Validator>),
+fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
+    let mut res = vec!(
         ("pid1mode".to_string(), box V::Scalar {
             default: Some("wait".to_string()),
             .. Default::default()} as Box<V::Validator>),
@@ -174,7 +157,17 @@ fn run_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
             element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
             .. Default::default()} as Box<V::Validator>),
+    );
+    if network {
+        res.push(
+            ("network".to_string(), box V::Structure { members: vec!(
+                ("ip".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default()} as Box<V::Validator>),
+                ),.. Default::default()} as Box<V::Validator>),
         );
+    }
+    return res;
 }
 
 fn command_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
@@ -186,8 +179,8 @@ fn command_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
             optional: true,
             .. Default::default()} as Box<V::Validator>),
         ("banner_delay".to_string(), box V::Numeric {
-            min: Some(0),
-            default: Some(0i64),
+            optional: true,
+            min: Some(0u32),
             .. Default::default()} as Box<V::Validator>),
         ("epilog".to_string(), box V::Scalar {
             optional: true,
@@ -198,7 +191,10 @@ fn command_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
 fn subcommand_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Enum { options: vec!(
         ("Command".to_string(), box V::Structure {
-            members: run_fields(),
+            members: run_fields(true),
+            .. Default::default()} as Box<V::Validator>),
+        ("BridgeCommand".to_string(), box V::Structure {
+            members: run_fields(false),
             .. Default::default()} as Box<V::Validator>),
     ), .. Default::default()} as Box<V::Validator>;
 }
@@ -206,7 +202,7 @@ fn subcommand_validator<'a>() -> Box<V::Validator + 'a> {
 pub fn command_validator<'a>() -> Box<V::Validator + 'a> {
     let mut command_members = vec!();
     command_members.extend(command_fields().into_iter());
-    command_members.extend(run_fields().into_iter());
+    command_members.extend(run_fields(false).into_iter());
 
     let mut supervise_members = vec!(
         ("mode".to_string(), box V::Scalar {
@@ -238,6 +234,7 @@ impl Networking for child::ChildCommand {
     fn network<'x>(&'x self) -> Option<&'x Network> {
         match self {
             &child::Command(ref cmd) => cmd.network.as_ref(),
+            &child::BridgeCommand(_) => None,
         }
     }
 }

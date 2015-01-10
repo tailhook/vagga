@@ -4,8 +4,8 @@ use std::io::stdio::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store};
 
-use config::command::{SuperviseInfo, ChildCommandInfo};
-use config::command::child::Command;
+use config::command::{SuperviseInfo, CommandInfo};
+use config::command::child::{Command, BridgeCommand};
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
@@ -42,13 +42,14 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
         .ok_or(format!("Child {} not found", child)));
     match childtype {
         &Command(ref info) => supervise_child_command(cname,
-            &child, info, wrapper, command),
+            &child, false, info, wrapper, command),
+        &BridgeCommand(ref info) => supervise_child_command(cname,
+            &child, true, info, wrapper, command),
     }
 }
 
-fn supervise_child_command(cmdname: &String, name: &String,
-    command: &ChildCommandInfo,
-    wrapper: &Wrapper, _supervise: &SuperviseInfo)
+fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
+    command: &CommandInfo, wrapper: &Wrapper, _supervise: &SuperviseInfo)
     -> Result<int, String>
 {
     let cconfig = try!(wrapper.config.containers.find(&command.container)
@@ -77,7 +78,9 @@ fn supervise_child_command(cmdname: &String, name: &String,
     cmd.args(cmdline.as_slice());
     cmd.set_env("VAGGA_COMMAND".to_string(), cmdname.to_string());
     cmd.set_env("VAGGA_SUBCOMMAND".to_string(), name.to_string());
-    cmd.set_uidmap(uid_map.clone());
+    if !bridge {
+        cmd.set_uidmap(uid_map.clone());
+    }
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {
