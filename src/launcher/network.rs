@@ -11,14 +11,14 @@ use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 use std::collections::BitvSet;
 use std::rand::distributions::{Range, IndependentSample};
 use libc::funcs::posix88::unistd::{geteuid};
-use libc::{pid_t, c_int};
+use libc::{pid_t};
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
 
 use config::Config;
 use container::util::get_user_name;
-use container::nsutil::{set_namespace, nsopen};
+use container::nsutil::{set_namespace};
 use container::container::{NewUser, NewNet};
 use container::monitor::{Monitor, Exit, Killed, RunOnce};
 use container::container::Command as ContainerCommand;
@@ -506,7 +506,7 @@ fn _run_command(cmd: Command) -> Result<(), String> {
     }
 }
 
-pub fn setup_bridge() -> Result<c_int, String> {
+pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     let index = try!(get_unused_inteface_no());
 
     let eif = format!("ch{}", index);
@@ -514,8 +514,14 @@ pub fn setup_bridge() -> Result<c_int, String> {
     let eip = format!("172.17.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
     let iip = format!("172.17.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
 
+    try!(File::create(link_to)
+        .map_err(|e| format!("Can't create namespace file: {}", e)));
+
     let mut ip_cmd = Command::new("ip");
     ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
 
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "add", eif.as_slice(), "type", "veth",
@@ -553,9 +559,13 @@ pub fn setup_bridge() -> Result<c_int, String> {
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
               "netns", format!("{}", pid).as_slice()]);
-    let result = _run_command(cmd)
-        .and_then(|()| nsopen(pid, "net")
-                       .map_err(|e| format!("Can't open ns: {}", e)));
+    let result = _run_command(cmd).and_then(|()| {
+            let mut cmd = busybox.clone();
+            cmd.args(["mount", "--bind"]);
+            cmd.arg(format!("/proc/{}/ns/net", pid));
+            cmd.arg(link_to);
+            _run_command(cmd)
+        });
     match mon.run() {
         Exit(0) => {}
         Killed => return Err(format!("vagga_setup_netns is dead")),
@@ -563,7 +573,7 @@ pub fn setup_bridge() -> Result<c_int, String> {
             format!("vagga_setup_netns exited with code: {}", c)),
     }
     match result {
-        Ok(fd) => Ok(fd),
+        Ok(()) => Ok(()),
         Err(e) => {
             let mut cmd = ip_cmd.clone();
             cmd.args(["link", "del", eif.as_slice()]);
@@ -573,8 +583,9 @@ pub fn setup_bridge() -> Result<c_int, String> {
     }
 }
 
-pub fn setup_container(name: &str, ip: &str) -> Result<c_int, String> {
-
+pub fn setup_container(link_to: &Path, name: &str, ip: &str)
+    -> Result<(), String>
+{
     let eif = if name.as_bytes().len() > 14 {
         let mut hash = Sha256::new();
         hash.input(name.as_bytes());
@@ -583,6 +594,9 @@ pub fn setup_container(name: &str, ip: &str) -> Result<c_int, String> {
         name.to_string()
     };
     let iif = eif + "g";
+
+    try!(File::create(link_to)
+        .map_err(|e| format!("Can't create namespace file: {}", e)));
 
     let mut ip_cmd = Command::new("ip");
     ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
@@ -625,9 +639,13 @@ pub fn setup_container(name: &str, ip: &str) -> Result<c_int, String> {
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
               "netns", format!("{}", pid).as_slice()]);
-    let result = _run_command(cmd)
-        .and_then(|()| nsopen(pid, "net")
-                       .map_err(|e| format!("Can't open ns: {}", e)));
+    let result = _run_command(cmd).and_then(|()| {
+            let mut cmd = busybox.clone();
+            cmd.args(["mount", "--bind"]);
+            cmd.arg(format!("/proc/{}/ns/net", pid));
+            cmd.arg(link_to);
+            _run_command(cmd)
+        });
 
     match mon.run() {
         Exit(0) => {}
@@ -637,7 +655,7 @@ pub fn setup_container(name: &str, ip: &str) -> Result<c_int, String> {
     }
 
     match result {
-        Ok(fd) => Ok(fd),
+        Ok(()) => Ok(()),
         Err(e) => {
             let mut cmd = ip_cmd.clone();
             cmd.args(["link", "del", eif.as_slice()]);

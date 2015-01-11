@@ -7,7 +7,7 @@ use std::collections::TreeSet;
 use argparse::{ArgumentParser};
 
 use container::mount::{mount_tmpfs};
-use container::nsutil::{set_namespace_fd, unshare_namespace};
+use container::nsutil::{set_namespace, unshare_namespace};
 use container::monitor::{Monitor, RunOnce, Exit, Killed};
 use container::container::{Command};
 use container::container::{NewNet, NewMount};
@@ -156,24 +156,11 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
             .map_err(|e| format!("Failed to create mount namespace: {}", e)));
         try!(mount_tmpfs(&nsdir, "size=10m"));
 
-        let bridge = try!(network::setup_bridge());
+        let bridge_ns = nsdir.join("bridge");
+        try!(network::setup_bridge(&bridge_ns));
 
         for name in containers_in_netns.iter() {
             let child = sup.children.find(name).unwrap();
-
-            try!(set_namespace_fd(bridge, NewNet)
-                .map_err(|e| format!("Error setting netns: {}", e)));
-            if let &BridgeCommand(_) = child {
-                // already setup by set_namespace_fd
-            } else {
-                let netw = child.network().unwrap();
-                let fd = try!(network::setup_container(
-                    name.as_slice(), netw.ip.as_slice()));
-                try!(set_namespace_fd(fd, NewNet)
-                    .map_err(|e| format!(
-                                "Error setting netns: {}", e)));
-            }
-
             let mut cmd = Command::new("wrapper".to_string(),
                 self_exe_path().unwrap().join("vagga_wrapper"));
             cmd.keep_sigmask();
@@ -181,6 +168,23 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
             cmd.arg(name.as_slice());
             _common(&mut cmd, workdir);
             cmd.container();
+
+            try!(set_namespace(&bridge_ns, NewNet)
+                .map_err(|e| format!("Error setting netns: {}", e)));
+            if let &BridgeCommand(_) = child {
+                // Already setup by set_namespace
+                // But also need to mount namespace_dir into container
+                cmd.set_env("VAGGA_NAMESPACE_DIR".to_string(),
+                            nsdir.display().to_string());
+            } else {
+                let netw = child.network().unwrap();
+                let current_ns = nsdir.join(netw.ip.as_slice());
+                try!(network::setup_container(&current_ns,
+                    name.as_slice(), netw.ip.as_slice()));
+                try!(set_namespace(&current_ns, NewNet)
+                    .map_err(|e| format!("Error setting netns: {}", e)));
+            }
+
             let name = Rc::new(name.clone());
             mon.add(name.clone(), box RunOnce::new(cmd));
             try!(mon.force_start(name));
@@ -189,8 +193,10 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         // Need to set network namespace back to bridge, to keep namespace
         // alive. Otherwise bridge is dropped, and no connectivity between
         // containers.
-        try!(set_namespace_fd(bridge, NewNet)
+        try!(set_namespace(&bridge_ns, NewNet)
             .map_err(|e| format!("Error setting netns: {}", e)));
+
+        // TODO(tailhook) close all namespace FDs
     }
     match mon.run() {
         Killed => Ok(143),

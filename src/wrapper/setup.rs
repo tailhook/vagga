@@ -4,7 +4,7 @@ use std::io::BufferedReader;
 use std::os::{self_exe_path};
 use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
 use std::io::fs::{File, PathExtensions};
-use std::io::fs::{mkdir, copy, readlink, symlink};
+use std::io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink};
 use std::collections::TreeMap;
 
 use config::Container;
@@ -184,6 +184,16 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
     try!(bind_mount(&locl_cache, &cache_dir));
 
+    if let Some(nsdir) = getenv("VAGGA_NAMESPACE_DIR") {
+        let newns_dir = vagga_dir.join("namespaces");
+        try!(mkdir_recursive(&newns_dir, ALL_PERMISSIONS)
+            .map_err(|e| format!("Error creating directory \
+                for namespaces: {}", e)));
+        try!(bind_mount(&Path::new(nsdir), &newns_dir)
+             .map_err(|e| format!("Error mounting directory \
+                with namespaces: {}", e)));
+    }
+
     let work_dir = mnt_dir.join("work");
     try_str!(mkdir(&work_dir, ALL_PERMISSIONS));
     try!(bind_mount(project_root, &work_dir));
@@ -259,6 +269,15 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
                 try!(bind_mount(&Path::new("/vagga/bin"), &dest));
             }
         }
+    }
+    if let Some(_) = getenv("VAGGA_NAMESPACE_DIR") {
+        let newns_dir = tgtroot.join("tmp/vagga/namespaces");
+        try!(mkdir_recursive(&newns_dir, ALL_PERMISSIONS)
+            .map_err(|e| format!("Error creating directory \
+                for namespaces: {}", e)));
+        try!(bind_mount(&Path::new("/vagga/namespaces"), &newns_dir)
+             .map_err(|e| format!("Error mounting directory \
+                with namespaces: {}", e)));
     }
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
          .map_err(|e| format!("Error changing root: {}", e)));
