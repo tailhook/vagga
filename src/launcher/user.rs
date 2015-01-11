@@ -6,10 +6,11 @@ use std::collections::TreeSet;
 
 use argparse::{ArgumentParser};
 
+use container::mount::{mount_tmpfs};
+use container::nsutil::{set_namespace_fd, unshare_namespace};
 use container::monitor::{Monitor, RunOnce, Exit, Killed};
 use container::container::{Command};
-use container::nsutil::set_namespace_fd;
-use container::container::{NewNet};
+use container::container::{NewNet, NewMount};
 use config::Config;
 use config::command::{main};
 use config::command::{CommandInfo, SuperviseInfo, Networking, stop_on_failure};
@@ -149,7 +150,12 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         mon.add(Rc::new(name.clone()), box RunOnce::new(cmd));
     }
     if containers_in_netns.len() > 0 {
+        let nsdir = network::namespace_dir();
         try!(network::join_gateway_namespaces());
+        try!(unshare_namespace(NewMount)
+            .map_err(|e| format!("Failed to create mount namespace: {}", e)));
+        try!(mount_tmpfs(&nsdir, "size=10m"));
+
         let bridge = try!(network::setup_bridge());
 
         for name in containers_in_netns.iter() {
