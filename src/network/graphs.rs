@@ -1,6 +1,7 @@
 use std::os::getenv;
 use std::io::{stdout, stderr};
-use std::collections::HashSet;
+use std::mem::swap;
+use std::collections::{HashSet, HashMap};
 
 use argparse::{ArgumentParser, List};
 
@@ -9,13 +10,47 @@ use config::command::{Networking};
 use config::command::{main};
 
 
-
-pub struct Graph {
-    pub drop_pairs: Vec<(String, String)>,
-    pub isolate: Vec<String>,
+#[deriving(PartialEq)]
+pub enum NodeLinks {
+    Full,
+    Isolate,
+    DropSome(Vec<String>),
 }
 
-pub fn full_mesh_cmd(_config: &Config, args: Vec<String>)
+pub struct Graph {
+    pub nodes: HashMap<String, NodeLinks>,
+}
+
+pub fn get_full_mesh(config: &Config)
+    -> Result<(HashMap<String, String>, Graph), String>
+{
+    let cmd = try!(getenv("VAGGA_COMMAND")
+        .and_then(|cmd| config.commands.find(&cmd))
+        .ok_or(format!("This command is supposed to be run inside \
+                        container started by vagga !Supervise command")));
+    let sup = match cmd {
+        &main::Supervise(ref sup) => sup,
+        _ => return Err(format!("This command is supposed to be run \
+                inside container started by vagga !Supervise command")),
+    };
+
+    Ok((
+        sup.children.iter()
+            .filter(|&(_, child)| child.network().is_some())
+            .map(|(name, child)| (name.to_string(),
+                                  child.network().unwrap().ip.to_string()))
+            .collect(),
+        Graph {
+            nodes: sup.children.iter()
+                .filter(|&(_, child)| child.network().is_some())
+                .map(|(_, child)| (child.network().unwrap().ip.to_string(),
+                                   Full))
+                .collect(),
+        },
+    ))
+}
+
+pub fn full_mesh_cmd(config: &Config, args: Vec<String>)
     -> Result<Graph, Result<int, String>>
 {
     {
@@ -29,7 +64,8 @@ pub fn full_mesh_cmd(_config: &Config, args: Vec<String>)
             }
         }
     }
-    return Ok(Graph { drop_pairs: vec!(), isolate: vec!() });
+    let (_ips, graph) = try!(get_full_mesh(config).map_err(Err));
+    return Ok(graph);
 }
 
 pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
@@ -54,76 +90,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let cmd = try!(getenv("VAGGA_COMMAND")
-        .and_then(|cmd| config.commands.find(&cmd))
-        .ok_or(Err(format!("This command is supposed to be run inside \
-                        container started by vagga !Supervise command"))));
-    let sup = match cmd {
-        &main::Supervise(ref sup) => sup,
-        _ => return Err(Err(format!("This command is supposed to be run \
-                inside container started by vagga !Supervise command"))),
-    };
-    let mut visited = HashSet::new();
-    let mut clusters = vec!();
-    let mut cluster: Vec<String> = vec!();
-    for v in nodes.iter() {
-        if v.as_slice() == "--" {
-            if cluster.len() > 0 {
-                clusters.push(cluster);
-                cluster = vec!();
-            }
-            continue;
-        }
-        let node = try!(sup.children.find(v)
-            .ok_or(Err(format!("Node {} does not exists", v))));
-        if let Some(netw) = node.network() {
-            let ref ip = netw.ip;
-            if ip.as_slice() == "172.18.0.254" {
-                return Err(Err(format!(
-                    "Node {} is bridge and must not be used", v)));
-            }
-            cluster.push(ip.to_string());
-            if !visited.insert(ip.to_string()) {
-                return Err(Err(format!("Duplicate node {} (or it's IP)", v)));
-            }
-        } else {
-            return Err(Err(format!("Node {} has no network", v)));
-        }
-    }
-    for (name, child) in sup.children.iter() {
-        if let Some(netw) = child.network() {
-            if !visited.contains(&netw.ip) {
-                return Err(Err(format!("Node {} is missing. \
-                    You may use 'split' command if you want to skip some nodes\
-                    ", name)));
-            }
-        }
-    }
-    if cluster.len() > 0 {
-        clusters.push(cluster);
-    }
-
-    let mut pairs = HashSet::new();
-    for i in visited.iter() {
-        for j in visited.iter() {
-            if i != j {
-                pairs.insert((i.clone(), j.clone()));
-            }
-        }
-    }
-    for cluster in clusters.iter() {
-        for i in cluster.iter() {
-            for j in cluster.iter() {
-                if i != j {
-                    pairs.remove(&(i.to_string(), j.to_string()));
-                }
-            }
-        }
-    }
-    return Ok(Graph {
-        drop_pairs: pairs.into_iter().collect(),
-        isolate: vec!(),
-        });
+    Ok(try!(_partition(config, nodes, false).map_err(Err)))
 }
 
 pub fn split_graph_cmd(config: &Config, args: Vec<String>)
@@ -149,19 +116,13 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let cmd = try!(getenv("VAGGA_COMMAND")
-        .and_then(|cmd| config.commands.find(&cmd))
-        .ok_or(Err(format!("This command is supposed to be run inside \
-                        container started by vagga !Supervise command"))));
-    let sup = match cmd {
-        &main::Supervise(ref sup) => sup,
-        _ => return Err(Err(format!("This command is supposed to be run \
-                inside container started by vagga !Supervise command"))),
-    };
-    let mut isolate: HashSet<String> = sup.children.iter()
-        .filter(|&(_, cfg)| cfg.network().is_some())
-        .map(|(_, cfg)| cfg.network().unwrap().ip.clone())
-        .collect();
+    Ok(try!(_partition(config, nodes, false).map_err(Err)))
+}
+
+fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
+    -> Result<Graph, String>
+{
+    let (ips, mut graph) = try!(get_full_mesh(config));
     let mut visited = HashSet::new();
     let mut clusters = vec!();
     let mut cluster: Vec<String> = vec!();
@@ -173,23 +134,24 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             }
             continue;
         }
-        let node = try!(sup.children.find(v)
-            .ok_or(Err(format!("Node {} does not exists", v))));
-        if let Some(netw) = node.network() {
-            let ref ip = netw.ip;
-            if ip.as_slice() == "172.18.0.254" {
-                return Err(Err(format!(
-                    "Node {} is bridge and must not be used", v)));
-            }
-            cluster.push(ip.to_string());
-            visited.insert(ip.to_string());
-            isolate.remove(ip);
-        } else {
-            return Err(Err(format!("Node {} has no network", v)));
+        let ip = try!(ips.find(v)
+            .ok_or(format!("Node {} does not exists or has no IP", v)));
+        cluster.push(ip.to_string());
+        if !visited.insert(ip.to_string()) {
+            return Err(format!("Duplicate node {} (or it's IP)", v));
         }
     }
     if cluster.len() > 0 {
         clusters.push(cluster);
+    }
+    if check_all {
+        for (name, ip) in ips.iter() {
+            if !visited.contains(ip) {
+                return Err(format!("Node {} is missing. \
+                    You may use 'split' command if you want to skip some nodes\
+                    ", name));
+            }
+        }
     }
 
     let mut pairs = HashSet::new();
@@ -209,10 +171,24 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    return Ok(Graph {
-        drop_pairs: pairs.into_iter().collect(),
-        isolate: isolate.into_iter().collect(),
-        });
+    for (i, j) in pairs.into_iter() {
+        let node = graph.nodes.find_mut(&i).unwrap();
+        if *node == Full {
+            *node = DropSome(ips.iter()
+                .filter(|&(_, ip)| ip.as_slice() != j.as_slice())
+                .map(|(_, ip)| ip.to_string())
+                .collect())
+        } else if let DropSome(ref mut items) = *node {
+            let mut old_items = vec!();
+            swap(&mut old_items, items);
+            *items = old_items.into_iter()
+                .filter(|ip| ip.as_slice() != j.as_slice())
+                .collect();
+        } else {
+            unreachable!();
+        }
+    }
+    return Ok(graph);
 }
 
 pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
@@ -238,32 +214,11 @@ pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let cmd = try!(getenv("VAGGA_COMMAND")
-        .and_then(|cmd| config.commands.find(&cmd))
-        .ok_or(Err(format!("This command is supposed to be run inside \
-                        container started by vagga !Supervise command"))));
-    let sup = match cmd {
-        &main::Supervise(ref sup) => sup,
-        _ => return Err(Err(format!("This command is supposed to be run \
-                inside container started by vagga !Supervise command"))),
-    };
-    let mut isolate = HashSet::new();
+    let (ips, mut graph) = try!(get_full_mesh(config).map_err(Err));
     for v in nodes.iter() {
-        let node = try!(sup.children.find(v)
+        let ip = try!(ips.find(v)
             .ok_or(Err(format!("Node {} does not exists", v))));
-        if let Some(netw) = node.network() {
-            let ref ip = netw.ip;
-            if ip.as_slice() == "172.18.0.254" {
-                return Err(Err(format!(
-                    "Node {} is bridge and must not be used", v)));
-            }
-            isolate.insert(ip.to_string());
-        } else {
-            return Err(Err(format!("Node {} has no network", v)));
-        }
+        *graph.nodes.find_mut(ip).unwrap() = Isolate;
     }
-    return Ok(Graph {
-        drop_pairs: vec!(),
-        isolate: isolate.into_iter().collect(),
-        });
+    return Ok(graph);
 }
