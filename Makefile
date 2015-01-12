@@ -8,7 +8,7 @@ DESTDIR ?=
 
 
 all: vagga_launcher vagga_wrapper vagga_version vagga_build vagga_setup_netns
-all: vagga_partition
+all: vagga_network
 
 
 rust-argparse/libargparse.rlib:
@@ -65,10 +65,10 @@ vagga_setup_netns: rust-argparse/libargparse.rlib
 vagga_setup_netns: src/setup_netns/*.rs
 	$(call rust_compile_static,$@,src/setup_netns/main.rs -g -L rust-argparse)
 
-vagga_partition: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
-vagga_partition: libconfig.rlib libcontainer.rlib
-vagga_partition: src/partition/*.rs
-	$(call rust_compile_static,$@,src/partition/main.rs -g \
+vagga_network: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
+vagga_network: libconfig.rlib libcontainer.rlib
+vagga_network: src/network/*.rs
+	$(call rust_compile_static,$@,src/network/main.rs -g \
 		-L rust-argparse -L rust-quire -L .)
 
 vagga_test: tests/*.rs tests/*/*.rs
