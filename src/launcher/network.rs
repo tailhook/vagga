@@ -18,9 +18,10 @@ use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
 
 use config::Config;
 use container::util::get_user_name;
+use container::mount::{bind_mount};
 use container::nsutil::{set_namespace};
-use container::container::{NewUser, NewNet};
 use container::monitor::{Monitor, Exit, Killed, RunOnce};
+use container::container::{NewUser, NewNet};
 use container::container::Command as ContainerCommand;
 use container::sha256::{Sha256, Digest};
 
@@ -520,9 +521,6 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     let mut ip_cmd = Command::new("ip");
     ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
 
-    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "add", eif.as_slice(), "type", "veth",
               "peer", "name", iif.as_slice()]);
@@ -559,20 +557,15 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
               "netns", format!("{}", pid).as_slice()]);
-    let result = _run_command(cmd).and_then(|()| {
-            let mut cmd = busybox.clone();
-            cmd.args(["mount", "--bind"]);
-            cmd.arg(format!("/proc/{}/ns/net", pid));
-            cmd.arg(link_to);
-            _run_command(cmd)
-        });
+    let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_to)
+        .and(_run_command(cmd));
     match mon.run() {
         Exit(0) => {}
         Killed => return Err(format!("vagga_setup_netns is dead")),
         Exit(c) => return Err(
             format!("vagga_setup_netns exited with code: {}", c)),
     }
-    match result {
+    match res {
         Ok(()) => Ok(()),
         Err(e) => {
             let mut cmd = ip_cmd.clone();
@@ -639,14 +632,8 @@ pub fn setup_container(link_to: &Path, name: &str, ip: &str)
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
               "netns", format!("{}", pid).as_slice()]);
-    let result = _run_command(cmd).and_then(|()| {
-            let mut cmd = busybox.clone();
-            cmd.args(["mount", "--bind"]);
-            cmd.arg(format!("/proc/{}/ns/net", pid));
-            cmd.arg(link_to);
-            _run_command(cmd)
-        });
-
+    let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_to)
+        .and(_run_command(cmd));
     match mon.run() {
         Exit(0) => {}
         Killed => return Err(format!("vagga_setup_netns is dead")),
@@ -654,7 +641,7 @@ pub fn setup_container(link_to: &Path, name: &str, ip: &str)
             format!("vagga_setup_netns exited with code: {}", c)),
     }
 
-    match result {
+    match res {
         Ok(()) => Ok(()),
         Err(e) => {
             let mut cmd = ip_cmd.clone();

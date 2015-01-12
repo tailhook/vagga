@@ -4,6 +4,7 @@ extern crate argparse;
 #[phase(plugin, link)] extern crate log;
 
 extern crate config;
+extern crate container;
 
 use std::os::set_exit_status;
 
@@ -15,6 +16,7 @@ use iptables::apply_graph;
 
 mod graphs;
 mod iptables;
+mod run;
 
 
 fn run() -> Result<(), Result<int, String>> {
@@ -38,8 +40,9 @@ fn run() -> Result<(), Result<int, String>> {
                 "split" -- divide into graph of networks that may have some
                     'bridge' nodes,
                 "isolate" -- isolate individual node(s) from anything and from
-                    each other.
-
+                    each other,
+                "run" -- run arbitrary command in node's network namespaces
+                    still being in same mount (filesystem) namespace.
                 "#);
         ap.refer(&mut args)
             .add_argument("node", box List::<String>, "
@@ -61,12 +64,16 @@ fn run() -> Result<(), Result<int, String>> {
     let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
         .expect("Error parsing configuration file");  // TODO
 
-    args.insert(0, format!("vagga_partition {}", kind));
+    args.insert(0, format!("vagga_network {}", kind));
     let graph = match kind.as_slice() {
         "fullmesh" => try!(graphs::full_mesh_cmd(&cfg, args)),
         "disjoint" => try!(graphs::disjoint_graph_cmd(&cfg, args)),
         "split" => try!(graphs::split_graph_cmd(&cfg, args)),
         "isolate" => try!(graphs::isolate_graph_cmd(&cfg, args)),
+        "run" => {
+            try!(run::run_command_cmd(&cfg, args));
+            return Ok(());
+        }
         _ => {
             return Err(Err(format!("Unknown command {}", kind)));
         }

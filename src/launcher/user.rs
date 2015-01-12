@@ -108,6 +108,7 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
     }
     let mut containers = TreeSet::new();
     let mut containers_in_netns = vec!();
+    let mut bridges = vec!();
     let mut containers_host_net = vec!();
     for (name, child) in sup.children.iter() {
         let cont = child.get_container();
@@ -122,7 +123,7 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
             }
         }
         if let &BridgeCommand(_) = child {
-            containers_in_netns.push(name.to_string());
+            bridges.push(name.to_string());
         } else {
             if child.network().is_some() {
                 containers_in_netns.push(name.to_string());
@@ -131,6 +132,7 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
             }
         }
     }
+    containers_in_netns.extend(bridges.into_iter()); // Bridges are just last
     if containers_in_netns.len() > 0 && !network::is_netns_set_up() {
         return Err(format!("Network namespace is not set up. You need to run \
             vagga _create_netns first"));
@@ -195,8 +197,6 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         // containers.
         try!(set_namespace(&bridge_ns, NewNet)
             .map_err(|e| format!("Error setting netns: {}", e)));
-
-        // TODO(tailhook) close all namespace FDs
     }
     match mon.run() {
         Killed => Ok(143),
