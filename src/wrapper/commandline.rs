@@ -1,7 +1,7 @@
 use std::os::getenv;
 use std::io::stdio::{stdout, stderr};
 
-use argparse::{ArgumentParser, List};
+use argparse::{ArgumentParser};
 
 use config::command::CommandInfo;
 use container::uidmap::{map_users};
@@ -16,7 +16,7 @@ use super::util::find_cmd;
 
 
 pub fn commandline_cmd(command: &CommandInfo,
-    wrapper: &Wrapper, mut cmdline: Vec<String>)
+    wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<int, String>
 {
     // TODO(tailhook) detect other shells too
@@ -27,9 +27,6 @@ pub fn commandline_cmd(command: &CommandInfo,
         let mut ap = ArgumentParser::new();
         ap.set_description(command.description.as_ref()
             .map(|x| x.as_slice()).unwrap_or(""));
-        ap.refer(&mut args)
-            .add_argument("args", box List::<String>,
-                "Arguments for the command");
         ap.stop_on_first_argument(true);
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -39,7 +36,6 @@ pub fn commandline_cmd(command: &CommandInfo,
             }
         }
     } else {
-        cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
     let mut cmdline = command.run + args;
