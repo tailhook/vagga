@@ -10,7 +10,7 @@ Contents:
    vagga_features
    installation
    config
-   builders
+   build_commands
    supervision
    pid1mode
    commandline
