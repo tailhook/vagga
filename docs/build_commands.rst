@@ -96,8 +96,8 @@ If you have more than one-liner you may use YAMLy *literal* syntax for it:
       cd somepackage
       make && make install
 
-The ``set -ex`` in above enables error handling and tracing of commands in
-shell it's good to specify them in all scripts.
+The ``set -ex`` in example above enables error handling and tracing of commands
+in shell. It's good idea to add the line to all scripts.
 
 To run ``!Sh`` you need ``/bin/sh``. If you don't have shell in container you
 may use ``!Cmd`` that runs command directly:
@@ -144,7 +144,7 @@ but not on final machine. Use ``!BuildDeps`` for them:
 The ``python-dev`` and ``gcc`` packages from above will be removed after
 building whole container.
 
-To add some environment arguments to build command use ``!Env``:
+To add some environment arguments to subsequent build commands use ``!Env``:
 
 .. code-block:: yaml
 
