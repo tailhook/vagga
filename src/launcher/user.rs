@@ -10,7 +10,7 @@ use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
 use container::monitor::{Monitor, RunOnce, Exit, Killed};
 use container::container::{Command};
-use container::container::{NewNet, NewMount};
+use container::container::{NewNet, NewUts, NewMount};
 use config::Config;
 use config::command::{main};
 use config::command::{CommandInfo, SuperviseInfo, Networking, stop_on_failure};
@@ -180,10 +180,16 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
                             nsdir.display().to_string());
             } else {
                 let netw = child.network().unwrap();
-                let current_ns = nsdir.join(netw.ip.as_slice());
-                try!(network::setup_container(&current_ns,
-                    name.as_slice(), netw.ip.as_slice()));
-                try!(set_namespace(&current_ns, NewNet)
+                let net_ns;
+                let uts_ns;
+                net_ns = nsdir.join("net.".to_string() + netw.ip.as_slice());
+                uts_ns = nsdir.join("uts.".to_string() + netw.ip.as_slice());
+                try!(network::setup_container(&net_ns, &uts_ns,
+                    name.as_slice(), netw.ip.as_slice(),
+                    netw.hostname.as_ref().unwrap_or(name).as_slice()));
+                try!(set_namespace(&net_ns, NewNet)
+                    .map_err(|e| format!("Error setting netns: {}", e)));
+                try!(set_namespace(&uts_ns, NewUts)
                     .map_err(|e| format!("Error setting netns: {}", e)));
             }
 

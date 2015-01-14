@@ -224,6 +224,7 @@ fn setup_guest_namespace(args: Vec<String>) {
     let mut interface = "".to_string();
     let mut ip = "".to_string();
     let mut gateway_ip = "".to_string();
+    let mut hostname = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -240,6 +241,10 @@ fn setup_guest_namespace(args: Vec<String>) {
         ap.refer(&mut gateway_ip)
             .add_option(&["--gateway-ip"], box Store::<String>,
                 "Gateway to use on the interface")
+            .required();
+        ap.refer(&mut hostname)
+            .add_option(&["--hostname"], box Store::<String>,
+                "IP and hostname to use")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -282,6 +287,10 @@ fn setup_guest_namespace(args: Vec<String>) {
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    commands.push(cmd);
+
+    let mut cmd = busybox.clone();
+    cmd.args(&["hostname", hostname.as_slice()]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();

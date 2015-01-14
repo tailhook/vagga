@@ -576,7 +576,8 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     }
 }
 
-pub fn setup_container(link_to: &Path, name: &str, ip: &str)
+pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
+    ip: &str, hostname: &str)
     -> Result<(), String>
 {
     let eif = if name.as_bytes().len() > 14 {
@@ -588,7 +589,9 @@ pub fn setup_container(link_to: &Path, name: &str, ip: &str)
     };
     let iif = eif + "g";
 
-    try!(File::create(link_to)
+    try!(File::create(link_net)
+        .map_err(|e| format!("Can't create namespace file: {}", e)));
+    try!(File::create(link_uts)
         .map_err(|e| format!("Can't create namespace file: {}", e)));
 
     let mut ip_cmd = Command::new("ip");
@@ -616,6 +619,7 @@ pub fn setup_container(link_to: &Path, name: &str, ip: &str)
         self_exe_path().unwrap().join("vagga_setup_netns"));
     cmd.args(["guest", "--interface", iif.as_slice(),
                        "--ip", ip.as_slice(),
+                       "--hostname", hostname,
                        "--gateway-ip", "172.18.0.254"]);
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
@@ -632,7 +636,8 @@ pub fn setup_container(link_to: &Path, name: &str, ip: &str)
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
               "netns", format!("{}", pid).as_slice()]);
-    let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_to)
+    let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_net)
+        .and(bind_mount(&Path::new(format!("/proc/{}/ns/uts", pid)), link_uts))
         .and(_run_command(cmd));
     match mon.run() {
         Exit(0) => {}

@@ -6,6 +6,7 @@ use argparse::{ArgumentParser, Store};
 
 use config::command::{SuperviseInfo, CommandInfo};
 use config::command::child::{Command, BridgeCommand};
+use container::nsutil::set_hostname;
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};

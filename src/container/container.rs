@@ -131,11 +131,11 @@ impl Command {
     }
     pub fn network_ns(&mut self) {
         self.namespaces.add(NewNet);
+        self.namespaces.add(NewUts);
     }
     pub fn container(&mut self) {
-        // Mount and user namespaces are set separately
+        // Network and user namespaces are set separately
         self.namespaces.add(NewMount);
-        self.namespaces.add(NewUts);
         self.namespaces.add(NewIpc);
         self.namespaces.add(NewPid);
     }

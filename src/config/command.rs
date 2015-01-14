@@ -35,6 +35,7 @@ pub enum WriteMode {
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 pub struct Network {
     pub ip: String,
+    pub hostname: Option<String>,
 }
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
@@ -162,6 +163,9 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
         res.push(
             ("network".to_string(), box V::Structure { members: vec!(
                 ("ip".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default()} as Box<V::Validator>),
+                ("hostname".to_string(), box V::Scalar {
                     optional: true,
                     .. Default::default()} as Box<V::Validator>),
                 ),.. Default::default()} as Box<V::Validator>),
