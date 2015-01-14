@@ -184,6 +184,7 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
                 let uts_ns;
                 net_ns = nsdir.join("net.".to_string() + netw.ip.as_slice());
                 uts_ns = nsdir.join("uts.".to_string() + netw.ip.as_slice());
+                // TODO(tailhook) support multiple commands with same IP
                 try!(network::setup_container(&net_ns, &uts_ns,
                     name.as_slice(), netw.ip.as_slice(),
                     netw.hostname.as_ref().unwrap_or(name).as_slice()));

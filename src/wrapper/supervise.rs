@@ -1,12 +1,12 @@
-use std::io::fs::{readlink};
+use std::io::ALL_PERMISSIONS;
 use std::os::getenv;
+use std::io::fs::{readlink, mkdir, File, PathExtensions};
 use std::io::stdio::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store};
 
 use config::command::{SuperviseInfo, CommandInfo};
 use config::command::child::{Command, BridgeCommand};
-use container::nsutil::set_hostname;
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::{Killed, Exit};
@@ -49,8 +49,35 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     }
 }
 
+fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
+    let basedir = Path::new("/tmp/vagga");
+    if !basedir.is_dir() {
+        try!(mkdir(&basedir, ALL_PERMISSIONS)
+            .map_err(|e| format!("Can't create dir: {}", e)));
+    }
+    let mut file = File::create(&basedir.join("hosts"));
+    try!((writeln!(file, "127.0.0.1 localhost"))
+         .map_err(|e| format!("Error writing hosts: {}", e)));
+    for (subname, subcommand) in supervise.children.iter() {
+        if let &Command(ref cmd) = subcommand {
+            if let Some(ref netw) = cmd.network {
+                // TODO(tailhook) support multiple commands with same IP
+                if netw.hostname.is_none() {
+                    try!((writeln!(file, "{} {}", netw.ip, subname))
+                         .map_err(|e| format!("Error writing hosts: {}", e)));
+                } else {
+                    try!((writeln!(file, "{} {} {}", netw.ip,
+                                    netw.hostname, subname))
+                         .map_err(|e| format!("Error writing hosts: {}", e)));
+                }
+            }
+        }
+    }
+    return Ok(());
+}
+
 fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
-    command: &CommandInfo, wrapper: &Wrapper, _supervise: &SuperviseInfo)
+    command: &CommandInfo, wrapper: &Wrapper, supervise: &SuperviseInfo)
     -> Result<int, String>
 {
     let cconfig = try!(wrapper.config.containers.find(&command.container)
@@ -67,6 +94,8 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     }
 
     try!(setup::setup_filesystem(cconfig, lnkcmp[lnkcmp.len()-2].unwrap()));
+
+    try!(_write_hosts(supervise));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {
