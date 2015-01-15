@@ -517,8 +517,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
 
     let eif = format!("ch{}", index);
     let iif = format!("ch{}c", index);
-    let eip = format!("172.17.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
-    let iip = format!("172.17.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
+    let eip = format!("172.18.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
+    let iip = format!("172.18.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
 
     try!(File::create(link_to)
         .map_err(|e| format!("Can't create namespace file: {}", e)));
