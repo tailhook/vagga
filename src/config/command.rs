@@ -7,6 +7,7 @@ use quire::ast as A;
 pub use self::main::MainCommand;
 pub use self::child::ChildCommand;
 
+type PortNumValidator = V::Numeric<u16>;
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -36,6 +37,7 @@ pub enum WriteMode {
 pub struct Network {
     pub ip: String,
     pub hostname: Option<String>,
+    pub ports: TreeMap<u16, u16>,
 }
 
 #[deriving(Decodable, Clone, PartialEq, Eq)]
@@ -167,6 +169,14 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
                     .. Default::default()} as Box<V::Validator>),
                 ("hostname".to_string(), box V::Scalar {
                     optional: true,
+                    .. Default::default()} as Box<V::Validator>),
+                ("ports".to_string(), box V::Mapping {
+                    key_element: box V::Numeric {
+                        default: None::<u16>,
+                        .. Default::default()} as Box<V::Validator>,
+                    value_element: box V::Numeric {
+                        default: None::<u16>,
+                        .. Default::default()} as Box<V::Validator>,
                     .. Default::default()} as Box<V::Validator>),
                 ),.. Default::default()} as Box<V::Validator>),
         );

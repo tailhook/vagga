@@ -15,6 +15,7 @@ use libc::{pid_t};
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
+use serialize::json;
 
 use config::Config;
 use container::util::get_user_name;
@@ -28,6 +29,12 @@ use container::sha256::{Sha256, Digest};
 use super::user;
 
 static MAX_INTERFACES: uint = 2048;
+
+pub struct PortForwardGuard {
+    nspath: Path,
+    ip: String,
+    ports: Vec<u16>,
+}
 
 pub fn namespace_dir() -> Path {
     let uid = unsafe { geteuid() };
@@ -503,7 +510,9 @@ fn _run_command(cmd: Command) -> Result<(), String> {
     }
 }
 
-pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
+pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
+    -> Result<String, String>
+{
     let index = try!(get_unused_inteface_no());
 
     let eif = format!("ch{}", index);
@@ -534,9 +543,13 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     let cmdname = Rc::new("setup_netns".to_string());
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
         self_exe_path().unwrap().join("vagga_setup_netns"));
-    cmd.args(["bridge", "--interface", iif.as_slice(),
-                        "--ip", iip.as_slice(),
-                        "--gateway-ip", eip.as_slice()]);
+    cmd.args(["bridge",
+        "--interface", iif.as_slice(),
+        "--ip", iip.as_slice(),
+        "--gateway-ip", eip.as_slice(),
+        "--port-forwards",
+            json::encode(port_forwards).as_slice(),
+        ]);
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
@@ -559,7 +572,7 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
             format!("vagga_setup_netns exited with code: {}", code)),
     }
     match res {
-        Ok(()) => Ok(()),
+        Ok(()) => Ok(iip),
         Err(e) => {
             let mut cmd = ip_cmd.clone();
             cmd.args(["link", "del", eif.as_slice()]);
@@ -643,6 +656,56 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
             cmd.args(["link", "del", eif.as_slice()]);
             try!(_run_command(cmd));
             Err(e)
+        }
+    }
+}
+
+impl PortForwardGuard {
+    pub fn new(ns: Path, ip: String, ports: Vec<u16>) -> PortForwardGuard {
+        return PortForwardGuard {
+            nspath: ns,
+            ip: ip,
+            ports: ports,
+        };
+    }
+    pub fn start_forwarding(&self) -> Result<(), String> {
+        try!(set_namespace(&self.nspath, NewNet)
+            .map_err(|e| format!("Error joining namespace: {}", e)));
+        let mut iptables = Command::new("iptables");
+        iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+
+        for port in self.ports.iter() {
+            let mut cmd = iptables.clone();
+            cmd.args(["-t", "nat", "-I", "PREROUTING",
+                      "-p", "tcp", "-m", "tcp",
+                      "--dport", format!("{}", port).as_slice(),
+                      "-j", "DNAT",
+                      "--to-destination", self.ip.as_slice()]);
+            try!(_run_command(cmd));
+        }
+
+        Ok(())
+    }
+}
+
+impl Drop for PortForwardGuard {
+    fn drop(&mut self) {
+        if let Err(e) = set_namespace(&self.nspath, NewNet) {
+            error!("Can't set namespace {}: {}. \
+                    Unable to clean firewall rules", self.nspath.display(), e);
+            return;
+        }
+        let mut iptables = Command::new("iptables");
+        iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+        for port in self.ports.iter() {
+            let mut cmd = iptables.clone();
+            cmd.args(["-t", "nat", "-D", "PREROUTING",
+                      "-p", "tcp", "-m", "tcp",
+                      "--dport", format!("{}", port).as_slice(),
+                      "-j", "DNAT",
+                      "--to-destination", self.ip.as_slice()]);
+            _run_command(cmd)
+            .unwrap_or_else(|e| error!("Error deleting firewall rule: {}", e));
         }
     }
 }

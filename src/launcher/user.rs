@@ -1,7 +1,10 @@
 use std::rc::Rc;
 use std::os::{getenv};
+use std::io::ALL_PERMISSIONS;
 use std::os::self_exe_path;
 use std::io::stdio::{stdout, stderr};
+use std::io::fs::{mkdir};
+use std::io::fs::PathExtensions;
 use std::collections::TreeSet;
 
 use argparse::{ArgumentParser};
@@ -110,6 +113,8 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
     let mut containers_in_netns = vec!();
     let mut bridges = vec!();
     let mut containers_host_net = vec!();
+    let mut forwards = vec!();
+    let mut ports = vec!();
     for (name, child) in sup.children.iter() {
         let cont = child.get_container();
         if !containers.contains(cont) {
@@ -125,8 +130,12 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         if let &BridgeCommand(_) = child {
             bridges.push(name.to_string());
         } else {
-            if child.network().is_some() {
+            if let Some(ref netw) = child.network() {
                 containers_in_netns.push(name.to_string());
+                for (ext_port, int_port) in netw.ports.iter() {
+                    forwards.push((*ext_port, netw.ip.clone(), *int_port));
+                    ports.push(*ext_port);
+                }
             } else {
                 containers_host_net.push(name.to_string());
             }
@@ -151,15 +160,25 @@ fn run_supervise_command(_config: &Config, workdir: &Path,
         cmd.set_max_uidmap();
         mon.add(Rc::new(name.clone()), box RunOnce::new(cmd));
     }
+    let mut port_forward_guard;
     if containers_in_netns.len() > 0 {
-        let nsdir = network::namespace_dir();
+        let gwdir = network::namespace_dir();
+        let nsdir = gwdir.join("children");
+        if !nsdir.exists() {
+            try!(mkdir(&nsdir, ALL_PERMISSIONS)
+                .map_err(|e| format!("Failed to create dir: {}", e)));
+        }
         try!(network::join_gateway_namespaces());
         try!(unshare_namespace(NewMount)
             .map_err(|e| format!("Failed to create mount namespace: {}", e)));
         try!(mount_tmpfs(&nsdir, "size=10m"));
 
         let bridge_ns = nsdir.join("bridge");
-        try!(network::setup_bridge(&bridge_ns));
+        let ip = try!(network::setup_bridge(&bridge_ns, &forwards));
+
+        port_forward_guard = network::PortForwardGuard::new(
+            gwdir.join("netns"), ip, ports);
+        try!(port_forward_guard.start_forwarding());
 
         for name in containers_in_netns.iter() {
             let child = sup.children.find(name).unwrap();

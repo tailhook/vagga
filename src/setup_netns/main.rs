@@ -1,6 +1,7 @@
 #![feature(phase, if_let)]
 
 extern crate argparse;
+extern crate serialize;
 #[phase(plugin, link)] extern crate log;
 
 use std::io::BufferedReader;
@@ -11,6 +12,7 @@ use std::io::timer::sleep;
 use std::io::stdio::{stdout, stderr};
 use std::time::duration::Duration;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use serialize::json;
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -125,6 +127,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
     let mut interface = "".to_string();
     let mut ip = "".to_string();
     let mut gateway_ip = "".to_string();
+    let mut ports_str = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -142,6 +145,11 @@ fn setup_bridge_namespace(args: Vec<String>) {
             .add_option(&["--gateway-ip"], box Store::<String>,
                 "Gateway to use on the interface")
             .required();
+        ap.refer(&mut ports_str)
+            .add_option(&["--port-forwards"],
+                box Store::<String>,
+                "Port forwards though bridge")
+            .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return,
@@ -151,6 +159,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
             }
         }
     }
+    let ports: Vec<(u16, String, u16)> = json::decode(ports_str.as_slice())
+        .ok().expect("Port-forwards JSON is invalid");
     loop {
         match has_interface(interface.as_slice()) {
             Ok(true) => break,
@@ -206,6 +216,15 @@ fn setup_bridge_namespace(args: Vec<String>) {
     cmd.args(["-t", "nat", "-A", "POSTROUTING",
               "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
+
+    for &(sport, ref dip, dport) in ports.iter() {
+        let mut cmd = Command::new("iptables");
+        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+        cmd.args(["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
+            "--dport", format!("{}", sport).as_slice(), "-j", "DNAT",
+            "--to-destination", format!("{}:{}", dip, dport).as_slice()]);
+        commands.push(cmd);
+    }
 
     for cmd in commands.iter() {
         debug!("Running {}", cmd);
