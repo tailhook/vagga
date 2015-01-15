@@ -233,7 +233,7 @@ impl<'a> Monitor<'a> {
                     unimplemented!();
                 }
                 Timeout(_) => {
-                    unimplemented!();
+                    continue;
                 }
                 Signal(signal::Terminate(sig)) => {
                     for (pid, _) in self.pids.iter() {

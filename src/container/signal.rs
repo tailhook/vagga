@@ -1,3 +1,5 @@
+use std::io::IoError;
+use std::os::errno;
 use std::io::process::Process;
 
 pub use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT, EINTR, ECHILD};
@@ -43,6 +45,20 @@ pub fn check_children() -> Option<Signal> {
         return Some(Child(pid, _convert_status(status)));
     }
     return None
+}
+
+pub fn wait_process(pid: pid_t) -> Result<int, IoError> {
+    let mut status: i32 = 0;
+    loop {
+        let pid = unsafe { waitpid(pid, &mut status, 0) };
+        if pid > 0 {
+            return Ok(_convert_status(status));
+        }
+        if errno() == EINTR as int {
+            continue;
+        }
+        return Err(IoError::last_error());
+    }
 }
 
 

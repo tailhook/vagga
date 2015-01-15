@@ -20,7 +20,7 @@ use config::Config;
 use container::util::get_user_name;
 use container::mount::{bind_mount};
 use container::nsutil::{set_namespace};
-use container::monitor::{Monitor, Exit, Killed, RunOnce};
+use container::signal::wait_process;
 use container::container::{NewUser, NewNet};
 use container::container::Command as ContainerCommand;
 use container::sha256::{Sha256, Digest};
@@ -83,8 +83,6 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         return Err("Namespaces already created".to_string());
     }
 
-    let mut mon = Monitor::new();
-    let vsn = Rc::new("vagga_setup_netns".to_string());
     let mut cmd = ContainerCommand::new("setup_netns".to_string(),
         self_exe_path().unwrap().join("vagga_setup_netns"));
     cmd.set_max_uidmap();
@@ -104,8 +102,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg(host_ip.as_slice());
     cmd.arg("--network");
     cmd.arg(network.as_slice());
-    mon.add(vsn.clone(), box RunOnce::new(cmd));
-    let child_pid = if dry_run { 123456 } else { try!(mon.force_start(vsn)) };
+    let child_pid = if dry_run { 123456 } else { try!(cmd.spawn()) };
 
     println!("We will run network setup commands with sudo.");
     println!("You may need to enter your password.");
@@ -230,11 +227,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             }
         }
 
-        match mon.run() {
-            Exit(0) => {}
-            Killed => return Err(format!("vagga_setup_netns is dead")),
-            Exit(c) => return Err(
-                format!("vagga_setup_netns exited with code: {}", c)),
+        match wait_process(child_pid) {
+            Ok(0) => {}
+            code => return Err(
+                format!("vagga_setup_netns exited with code: {}", code)),
         }
         if iptables {
             let mut iptables = Command::new("sudo");
@@ -536,7 +532,6 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     try!(_run_command(cmd));
 
     let cmdname = Rc::new("setup_netns".to_string());
-    let mut mon = Monitor::new();
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
         self_exe_path().unwrap().join("vagga_setup_netns"));
     cmd.args(["bridge", "--interface", iif.as_slice(),
@@ -551,19 +546,17 @@ pub fn setup_bridge(link_to: &Path) -> Result<(), String> {
     if let Some(x) = getenv("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
-    mon.add(cmdname.clone(), box RunOnce::new(cmd));
-    let pid = try!(mon.force_start(cmdname));
+    let pid = try!(cmd.spawn());
 
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
               "netns", format!("{}", pid).as_slice()]);
     let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_to)
         .and(_run_command(cmd));
-    match mon.run() {
-        Exit(0) => {}
-        Killed => return Err(format!("vagga_setup_netns is dead")),
-        Exit(c) => return Err(
-            format!("vagga_setup_netns exited with code: {}", c)),
+    match wait_process(pid) {
+        Ok(0) => {}
+        code => return Err(
+            format!("vagga_setup_netns exited with code: {}", code)),
     }
     match res {
         Ok(()) => Ok(()),
@@ -614,7 +607,6 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     try!(_run_command(cmd));
 
     let cmdname = Rc::new("setup_netns".to_string());
-    let mut mon = Monitor::new();
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
         self_exe_path().unwrap().join("vagga_setup_netns"));
     cmd.args(["guest", "--interface", iif.as_slice(),
@@ -630,8 +622,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     if let Some(x) = getenv("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
-    mon.add(cmdname.clone(), box RunOnce::new(cmd));
-    let pid = try!(mon.force_start(cmdname));
+    let pid = try!(cmd.spawn());
 
     let mut cmd = ip_cmd.clone();
     cmd.args(["link", "set", "dev", iif.as_slice(),
@@ -639,11 +630,10 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_net)
         .and(bind_mount(&Path::new(format!("/proc/{}/ns/uts", pid)), link_uts))
         .and(_run_command(cmd));
-    match mon.run() {
-        Exit(0) => {}
-        Killed => return Err(format!("vagga_setup_netns is dead")),
-        Exit(c) => return Err(
-            format!("vagga_setup_netns exited with code: {}", c)),
+    match wait_process(pid) {
+        Ok(0) => {}
+        code => return Err(
+            format!("vagga_setup_netns exited with code: {}", code)),
     }
 
     match res {
