@@ -22,7 +22,7 @@ pub fn apply_graph(graph: Graph) -> Result<(), String> {
 
 fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
     try!(set_namespace(
-        &Path::new(format!("/tmp/vagga/namespaces/{}", ip)), NewNet)
+        &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| format!("Can't set namespace: {}", e)));
     let mut cmd = Command::new("iptables-restore");
     cmd.stdout(InheritFd(1)).stderr(InheritFd(2));

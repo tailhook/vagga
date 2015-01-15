@@ -60,7 +60,7 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         return Err(Err(format!("Node {} is missing", subcommand)));
     };
     try!(set_namespace(
-        &Path::new(format!("/tmp/vagga/namespaces/{}", ip)), NewNet)
+        &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| Err(format!("Can't set namespace: {}", e))));
 
     let mut cmd = Command::new(command.as_slice());
