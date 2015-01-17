@@ -20,6 +20,7 @@ use argparse::{ArgumentParser, Store, List};
 mod list;
 mod user;
 mod network;
+mod supervisor;
 
 
 pub fn run() -> int {
