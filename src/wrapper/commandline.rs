@@ -16,7 +16,7 @@ use super::util::find_cmd;
 
 
 pub fn commandline_cmd(command: &CommandInfo,
-    wrapper: &Wrapper, cmdline: Vec<String>)
+    wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<int, String>
 {
     // TODO(tailhook) detect other shells too
@@ -36,6 +36,7 @@ pub fn commandline_cmd(command: &CommandInfo,
             }
         }
     } else {
+        cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
     let mut cmdline = command.run + args;
