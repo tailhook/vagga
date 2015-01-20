@@ -174,3 +174,41 @@ project directory (the dir where ``vagga.yaml`` is). For example:
 .. _marathon: https://github.com/mesosphere/marathon
 
 
+Npm Installer
+=============
+
+You can build somewhat default nodejs environment using ``!NpmInstall``
+command. For example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !NpmInstall [react-tools]
+
+All node packages are installed as ``--global`` which should be expected. If
+no distribution is specified before the ``!NpmInstall`` command, the implicit
+``!Alpine v3.1`` (in fact the latest version) will be executed.
+
+.. code-block:: yaml
+
+   setup:
+   - !NpmInstall [react-tools]
+
+So above should just work as expected if you don't need any special needs. E.g.
+it's usually perfectly ok if you only use node to build static scripts.
+
+The following ``npm`` features are supported:
+
+* Specify ``package@version`` to install specific version **(recommended)**
+* Use ``git://`` url for the package. In this case git will be installed for
+  the duration of the build automatically
+* Bare ``package_name`` (should be used only for one-off environments)
+
+Other forms may work, but are unsupported for now.
+
+
+.. note:: The ``npm`` and additional utilities (like ``build-essential`` and
+    ``git``) will be removed after end of container building. You must
+    ``!Install`` them explicitly if you rely on them later.
+

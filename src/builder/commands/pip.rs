@@ -1,31 +1,15 @@
-use std::mem::transmute;
-use std::collections::EnumSet;
-use std::collections::enum_set::CLike;
-
 use super::super::context::{BuildContext};
 use super::generic::run_command;
 use super::super::context as distr;
+use super::super::dev;
 use super::debian;
 use super::alpine;
 
 
-#[repr(uint)]
-#[deriving(Clone)]
 pub enum PipFeatures {
     Dev,
     Pip,
-    Git,
-    Hg,
-}
-
-impl CLike for PipFeatures {
-    fn to_uint(&self) -> uint {
-        *self as uint
-    }
-
-    fn from_uint(v: uint) -> PipFeatures {
-        unsafe { transmute(v) }
-    }
+    Rev(dev::RevControl),
 }
 
 #[deriving(Default)]
@@ -44,7 +28,7 @@ pub fn add_link(ctx: &mut BuildContext, lnk: &String) {
 }
 
 pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
-    features: &EnumSet<PipFeatures>)
+    features: &[PipFeatures])
     -> Result<Path, String>
 {
     match ctx.distribution {
@@ -60,15 +44,15 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
     }
 }
 
-pub fn scan_features(pkgs: &Vec<String>) -> EnumSet<PipFeatures> {
-    let mut res = EnumSet::empty();
-    res.add(Dev);
-    res.add(Pip);
+pub fn scan_features(pkgs: &Vec<String>) -> Vec<PipFeatures> {
+    let mut res = vec!();
+    res.push(Dev);
+    res.push(Pip);
     for name in pkgs.iter() {
         if name.as_slice().starts_with("git+") {
-            res.add(Git);
+            res.push(Rev(dev::Git));
         } else if name.as_slice().starts_with("hg+") {
-            res.add(Hg);
+            res.push(Rev(dev::Hg));
         }
     }
     return res;
@@ -81,7 +65,7 @@ pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
                            "pip-cache".to_string()));
     ctx.environ.insert("PIP_DOWNLOAD_CACHE".to_string(),
                        "/tmp/pip-cache".to_string());
-    let pip = try!(ensure_pip(ctx, ver, &scan_features(pkgs)));
+    let pip = try!(ensure_pip(ctx, ver, scan_features(pkgs).as_slice()));
     let mut args = vec!(
         pip.display().to_string(),  // Crappy, but but works in 99.99% cases
         "install".to_string(),

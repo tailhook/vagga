@@ -8,6 +8,7 @@ use super::commands::debian;
 use super::commands::alpine;
 use super::commands::generic;
 use super::commands::pip;
+use super::commands::npm;
 use super::tarcmd;
 use container::util::clean_dir;
 use super::context as distr;
@@ -120,6 +121,9 @@ impl BuildCommand for B::Builder {
             }
             &B::Py3Install(ref pkgs) => {
                 pip::pip_install(ctx, 3, pkgs)
+            }
+            &B::NpmInstall(ref pkgs) => {
+                npm::npm_install(ctx, pkgs)
             }
         }
     }

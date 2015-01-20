@@ -25,11 +25,13 @@ mod context;
 mod bld;
 mod download;
 mod tarcmd;
+mod dev;
 mod commands {
     pub mod debian;
     pub mod generic;
     pub mod alpine;
     pub mod pip;
+    pub mod npm;
 }
 
 

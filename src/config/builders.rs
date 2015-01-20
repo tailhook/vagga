@@ -100,7 +100,7 @@ pub enum Builder {
     //Dockerfile(Path),
 
     // -- Languages --
-    //NpmInstall(Vec<String>),
+    NpmInstall(Vec<String>),
     //PipRequirement(Path),
     //GemInstall(Vec<String>),
 
@@ -206,6 +206,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         ("Alpine".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
 
+        // Python
         ("PipLinks".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
         ("PipEnableDependencies".to_string(),
@@ -215,6 +216,12 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
         ("Py3Install".to_string(), box V::Sequence {
+            element: box V::Scalar {
+            .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+
+        // Node.js
+        ("NpmInstall".to_string(), box V::Sequence {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),

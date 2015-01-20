@@ -1,12 +1,13 @@
 use std::io::fs::File;
-use std::collections::EnumSet;
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext, Ubuntu, Unknown};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
+use super::super::dev;
 use super::generic::run_command;
 use super::pip;
+use super::npm;
 use container::sha256::{Sha256, Digest};
 
 
@@ -190,8 +191,15 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     Ok(())
 }
 
+pub fn revcontrol_package(name: dev::RevControl) -> String {
+    match name {
+        dev::Git => "git".to_string(),
+        dev::Hg => "hg".to_string(),
+    }
+}
+
 pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
-    features: &EnumSet<pip::PipFeatures>)
+    features: &[pip::PipFeatures])
     -> Result<Path, String>
 {
     let needs_universe = match ctx.distribution {
@@ -207,13 +215,12 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
         );
     ctx.packages.extend(packages.clone().into_iter());
     for i in features.iter() {
-        let dep = match i {
+        let dep = match *i {
             pip::Dev => (if ver == 2 { "python-dev" }
                          else { "python3-dev" }).to_string(),
             pip::Pip => (if ver == 2 { "python-pip" }
                          else { "python3-pip" }).to_string(),
-            pip::Git => "git".to_string(),
-            pip::Hg => "hg".to_string(),
+            pip::Rev(name) => revcontrol_package(name),
         };
         if !ctx.packages.contains(&dep) {
             if ctx.build_deps.insert(dep.clone()) {
@@ -225,4 +232,39 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
         try!(apt_install(ctx, &packages));
     }
     return Ok(Path::new(format!("/usr/bin/pip{}", ver)));
+}
+
+pub fn ensure_npm(ctx: &mut BuildContext, features: &[npm::NpmFeatures])
+    -> Result<Path, String>
+{
+    let needs_universe = match ctx.distribution {
+        Ubuntu(ref ubuntu) => !ubuntu.has_universe,
+        _ => unreachable!(),
+    };
+    if needs_universe {
+        debug!("Add Universe");
+        try!(ubuntu_add_universe(ctx));
+    }
+    let mut packages = vec!("nodejs".to_string());
+    ctx.packages.extend(packages.clone().into_iter());
+    for i in features.iter() {
+        let deps = match *i {
+            npm::Dev => vec!("nodejs-dev".to_string(),
+                             "npm".to_string(),
+                             "build-essential".to_string()),
+            npm::Npm => vec!(),
+            npm::Rev(name) => vec!(revcontrol_package(name)),
+        };
+        for dep in deps.into_iter() {
+            if !ctx.packages.contains(&dep) {
+                if ctx.build_deps.insert(dep.clone()) {
+                    packages.push(dep);
+                }
+            }
+        }
+    }
+    if packages.len() > 0 {
+        try!(apt_install(ctx, &packages));
+    }
+    return Ok(Path::new("/usr/bin/npm"));
 }
