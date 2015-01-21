@@ -212,3 +212,51 @@ Other forms may work, but are unsupported for now.
     ``git``) will be removed after end of container building. You must
     ``!Install`` them explicitly if you rely on them later.
 
+
+Python Installer
+================
+
+There are two separate commands for installing packages for python2 and
+python3. Here is a brief example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !Py2Install [sphinx]
+
+Currently packages are installed by system pip_. We consider this an
+implementation detail and will use latest pip_ in future. The ``python-dev``
+headers are installed for the time of the build too. Both ``python-dev`` and
+``pip`` are removed when installation is finished.
+
+The following ``pip`` package specification formats are supported:
+
+* The ``package_name==version`` to install specific version **(recommended)**
+* Bare ``package_name`` (should be used only for one-off environments)
+* The ``git+`` and ``hg+`` links (the git and mercurial are installed as build
+  dependency automatically)
+
+All other forms may work but not supported. Specifying command-line arguments
+instead of package names is not supported. To configure pip use ``!PipConfig``
+directive. In the following example there are full list of paramenters::
+
+
+    setup:
+    - !Ubuntu trusty
+    - !PipConfig
+      index-urls: ["http://internal.pypi.local"]
+      find-links: ["http://internal.additional-packages.local"]
+      dependencies: true
+    - !Py2Install [sphinx]
+
+They should be self-descriptive. Note unlike in pip command line we use single
+list both for primary and "extra" indexes. See pip documentation for more info
+about options
+
+.. note:: By default ``dependencies`` is false. Which means pip is run with
+   ``--no-deps`` option. Which is recommended way for setting up isolated
+   environments any way. To see list of dependencies and their versions you may
+   use ``pip freeze`` command.
+
+.. _pip: http://pip.pypa.io
