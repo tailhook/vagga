@@ -1,32 +1,16 @@
 containers:
-  rust:
-    setup:
-    - !Ubuntu trusty
-    - !Tar
-      url: http://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
-      subdir: rust-0.12.0-x86_64-unknown-linux-gnu
-      path: /tmp/rust
-    - !Sh |
-        cd /tmp/rust
-        ./install.sh --prefix=/usr
 
   docs:
-    uids: [0-1000, 65535]
-    gids: [0-1000, 65535]
     setup:
     - !Ubuntu trusty
     - !Install [python-sphinx, make]
 
   alpine-docs:
-    uids: [0-1000, 65535]
-    gids: [0-1000, 65535]
     setup:
     - !Alpine v3.1
     - !Install [alpine-base, py-sphinx, make]
 
   package:
-    uids: [0-1000, 65535]
-    gids: [0-1000, 65535]
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse ~

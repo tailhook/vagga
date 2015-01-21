@@ -9,6 +9,7 @@ use quire::validate as V;
 use super::containers;
 use super::containers::Container;
 use super::command::{MainCommand, command_validator};
+use super::range::Range;
 
 #[deriving(Decodable)]
 pub struct Config {
@@ -59,7 +60,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String> {
 }
 
 pub fn read_config(filename: &Path) -> Result<Config, String> {
-    let config: Config = match parse_config(
+    let mut config: Config = match parse_config(
         filename, &*config_validator(), Default::default())
     {
         Ok(cfg) => cfg,
@@ -68,5 +69,13 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
                 filename.display(), e));
         }
     };
+    for (_, ref mut container) in config.containers.iter_mut() {
+        if container.uids.len() == 0 {
+            container.uids.push(Range { start: 0, end: 65535 });
+        }
+        if container.gids.len() == 0 {
+            container.gids.push(Range { start: 0, end: 65535 });
+        }
+    }
     return Ok(config);
 }
