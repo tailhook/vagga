@@ -108,12 +108,8 @@ impl BuildCommand for B::Builder {
             &B::Alpine(ref name) => {
                 alpine::setup_base(ctx, name)
             }
-            &B::PipEnableDependencies => {
-                pip::enable_deps(ctx);
-                Ok(())
-            }
-            &B::PipLinks(ref link) => {
-                pip::add_link(ctx, link);
+            &B::PipConfig(ref pip_settings) => {
+                ctx.pip_settings = pip_settings.clone();
                 Ok(())
             }
             &B::Py2Install(ref pkgs) => {

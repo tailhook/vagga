@@ -12,20 +12,6 @@ pub enum PipFeatures {
     Rev(dev::RevControl),
 }
 
-#[deriving(Default)]
-pub struct PipSettings {
-    find_links: Vec<String>,
-    fetch_deps: bool,
-}
-
-
-pub fn enable_deps(ctx: &mut BuildContext) {
-    ctx.pip_settings.fetch_deps = true;
-}
-
-pub fn add_link(ctx: &mut BuildContext, lnk: &String) {
-    ctx.pip_settings.find_links.push(lnk.to_string());
-}
 
 pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
     features: &[PipFeatures])
@@ -70,7 +56,16 @@ pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
         pip.display().to_string(),  // Crappy, but but works in 99.99% cases
         "install".to_string(),
         );
-    if !ctx.pip_settings.fetch_deps {
+    if ctx.pip_settings.index_urls.len() > 0 {
+        let mut indexes = ctx.pip_settings.index_urls.iter();
+        if let Some(ref lnk) = indexes.next() {
+            args.push(format!("--index-url={}", lnk));
+            for lnk in indexes {
+                args.push(format!("--extra-index-url={}", lnk));
+            }
+        }
+    }
+    if !ctx.pip_settings.dependencies {
         args.push("--no-deps".to_string());
     }
     for lnk in ctx.pip_settings.find_links.iter() {

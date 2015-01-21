@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::fmt::{Show, Formatter, FormatError};
 use std::c_str::{CString, ToCStr};
 use std::ptr::null;
 use std::io::IoError;
@@ -64,6 +65,13 @@ pub struct Command {
     stderr: i32,
 }
 
+impl Show for Command {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
+        self.executable.fmt(fmt)
+        .and_then(|()| " ".fmt(fmt))
+        .and_then(|()| self.arguments.fmt(fmt))
+    }
+}
 
 impl Command {
     pub fn new<T:ToCStr>(name: String, cmd: T) -> Command {

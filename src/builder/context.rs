@@ -7,9 +7,9 @@ use std::collections::{TreeMap, TreeSet};
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::util::clean_dir;
 use config::Container;
+use config::builders::PipSettings;
 use super::commands::debian::UbuntuInfo;
 use super::commands::alpine::AlpineInfo;
-use super::commands::pip::PipSettings;
 use super::commands::debian;
 use super::commands::alpine;
 

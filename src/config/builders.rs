@@ -53,6 +53,14 @@ pub struct UbuntuRepoInfo {
     pub components: Vec<String>,
 }
 
+#[deriving(Default, Clone, Decodable, Encodable)]
+pub struct PipSettings {
+    pub find_links: Vec<String>,
+    pub index_urls: Vec<String>,
+    pub dependencies: bool,
+}
+
+
 #[deriving(Encodable, Decodable, Clone)]
 pub enum Builder {
     // -- Generic --
@@ -105,8 +113,7 @@ pub enum Builder {
     //GemInstall(Vec<String>),
 
     // -- Python --
-    PipEnableDependencies,
-    PipLinks(String),
+    PipConfig(PipSettings),
     Py2Install(Vec<String>),
     Py3Install(Vec<String>),
 }
@@ -207,10 +214,22 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
 
         // Python
-        ("PipLinks".to_string(), box V::Scalar {
+        ("PipConfig".to_string(), box V::Structure {
+            members: vec!(
+                ("dependencies".to_string(), box V::Scalar {
+                    default: Some("false".to_string()),
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("find_links".to_string(), box V::Sequence {
+                    element: box V::Scalar {
+                        .. Default::default() } as Box<V::Validator>,
+                    .. Default::default() } as Box<V::Validator>),
+                ("index_urls".to_string(), box V::Sequence {
+                    element: box V::Scalar {
+                        .. Default::default() } as Box<V::Validator>,
+                    .. Default::default() } as Box<V::Validator>),
+            ),
         .. Default::default() } as Box<V::Validator>),
-        ("PipEnableDependencies".to_string(),
-            box V::Nothing as Box<V::Validator>),
         ("Py2Install".to_string(), box V::Sequence {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,

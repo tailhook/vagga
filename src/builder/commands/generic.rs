@@ -40,6 +40,8 @@ pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
         cmd.set_env(k.clone(), v.clone());
     }
 
+    debug!("Running {}", cmd);
+
     match Monitor::run_command(cmd) {
         Killed => {
             return Err(format!("Command {} is dead", cmdline));
