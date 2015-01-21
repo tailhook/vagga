@@ -257,6 +257,11 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
     try!(remount_ro(&tgtroot));
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
+
+    if let None = container.volumes.find(&Path::new("/tmp")) {
+        try!(mount_tmpfs(&tgtroot.join("tmp"), "size=100m,mode=01777"));
+    }
+
     for (path, vol) in container.volumes.iter() {
         let dest = tgtroot.join(path.path_relative_from(&root_path).unwrap());
         match vol {
