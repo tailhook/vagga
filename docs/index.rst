@@ -10,7 +10,10 @@ Contents:
    vagga_features
    installation
    config
+   commands
    build_commands
+   volumes
+   network
    supervision
    pid1mode
    commandline
