@@ -14,11 +14,18 @@
 type curl
 type mkdir
 type awk
+type sed
 type tar
+type mktemp
+
 
 if [ -n "$docker_dockerfile" ]; then
-    exec < "$docker_dockerfile"
-    while read kw tail; do
+    tmpname=$(mktemp)
+    grep -vE '^\s*#' "$docker_dockerfile" | \
+        sed ':x; /\\$/ { N; s/\\\n//; tx }' > $tmpname
+    exec < $tmpname
+    rm $tmpname
+    while read -r kw tail; do
         case "$kw" in
             \#*|"") ;;
             FROM)
@@ -116,7 +123,7 @@ done
 
 [ -z "$docker_dockerfile" ] && exit 0
 
-while read kw tail; do
+while read -r kw tail; do
     case "$kw" in
         \#*|"") ;;
         FROM)
