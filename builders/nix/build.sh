@@ -34,3 +34,5 @@ rsync --recursive --links --perms --times \
 chmod -R u+w $container_root
 mkdir -p $container_root/usr/bin
 ln -sfn /bin/env $container_root/usr/bin/env
+
+test -d $container_root/mnt || mkdir -p $container_root/mnt
