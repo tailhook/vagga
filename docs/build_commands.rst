@@ -172,6 +172,74 @@ project directory (the dir where ``vagga.yaml`` is). For example:
    - !Depends requirements.txt
    - !Sh "pip install -r requirements.txt"
 
+To download and unpack tar archive use ``!Tar`` command:
+
+.. code-block:: yaml
+
+   setup:
+   - !Tar
+     url: http://something.example.com/some-project-1.0.tar.gz
+     sha256: acd1234...
+     path: /
+     subdir: some-project-1.0
+
+Only ``url`` field is mandatory. The ``path`` is target path to unpack into,
+and ``subdir`` is a dir inside tar file. By default ``path`` is root of new
+filesystem. The ``subdir`` is a dir inside the tar file, if omitted whole tar
+archive will be unpacked.  You *can* use ``!Tar`` command to download and
+unpack the root filesystem from scratch.
+
+There is a shortcut to download tar file and build and install from there,
+which is ``!TarInstall``:
+
+.. code-block:: yaml
+
+   setup:
+   - !TarInstall
+     url: http://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+     sha256: abcd1234...
+     subdir: rust-0.12.0-x86_64-unknown-linux-gnu
+     script: ./install.sh --prefix=/usr
+
+Only the ``url`` is mandatory here too. The ``script`` is by default
+``./configure --prefix=/usr; make; make install``. It's run in ``subdir`` of
+unpacked archive. If ``subdir`` is omitted it's run in the *only* subdirectory
+of the archive. If archive contains more than one directory and ``subdir`` is
+empty, it's an error, however you may use ``.`` as ``subdir``.
+
+To remove some data from the image after building use ``!Remove`` command:
+
+.. code-block:: yaml
+
+   setup:
+   # ...
+   - !Remove /var/cache/something
+
+To clean directory but ensure that directory exists use ``!EmptyDir`` command:
+
+.. code-block:: yaml
+
+   setup:
+   # ...
+   - !EmptyDir /tmp
+
+.. note:: The ``/tmp`` directory is declared as ``!EmptyDir`` implicitly for
+   all containers.
+
+To ensure that directory exists use ``!EnsureDir`` command. It's very often
+used for future mount points:
+
+.. code-block:: yaml
+
+   setup:
+   # ...
+   - !EnsureDir /sys
+   - !EnsureDir /dev
+   - !EnsureDir /proc
+
+.. note:: The ``/sys``, ``/dev`` and ``/proc`` directories are created
+   automatically for all containers.
+
 
 .. _marathon: https://github.com/mesosphere/marathon
 
