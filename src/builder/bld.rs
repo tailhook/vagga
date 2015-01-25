@@ -90,7 +90,7 @@ impl BuildCommand for B::Builder {
                 ctx.add_ensure_dir(path.clone());
                 Ok(())
             }
-            &B::CacheDir(ref pairs) => {
+            &B::CacheDirs(ref pairs) => {
                 for (k, v) in pairs.iter() {
                     try!(ctx.add_cache_dir(k.clone(), v.clone()));
                 }

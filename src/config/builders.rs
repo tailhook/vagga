@@ -74,7 +74,7 @@ pub enum Builder {
     Remove(Path),
     EnsureDir(Path),
     EmptyDir(Path),
-    CacheDir(TreeMap<Path, String>),
+    CacheDirs(TreeMap<Path, String>),
     //Busybox,
 
     // -- Generic --
@@ -159,7 +159,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         ("EmptyDir".to_string(), box V::Directory {
             absolute: Some(true),
         .. Default::default() } as Box<V::Validator>),
-        ("CacheDir".to_string(), box V::Mapping {
+        ("CacheDirs".to_string(), box V::Mapping {
             key_element: box V::Directory {
                 absolute: Some(true),
                 .. Default::default() } as Box<V::Validator>,

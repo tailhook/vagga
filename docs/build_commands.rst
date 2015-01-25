@@ -240,6 +240,23 @@ used for future mount points:
 .. note:: The ``/sys``, ``/dev`` and ``/proc`` directories are created
    automatically for all containers.
 
+Sometimes you want to keep some cache between builds of container or similar
+containers. Use ``!CacheDirs`` for that:
+
+.. code-block:: yaml
+
+   setup
+   # ...
+   - !CacheDirs { "/var/cache/apt": "apt-cache" }
+
+Mutliple directories may be specified at once.
+
+.. warning:: The "apt-cache" name is a name of the directory like
+   ``.vagga/.cache/apt-cache``. So the directory is shared both between
+   all the containers and all the different builders (not only same versions
+   of the single container). In case user enabled ``shared-cache`` the folder
+   will be also shared between containers of different projects.
+
 
 .. _marathon: https://github.com/mesosphere/marathon
 
