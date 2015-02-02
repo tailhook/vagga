@@ -18,7 +18,6 @@ use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
 use serialize::json;
 
 use config::Config;
-use container::util::get_user_name;
 use container::mount::{bind_mount};
 use container::nsutil::{set_namespace};
 use container::signal::wait_process;
@@ -40,7 +39,7 @@ pub fn namespace_dir() -> Path {
     let uid = unsafe { geteuid() };
     getenv("XDG_RUNTIME_DIR")
         .map(|v| Path::new(v).join("vagga"))
-        .unwrap_or(Path::new(format!("/tmp/vagga-{}", get_user_name(uid))))
+        .unwrap_or(Path::new(format!("/tmp/vagga-{}", uid)))
 }
 
 
