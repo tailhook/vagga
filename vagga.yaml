@@ -15,7 +15,7 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse ~
     - !TarInstall
-      url: http://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+      url: http://static.rust-lang.org/dist/rust-1.0.0-alpha-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr
     - !Install [make, checkinstall]
@@ -47,4 +47,9 @@ commands:
     container: docs
     run: make html
     work-dir: docs
+
+  make: !Command
+    description: Build vagga
+    container: package
+    run: [make]
 
