@@ -1,8 +1,10 @@
+use std::os::getenv;
 use std::io::{IoError, OtherIoError};
 use std::io::{File, Open, Write};
 use std::io::{BufferedReader, MemWriter};
 use std::cmp::min;
 use std::from_str::FromStr;
+use std::str::from_utf8;
 use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
@@ -10,7 +12,6 @@ use libc::{pid_t, uid_t, gid_t};
 
 use config::Range;
 use config::Settings;
-use super::util::get_user_name;
 
 #[deriving(Clone)]
 pub enum Uidmap {
@@ -19,10 +20,7 @@ pub enum Uidmap {
 }
 
 
-fn read_uid_map() -> Result<Vec<Range>,String> {
-    let uid = unsafe { geteuid() };
-    let user = try!(get_user_name(uid)
-        .map_err(|e| format!("Error getting user name for {}: {}", uid, e)));
+fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
     let file = File::open(&Path::new("/etc/subuid"));
     let mut res = Vec::new();
     let mut reader = BufferedReader::new(file);
@@ -35,7 +33,7 @@ fn read_uid_map() -> Result<Vec<Range>,String> {
         if parts.len() != 3 || start.is_none() || count.is_none() {
             return Err(format!("/etc/subuid:{}: Bad syntax", num+1));
         }
-        if parts[0].eq(&user.as_slice()) {
+        if parts[0].eq(&username) {
             let start: uid_t = start.unwrap();
             let end = start + count.unwrap() - 1;
             res.push(Range::new(start, end));
@@ -44,10 +42,7 @@ fn read_uid_map() -> Result<Vec<Range>,String> {
     return Ok(res);
 }
 
-fn read_gid_map() -> Result<Vec<Range>,String> {
-    let uid = unsafe { geteuid() };
-    let user = try!(get_user_name(uid)
-        .map_err(|e| format!("Error getting user name for {}: {}", uid, e)));
+fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
     let file = File::open(&Path::new("/etc/subgid"));
     let mut res = Vec::new();
     let mut reader = BufferedReader::new(file);
@@ -60,7 +55,7 @@ fn read_gid_map() -> Result<Vec<Range>,String> {
         if parts.len() != 3 || start.is_none() || count.is_none() {
             return Err(format!("/etc/subgid:{}: Bad syntax", num+1));
         }
-        if parts[0].eq(&user.as_slice()) {
+        if parts[0].eq(&username) {
             let start: gid_t = start.unwrap();
             let end = start + count.unwrap() - 1;
             res.push(Range::new(start, end));
@@ -108,8 +103,20 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
 
 pub fn get_max_uidmap() -> Result<Uidmap, String>
 {
-    let uid_map = read_uid_map().ok();
-    let gid_map = read_gid_map().ok();
+    let mut cmd = Command::new("id");
+    cmd.arg("--user").arg("--name");
+    if let Some(path) = getenv("HOST_PATH") {
+        cmd.env("PATH", path);
+    }
+    cmd.stdin(Ignored).stderr(InheritFd(2));
+    let username = try!(cmd.output()
+        .map_err(|e| format!("Error running `id --user --name`: {}", e))
+        .and_then(|out| if out.status == ExitStatus(0) { Ok(out.output) } else
+            { Err(format!("Error running `id --user --name`")) })
+        .and_then(|val| from_utf8(val.as_slice()).map(|x| x.trim().to_string())
+                   .ok_or(format!("Can't decode username"))));
+    let uid_map = read_uid_map(username.as_slice()).ok();
+    let gid_map = read_gid_map(username.as_slice()).ok();
 
     let uid = unsafe { geteuid() };
     let gid = unsafe { getegid() };
