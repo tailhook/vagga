@@ -14,8 +14,8 @@ use serialize::json;
 use argparse::{ArgumentParser, Store, StoreTrue};
 
 use container::mount::{bind_mount};
-use container::monitor::{Monitor, Executor, MonitorStatus, Shutdown};
-use container::monitor::{Killed, Exit};
+use container::monitor::{Monitor, Executor, MonitorStatus};
+use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use container::uidmap::{Uidmap, map_users};
 use config::{Settings};
@@ -57,7 +57,7 @@ impl<'a> Executor for RunVersion<'a> {
         }
         return cmd;
     }
-    fn finish(&mut self, status: int) -> MonitorStatus {
+    fn finish(&mut self, status: isize) -> MonitorStatus {
         unsafe { close(self.pipe.writer) };
         if status == 0 {
             let mut rd = PipeStream::open(self.pipe.reader);
@@ -66,7 +66,7 @@ impl<'a> Executor for RunVersion<'a> {
         } else {
             unsafe { close(self.pipe.reader) };
         }
-        return Shutdown(status)
+        return MonitorStatus::Shutdown(status)
     }
 }
 
@@ -140,17 +140,17 @@ pub fn get_version_hash(container: String, wrapper: &Wrapper)
 {
     let mut mon = Monitor::new();
     let ver = Rc::new(RefCell::new("".to_string()));
-    let cconfig = try!(wrapper.config.containers.find(&container)
+    let cconfig = try!(wrapper.config.containers.get(&container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
-    mon.add(Rc::new("version".to_string()), box RunVersion {
+    mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
         container: container,
         pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
         result: ver.clone(),
         settings: wrapper.settings,
         uid_map: &uid_map,
-    });
+    }));
     match mon.run() {
         Killed => return Err(format!("Versioner has died")),
         Exit(0) => {},
@@ -186,24 +186,24 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
 pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let cconfig = try!(wrapper.config.containers.find(container)
+    let cconfig = try!(wrapper.config.containers.get(container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
     let mut mon = Monitor::new();
     let ver = Rc::new(RefCell::new("".to_string()));
-    mon.add(Rc::new("version".to_string()), box RunVersion {
+    mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
         container: container.clone(),
         pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
         result: ver.clone(),
         settings: wrapper.settings,
         uid_map: &uid_map,
-    });
+    }));
     match mon.run() {
         Killed => return Err(format!("Builder has died")),
         Exit(0) if force => {}
         Exit(0) => {
-            debug!("Container version: {}", ver.borrow());
+            debug!("Container version: {:?}", ver.borrow());
             let name = format!("{}.{}", container,
                 ver.borrow().as_slice().slice_to(8));
             let finalpath = Path::new("/vagga/roots")
@@ -217,7 +217,7 @@ pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
         Exit(29) => {},
         Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
-    debug!("Container version: {}", ver.borrow());
+    debug!("Container version: {:?}", ver.borrow());
     let tmppath = Path::new(format!("/vagga/roots/.tmp.{}", container));
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
@@ -225,24 +225,24 @@ pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
             return Err(format!("Error preparing root dir: {}", x));
         }
     }
-    mon.add(Rc::new("build".to_string()), box RunBuilder {
+    mon.add(Rc::new("build".to_string()), Box::new(RunBuilder {
         container: container.to_string(),
         settings: wrapper.settings,
         uid_map: &uid_map,
-    });
+    }));
     match mon.run() {
         Killed => return Err(format!("Builder has died")),
         Exit(0) => {},
         Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
     if ver.borrow().len() != 64 {
-        mon.add(Rc::new("version".to_string()), box RunVersion {
+        mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
             container: container.to_string(),
             pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
             result: ver.clone(),
             settings: wrapper.settings,
             uid_map: &uid_map,
-        });
+        }));
         match mon.run() {
             Killed => return Err(format!("Builder has died")),
             Exit(0) => {},
@@ -269,7 +269,7 @@ pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
 }
 
 pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     let mut name: String = "".to_string();
     let mut force: bool = false;
@@ -279,10 +279,10 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             Internal vagga tool to setup basic system sandbox
             ");
         ap.refer(&mut name)
-            .add_argument("container_name", box Store::<String>,
+            .add_argument("container_name", Box::new(Store::<String>),
                 "Container name to build");
         ap.refer(&mut force)
-            .add_option(&["--force"], box StoreTrue,
+            .add_option(&["--force"], Box::new(StoreTrue),
                 "Force build even if container is considered up to date");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -300,7 +300,7 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 }
 
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     let mut name: String = "".to_string();
     {
@@ -311,7 +311,7 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             before the build.
             ");
         ap.refer(&mut name)
-            .add_argument("container_name", box Store::<String>,
+            .add_argument("container_name", Box::new(Store::<String>),
                 "Container name to build");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

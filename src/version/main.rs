@@ -1,15 +1,14 @@
-#![feature(phase, if_let, slicing_syntax, macro_rules)]
+#![feature(slicing_syntax)]
 
 extern crate quire;
 extern crate argparse;
 extern crate serialize;
 extern crate regex;
 extern crate libc;
-#[phase(plugin)] extern crate regex_macros;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 extern crate config;
-#[phase(plugin, link)] extern crate container;
+#[macro_use] extern crate container;
 
 use std::os::{set_exit_status};
 use std::io::fs::File;
@@ -22,12 +21,14 @@ use config::Settings;
 use container::signal;
 use argparse::{ArgumentParser, Store};
 use container::sha256::{Sha256, Digest};
-use self::version::{VersionHash, Hashed, New, Error};
+use self::version::{VersionHash};
+use self::version::HashResult::{Hashed, New, Error};
+
 
 mod version;
 
 
-pub fn run() -> int {
+pub fn run() -> isize {
     signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
@@ -37,11 +38,11 @@ pub fn run() -> int {
             A tool which versions containers
             ");
         ap.refer(&mut container)
-          .add_argument("container", box Store::<String>,
+          .add_argument("container", Box::new(Store::<String>),
                 "A container to version")
           .required();
         ap.refer(&mut settings)
-          .add_option(&["--settings"], box Store::<Settings>,
+          .add_option(&["--settings"], Box::new(Store::<Settings>),
                 "User settings for the container build");
         match ap.parse_args() {
             Ok(()) => {}
@@ -53,7 +54,7 @@ pub fn run() -> int {
     // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
     let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
         .expect("Error parsing configuration file");  // TODO
-    let cont = cfg.containers.find(&container)
+    let cont = cfg.containers.get(&container)
         .expect("Container not found");  // TODO
     debug!("Versioning items: {}", cont.setup.len());
     let mut hash = Sha256::new();
@@ -66,12 +67,12 @@ pub fn run() -> int {
                .ok().expect("Can't read gid_map")
                .as_slice());
     for b in cont.setup.iter() {
-        debug!("Versioning setup: {}", b);
+        debug!("Versioning setup: {:?}", b);
         match b.hash(&mut hash) {
             Hashed => continue,
             New => return 29,  // Always rebuild
             Error(e) => {
-                error!("Error versioning command {}: {}", b, e);
+                error!("Error versioning command {:?}: {}", b, e);
                 return 1;
             }
         }

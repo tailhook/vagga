@@ -1,17 +1,18 @@
 use std::io::fs::File;
 
 use config::builders::UbuntuRepoInfo;
-use super::super::context::{BuildContext, Ubuntu, Unknown};
+use super::super::context::{BuildContext};
+use super::super::context::Distribution::{Ubuntu, Unknown};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
-use super::super::dev;
+use super::super::dev::RevControl;
 use super::generic::run_command;
-use super::pip;
-use super::npm;
+use super::pip::PipFeatures as Pip;
+use super::npm::NpmFeatures as Npm;
 use container::sha256::{Sha256, Digest};
 
 
-#[deriving(Show)]
+#[derive(Show)]
 pub struct UbuntuInfo {
     pub release: String,
     pub apt_update: bool,
@@ -84,7 +85,8 @@ pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
     let apt_update = if let Ubuntu(ref ubuntu) = ctx.distribution {
         ubuntu.apt_update
     } else {
-        return Err(format!("Incompatible distribution: {}", ctx.distribution));
+        return Err(format!("Incompatible distribution: {:?}",
+                           ctx.distribution));
     };
     if apt_update {
         if let Ubuntu(ref mut ubuntu) = ctx.distribution {
@@ -146,15 +148,16 @@ pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)
     if let Ubuntu(ref mut ubuntu) = ctx.distribution {
         ubuntu.apt_update = true;
     } else {
-        return Err(format!("Incompatible distribution: {}", ctx.distribution));
+        return Err(format!("Incompatible distribution: {:?}",
+                           ctx.distribution));
     };
 
     File::create(&Path::new("/vagga/root/etc/apt/sources.list.d")
                  .join(name.as_slice()))
         .and_then(|mut f| {
-            try!(write!(f, "deb {} {}", repo.url, repo.suite))
+            try!(write!(&mut f, "deb {} {}", repo.url, repo.suite));
             for item in repo.components.iter() {
-                try!(write!(f, " {}", item));
+                try!(write!(&mut f, " {}", item));
             }
             Ok(())
         })
@@ -169,20 +172,21 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     if let Ubuntu(ref ubuntu) = ctx.distribution {
         try!(File::create(&Path::new(target))
             .and_then(|mut f| {
-            try!(writeln!(f,
+            try!(writeln!(&mut f,
                 "deb http://archive.ubuntu.com/ubuntu/ {} universe",
                 ubuntu.release));
-            try!(writeln!(f,
+            try!(writeln!(&mut f,
                 "deb http://archive.ubuntu.com/ubuntu/ {}-updates universe",
                 ubuntu.release));
-            try!(writeln!(f,
+            try!(writeln!(&mut f,
                 "deb http://archive.ubuntu.com/ubuntu/ {}-security universe",
                 ubuntu.release));
                 Ok(())
             })
             .map_err(|e| format!("Error writing universe.list file: {}", e)));
     } else {
-        return Err(format!("Incompatible distribution: {}", ctx.distribution));
+        return Err(format!("Incompatible distribution: {:?}",
+                           ctx.distribution));
     };
     match ctx.distribution {
         Ubuntu(ref mut ubuntu) => { ubuntu.has_universe = true; }
@@ -191,15 +195,14 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     Ok(())
 }
 
-pub fn revcontrol_package(name: dev::RevControl) -> String {
+pub fn revcontrol_package(name: RevControl) -> String {
     match name {
-        dev::Git => "git".to_string(),
-        dev::Hg => "hg".to_string(),
+        RevControl::Git => "git".to_string(),
+        RevControl::Hg => "hg".to_string(),
     }
 }
 
-pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
-    features: &[pip::PipFeatures])
+pub fn ensure_pip(ctx: &mut BuildContext, ver: u8, features: &[Pip])
     -> Result<Path, String>
 {
     let needs_universe = match ctx.distribution {
@@ -216,11 +219,11 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
     ctx.packages.extend(packages.clone().into_iter());
     for i in features.iter() {
         let dep = match *i {
-            pip::Dev => (if ver == 2 { "python-dev" }
+            Pip::Dev => (if ver == 2 { "python-dev" }
                          else { "python3-dev" }).to_string(),
-            pip::Pip => (if ver == 2 { "python-pip" }
+            Pip::Pip => (if ver == 2 { "python-pip" }
                          else { "python3-pip" }).to_string(),
-            pip::Rev(name) => revcontrol_package(name),
+            Pip::Rev(name) => revcontrol_package(name),
         };
         if !ctx.packages.contains(&dep) {
             if ctx.build_deps.insert(dep.clone()) {
@@ -234,7 +237,7 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
     return Ok(Path::new(format!("/usr/bin/pip{}", ver)));
 }
 
-pub fn ensure_npm(ctx: &mut BuildContext, features: &[npm::NpmFeatures])
+pub fn ensure_npm(ctx: &mut BuildContext, features: &[Npm])
     -> Result<Path, String>
 {
     let needs_universe = match ctx.distribution {
@@ -249,11 +252,11 @@ pub fn ensure_npm(ctx: &mut BuildContext, features: &[npm::NpmFeatures])
     ctx.packages.extend(packages.clone().into_iter());
     for i in features.iter() {
         let deps = match *i {
-            npm::Dev => vec!("nodejs-dev".to_string(),
+            Npm::Dev => vec!("nodejs-dev".to_string(),
                              "npm".to_string(),
                              "build-essential".to_string()),
-            npm::Npm => vec!(),
-            npm::Rev(name) => vec!(revcontrol_package(name)),
+            Npm::Npm => vec!(),
+            Npm::Rev(name) => vec!(revcontrol_package(name)),
         };
         for dep in deps.into_iter() {
             if !ctx.packages.contains(&dep) {

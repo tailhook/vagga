@@ -1,4 +1,6 @@
 use std::io::IoError;
+use std::ffi::CString;
+use std::path::BytesContainer;
 use libc::{c_int, pid_t, size_t};
 use libc::funcs::posix88::fcntl::open;
 use libc::funcs::posix88::unistd::close;
@@ -23,7 +25,7 @@ pub fn set_namespace_fd(fd: c_int, ns: Namespace) -> Result<(), IoError> {
 }
 
 pub fn set_namespace(path: &Path, ns: Namespace) -> Result<(), IoError> {
-    let c_path = path.to_c_str();
+    let c_path = CString::from_slice(path.container_as_bytes());
     let fd = unsafe { open(c_path.as_ptr(), O_RDONLY|O_CLOEXEC, 0) };
     if fd < 0 {
         return Err(IoError::last_error());
@@ -37,7 +39,8 @@ pub fn set_namespace(path: &Path, ns: Namespace) -> Result<(), IoError> {
 }
 
 pub fn nsopen(pid: pid_t, ns_name: &str) -> Result<c_int, IoError> {
-    let filename = format!("/proc/{}/ns/{}", pid, ns_name).to_c_str();
+    let filename = CString::from_slice(
+        format!("/proc/{}/ns/{}", pid, ns_name).as_bytes());
     let fd = unsafe { open(filename.as_ptr(), O_RDONLY|O_CLOEXEC, 0) };
     if fd < 0 {
         return Err(IoError::last_error());

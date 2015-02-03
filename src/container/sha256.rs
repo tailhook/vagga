@@ -14,9 +14,8 @@
 
 #![allow(deprecated)] // to_be32
 
-use std::io::extensions::u64_to_le_bytes;
-use std::iter::range_step;
-use std::num::Zero;
+use std::iter::{range_step, repeat};
+use std::num::Int;
 use std::slice::bytes::{MutableByteVector, copy_memory};
 use serialize::hex::ToHex;
 
@@ -41,7 +40,7 @@ fn read_u32_be(input: &[u8]) -> u32 {
 /// Read a vector of bytes into a vector of u32s. The values are read in big-endian format.
 fn read_u32v_be(dst: &mut[u32], input: &[u8]) {
     assert!(dst.len() * 4 == input.len());
-    let mut pos = 0u;
+    let mut pos = 0us;
     for chunk in input.chunks(4) {
         dst[pos] = read_u32_be(chunk);
         pos += 1;
@@ -60,18 +59,18 @@ impl ToBits for u64 {
     }
 }
 
-/// Adds the specified number of bytes to the bit count. fail!() if this would cause numeric
+/// Adds the specified number of bytes to the bit count. panic!() if this would cause numeric
 /// overflow.
-fn add_bytes_to_bits<T: Int + CheckedAdd + ToBits>(bits: T, bytes: T) -> T {
+fn add_bytes_to_bits<T: Int + ToBits>(bits: T, bytes: T) -> T {
     let (new_high_bits, new_low_bits) = bytes.to_bits();
 
-    if new_high_bits > Zero::zero() {
-        fail!("numeric overflow occurred.")
+    if new_high_bits > Int::zero() {
+        panic!("numeric overflow occurred.")
     }
 
-    match bits.checked_add(&new_low_bits) {
+    match bits.checked_add(new_low_bits) {
         Some(x) => return x,
-        None => fail!("numeric overflow occurred.")
+        None => panic!("numeric overflow occurred.")
     }
 }
 
@@ -83,50 +82,53 @@ fn add_bytes_to_bits<T: Int + CheckedAdd + ToBits>(bits: T, bytes: T) -> T {
 trait FixedBuffer {
     /// Input a vector of bytes. If the buffer becomes full, process it with the provided
     /// function and then clear the buffer.
-    fn input(&mut self, input: &[u8], func: |&[u8]|);
+    fn input<F>(&mut self, input: &[u8], func: F) where
+        F: FnMut(&[u8]);
 
     /// Reset the buffer.
     fn reset(&mut self);
 
     /// Zero the buffer up until the specified index. The buffer position currently must not be
     /// greater than that index.
-    fn zero_until(&mut self, idx: uint);
+    fn zero_until(&mut self, idx: usize);
 
     /// Get a slice of the buffer of the specified size. There must be at least that many bytes
     /// remaining in the buffer.
-    fn next<'s>(&'s mut self, len: uint) -> &'s mut [u8];
+    fn next<'s>(&'s mut self, len: usize) -> &'s mut [u8];
 
     /// Get the current buffer. The buffer must already be full. This clears the buffer as well.
     fn full_buffer<'s>(&'s mut self) -> &'s [u8];
 
     /// Get the current position of the buffer.
-    fn position(&self) -> uint;
+    fn position(&self) -> usize;
 
     /// Get the number of bytes remaining in the buffer until it is full.
-    fn remaining(&self) -> uint;
+    fn remaining(&self) -> usize;
 
     /// Get the size of the buffer
-    fn size(&self) -> uint;
+    fn size(&self) -> usize;
 }
 
 /// A FixedBuffer of 64 bytes useful for implementing Sha256 which has a 64 byte blocksize.
 struct FixedBuffer64 {
-    buffer: [u8, ..64],
-    buffer_idx: uint,
+    buffer: [u8; 64],
+    buffer_idx: usize,
 }
 
 impl FixedBuffer64 {
     /// Create a new FixedBuffer64
     fn new() -> FixedBuffer64 {
         return FixedBuffer64 {
-            buffer: [0u8, ..64],
+            buffer: [0u8; 64],
             buffer_idx: 0
         };
     }
 }
 
 impl FixedBuffer for FixedBuffer64 {
-    fn input(&mut self, input: &[u8], func: |&[u8]|) {
+    fn input<F>(&mut self, input: &[u8], mut func: F) where
+        F: FnMut(&[u8]),
+    {
         let mut i = 0;
 
         let size = self.size();
@@ -137,14 +139,14 @@ impl FixedBuffer for FixedBuffer64 {
             let buffer_remaining = size - self.buffer_idx;
             if input.len() >= buffer_remaining {
                     copy_memory(
-                        self.buffer[mut self.buffer_idx..size],
-                        input[..buffer_remaining]);
+                        self.buffer.slice_mut(self.buffer_idx, size),
+                        &input[0..buffer_remaining]);
                 self.buffer_idx = 0;
-                func(self.buffer);
+                func(&self.buffer);
                 i += buffer_remaining;
             } else {
                 copy_memory(
-                    self.buffer[mut self.buffer_idx..self.buffer_idx + input.len()],
+                    self.buffer.slice_mut(self.buffer_idx, self.buffer_idx + input.len()),
                     input);
                 self.buffer_idx += input.len();
                 return;
@@ -154,7 +156,7 @@ impl FixedBuffer for FixedBuffer64 {
         // While we have at least a full buffer size chunk's worth of data, process that data
         // without copying it into the buffer
         while input.len() - i >= size {
-            func(input[i..i + size]);
+            func(&input[i..(i + size)]);
             i += size;
         }
 
@@ -163,8 +165,8 @@ impl FixedBuffer for FixedBuffer64 {
         // be empty.
         let input_remaining = input.len() - i;
         copy_memory(
-            self.buffer[mut ..input_remaining],
-            input[i..]);
+            self.buffer.slice_to_mut(input_remaining),
+            &input[i..]);
         self.buffer_idx += input_remaining;
     }
 
@@ -172,28 +174,28 @@ impl FixedBuffer for FixedBuffer64 {
         self.buffer_idx = 0;
     }
 
-    fn zero_until(&mut self, idx: uint) {
+    fn zero_until(&mut self, idx: usize) {
         assert!(idx >= self.buffer_idx);
-        self.buffer[mut self.buffer_idx..idx].set_memory(0);
+        self.buffer.slice_mut(self.buffer_idx, idx).set_memory(0);
         self.buffer_idx = idx;
     }
 
-    fn next<'s>(&'s mut self, len: uint) -> &'s mut [u8] {
+    fn next<'s>(&'s mut self, len: usize) -> &'s mut [u8] {
         self.buffer_idx += len;
-        return self.buffer[mut self.buffer_idx - len..self.buffer_idx];
+        return self.buffer.slice_mut(self.buffer_idx - len, self.buffer_idx);
     }
 
     fn full_buffer<'s>(&'s mut self) -> &'s [u8] {
         assert!(self.buffer_idx == 64);
         self.buffer_idx = 0;
-        return self.buffer[..64];
+        return &self.buffer[0..64];
     }
 
-    fn position(&self) -> uint { self.buffer_idx }
+    fn position(&self) -> usize { self.buffer_idx }
 
-    fn remaining(&self) -> uint { 64 - self.buffer_idx }
+    fn remaining(&self) -> usize { 64 - self.buffer_idx }
 
-    fn size(&self) -> uint { 64 }
+    fn size(&self) -> usize { 64 }
 }
 
 /// The StandardPadding trait adds a method useful for Sha256 to a FixedBuffer struct.
@@ -202,11 +204,11 @@ trait StandardPadding {
     /// guaranteed to have exactly rem remaining bytes when it returns. If there are not at least
     /// rem bytes available, the buffer will be zero padded, processed, cleared, and then filled
     /// with zeros again until only rem bytes are remaining.
-    fn standard_padding(&mut self, rem: uint, func: |&[u8]|);
+    fn standard_padding<F>(&mut self, rem: usize, func: F) where F: FnMut(&[u8]);
 }
 
 impl <T: FixedBuffer> StandardPadding for T {
-    fn standard_padding(&mut self, rem: uint, func: |&[u8]|) {
+    fn standard_padding<F>(&mut self, rem: usize, mut func: F) where F: FnMut(&[u8]) {
         let size = self.size();
 
         self.next(1)[0] = 128;
@@ -242,7 +244,7 @@ pub trait Digest {
     fn reset(&mut self);
 
     /// Get the output size in bits.
-    fn output_bits(&self) -> uint;
+    fn output_bits(&self) -> usize;
 
     /// Convenience function that feeds a string into a digest.
     ///
@@ -253,19 +255,10 @@ pub trait Digest {
         self.input(input.as_bytes());
     }
 
-    /// Convenience function that feeds a int into a digest.
-    ///
-    /// # Arguments
-    ///
-    /// * `input` The uint to feed into the digest
-    fn input_uint(&mut self, input: u64) {
-        u64_to_le_bytes(input, 8, |v| self.input(v))
-    }
-
     /// Convenience function that retrieves the result of a digest as a
     /// newly allocated vec of bytes.
     fn result_bytes(&mut self) -> Vec<u8> {
-        let mut buf = Vec::from_elem((self.output_bits()+7)/8, 0u8);
+        let mut buf: Vec<u8> = repeat(0u8).take((self.output_bits()+7)/8).collect();
         self.result(buf.as_mut_slice());
         buf
     }
@@ -273,7 +266,7 @@ pub trait Digest {
     /// Convenience function that retrieves the result of a digest as a
     /// String in hexadecimal format.
     fn result_str(&mut self) -> String {
-        self.result_bytes().as_slice().to_hex().to_string()
+        self.result_bytes().to_hex().to_string()
     }
 }
 
@@ -291,7 +284,7 @@ struct Engine256State {
 }
 
 impl Engine256State {
-    fn new(h: &[u32, ..8]) -> Engine256State {
+    fn new(h: &[u32; 8]) -> Engine256State {
         return Engine256State {
             h0: h[0],
             h1: h[1],
@@ -304,7 +297,7 @@ impl Engine256State {
         };
     }
 
-    fn reset(&mut self, h: &[u32, ..8]) {
+    fn reset(&mut self, h: &[u32; 8]) {
         self.h0 = h[0];
         self.h1 = h[1];
         self.h2 = h[2];
@@ -349,16 +342,16 @@ impl Engine256State {
         let mut g = self.h6;
         let mut h = self.h7;
 
-        let mut w = [0u32, ..64];
+        let mut w = [0u32; 64];
 
         // Sha-512 and Sha-256 use basically the same calculations which are implemented
         // by these macros. Inlining the calculations seems to result in better generated code.
-        macro_rules! schedule_round( ($t:expr) => (
+        macro_rules! schedule_round { ($t:expr) => (
                 w[$t] = sigma1(w[$t - 2]) + w[$t - 7] + sigma0(w[$t - 15]) + w[$t - 16];
                 )
-        )
+        }
 
-        macro_rules! sha2_round(
+        macro_rules! sha2_round {
             ($A:ident, $B:ident, $C:ident, $D:ident,
              $E:ident, $F:ident, $G:ident, $H:ident, $K:ident, $t:expr) => (
                 {
@@ -367,13 +360,13 @@ impl Engine256State {
                     $H += sum0($A) + maj($A, $B, $C);
                 }
              )
-        )
+        }
 
-        read_u32v_be(w[mut 0..16], data);
+        read_u32v_be(w.slice_mut(0, 16), data);
 
         // Putting the message schedule inside the same loop as the round calculations allows for
         // the compiler to generate better code.
-        for t in range_step(0u, 48, 8) {
+        for t in range_step(0us, 48, 8) {
             schedule_round!(t + 16);
             schedule_round!(t + 17);
             schedule_round!(t + 18);
@@ -393,7 +386,7 @@ impl Engine256State {
             sha2_round!(b, c, d, e, f, g, h, a, K32, t + 7);
         }
 
-        for t in range_step(48u, 64, 8) {
+        for t in range_step(48us, 64, 8) {
             sha2_round!(a, b, c, d, e, f, g, h, K32, t);
             sha2_round!(h, a, b, c, d, e, f, g, K32, t + 1);
             sha2_round!(g, h, a, b, c, d, e, f, K32, t + 2);
@@ -415,7 +408,7 @@ impl Engine256State {
     }
 }
 
-static K32: [u32, ..64] = [
+static K32: [u32; 64] = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
     0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
@@ -444,7 +437,7 @@ struct Engine256 {
 }
 
 impl Engine256 {
-    fn new(h: &[u32, ..8]) -> Engine256 {
+    fn new(h: &[u32; 8]) -> Engine256 {
         return Engine256 {
             length_bits: 0,
             buffer: FixedBuffer64::new(),
@@ -453,7 +446,7 @@ impl Engine256 {
         }
     }
 
-    fn reset(&mut self, h: &[u32, ..8]) {
+    fn reset(&mut self, h: &[u32; 8]) {
         self.length_bits = 0;
         self.buffer.reset();
         self.state.reset(h);
@@ -461,7 +454,7 @@ impl Engine256 {
     }
 
     fn input(&mut self, input: &[u8]) {
-        assert!(!self.finished)
+        assert!(!self.finished);
         // Assumes that input.len() can be converted to u64 without overflow
         self.length_bits = add_bytes_to_bits(self.length_bits, input.len() as u64);
         let self_state = &mut self.state;
@@ -505,24 +498,24 @@ impl Digest for Sha256 {
     fn result(&mut self, out: &mut [u8]) {
         self.engine.finish();
 
-        write_u32_be(out[mut 0..4], self.engine.state.h0);
-        write_u32_be(out[mut 4..8], self.engine.state.h1);
-        write_u32_be(out[mut 8..12], self.engine.state.h2);
-        write_u32_be(out[mut 12..16], self.engine.state.h3);
-        write_u32_be(out[mut 16..20], self.engine.state.h4);
-        write_u32_be(out[mut 20..24], self.engine.state.h5);
-        write_u32_be(out[mut 24..28], self.engine.state.h6);
-        write_u32_be(out[mut 28..32], self.engine.state.h7);
+        write_u32_be(out.slice_mut(0, 4), self.engine.state.h0);
+        write_u32_be(out.slice_mut(4, 8), self.engine.state.h1);
+        write_u32_be(out.slice_mut(8, 12), self.engine.state.h2);
+        write_u32_be(out.slice_mut(12, 16), self.engine.state.h3);
+        write_u32_be(out.slice_mut(16, 20), self.engine.state.h4);
+        write_u32_be(out.slice_mut(20, 24), self.engine.state.h5);
+        write_u32_be(out.slice_mut(24, 28), self.engine.state.h6);
+        write_u32_be(out.slice_mut(28, 32), self.engine.state.h7);
     }
 
     fn reset(&mut self) {
         self.engine.reset(&H256);
     }
 
-    fn output_bits(&self) -> uint { 256 }
+    fn output_bits(&self) -> usize { 256 }
 }
 
-static H256: [u32, ..8] = [
+static H256: [u32; 8] = [
     0x6a09e667,
     0xbb67ae85,
     0x3c6ef372,
@@ -537,11 +530,12 @@ static H256: [u32, ..8] = [
 mod tests {
     extern crate rand;
 
-    use super::{Digest, Sha256, FixedBuffer};
-    use std::num::Bounded;
-    use self::rand::isaac::IsaacRng;
     use self::rand::Rng;
+    use self::rand::isaac::IsaacRng;
     use serialize::hex::FromHex;
+    use std::iter::repeat;
+    use std::num::Int;
+    use super::{Digest, Sha256, FixedBuffer};
 
     // A normal addition - no overflow occurs
     #[test]
@@ -553,7 +547,7 @@ mod tests {
     #[test]
     #[should_fail]
     fn test_add_bytes_to_bits_overflow() {
-        super::add_bytes_to_bits::<u64>(Bounded::max_value(), 1);
+        super::add_bytes_to_bits::<u64>(Int::max_value(), 1);
     }
 
     struct Test {
@@ -576,9 +570,8 @@ mod tests {
             let len = t.input.len();
             let mut left = len;
             while left > 0u {
-                let take = (left + 1u) / 2u;
+                let take = (left + 1us) / 2us;
                 sh.input_str(t.input
-                              .as_slice()
                               .slice(len - left, take + len - left));
                 left = left - take;
             }
@@ -618,16 +611,16 @@ mod tests {
 
     /// Feed 1,000,000 'a's into the digest with varying input sizes and check that the result is
     /// correct.
-    fn test_digest_1million_random<D: Digest>(digest: &mut D, blocksize: uint, expected: &str) {
+    fn test_digest_1million_random<D: Digest>(digest: &mut D, blocksize: usize, expected: &str) {
         let total_size = 1000000;
-        let buffer = Vec::from_elem(blocksize * 2, 'a' as u8);
+        let buffer: Vec<u8> = repeat('a' as u8).take(blocksize * 2).collect();
         let mut rng = IsaacRng::new_unseeded();
         let mut count = 0;
 
         digest.reset();
 
         while count < total_size {
-            let next: uint = rng.gen_range(0, 2 * blocksize + 1);
+            let next: usize = rng.gen_range(0, 2 * blocksize + 1);
             let remaining = total_size - count;
             let size = if next > remaining { remaining } else { next };
             digest.input(buffer.slice_to(size));
@@ -665,9 +658,9 @@ mod bench {
     #[bench]
     pub fn sha256_10(b: &mut Bencher) {
         let mut sh = Sha256::new();
-        let bytes = [1u8, ..10];
+        let bytes = [1u8; 10];
         b.iter(|| {
-            sh.input(bytes);
+            sh.input(&bytes);
         });
         b.bytes = bytes.len() as u64;
     }
@@ -675,9 +668,9 @@ mod bench {
     #[bench]
     pub fn sha256_1k(b: &mut Bencher) {
         let mut sh = Sha256::new();
-        let bytes = [1u8, ..1024];
+        let bytes = [1u8; 1024];
         b.iter(|| {
-            sh.input(bytes);
+            sh.input(&bytes);
         });
         b.bytes = bytes.len() as u64;
     }
@@ -685,9 +678,9 @@ mod bench {
     #[bench]
     pub fn sha256_64k(b: &mut Bencher) {
         let mut sh = Sha256::new();
-        let bytes = [1u8, ..65536];
+        let bytes = [1u8; 65536];
         b.iter(|| {
-            sh.input(bytes);
+            sh.input(&bytes);
         });
         b.bytes = bytes.len() as u64;
     }

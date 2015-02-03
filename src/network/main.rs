@@ -1,7 +1,5 @@
-#![feature(phase, if_let)]
-
 extern crate argparse;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 extern crate config;
 extern crate container;
@@ -19,7 +17,7 @@ mod iptables;
 mod run;
 
 
-fn run() -> Result<(), Result<int, String>> {
+fn run() -> Result<(), Result<isize, String>> {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
     {
@@ -34,7 +32,7 @@ fn run() -> Result<(), Result<int, String>> {
             the bridge-namespaced nodes and from the internet.
             ");
         ap.refer(&mut kind)
-            .add_argument("kind", box Store::<String>, r#"
+            .add_argument("kind", Box::new(Store::<String>), r#"
                 Kind of partitioning to do:
                 "disjoint" -- divide into few non-intersecting networks,
                 "split" -- divide into graph of networks that may have some
@@ -45,7 +43,7 @@ fn run() -> Result<(), Result<int, String>> {
                     still being in same mount (filesystem) namespace.
                 "#);
         ap.refer(&mut args)
-            .add_argument("node", box List::<String>, "
+            .add_argument("node", Box::new(List::<String>), "
                 A node(s) to operate on. See help of specific command
                 for details
                 ");

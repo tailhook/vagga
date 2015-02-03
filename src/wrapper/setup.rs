@@ -2,13 +2,14 @@ use std::io::ALL_PERMISSIONS;
 use std::os::{getenv};
 use std::io::BufferedReader;
 use std::os::{self_exe_path};
-use std::io::{TypeSymlink, TypeDirectory, FileNotFound};
+use std::io::FileType::{Symlink, Directory};
+use std::io::FileNotFound;
 use std::io::fs::{File, PathExtensions};
 use std::io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink};
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 
 use config::Container;
-use config::containers::{Tmpfs, VaggaBin};
+use config::containers::Volume::{Tmpfs, VaggaBin};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_pseudo};
@@ -29,7 +30,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
     if !path.exists() {
         return Ok(path);
     }
-    for i in range(1i, 101i) {
+    for i in range(1is, 101is) {
         let result = format!("{}-{}", name, i);
         let path = storage_dir.join(result);
         if !path.exists() {
@@ -64,11 +65,11 @@ fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
     match dir.lstat() {
-        Ok(stat) if stat.kind == TypeSymlink => {
+        Ok(stat) if stat.kind == Symlink => {
             return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
                                "Please run `unlink {0}`"), dir.display()));
         }
-        Ok(stat) if stat.kind == TypeDirectory => {
+        Ok(stat) if stat.kind == Directory => {
             // ok
         }
         Ok(_) => {
@@ -208,9 +209,9 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
 }
 
 pub fn get_environment(container: &Container)
-    -> Result<TreeMap<String, String>, String>
+    -> Result<BTreeMap<String, String>, String>
 {
-    let mut result = TreeMap::new();
+    let mut result = BTreeMap::new();
     result.insert("TERM".to_string(),
                   getenv("TERM").unwrap_or("dumb".to_string()));
     result.insert("PATH".to_string(),
@@ -230,7 +231,7 @@ pub fn get_environment(container: &Container)
                 .ok_or(format!("Error reading environment file {}: bad format",
                     filename.display())));
             if value.len() > 0 && value.starts_with("\"") {
-                value = value[ 1 .. value.len()-2 ];
+                value = value.trim_matches('"');
             }
             result.insert(key.to_string(), value.to_string());
         }
@@ -258,16 +259,16 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
 
-    if let None = container.volumes.find(&Path::new("/tmp")) {
+    if let None = container.volumes.get(&Path::new("/tmp")) {
         try!(mount_tmpfs(&tgtroot.join("tmp"), "size=100m,mode=01777"));
     }
 
     for (path, vol) in container.volumes.iter() {
         let dest = tgtroot.join(path.path_relative_from(&root_path).unwrap());
         match vol {
-            &Tmpfs(params) => {
+            &Tmpfs(ref params) => {
                 try!(mount_tmpfs(&dest,
-                    format!("size={:u},mode=0{:o}", params.size, params.mode)
+                    format!("size={},mode=0{:o}", params.size, params.mode)
                     .as_slice()));
             }
             &VaggaBin => {

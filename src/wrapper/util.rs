@@ -1,14 +1,14 @@
 use std::io::fs::PathExtensions;
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 
 
-pub fn find_cmd(cmd: &str, env: &TreeMap<String, String>)
+pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
     -> Result<Path, String>
 {
     if cmd.contains("/") {
         return Ok(Path::new(cmd));
     } else {
-        if let Some(paths) = env.find(&"PATH".to_string()) {
+        if let Some(paths) = env.get(&"PATH".to_string()) {
             for dir in paths.as_slice().split(':') {
                 let path = Path::new(dir);
                 if !path.is_absolute() {

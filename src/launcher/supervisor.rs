@@ -5,19 +5,21 @@ use std::cell::Cell;
 use std::io::stdio::{stdout, stderr};
 use std::io::fs::{mkdir};
 use std::io::fs::PathExtensions;
-use std::collections::TreeSet;
+use std::collections::BTreeSet;
 
 use argparse::{ArgumentParser};
 
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
-use container::monitor::{Monitor, Exit, Killed, Executor};
-use container::monitor::{MonitorStatus, Shutdown};
+use container::monitor::{Monitor, Executor};
+use container::monitor::MonitorResult::{Exit, Killed};
+use container::monitor::MonitorStatus;
 use container::container::{Command};
-use container::container::{NewNet, NewUts, NewMount};
+use container::container::Namespace::{NewNet, NewUts, NewMount};
 use config::Config;
-use config::command::{SuperviseInfo, Networking, stop_on_failure};
-use config::command::child::{BridgeCommand};
+use config::command::{SuperviseInfo, Networking};
+use config::command::SuperviseMode::{stop_on_failure};
+use config::command::ChildCommand::{BridgeCommand};
 
 use super::network;
 use super::user::{run_wrapper, common_child_command_env};
@@ -33,7 +35,7 @@ impl<'a> Executor for RunChild<'a> {
     fn command(&mut self) -> Command {
         return self.command.take().expect("Command can't be run twice");
     }
-    fn finish(&mut self, status: int) -> MonitorStatus {
+    fn finish(&mut self, status: isize) -> MonitorStatus {
         if self.running.get() {
             println!(
                 "---------- \
@@ -42,20 +44,20 @@ impl<'a> Executor for RunChild<'a> {
                 self.name, status);
             self.running.set(false);
         }
-        Shutdown(status)
+        MonitorStatus::Shutdown(status)
     }
 }
 
 
 pub fn run_supervise_command(_config: &Config, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     if sup.mode != stop_on_failure {
-        fail!("Only stop-on-failure mode implemented");
+        panic!("Only stop-on-failure mode implemented");
     }
     {
-        args.insert(0, "vagga ".to_string() + cmdname);
+        args.insert(0, "vagga ".to_string() + cmdname.as_slice());
         let mut ap = ArgumentParser::new();
         ap.set_description(sup.description.as_ref().map(|x| x.as_slice())
             .unwrap_or("Run multiple processes simultaneously"));
@@ -68,7 +70,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
             }
         }
     }
-    let mut containers = TreeSet::new();
+    let mut containers = BTreeSet::new();
     let mut containers_in_netns = vec!();
     let mut bridges = vec!();
     let mut containers_host_net = vec!();
@@ -146,7 +148,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
         try!(port_forward_guard.start_forwarding());
 
         for name in containers_in_netns.iter() {
-            let child = sup.children.find(name).unwrap();
+            let child = sup.children.get(name).unwrap();
             let mut cmd = Command::new("wrapper".to_string(),
                 self_exe_path().unwrap().join("vagga_wrapper"));
             cmd.keep_sigmask();

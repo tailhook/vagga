@@ -2,8 +2,10 @@
 use std::io::{IoError};
 use std::io::BufferedReader;
 use std::ptr::null;
+use std::ffi::CString;
 use std::io::fs::File;
-use std::from_str::FromStr;
+use std::path::BytesContainer;
+use std::str::FromStr;
 use libc::{c_ulong, c_int};
 
 // sys/mount.h
@@ -48,15 +50,15 @@ extern {
 
 
 pub struct MountRecord<'a> {
-    pub mount_id: uint,
-    pub parent_id: uint,
+    pub mount_id: usize,
+    pub parent_id: usize,
     _device: &'a str,  // TODO(tailhook) parse if ever need
     pub relative_root: &'a str,
     pub mount_point: &'a str,
     pub mount_options: &'a str,
-    pub tag_shared: Option<uint>,
-    pub tag_master: Option<uint>,
-    pub tag_propagate_from: Option<uint>,
+    pub tag_shared: Option<usize>,
+    pub tag_master: Option<usize>,
+    pub tag_propagate_from: Option<usize>,
     pub tag_unbindable: Option<()>,
     pub fstype: &'a str,
     pub mount_source: &'a str,
@@ -128,27 +130,6 @@ impl<'a> MountRecord<'a> {
     }
 }
 
-pub fn check_mount_point(dir: &str, fun: |MountRecord|)
-    -> Result<(), String>
-{
-    let f = try_str!(File::open(&Path::new("/proc/self/mountinfo")));
-    let mut buf = BufferedReader::new(f);
-    for line in buf.lines() {
-        let line = try_str!(line);
-        match MountRecord::from_str(line.as_slice()) {
-            Some(rec) => {
-                if rec.mount_point == dir {
-                    fun(rec);
-                }
-            }
-            None => {
-                return Err(format!("Can't parse mountinfo line: {}", line));
-            }
-        }
-    }
-    return Ok(());
-}
-
 pub fn get_submounts_of(dir: &Path)
     -> Result<Vec<Path>, String>
 {
@@ -173,9 +154,9 @@ pub fn get_submounts_of(dir: &Path)
 }
 
 pub fn remount_ro(target: &Path) -> Result<(), String> {
-    let none = "none".to_c_str();
+    let none = CString::from_slice("none".as_bytes());
     debug!("Remount readonly: {}", target.display());
-    let c_target = target.to_c_str();
+    let c_target = CString::from_slice(target.container_as_bytes());
     let rc = unsafe { mount(
        none.as_bytes().as_ptr(),
        c_target.as_bytes().as_ptr(),
@@ -188,8 +169,8 @@ pub fn remount_ro(target: &Path) -> Result<(), String> {
 }
 
 pub fn mount_private(target: &Path) -> Result<(), String> {
-    let none = "none".to_c_str();
-    let c_target = target.to_c_str();
+    let none = CString::from_slice("none".as_bytes());
+    let c_target = CString::from_slice(target.container_as_bytes());
     debug!("Making private {}", target.display());
     let rc = unsafe { mount(
         none.as_bytes().as_ptr(),
@@ -205,8 +186,8 @@ pub fn mount_private(target: &Path) -> Result<(), String> {
 }
 
 pub fn bind_mount(source: &Path, target: &Path) -> Result<(), String> {
-    let c_source = source.to_c_str();
-    let c_target = target.to_c_str();
+    let c_source = CString::from_slice(source.container_as_bytes());
+    let c_target = CString::from_slice(target.container_as_bytes());
     debug!("Bind mount {} -> {}", source.display(), target.display());
     let rc = unsafe {
         mount(c_source.as_bytes().as_ptr(), c_target.as_bytes().as_ptr(),
@@ -223,9 +204,9 @@ pub fn bind_mount(source: &Path, target: &Path) -> Result<(), String> {
 pub fn mount_pseudo(target: &Path, name: &str, options: &str, readonly: bool)
     -> Result<(), String>
 {
-    let c_name = name.to_c_str();
-    let c_target = target.to_c_str();
-    let c_opts = options.to_c_str();
+    let c_name = CString::from_slice(name.container_as_bytes());
+    let c_target = CString::from_slice(target.container_as_bytes());
+    let c_opts = CString::from_slice(options.container_as_bytes());
     let mut flags = MS_NOSUID | MS_NOEXEC | MS_NODEV | MS_NOATIME;
     if readonly {
         flags |= MS_RDONLY;
@@ -247,9 +228,9 @@ pub fn mount_pseudo(target: &Path, name: &str, options: &str, readonly: bool)
 }
 
 pub fn mount_tmpfs(target: &Path, options: &str) -> Result<(), String> {
-    let c_tmpfs = "tmpfs".to_c_str();
-    let c_target = target.to_c_str();
-    let c_opts = options.to_c_str();
+    let c_tmpfs = CString::from_slice("tmpfs".as_bytes());
+    let c_target = CString::from_slice(target.container_as_bytes());
+    let c_opts = CString::from_slice(options.container_as_bytes());
     debug!("Tmpfs mount {} {}", target.display(), options);
     let rc = unsafe { mount(
         c_tmpfs.as_bytes().as_ptr(),
@@ -267,7 +248,7 @@ pub fn mount_tmpfs(target: &Path, options: &str) -> Result<(), String> {
 }
 
 pub fn unmount(target: &Path) -> Result<(), String> {
-    let c_target = target.to_c_str();
+    let c_target = CString::from_slice(target.container_as_bytes());
     let rc = unsafe { umount2(c_target.as_bytes().as_ptr(), MNT_DETACH) };
     if rc == 0 {
         return Ok(());

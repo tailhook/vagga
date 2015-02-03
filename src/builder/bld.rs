@@ -1,7 +1,8 @@
 use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir_recursive};
 
-use config::builders as B;
+use config::builders::Builder;
+use config::builders::Builder as B;
 
 use super::context::BuildContext;
 use super::commands::debian;
@@ -11,7 +12,7 @@ use super::commands::pip;
 use super::commands::npm;
 use super::tarcmd;
 use container::util::clean_dir;
-use super::context as distr;
+use super::context::Distribution as Distr;
 
 
 pub trait BuildCommand {
@@ -19,7 +20,7 @@ pub trait BuildCommand {
 }
 
 
-impl BuildCommand for B::Builder {
+impl BuildCommand for Builder {
     fn build(&self, ctx: &mut BuildContext) -> Result<(), String> {
         match self {
 
@@ -29,9 +30,9 @@ impl BuildCommand for B::Builder {
                     ctx.build_deps.remove(i);
                 }
                 match ctx.distribution {
-                    distr::Unknown => Err(format!("Unknown distribution")),
-                    distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),
-                    distr::Alpine(_) => alpine::install(ctx, pkgs),
+                    Distr::Unknown => Err(format!("Unknown distribution")),
+                    Distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),
+                    Distr::Alpine(_) => alpine::install(ctx, pkgs),
                 }
             }
             &B::BuildDeps(ref pkgs) => {
@@ -41,9 +42,9 @@ impl BuildCommand for B::Builder {
                     }
                 }
                 match ctx.distribution {
-                    distr::Unknown => Err(format!("Unknown distribution")),
-                    distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),
-                    distr::Alpine(_) => alpine::install(ctx, pkgs),
+                    Distr::Unknown => Err(format!("Unknown distribution")),
+                    Distr::Ubuntu(_) => debian::apt_install(ctx, pkgs),
+                    Distr::Alpine(_) => alpine::install(ctx, pkgs),
                 }
             }
 

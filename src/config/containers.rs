@@ -1,24 +1,24 @@
 use std::default::Default;
-use std::collections::treemap::TreeMap;
+use std::collections::BTreeMap;
 
 use quire::validate as V;
 
 use super::builders::{Builder, builder_validator};
 use super::Range;
 
-#[deriving(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq)]
 pub enum Volume {
     Tmpfs(TmpfsInfo),
     VaggaBin,
 }
 
-#[deriving(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq)]
 pub struct TmpfsInfo {
-    pub size: uint,
+    pub size: usize,
     pub mode: u32,
 }
 
-#[deriving(Decodable, Clone)]
+#[derive(Decodable, Clone)]
 pub struct Container {
     pub setup: Vec<Builder>,
 
@@ -26,9 +26,9 @@ pub struct Container {
     pub gids: Vec<Range>,
 
     pub environ_file: Option<Path>,
-    pub environ: TreeMap<String, String>,
+    pub environ: BTreeMap<String, String>,
     pub resolv_conf: Option<Path>,
-    pub volumes: TreeMap<Path, Volume>,
+    pub volumes: BTreeMap<Path, Volume>,
 }
 
 impl PartialEq for Container {
@@ -39,12 +39,12 @@ pub fn volume_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Enum { options: vec!(
         ("Tmpfs".to_string(),  box V::Structure { members: vec!(
             ("size".to_string(),  box V::Numeric {
-                min: Some(0u),
+                min: Some(0us),
                 default: Some(100*1024*1024),
                 .. Default::default()} as Box<V::Validator>),
             ("mode".to_string(),  box V::Numeric {
-                min: Some(0u),
-                max: Some(0o1777u),
+                min: Some(0u32),
+                max: Some(0o1777u32),
                 default: Some(0o766),
                 .. Default::default()} as Box<V::Validator>),
             ),.. Default::default()} as Box<V::Validator>),

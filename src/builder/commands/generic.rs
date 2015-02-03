@@ -1,13 +1,14 @@
 use std::io::fs::PathExtensions;
 
 use super::super::context::BuildContext;
-use container::monitor::{Monitor, Exit, Killed};
+use container::monitor::{Monitor};
+use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
 
 
 fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {
     let rpath = Path::new("/");
-    if let Some(paths) = ctx.environ.find(&"PATH".to_string()) {
+    if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {
         for dir in paths.as_slice().split(':') {
             let path = Path::new(dir);
             if !path.is_absolute() {
@@ -35,22 +36,22 @@ pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
     let mut cmd = Command::new("run".to_string(), &cmdpath);
     cmd.set_workdir(path);
     cmd.chroot(&Path::new("/vagga/root"));
-    cmd.args(cmdline[1..]);
+    cmd.args(cmdline[1..].as_slice());
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
     }
 
-    debug!("Running {}", cmd);
+    debug!("Running {:?}", cmd);
 
     match Monitor::run_command(cmd) {
         Killed => {
-            return Err(format!("Command {} is dead", cmdline));
+            return Err(format!("Command {:?} is dead", cmdline));
         }
         Exit(0) => {
             return Ok(())
         }
         Exit(val) => {
-            return Err(format!("Command {} exited with status {}",
+            return Err(format!("Command {:?} exited with status {}",
                                cmdline, val));
         }
     }

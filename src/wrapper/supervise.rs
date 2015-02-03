@@ -6,10 +6,10 @@ use std::io::stdio::{stdout, stderr};
 use argparse::{ArgumentParser, Store};
 
 use config::command::{SuperviseInfo, CommandInfo};
-use config::command::child::{Command, BridgeCommand};
+use config::command::ChildCommand::{Command, BridgeCommand};
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
-use container::monitor::{Killed, Exit};
+use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use super::Wrapper;
 use super::util::find_cmd;
@@ -18,14 +18,14 @@ use super::setup;
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     let mut child = "".to_string();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("Runs a single command from supervision suite");
         ap.refer(&mut child)
-            .add_argument("child", box Store::<String>,
+            .add_argument("child", Box::new(Store::<String>),
                 "Child to run")
             .required();
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
@@ -39,7 +39,7 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
-    let childtype = try!(command.children.find(&child)
+    let childtype = try!(command.children.get(&child)
         .ok_or(format!("Child {} not found", child)));
     match childtype {
         &Command(ref info) => supervise_child_command(cname,
@@ -56,18 +56,18 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
             .map_err(|e| format!("Can't create dir: {}", e)));
     }
     let mut file = File::create(&basedir.join("hosts"));
-    try!((writeln!(file, "127.0.0.1 localhost"))
+    try!((writeln!(&mut file, "127.0.0.1 localhost"))
          .map_err(|e| format!("Error writing hosts: {}", e)));
     for (subname, subcommand) in supervise.children.iter() {
         if let &Command(ref cmd) = subcommand {
             if let Some(ref netw) = cmd.network {
                 // TODO(tailhook) support multiple commands with same IP
-                if netw.hostname.is_none() {
-                    try!((writeln!(file, "{} {}", netw.ip, subname))
+                if let Some(ref val) = netw.hostname {
+                    try!((writeln!(&mut file, "{} {} {}", netw.ip,
+                                    val, subname))
                          .map_err(|e| format!("Error writing hosts: {}", e)));
                 } else {
-                    try!((writeln!(file, "{} {} {}", netw.ip,
-                                    netw.hostname, subname))
+                    try!((writeln!(&mut file, "{} {}", netw.ip, subname))
                          .map_err(|e| format!("Error writing hosts: {}", e)));
                 }
             }
@@ -78,9 +78,9 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
 
 fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     command: &CommandInfo, wrapper: &Wrapper, supervise: &SuperviseInfo)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
-    let cconfig = try!(wrapper.config.containers.find(&command.container)
+    let cconfig = try!(wrapper.config.containers.get(&command.container)
         .ok_or(format!("Container {} not found", command.container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
@@ -102,7 +102,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         env.insert(k.clone(), v.clone());
     }
     let mut cmdline = command.run.clone();
-    let cpath = try!(find_cmd(cmdline.remove(0).unwrap().as_slice(), &env));
+    let cpath = try!(find_cmd(cmdline.remove(0).as_slice(), &env));
 
     let mut cmd = Command::new(name.to_string(), &cpath);
     cmd.args(cmdline.as_slice());

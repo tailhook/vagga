@@ -1,32 +1,37 @@
 use std::rc::Rc;
-use std::fmt::{Show, Formatter, FormatError};
+use std::fmt::{Show, Formatter};
+use std::fmt::Error as FormatError;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
 use libc::pid_t;
-use time::{Timespec, get_time};
 
 use super::container::Command;
 use super::signal;
-use super::async::{Loop, Event, Signal, Timeout, Input};
+use super::signal::Signal as Sig;
+use super::util::{Time, get_time};
+use super::async::{Loop, Event};
+use super::async::Event::{Signal, Timeout, Input};
+use self::MonitorStatus::*;
+use self::MonitorResult::*;
 
 type ProcRef<'a> = Rc<RefCell<Process<'a>>>;
 
 pub enum MonitorResult {
     Killed,
-    Exit(int),
+    Exit(isize),
 }
 
 pub enum MonitorStatus {
     Run,
     Error(String),
-    Shutdown(int),
+    Shutdown(isize),
 }
 
 pub trait Executor {
     fn prepare(&mut self) -> MonitorStatus { Run }
     fn command(&mut self) -> Command;
-    fn finish(&mut self, status: int) -> MonitorStatus { Shutdown(status) }
+    fn finish(&mut self, status: isize) -> MonitorStatus { Shutdown(status) }
 }
 
 pub struct RunOnce {
@@ -50,7 +55,7 @@ impl RunOnce {
 
 pub struct Process<'a> {
     name: Rc<String>,
-    start_time: Option<Timespec>,
+    start_time: Option<Time>,
     executor: Box<Executor + 'a>,
 }
 
@@ -66,29 +71,7 @@ pub struct Monitor<'a> {
     processes: Vec<ProcRef<'a>>,
     pids: HashMap<pid_t, ProcRef<'a>>,
     aio: Loop<ProcRef<'a>>,
-    status: Option<int>,
-}
-
-impl<'a> Show for Event<Rc<RefCell<Process<'a>>>> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
-        match self {
-            &Signal(ref sig) => {
-                fmt.write("Signal(".as_bytes())
-                .and(sig.fmt(fmt))
-                .and(fmt.write(")".as_bytes()))
-            }
-            &Timeout(ref name) => {
-                fmt.write("Timeout(".as_bytes())
-                .and(name.borrow().fmt(fmt))
-                .and(fmt.write(")".as_bytes()))
-            }
-            &Input(ref name) => {
-                fmt.write("Input(".as_bytes())
-                .and(name.borrow().fmt(fmt))
-                .and(fmt.write(")".as_bytes()))
-            }
-        }
-    }
+    status: Option<isize>,
 }
 
 impl<'a> Monitor<'a> {
@@ -100,7 +83,7 @@ impl<'a> Monitor<'a> {
             status: None,
         };
     }
-    pub fn add(&mut self, name: Rc<String>, executor: Box<Executor>)
+    pub fn add(&mut self, name: Rc<String>, executor: Box<Executor + 'a>)
     {
         let prc = Rc::new(RefCell::new(Process {
             name: name,
@@ -109,7 +92,7 @@ impl<'a> Monitor<'a> {
         self.processes.push(prc.clone());
         self.aio.add_timeout(Duration::seconds(0), prc);
     }
-    fn _start_process(&mut self, prc: ProcRef) -> MonitorStatus {
+    fn _start_process(&mut self, prc: ProcRef<'a>) -> MonitorStatus {
         let prepare_result = prc.borrow_mut().executor.prepare();
         match prepare_result {
             Run => {
@@ -135,7 +118,7 @@ impl<'a> Monitor<'a> {
         }
         return prepare_result;
     }
-    fn _reap_child(&mut self, prc: ProcRef, pid: pid_t, status: int)
+    fn _reap_child(&mut self, prc: ProcRef, pid: pid_t, status: isize)
         -> MonitorStatus
     {
         let mut prc = prc.borrow_mut();
@@ -144,7 +127,7 @@ impl<'a> Monitor<'a> {
             prc.name, pid, status, get_time() - start_time);
         return prc.executor.finish(status);
     }
-    fn _find_by_name(&self, name: &Rc<String>) -> Option<ProcRef> {
+    fn _find_by_name(&self, name: &Rc<String>) -> Option<ProcRef<'a>> {
         for prc in self.processes.iter() {
             if prc.borrow().name == *name {
                 return Some(prc.clone());
@@ -169,7 +152,7 @@ impl<'a> Monitor<'a> {
         // Main loop
         loop {
             let sig = self.aio.poll();
-            info!("Got signal {}", sig);
+            info!("Got signal {:?}", sig);
             match sig {
                 Input(_) => {
                     unimplemented!();
@@ -183,7 +166,7 @@ impl<'a> Monitor<'a> {
                             self.status = Some(x);
                             for (pid, _) in self.pids.iter() {
                                 signal::send_signal(*pid,
-                                    signal::SIGTERM as int);
+                                    signal::SIGTERM as isize);
                             }
                             break;
                         }
@@ -191,14 +174,14 @@ impl<'a> Monitor<'a> {
                         Run => {}
                     }
                 }
-                Signal(signal::Terminate(sig)) => {
+                Signal(Sig::Terminate(sig)) => {
                     for (pid, _) in self.pids.iter() {
                         signal::send_signal(*pid, sig);
                     }
                     break;
                 }
-                Signal(signal::Child(pid, status)) => {
-                    let prc = match self.pids.pop(&pid) {
+                Signal(Sig::Child(pid, status)) => {
+                    let prc = match self.pids.remove(&pid) {
                         Some(prc) => prc,
                         None => {
                             warn!("Unknown process {} dead with {}",
@@ -211,7 +194,7 @@ impl<'a> Monitor<'a> {
                             self.status = Some(x);
                             for (pid, _) in self.pids.iter() {
                                 signal::send_signal(*pid,
-                                    signal::SIGTERM as int);
+                                    signal::SIGTERM as isize);
                             }
                             break;
                         }
@@ -227,7 +210,7 @@ impl<'a> Monitor<'a> {
               self.pids.len());
         while self.pids.len() > 0 {
             let sig = self.aio.poll();
-            info!("Got signal {}", sig);
+            info!("Got signal {:?}", sig);
             match sig {
                 Input(_) => {
                     unimplemented!();
@@ -235,13 +218,13 @@ impl<'a> Monitor<'a> {
                 Timeout(_) => {
                     continue;
                 }
-                Signal(signal::Terminate(sig)) => {
+                Signal(Sig::Terminate(sig)) => {
                     for (pid, _) in self.pids.iter() {
                         signal::send_signal(*pid, sig);
                     }
                 }
-                Signal(signal::Child(pid, status)) => {
-                    let prc = match self.pids.pop(&pid) {
+                Signal(Sig::Child(pid, status)) => {
+                    let prc = match self.pids.remove(&pid) {
                         Some(prc) => prc,
                         None => {
                             warn!("Unknown process {} dead with {}",
@@ -249,7 +232,7 @@ impl<'a> Monitor<'a> {
                             continue;
                         }
                     };
-                    info!("Child {}:{} exited with status {}",
+                    info!("Child {}:{} exited with status {:?}",
                         prc.borrow().name, pid, status);
                     match self._reap_child(prc, pid, status) {
                         Shutdown(x) => {
@@ -270,7 +253,7 @@ impl<'a> Monitor<'a> {
     pub fn run_command(cmd: Command) -> MonitorResult {
         let mut mon = Monitor::new();
         mon.add(Rc::new(cmd.name.to_string()),
-                box RunOnce { command: Some(cmd) });
+                Box::new(RunOnce { command: Some(cmd) }));
         return mon.run();
     }
 }

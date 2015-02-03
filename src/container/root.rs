@@ -1,4 +1,6 @@
 use std::io::IoError;
+use std::ffi::CString;
+use std::path::BytesContainer;
 use libc::funcs::posix88::unistd::chdir;
 use libc::{c_int, c_char};
 
@@ -9,19 +11,20 @@ extern {
 }
 
 
-pub fn temporary_change_root<T>(path: &Path, fun: || -> Result<T, String>)
+pub fn temporary_change_root<T, F>(path: &Path, mut fun: F)
     -> Result<T, String>
+    where F: FnMut() -> Result<T, String>
 {
-    if unsafe { chdir("/".to_c_str().as_ptr()) } != 0 {
+    if unsafe { chdir(CString::from_slice("/".as_bytes()).as_ptr()) } != 0 {
         return Err(format!("Error chdir to root: {}",
                            IoError::last_error()));
     }
-    if unsafe { chroot(path.to_c_str().as_ptr()) } != 0 {
+    if unsafe { chroot(CString::from_slice(path.container_as_bytes()).as_ptr()) } != 0 {
         return Err(format!("Error chroot to {}: {}",
                            path.display(), IoError::last_error()));
     }
     let res = fun();
-    if unsafe { chroot(".".to_c_str().as_ptr()) } != 0 {
+    if unsafe { chroot(CString::from_slice(".".container_as_bytes()).as_ptr()) } != 0 {
         return Err(format!("Error chroot back: {}",
                            IoError::last_error()));
     }
@@ -30,12 +33,12 @@ pub fn temporary_change_root<T>(path: &Path, fun: || -> Result<T, String>)
 
 pub fn change_root(new_root: &Path, put_old: &Path) -> Result<(), String>
 {
-    if unsafe { pivot_root(new_root.to_c_str().as_ptr(),
-                           put_old.to_c_str().as_ptr()) } != 0 {
+    if unsafe { pivot_root(CString::from_slice(new_root.container_as_bytes()).as_ptr(),
+                           CString::from_slice(put_old.container_as_bytes()).as_ptr()) } != 0 {
         return Err(format!("Error pivot_root to {}: {}", new_root.display(),
                            IoError::last_error()));
     }
-    if unsafe { chdir("/".to_c_str().as_ptr()) } != 0 {
+    if unsafe { chdir(CString::from_slice("/".as_bytes()).as_ptr()) } != 0 {
         return Err(format!("Error chdir to root: {}",
                            IoError::last_error()));
     }

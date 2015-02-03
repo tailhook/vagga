@@ -1,10 +1,11 @@
 use std::os::{getenv};
 use std::os::self_exe_path;
 
-use container::monitor::{Monitor, Exit, Killed};
+use container::monitor::{Monitor};
+use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
 use config::Config;
-use config::command::{main};
+use config::command::MainCommand;
 use config::command::{CommandInfo, Networking};
 
 use super::supervisor;
@@ -12,14 +13,14 @@ use super::supervisor;
 
 pub fn run_user_command(config: &Config, workdir: &Path,
     cmd: String, args: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
-    match config.commands.find(&cmd) {
+    match config.commands.get(&cmd) {
         None => Err(format!("Command {} not found. \
                     Run vagga without arguments to see the list.", cmd)),
-        Some(&main::Command(ref info))
+        Some(&MainCommand::Command(ref info))
         => run_simple_command(info, workdir, cmd, args),
-        Some(&main::Supervise(ref sup))
+        Some(&MainCommand::Supervise(ref sup))
         => supervisor::run_supervise_command(config, workdir, sup, cmd, args),
     }
 }
@@ -46,7 +47,7 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: &Path) {
 
 pub fn run_simple_command(cfg: &CommandInfo,
     workdir: &Path, cmdname: String, args: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     if let Some(_) = cfg.network {
         return Err(format!(
@@ -58,7 +59,7 @@ pub fn run_simple_command(cfg: &CommandInfo,
 // TODO(tailhook) run not only for simple commands
 pub fn run_wrapper(workdir: &Path, cmdname: String, args: Vec<String>,
     userns: bool)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     let mut cmd = Command::new("wrapper".to_string(),
         self_exe_path().unwrap().join("vagga_wrapper"));

@@ -1,9 +1,10 @@
-use super::graphs::{Graph, NodeLinks, Full, Isolate, DropSome};
+use super::graphs::{Graph, NodeLinks};
+use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 
 use std::io::process::{Command, InheritFd, ExitStatus};
 
 use container::nsutil::set_namespace;
-use container::container::NewNet;
+use container::container::Namespace::NewNet;
 
 
 fn _rule<W: Writer, S:Str>(out: &mut W, data: S) -> Result<(), String> {
@@ -69,6 +70,6 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
     }
     match prc.wait() {
         Ok(ExitStatus(0)) => Ok(()),
-        e => Err(format!("Error running iptables-restore: {}", e)),
+        e => Err(format!("Error running iptables-restore: {:?}", e)),
     }
 }

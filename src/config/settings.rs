@@ -1,9 +1,9 @@
-use std::from_str::FromStr;
+use std::str::FromStr;
 use serialize::json;
 use libc::{uid_t, gid_t};
 
 
-#[deriving(Decodable, Encodable, Default, Clone)]
+#[derive(Decodable, Encodable, Default, Clone)]
 pub struct Settings {
     pub version_check: bool,
     pub uid_map: Option<(Vec<(uid_t, uid_t, uid_t)>,

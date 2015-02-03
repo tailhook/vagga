@@ -1,16 +1,19 @@
 use libc::uid_t;
+use regex::Regex;
 use serialize::{Decoder, Decodable};
-use std::from_str::FromStr;
+use std::str::FromStr;
 
 
-#[deriving(Clone, Show)]
+#[derive(Clone, Show, Copy)]
 pub struct Range {
     pub start: uid_t,
     pub end: uid_t,
 }
 
-impl<E, D:Decoder<E>> Decodable<D, E> for Range {
-    fn decode(d: &mut D) -> Result<Range, E> {
+struct RangeError;
+
+impl Decodable for Range {
+    fn decode<D:Decoder>(d: &mut D) -> Result<Range, D::Error> {
         match d.read_str() {
             Ok(val) => {
                 let num:Option<uid_t> = FromStr::from_str(val.as_slice());
@@ -18,11 +21,12 @@ impl<E, D:Decoder<E>> Decodable<D, E> for Range {
                     Some(num) => return Ok(Range::new(num, num)),
                     None => {}
                 }
-                match regex!(r"^(\d+)-(\d+)$").captures(val.as_slice()) {
+                let regex = Regex::new(r"^(\d+)-(\d+)$").unwrap();
+                match regex.captures(val.as_slice()) {
                     Some(caps) => {
                         return Ok(Range::new(
-                            from_str(caps.at(1)).unwrap(),
-                            from_str(caps.at(2)).unwrap()));
+                            caps.at(1).and_then(FromStr::from_str).unwrap(),
+                            caps.at(2).and_then(FromStr::from_str).unwrap()));
                     }
                     None => unimplemented!(),
                 }

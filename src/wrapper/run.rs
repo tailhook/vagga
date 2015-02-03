@@ -7,7 +7,7 @@ use argparse::{ArgumentParser, Store, List};
 use config::{Container};
 use container::uidmap::{map_users, Uidmap};
 use container::monitor::{Monitor};
-use container::monitor::{Killed, Exit};
+use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 
 use super::build;
@@ -20,7 +20,7 @@ pub static DEFAULT_PATH: &'static str =
 
 pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
     container: &Container, command: &String, args: &[String])
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     try!(setup::setup_filesystem(container, cname.as_slice()));
 
@@ -45,7 +45,7 @@ pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
             }
         }
         if !cpath.is_absolute() {
-            return Err(format!("Command {} not found in {}",
+            return Err(format!("Command {} not found in {:?}",
                 cpath.display(), paths.as_slice()));
         }
     }
@@ -67,7 +67,7 @@ pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
 }
 
 pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     let mut container: String = "".to_string();
     let mut command: String = "".to_string();
@@ -79,22 +79,22 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
             ");
         /* TODO(tailhook) implement environment settings
         ap.refer(&mut env.set_env)
-          .add_option(&["-E", "--env", "--environ"], box Collect::<String>,
+          .add_option(&["-E", "--env", "--environ"], Box::new(Collect::<String>),
                 "Set environment variable for running command")
           .metavar("NAME=VALUE");
         ap.refer(&mut env.propagate_env)
-          .add_option(&["-e", "--use-env"], box Collect::<String>,
+          .add_option(&["-e", "--use-env"], Box::new(Collect::<String>),
                 "Propagate variable VAR into command environment")
           .metavar("VAR");
         */
         ap.refer(&mut container)
-            .add_argument("container_name", box Store::<String>,
+            .add_argument("container_name", Box::new(Store::<String>),
                 "Container name to build");
         ap.refer(&mut command)
-            .add_argument("command", box Store::<String>,
+            .add_argument("command", Box::new(Store::<String>),
                 "Command to run inside the container");
         ap.refer(&mut args)
-            .add_argument("args", box List::<String>,
+            .add_argument("args", Box::new(List::<String>),
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
@@ -107,7 +107,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
-    let cconfig = try!(wrapper.config.containers.find(&container)
+    let cconfig = try!(wrapper.config.containers.get(&container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = if user_ns {
             Some(try!(map_users(wrapper.settings,

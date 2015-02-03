@@ -1,19 +1,20 @@
 use std::io::ALL_PERMISSIONS;
-use std::rand::{task_rng, Rng};
+use std::rand::{thread_rng, Rng};
 use std::io::fs::{File, mkdir_recursive};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
-use super::super::context::{BuildContext, Alpine, Unknown};
-use super::super::dev;
-use super::pip;
-use super::npm;
+use super::super::context::{BuildContext};
+use super::super::context::Distribution::{Alpine, Unknown};
+use super::super::dev::RevControl;
+use super::pip::PipFeatures as Pip;
+use super::npm::NpmFeatures as Npm;
 
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 pub static LATEST_VERSION: &'static str = "v3.1";
 
 
-#[deriving(Show)]
+#[derive(Show)]
 pub struct AlpineInfo {
     mirror: String,
     version: String,
@@ -46,7 +47,7 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
     };
     let apk_dir = Path::new("/vagga/root/etc/apk");
     let repos = MIRRORS.split('\n').collect::<Vec<&str>>();
-    let mirror = task_rng().choose(repos.as_slice())
+    let mirror = thread_rng().choose(repos.as_slice())
         .expect("At least one mirror should work");
     debug!("Chosen mirror {}", mirror);
 
@@ -60,7 +61,7 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
 
     try!(File::create(&Path::new("/vagga/root/etc/apk/repositories"))
          .and_then(|mut f|
-            writeln!(f, "{}{}/main", mirror, version))
+            writeln!(&mut f, "{}{}/main", mirror, version))
         .map_err(|e| format!("Error creating apk repo: {}", e)));
     try!(apk_run(&[
         "--allow-untrusted",
@@ -104,16 +105,16 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     remove(ctx, &pkgs)
 }
 
-pub fn ensure_npm(ctx: &mut BuildContext, features: &[npm::NpmFeatures])
+pub fn ensure_npm(ctx: &mut BuildContext, features: &[Npm])
     -> Result<Path, String>
 {
     let mut packages = vec!("nodejs".to_string());
     ctx.packages.extend(packages.clone().into_iter());
     for i in features.iter() {
         let dep = match *i {
-            npm::Dev => "nodejs-dev".to_string(),
-            npm::Npm => continue,
-            npm::Rev(name) => revcontrol_package(name),
+            Npm::Dev => "nodejs-dev".to_string(),
+            Npm::Npm => continue,
+            Npm::Rev(name) => revcontrol_package(name),
         };
         if !ctx.packages.contains(&dep) {
             if ctx.build_deps.insert(dep.clone()) {
@@ -129,15 +130,14 @@ pub fn ensure_npm(ctx: &mut BuildContext, features: &[npm::NpmFeatures])
     return Ok(Path::new("/usr/bin/npm"));
 }
 
-pub fn revcontrol_package(name: dev::RevControl) -> String {
+pub fn revcontrol_package(name: RevControl) -> String {
     match name {
-        dev::Git => "git".to_string(),
-        dev::Hg => "hg".to_string(),
+        RevControl::Git => "git".to_string(),
+        RevControl::Hg => "hg".to_string(),
     }
 }
 
-pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
-    features: &[pip::PipFeatures])
+pub fn ensure_pip(ctx: &mut BuildContext, ver: u8, features: &[Pip])
     -> Result<Path, String>
 {
     if ver != 2 {
@@ -149,11 +149,11 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
     ctx.packages.extend(packages.clone().into_iter());
     for i in features.iter() {
         let dep = match *i {
-            pip::Dev => (if ver == 2 { "python-dev" }
+            Pip::Dev => (if ver == 2 { "python-dev" }
                          else { "python3-dev" }).to_string(),
-            pip::Pip => (if ver == 2 { "py-pip" }
+            Pip::Pip => (if ver == 2 { "py-pip" }
                          else { "py3-pip" }).to_string(),
-            pip::Rev(name) => "git".to_string(),
+            Pip::Rev(name) => "git".to_string(),
         };
         if !ctx.packages.contains(&dep) {
             if ctx.build_deps.insert(dep.clone()) {

@@ -1,30 +1,31 @@
-use std::fmt::{Show, Formatter, FormatError};
+use std::fmt::{Show, Formatter};
+use std::fmt::Error as FormatError;
 use std::default::Default;
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 
 use quire::validate as V;
 use serialize::json;
 
-#[deriving(Encodable, Decodable, Show, Clone)]
+#[derive(Encodable, Decodable, Show, Clone)]
 pub struct DebianRepo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[deriving(Encodable, Decodable, Show, Clone)]
+#[derive(Encodable, Decodable, Show, Clone)]
 pub struct AptKey {
     pub key_server: String,
     pub keys: Vec<String>,
 }
 
-#[deriving(Encodable, Decodable, Show, Clone)]
+#[derive(Encodable, Decodable, Show, Clone)]
 pub struct PacmanRepo {
     pub name: String,
     pub url: String,
 }
 
-#[deriving(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Clone)]
 pub struct TarInfo {
     pub url: String,
     pub sha256: Option<String>,
@@ -32,7 +33,7 @@ pub struct TarInfo {
     pub subdir: Path,
 }
 
-#[deriving(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Clone)]
 pub struct TarInstallInfo {
     pub url: String,
     pub sha256: Option<String>,
@@ -40,20 +41,20 @@ pub struct TarInstallInfo {
     pub script: String,
 }
 
-#[deriving(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Clone)]
 pub struct FileInfo {
     pub name: Path,
     pub contents: String,
 }
 
-#[deriving(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Clone)]
 pub struct UbuntuRepoInfo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[deriving(Default, Clone, Decodable, Encodable)]
+#[derive(Default, Clone, Decodable, Encodable)]
 pub struct PipSettings {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
@@ -61,12 +62,12 @@ pub struct PipSettings {
 }
 
 
-#[deriving(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Clone)]
 pub enum Builder {
     // -- Generic --
     Sh(String),
     Cmd(Vec<String>),
-    Env(TreeMap<String, String>),
+    Env(BTreeMap<String, String>),
     Depends(Path),
     Tar(TarInfo),
     TarInstall(TarInstallInfo),
@@ -74,7 +75,7 @@ pub enum Builder {
     Remove(Path),
     EnsureDir(Path),
     EmptyDir(Path),
-    CacheDirs(TreeMap<Path, String>),
+    CacheDirs(BTreeMap<Path, String>),
     //Busybox,
 
     // -- Generic --

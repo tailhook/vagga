@@ -2,7 +2,7 @@ use std::io::ALL_PERMISSIONS;
 use std::io::fs::{mkdir_recursive, mkdir};
 use std::io::fs::PathExtensions;
 use std::default::Default;
-use std::collections::{TreeMap, TreeSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::util::clean_dir;
@@ -13,7 +13,7 @@ use super::commands::alpine::AlpineInfo;
 use super::commands::debian;
 use super::commands::alpine;
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Distribution {
     Unknown,
     Ubuntu(UbuntuInfo),
@@ -23,16 +23,16 @@ pub enum Distribution {
 pub struct BuildContext<'a> {
     pub container_name: String,
     pub container_config: Container,
-    ensure_dirs: TreeSet<Path>,
-    empty_dirs: TreeSet<Path>,
-    remove_dirs: TreeSet<Path>,
-    cache_dirs: TreeMap<Path, String>,
-    pub environ: TreeMap<String, String>,
+    ensure_dirs: BTreeSet<Path>,
+    empty_dirs: BTreeSet<Path>,
+    remove_dirs: BTreeSet<Path>,
+    cache_dirs: BTreeMap<Path, String>,
+    pub environ: BTreeMap<String, String>,
 
     pub distribution: Distribution,
     pub pip_settings: PipSettings,
-    pub packages: TreeSet<String>,
-    pub build_deps: TreeSet<String>,
+    pub packages: BTreeSet<String>,
+    pub build_deps: BTreeSet<String>,
 }
 
 impl<'a> BuildContext<'a> {
@@ -63,10 +63,10 @@ impl<'a> BuildContext<'a> {
                  .to_string()),
                 ).into_iter().collect(),
 
-            distribution: Unknown,
+            distribution: Distribution::Unknown,
             pip_settings: Default::default(),
-            packages: TreeSet::new(),
-            build_deps: TreeSet::new(),
+            packages: BTreeSet::new(),
+            build_deps: BTreeSet::new(),
         };
     }
 
@@ -75,7 +75,7 @@ impl<'a> BuildContext<'a> {
     {
         assert!(path.is_absolute());
         let path = path.path_relative_from(&Path::new("/")).unwrap();
-        if self.cache_dirs.insert(path.clone(), name.clone()) {
+        if self.cache_dirs.insert(path.clone(), name.clone()).is_none() {
             let cache_dir = Path::new("/vagga/cache").join(name.as_slice());
             if !cache_dir.exists() {
                 try!(mkdir(&cache_dir, ALL_PERMISSIONS)
@@ -115,18 +115,18 @@ impl<'a> BuildContext<'a> {
     pub fn finish(&mut self) -> Result<(), String> {
 
         match self.distribution {
-            Unknown => {}
-            Ubuntu(_) => {
+            Distribution::Unknown => {}
+            Distribution::Ubuntu(_) => {
                 try!(debian::finish(self));
             }
-            Alpine(_) => {
+            Distribution::Alpine(_) => {
                 try!(alpine::finish(self));
             }
         }
 
         let base = Path::new("/vagga/root");
 
-        for (dir, _) in self.cache_dirs.rev_iter() {
+        for (dir, _) in self.cache_dirs.iter().rev() {
             try!(unmount(&base.join(dir)));
         }
 

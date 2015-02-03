@@ -1,14 +1,15 @@
 use super::super::context::{BuildContext};
 use super::generic::run_command;
-use super::super::context as distr;
-use super::super::dev;
+use super::super::context::Distribution as Distr;
+use super::super::dev::RevControl;
 use super::debian;
 use super::alpine;
+use self::NpmFeatures::*;
 
 pub enum NpmFeatures {
     Dev,
     Npm,
-    Rev(dev::RevControl),
+    Rev(RevControl),
 }
 
 pub fn scan_features(pkgs: &Vec<String>) -> Vec<NpmFeatures> {
@@ -17,7 +18,7 @@ pub fn scan_features(pkgs: &Vec<String>) -> Vec<NpmFeatures> {
     res.push(Npm);
     for name in pkgs.iter() {
         if name.as_slice().starts_with("git://") {
-            res.push(Rev(dev::Git));
+            res.push(Rev(RevControl::Git));
         }
     }
     return res;
@@ -27,16 +28,16 @@ pub fn ensure_npm(ctx: &mut BuildContext, features: &[NpmFeatures])
     -> Result<Path, String>
 {
     match ctx.distribution {
-        distr::Unknown => {
+        Distr::Unknown => {
             //  Currently use alpine by default as it has smallest disk
             //  footprint
             try!(alpine::setup_base(ctx, &alpine::LATEST_VERSION.to_string()));
             return alpine::ensure_npm(ctx, features);
         }
-        distr::Ubuntu(_) => {
+        Distr::Ubuntu(_) => {
             return debian::ensure_npm(ctx, features);
         }
-        distr::Alpine(_) => {
+        Distr::Alpine(_) => {
             return alpine::ensure_npm(ctx, features);
         }
     }

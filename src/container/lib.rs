@@ -1,11 +1,11 @@
 #![crate_name="container"]
 #![crate_type="lib"]
-#![feature(if_let, phase, macro_rules, slicing_syntax)]
+#![feature(slicing_syntax)]
 
 extern crate libc;
-extern crate time;
 extern crate serialize;
-#[phase(plugin, link)] extern crate log;
+extern crate collections;
+#[macro_use] extern crate log;
 
 extern crate config;
 

@@ -6,13 +6,13 @@ use argparse::{ArgumentParser, Store, List};
 
 use config::Config;
 use config::command::{Networking};
-use config::command::main;
+use config::command::{MainCommand};
 use container::nsutil::set_namespace;
-use container::container::NewNet;
+use container::container::Namespace::NewNet;
 
 
 pub fn run_command_cmd(config: &Config, args: Vec<String>)
-    -> Result<(), Result<int, String>>
+    -> Result<(), Result<isize, String>>
 {
     let mut subcommand = "".to_string();
     let mut command = "".to_string();
@@ -24,13 +24,13 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
             The command runs in current mount namespace (i.e. same file system)
             ");
         ap.refer(&mut subcommand)
-            .add_argument("node", box Store::<String>,
+            .add_argument("node", Box::new(Store::<String>),
                 "A node (subcommand) which namespace to run in");
         ap.refer(&mut command)
-            .add_argument("command", box Store::<String>,
+            .add_argument("command", Box::new(Store::<String>),
                 "A command to run in namespace");
         ap.refer(&mut cmdargs)
-            .add_argument("args", box List::<String>,
+            .add_argument("args", Box::new(List::<String>),
                 "Additional arguments to command");
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -42,15 +42,15 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         }
     }
     let cmd = try!(getenv("VAGGA_COMMAND")
-        .and_then(|cmd| config.commands.find(&cmd))
+        .and_then(|cmd| config.commands.get(&cmd))
         .ok_or(Err(format!("This command is supposed to be run inside \
                         container started by vagga !Supervise command"))));
     let sup = match cmd {
-        &main::Supervise(ref sup) => sup,
+        &MainCommand::Supervise(ref sup) => sup,
         _ => return Err(Err(format!("This command is supposed to be run \
                 inside container started by vagga !Supervise command"))),
     };
-    let ip = if let Some(child) = sup.children.find(&subcommand) {
+    let ip = if let Some(child) = sup.children.get(&subcommand) {
         if let Some(ref netw) = child.network() {
             netw.ip.clone()
         } else {
@@ -68,7 +68,7 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
     cmd.args(cmdargs.as_slice());
     match cmd.status() {
         Ok(ExitStatus(0)) => Ok(()),
-        e => Err(Err(format!("Error running {}: {}", command, e))),
+        e => Err(Err(format!("Error running {}: {:?}", command, e))),
     }
 }
 

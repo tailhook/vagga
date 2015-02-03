@@ -1,20 +1,23 @@
 #![allow(dead_code)]
 
-use std::fmt::{Show, Formatter, FormatError};
-use std::c_str::{CString, ToCStr};
+use std::fmt::{Show, Formatter};
+use std::fmt::Error as FormatError;
+use std::ffi::{CString};
+use std::path::BytesContainer;
 use std::ptr::null;
 use std::io::IoError;
 use std::os::getcwd;
-use std::collections::TreeMap;
-use std::collections::enum_set::{EnumSet, CLike};
+use std::collections::BTreeMap;
+use collections::enum_set::{EnumSet, CLike};
 
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 
 use libc::{c_int, c_char, pid_t};
+use self::Namespace::*;
 
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Namespace {
     NewMount,
     NewUts,
@@ -25,7 +28,7 @@ pub enum Namespace {
 }
 
 impl CLike for Namespace {
-    fn to_uint(&self) -> uint {
+    fn to_uint(&self) -> usize {
         match *self {
             NewMount => 0,
             NewUts => 1,
@@ -35,7 +38,7 @@ impl CLike for Namespace {
             NewNet => 5,
         }
     }
-    fn from_uint(val: uint) -> Namespace {
+    fn from_uint(val: usize) -> Namespace {
         match val {
             0 => NewMount,
             1 => NewUts,
@@ -54,10 +57,10 @@ pub struct Command {
     chroot: CString,
     executable: CString,
     arguments: Vec<CString>,
-    environment: TreeMap<String, String>,
+    environment: BTreeMap<String, String>,
     namespaces: EnumSet<Namespace>,
     restore_sigmask: bool,
-    user_id: uint,
+    user_id: usize,
     workdir: CString,
     uidmap: Option<Uidmap>,
     stdin: i32,
@@ -74,15 +77,15 @@ impl Show for Command {
 }
 
 impl Command {
-    pub fn new<T:ToCStr>(name: String, cmd: T) -> Command {
+    pub fn new<T:BytesContainer>(name: String, cmd: T) -> Command {
         return Command {
             name: name,
-            chroot: "/".to_c_str(),
-            workdir: getcwd().to_c_str(),
-            executable: cmd.to_c_str(),
-            arguments: vec!(cmd.to_c_str()),
-            namespaces: EnumSet::empty(),
-            environment: TreeMap::new(),
+            chroot: CString::from_slice("/".as_bytes()),
+            workdir: CString::from_slice(getcwd().unwrap().container_as_bytes()),
+            executable: CString::from_slice(cmd.container_as_bytes()),
+            arguments: vec!(CString::from_slice(cmd.container_as_bytes())),
+            namespaces: EnumSet::new(),
+            environment: BTreeMap::new(),
             restore_sigmask: true,
             user_id: 0,
             uidmap: None,
@@ -91,7 +94,7 @@ impl Command {
             stderr: 2,
         };
     }
-    pub fn set_user_id(&mut self, uid: uint) {
+    pub fn set_user_id(&mut self, uid: usize) {
         self.user_id = uid;
     }
     pub fn set_stdout_fd(&mut self, fd: i32) {
@@ -104,63 +107,67 @@ impl Command {
         self.stdin = fd;
     }
     pub fn chroot(&mut self, dir: &Path) {
-        self.chroot = dir.to_c_str();
+        self.chroot = CString::from_slice(dir.container_as_bytes());
     }
     pub fn set_workdir(&mut self, dir: &Path) {
-        self.workdir = dir.to_c_str();
+        self.workdir = CString::from_slice(dir.container_as_bytes());
     }
     pub fn keep_sigmask(&mut self) {
         self.restore_sigmask = false;
     }
-    pub fn arg<T:ToCStr>(&mut self, arg: T) {
-        self.arguments.push(arg.to_c_str());
+    pub fn arg<T:BytesContainer>(&mut self, arg: T) {
+        self.arguments.push(CString::from_slice(arg.container_as_bytes()));
     }
-    pub fn args<T:ToCStr>(&mut self, arg: &[T]) {
-        self.arguments.extend(arg.iter().map(|v| v.to_c_str()));
+    pub fn args<T:BytesContainer>(&mut self, arg: &[T]) {
+        self.arguments.extend(arg.iter()
+            .map(|v| CString::from_slice(v.container_as_bytes())));
     }
-    pub fn set_env(&mut self, key: String, value: String) {
+    pub fn set_env(&mut self, key: String, value: String)
+    {
         self.environment.insert(key, value);
     }
 
-    pub fn update_env<'x, I: Iterator<(&'x String, &'x String)>>(&mut self,
+    pub fn update_env<'x, I: Iterator<Item=(String, String)>>(&mut self,
         mut env: I)
     {
         for (k, v) in env {
-            self.environment.insert(k.clone(), v.clone());
+            self.environment.insert(k, v);
         }
     }
     pub fn set_max_uidmap(&mut self) {
-        self.namespaces.add(NewUser);
+        self.namespaces.insert(NewUser);
         self.uidmap = Some(get_max_uidmap().unwrap());
     }
     pub fn set_uidmap(&mut self, uidmap: Uidmap) {
-        self.namespaces.add(NewUser);
+        self.namespaces.insert(NewUser);
         self.uidmap = Some(uidmap);
     }
     pub fn network_ns(&mut self) {
-        self.namespaces.add(NewNet);
-        self.namespaces.add(NewUts);
+        self.namespaces.insert(NewNet);
+        self.namespaces.insert(NewUts);
     }
     pub fn container(&mut self) {
         // Network and user namespaces are set separately
-        self.namespaces.add(NewMount);
-        self.namespaces.add(NewIpc);
-        self.namespaces.add(NewPid);
+        self.namespaces.insert(NewMount);
+        self.namespaces.insert(NewIpc);
+        self.namespaces.insert(NewPid);
     }
     pub fn spawn(&self) -> Result<pid_t, String> {
         let mut exec_args: Vec<*const u8> = self.arguments.iter()
             .map(|a| a.as_bytes().as_ptr()).collect();
         exec_args.push(null());
         let environ_cstr: Vec<CString> = self.environment.iter()
-            .map(|(k, v)| (*k + "=" + *v).to_c_str()).collect();
+            .map(|(k, v)| CString::from_slice(
+                (k.clone() + "=" + v.as_slice()).as_bytes()))
+            .collect();
         let mut exec_environ: Vec<*const u8> = environ_cstr.iter()
             .map(|p| p.as_bytes().as_ptr()).collect();
         exec_environ.push(null());
 
-        let logprefix = format!(
+        let logprefix = CString::from_slice(format!(
             // Only errors are logged from C code
             "ERROR:lithos::container.c: [{}]", self.name
-            ).to_c_str();
+            ).as_bytes());
 
         let pipe = try!(CPipe::new()
                         .map_err(|e| format!("Error creating pipe: {}", e)));

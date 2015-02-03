@@ -1,15 +1,15 @@
 use std::default::Default;
-use std::collections::TreeMap;
+use std::collections::BTreeMap;
 
 use quire::validate as V;
-use quire::ast as A;
-
-pub use self::main::MainCommand;
-pub use self::child::ChildCommand;
+use quire::ast::Ast as A;
+use quire::ast::Ast;
+use quire::ast::Tag::{NonSpecific};
+use quire::ast::ScalarKind::{Plain};
 
 type PortNumValidator = V::Numeric<u16>;
 
-#[deriving(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Pid1Mode {
     exec = 0,
@@ -17,7 +17,7 @@ pub enum Pid1Mode {
     wait_all_children = 2,
 }
 
-#[deriving(Decodable, Show, Clone, PartialEq, Eq)]
+#[derive(Decodable, Show, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum SuperviseMode {
     wait_all,
@@ -25,7 +25,7 @@ pub enum SuperviseMode {
     restart,
 }
 
-#[deriving(Decodable, Show, Clone, PartialEq, Eq)]
+#[derive(Decodable, Show, Clone, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum WriteMode {
     read_only,
@@ -33,14 +33,14 @@ pub enum WriteMode {
     transient_hardlink_copy,
 }
 
-#[deriving(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq)]
 pub struct Network {
     pub ip: String,
     pub hostname: Option<String>,
-    pub ports: TreeMap<u16, u16>,
+    pub ports: BTreeMap<u16, u16>,
 }
 
-#[deriving(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common for toplevel commands
     pub description: Option<String>,
@@ -54,13 +54,13 @@ pub struct CommandInfo {
     pub work_dir: Option<String>,
     pub container: String,
     pub accepts_arguments: Option<bool>,
-    pub environ: TreeMap<String, String>,
+    pub environ: BTreeMap<String, String>,
     pub inherit_environ: Vec<String>,
     pub write_mode: WriteMode,
     pub run: Vec<String>,
 }
 
-#[deriving(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq)]
 pub struct SuperviseInfo {
     // Common
     pub description: Option<String>,
@@ -70,56 +70,48 @@ pub struct SuperviseInfo {
 
     // Supervise
     pub mode: SuperviseMode,
-    pub children: TreeMap<String, ChildCommand>,
+    pub children: BTreeMap<String, ChildCommand>,
 }
 
-pub mod main {
-    use super::{CommandInfo, SuperviseInfo};
+#[derive(Decodable, PartialEq, Eq, Clone)]
+pub enum MainCommand {
+    Command(CommandInfo),
+    Supervise(SuperviseInfo),
+}
 
-    #[deriving(Decodable, PartialEq, Eq, Clone)]
-    pub enum MainCommand {
-        Command(CommandInfo),
-        Supervise(SuperviseInfo),
-    }
-
-    impl MainCommand {
-        pub fn description<'x>(&'x self) -> Option<&'x String> {
-            match *self {
-                Command(ref cmd) => cmd.description.as_ref(),
-                Supervise(ref cmd) => cmd.description.as_ref(),
-            }
+impl MainCommand {
+    pub fn description<'x>(&'x self) -> Option<&'x String> {
+        match *self {
+            MainCommand::Command(ref cmd) => cmd.description.as_ref(),
+            MainCommand::Supervise(ref cmd) => cmd.description.as_ref(),
         }
     }
 }
 
-pub mod child {
-    use super::CommandInfo;
+#[derive(Decodable, PartialEq, Eq, Clone)]
+pub enum ChildCommand {
+    Command(CommandInfo),
+    BridgeCommand(CommandInfo),
+}
 
-    #[deriving(Decodable, PartialEq, Eq, Clone)]
-    pub enum ChildCommand {
-        Command(CommandInfo),
-        BridgeCommand(CommandInfo),
-    }
-
-    impl ChildCommand {
-        pub fn get_container<'x>(&'x self) -> &String {
-            match *self {
-                Command(ref info) => &info.container,
-                BridgeCommand(ref info) => &info.container,
-            }
+impl ChildCommand {
+    pub fn get_container<'x>(&'x self) -> &String {
+        match *self {
+            ChildCommand::Command(ref info) => &info.container,
+            ChildCommand::BridgeCommand(ref info) => &info.container,
         }
     }
 }
 
-fn shell_command(ast: A::Ast) -> Vec<A::Ast> {
+fn shell_command(ast: Ast) -> Vec<Ast> {
     match ast {
         A::Scalar(pos, _, style, value) => {
             return vec!(
-                A::Scalar(pos.clone(), A::NonSpecific, A::Plain,
+                A::Scalar(pos.clone(), NonSpecific, Plain,
                           "/bin/sh".to_string()),
-                A::Scalar(pos.clone(), A::NonSpecific, A::Plain,
+                A::Scalar(pos.clone(), NonSpecific, Plain,
                           "-c".to_string()),
-                A::Scalar(pos.clone(), A::NonSpecific, style,
+                A::Scalar(pos.clone(), NonSpecific, style,
                           value),
                 );
         }
@@ -156,7 +148,7 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
             default: Some("read-only".to_string()),
             .. Default::default()} as Box<V::Validator>),
         ("run".to_string(), box V::Sequence {
-            from_scalar: Some(shell_command),
+            from_scalar: Some(shell_command as fn(Ast) -> Vec<Ast>),
             element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
             .. Default::default()} as Box<V::Validator>),
@@ -244,11 +236,11 @@ pub trait Networking {
     fn network<'x>(&'x self) -> Option<&'x Network>;
 }
 
-impl Networking for child::ChildCommand {
+impl Networking for ChildCommand {
     fn network<'x>(&'x self) -> Option<&'x Network> {
         match self {
-            &child::Command(ref cmd) => cmd.network.as_ref(),
-            &child::BridgeCommand(_) => None,
+            &ChildCommand::Command(ref cmd) => cmd.network.as_ref(),
+            &ChildCommand::BridgeCommand(_) => None,
         }
     }
 }

@@ -1,12 +1,11 @@
-#![feature(phase, if_let, slicing_syntax)]
+#![feature(box_syntax)]
 
 extern crate quire;
 extern crate argparse;
 extern crate serialize;
 extern crate libc;
 extern crate regex;
-#[phase(plugin)] extern crate regex_macros;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 extern crate config;
 extern crate container;
@@ -23,7 +22,7 @@ mod network;
 mod supervisor;
 
 
-pub fn run() -> int {
+pub fn run() -> isize {
     let mut err = stderr();
     let mut cname = "".to_string();
     let mut args = vec!();
@@ -49,7 +48,7 @@ pub fn run() -> int {
         }
     }
 
-    let workdir = getcwd();
+    let workdir = getcwd().unwrap();
 
     let (config, cfg_dir) = match find_config(&workdir) {
         Ok(tup) => tup,
@@ -61,7 +60,7 @@ pub fn run() -> int {
     let int_workdir = workdir.path_relative_from(&cfg_dir)
                              .unwrap_or(Path::new("."));
 
-    let result:Result<int, String> = match cname.as_slice() {
+    let result:Result<isize, String> = match cname.as_slice() {
         "" => {
             err.write_line("Available commands:").ok();
             for (k, cmd) in config.commands.iter() {

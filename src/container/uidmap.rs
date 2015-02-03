@@ -2,7 +2,8 @@ use std::io::{IoError, OtherIoError};
 use std::io::{File, Open, Write};
 use std::io::{BufferedReader, MemWriter};
 use std::cmp::min;
-use std::from_str::FromStr;
+use std::cmp::Ordering;
+use std::str::FromStr;
 use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
@@ -11,8 +12,9 @@ use libc::{pid_t, uid_t, gid_t};
 use config::Range;
 use config::Settings;
 use super::util::get_user_name;
+use self::Uidmap::*;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum Uidmap {
     Singleton(uid_t, gid_t),
     Ranges(Vec<(uid_t, uid_t, uid_t)>, Vec<(gid_t, gid_t, gid_t)>),
@@ -30,12 +32,12 @@ fn read_uid_map() -> Result<Vec<Range>,String> {
         let line = try!(line.map_err(
             |e| format!("Error reading /etc/subuid: {}", e)));
         let parts: Vec<&str> = line.as_slice().split(':').collect();
-        let start = from_str(parts[1]);
-        let count = from_str(parts[2].trim_right());
+        let start = FromStr::from_str(parts[1]);
+        let count = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_none() || count.is_none() {
             return Err(format!("/etc/subuid:{}: Bad syntax", num+1));
         }
-        if parts[0].eq(&user.as_slice()) {
+        if parts[0].eq(user.as_slice()) {
             let start: uid_t = start.unwrap();
             let end = start + count.unwrap() - 1;
             res.push(Range::new(start, end));
@@ -55,12 +57,12 @@ fn read_gid_map() -> Result<Vec<Range>,String> {
         let line = try!(line.map_err(
             |e| format!("Error reading /etc/subgid: {}", e)));
         let parts: Vec<&str> = line.as_slice().split(':').collect();
-        let start = from_str(parts[1]);
-        let count = from_str(parts[2].trim_right());
+        let start = FromStr::from_str(parts[1]);
+        let count = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_none() || count.is_none() {
             return Err(format!("/etc/subgid:{}: Bad syntax", num+1));
         }
-        if parts[0].eq(&user.as_slice()) {
+        if parts[0].eq(user.as_slice()) {
             let start: gid_t = start.unwrap();
             let end = start + count.unwrap() - 1;
             res.push(Range::new(start, end));
@@ -255,7 +257,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                 }
                 let mut file = try!(File::create(&Path::new(
                     format!("/proc/{}/uid_map", pid))));
-                let value = membuf.unwrap();
+                let value = membuf.into_inner();
                 debug!("Writing uid map ```{}```",
                     String::from_utf8_lossy(value.as_slice()));
                 try!(file.write(value.as_slice()));
@@ -266,7 +268,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                 }
                 let mut file = try!(File::create(&Path::new(
                     format!("/proc/{}/gid_map", pid))));
-                let value = membuf.unwrap();
+                let value = membuf.into_inner();
                 debug!("Writing gid map ```{}```",
                     String::from_utf8_lossy(value.as_slice()));
                 try!(file.write(value.as_slice()));

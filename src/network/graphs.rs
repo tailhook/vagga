@@ -7,10 +7,11 @@ use argparse::{ArgumentParser, List};
 
 use config::Config;
 use config::command::{Networking};
-use config::command::{main};
+use config::command::{MainCommand};
+use self::NodeLinks::*;
 
 
-#[deriving(PartialEq)]
+#[derive(PartialEq)]
 pub enum NodeLinks {
     Full,
     Isolate,
@@ -25,11 +26,11 @@ pub fn get_full_mesh(config: &Config)
     -> Result<(HashMap<String, String>, Graph), String>
 {
     let cmd = try!(getenv("VAGGA_COMMAND")
-        .and_then(|cmd| config.commands.find(&cmd))
+        .and_then(|cmd| config.commands.get(&cmd))
         .ok_or(format!("This command is supposed to be run inside \
                         container started by vagga !Supervise command")));
     let sup = match cmd {
-        &main::Supervise(ref sup) => sup,
+        &MainCommand::Supervise(ref sup) => sup,
         _ => return Err(format!("This command is supposed to be run \
                 inside container started by vagga !Supervise command")),
     };
@@ -51,7 +52,7 @@ pub fn get_full_mesh(config: &Config)
 }
 
 pub fn full_mesh_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<int, String>>
+    -> Result<Graph, Result<isize, String>>
 {
     {
         let mut ap = ArgumentParser::new();
@@ -69,7 +70,7 @@ pub fn full_mesh_cmd(config: &Config, args: Vec<String>)
 }
 
 pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<int, String>>
+    -> Result<Graph, Result<isize, String>>
 {
     let mut nodes: Vec<String> = vec!();
     {
@@ -79,7 +80,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             specified exactly once. Clusters are separated by double-dash.
             ");
         ap.refer(&mut nodes)
-            .add_argument("node", box List::<String>, r#"
+            .add_argument("node", Box::new(List::<String>), r#"
                 List of nodes separated in clusters by "--"
                 "#);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -94,7 +95,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
 }
 
 pub fn split_graph_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<int, String>>
+    -> Result<Graph, Result<isize, String>>
 {
     let mut nodes: Vec<String> = vec!();
     {
@@ -105,7 +106,7 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             from all others.
             ");
         ap.refer(&mut nodes)
-            .add_argument("node", box List::<String>, r#"
+            .add_argument("node", Box::new(List::<String>), r#"
                 List of nodes separated in clusters by "--"
                 "#);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -134,7 +135,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
             }
             continue;
         }
-        let ip = try!(ips.find(v)
+        let ip = try!(ips.get(v)
             .ok_or(format!("Node {} does not exists or has no IP", v)));
         cluster.push(ip.to_string());
         if !visited.insert(ip.to_string()) {
@@ -172,7 +173,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
         }
     }
     for (i, j) in pairs.into_iter() {
-        let node = graph.nodes.find_mut(&i).unwrap();
+        let node = graph.nodes.get_mut(&i).unwrap();
         if *node == Full {
             *node = DropSome(ips.iter()
                 .filter(|&(_, ip)| ip.as_slice() != j.as_slice())
@@ -192,7 +193,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
 }
 
 pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<int, String>>
+    -> Result<Graph, Result<isize, String>>
 {
     let mut nodes: Vec<String> = vec!();
     {
@@ -203,7 +204,7 @@ pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
             from all others.
             ");
         ap.refer(&mut nodes)
-            .add_argument("node", box List::<String>, r#"
+            .add_argument("node", Box::new(List::<String>), r#"
                 List of nodes separated in clusters by "--"
                 "#);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -216,9 +217,9 @@ pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
     }
     let (ips, mut graph) = try!(get_full_mesh(config).map_err(Err));
     for v in nodes.iter() {
-        let ip = try!(ips.find(v)
+        let ip = try!(ips.get(v)
             .ok_or(Err(format!("Node {} does not exists", v))));
-        *graph.nodes.find_mut(ip).unwrap() = Isolate;
+        *graph.nodes.get_mut(ip).unwrap() = Isolate;
     }
     return Ok(graph);
 }

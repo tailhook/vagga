@@ -1,15 +1,16 @@
 use super::super::context::{BuildContext};
 use super::generic::run_command;
-use super::super::context as distr;
-use super::super::dev;
+use super::super::context::Distribution as Distr;
+use super::super::dev::RevControl;
 use super::debian;
 use super::alpine;
+use self::PipFeatures::*;
 
 
 pub enum PipFeatures {
     Dev,
     Pip,
-    Rev(dev::RevControl),
+    Rev(RevControl),
 }
 
 
@@ -18,13 +19,13 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
     -> Result<Path, String>
 {
     match ctx.distribution {
-        distr::Unknown => {
+        Distr::Unknown => {
             return Err(format!("Unsupported distribution"));
         }
-        distr::Ubuntu(_) => {
+        Distr::Ubuntu(_) => {
             return debian::ensure_pip(ctx, ver, features);
         }
-        distr::Alpine(_) => {
+        Distr::Alpine(_) => {
             return alpine::ensure_pip(ctx, ver, features);
         }
     }
@@ -36,9 +37,9 @@ pub fn scan_features(pkgs: &Vec<String>) -> Vec<PipFeatures> {
     res.push(Pip);
     for name in pkgs.iter() {
         if name.as_slice().starts_with("git+") {
-            res.push(Rev(dev::Git));
+            res.push(Rev(RevControl::Git));
         } else if name.as_slice().starts_with("hg+") {
-            res.push(Rev(dev::Hg));
+            res.push(Rev(RevControl::Hg));
         }
     }
     return res;

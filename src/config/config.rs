@@ -1,7 +1,7 @@
 use std::default::Default;
 use std::io::fs::PathExtensions;
 
-use std::collections::treemap::TreeMap;
+use std::collections::BTreeMap;
 use serialize::{Decoder};
 
 use quire::parse_config;
@@ -11,10 +11,10 @@ use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
 
-#[deriving(Decodable)]
+#[derive(Decodable)]
 pub struct Config {
-    pub commands: TreeMap<String, MainCommand>,
-    pub containers: TreeMap<String, Container>,
+    pub commands: BTreeMap<String, MainCommand>,
+    pub containers: BTreeMap<String, Container>,
 }
 
 pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
@@ -35,7 +35,7 @@ pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
 fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
     let mut dir = work_dir.clone();
     loop {
-        let fname = dir.join_many([".vagga", "vagga.yaml"]);
+        let fname = dir.join_many(&[".vagga", "vagga.yaml"]);
         if fname.exists() {
             return Some((dir, fname));
         }

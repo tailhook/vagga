@@ -1,8 +1,6 @@
-#![feature(phase, if_let)]
-
 extern crate argparse;
 extern crate serialize;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 use std::io::BufferedReader;
 use std::os::set_exit_status;
@@ -46,13 +44,13 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Set up intermediate (gateway) network namespace
             ");
         ap.refer(&mut guest_ip)
-            .add_option(&["--guest-ip"], box Store::<String>,
+            .add_option(&["--guest-ip"], Box::new(Store::<String>),
                 "IP to use on the vagga_guest interface");
         ap.refer(&mut network)
-            .add_option(&["--network"], box Store::<String>,
+            .add_option(&["--network"], Box::new(Store::<String>),
                 "Network address");
         ap.refer(&mut gateway_ip)
-            .add_option(&["--gateway-ip"], box Store::<String>,
+            .add_option(&["--gateway-ip"], Box::new(Store::<String>),
                 "Gateway address");
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -105,9 +103,9 @@ fn setup_gateway_namespace(args: Vec<String>) {
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
     cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-    cmd.args(["-t", "nat", "-A", "POSTROUTING",
-              "-o", "vagga_guest",
-              "-j", "MASQUERADE"]);
+    cmd.args(&["-t", "nat", "-A", "POSTROUTING",
+               "-o", "vagga_guest",
+               "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for cmd in commands.iter() {
@@ -115,7 +113,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
-                error!("Error running command {}: {}", cmd, err);
+                error!("Error running command {}: {:?}", cmd, err);
                 set_exit_status(1);
                 return;
             }
@@ -134,20 +132,19 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Set up intermediate (bridge) network namespace
             ");
         ap.refer(&mut interface)
-            .add_option(&["--interface"], box Store::<String>,
+            .add_option(&["--interface"], Box::new(Store::<String>),
                 "Network interface name")
             .required();
         ap.refer(&mut ip)
-            .add_option(&["--ip"], box Store::<String>,
+            .add_option(&["--ip"], Box::new(Store::<String>),
                 "IP to use on the interface")
             .required();
         ap.refer(&mut gateway_ip)
-            .add_option(&["--gateway-ip"], box Store::<String>,
+            .add_option(&["--gateway-ip"], Box::new(Store::<String>),
                 "Gateway to use on the interface")
             .required();
         ap.refer(&mut ports_str)
-            .add_option(&["--port-forwards"],
-                box Store::<String>,
+            .add_option(&["--port-forwards"], Box::new(Store::<String>),
                 "Port forwards though bridge")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -213,14 +210,14 @@ fn setup_bridge_namespace(args: Vec<String>) {
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
     cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-    cmd.args(["-t", "nat", "-A", "POSTROUTING",
-              "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
+    cmd.args(&["-t", "nat", "-A", "POSTROUTING",
+               "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for &(sport, ref dip, dport) in ports.iter() {
         let mut cmd = Command::new("iptables");
         cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-        cmd.args(["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
+        cmd.args(&["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
             "--dport", format!("{}", sport).as_slice(), "-j", "DNAT",
             "--to-destination", format!("{}:{}", dip, dport).as_slice()]);
         commands.push(cmd);
@@ -231,7 +228,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
-                error!("Error running command {}: {}", cmd, err);
+                error!("Error running command {}: {:?}", cmd, err);
                 set_exit_status(1);
                 return;
             }
@@ -250,19 +247,19 @@ fn setup_guest_namespace(args: Vec<String>) {
             Set up guest network namespace
             ");
         ap.refer(&mut interface)
-            .add_option(&["--interface"], box Store::<String>,
+            .add_option(&["--interface"], Box::new(Store::<String>),
                 "Network interface name")
             .required();
         ap.refer(&mut ip)
-            .add_option(&["--ip"], box Store::<String>,
+            .add_option(&["--ip"], Box::new(Store::<String>),
                 "IP to use on the interface")
             .required();
         ap.refer(&mut gateway_ip)
-            .add_option(&["--gateway-ip"], box Store::<String>,
+            .add_option(&["--gateway-ip"], Box::new(Store::<String>),
                 "Gateway to use on the interface")
             .required();
         ap.refer(&mut hostname)
-            .add_option(&["--hostname"], box Store::<String>,
+            .add_option(&["--hostname"], Box::new(Store::<String>),
                 "IP and hostname to use")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -321,7 +318,7 @@ fn setup_guest_namespace(args: Vec<String>) {
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
-                error!("Error running command {}: {}", cmd, err);
+                error!("Error running command {}: {:?}", cmd, err);
                 set_exit_status(1);
                 return;
             }
@@ -338,10 +335,10 @@ fn main() {
             Set up network namespace for containers
             ");
         ap.refer(&mut kind)
-            .add_argument("kind", box Store::<String>,
+            .add_argument("kind", Box::new(Store::<String>),
                 "Kind of namespace to set up (bridge or container)");
         ap.refer(&mut args)
-            .add_argument("options", box List::<String>,
+            .add_argument("options", Box::new(List::<String>),
                 "Options specific for this kind");
         ap.stop_on_first_argument(true);
         match ap.parse_args() {

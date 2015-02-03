@@ -1,21 +1,18 @@
-#![feature(phase, if_let, slicing_syntax)]
-
 extern crate quire;
 extern crate argparse;
 extern crate serialize;
 extern crate regex;
 extern crate libc;
-#[phase(plugin)] extern crate regex_macros;
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 extern crate config;
-#[phase(plugin, link)] extern crate container;
+#[macro_use] extern crate container;
 
 use std::io::stderr;
 use std::os::{getcwd, set_exit_status};
 
 use config::{find_config, Config, Settings};
-use config::command::main::{Command, Supervise};
+use config::command::MainCommand::{Command, Supervise};
 use container::signal;
 use settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List};
@@ -38,7 +35,7 @@ struct Wrapper<'a> {
 }
 
 
-pub fn run() -> int {
+pub fn run() -> isize {
     let mut err = stderr();
     let mut cmd: String = "".to_string();
     let mut args: Vec<String> = Vec::new();
@@ -48,11 +45,11 @@ pub fn run() -> int {
             Internal vagga tool to setup basic system sandbox
             ");
         ap.refer(&mut cmd)
-          .add_argument("command", box Store::<String>,
+          .add_argument("command", Box::new(Store::<String>),
                 "A vagga command to run")
           .required();
         ap.refer(&mut args)
-          .add_argument("args", box List::<String>,
+          .add_argument("args", Box::new(List::<String>),
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         match ap.parse_args() {
@@ -64,7 +61,7 @@ pub fn run() -> int {
         }
     }
 
-    let workdir = getcwd();
+    let workdir = getcwd().unwrap();
 
     let (config, project_root) = match find_config(&workdir) {
         Ok(tup) => tup,
@@ -98,7 +95,7 @@ pub fn run() -> int {
         "_run" => run::run_command_cmd(&wrapper, args, true),
         "_run_in_netns" => run::run_command_cmd(&wrapper, args, false),
         _ => {
-            match config.commands.find(&cmd) {
+            match config.commands.get(&cmd) {
                 Some(&Command(ref cmd_info)) => {
                     commandline::commandline_cmd(cmd_info, &wrapper, args)
                 }

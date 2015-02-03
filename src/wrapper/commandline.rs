@@ -6,7 +6,7 @@ use argparse::{ArgumentParser};
 use config::command::CommandInfo;
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
-use container::monitor::{Killed, Exit};
+use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 
 use super::build;
@@ -17,7 +17,7 @@ use super::util::find_cmd;
 
 pub fn commandline_cmd(command: &CommandInfo,
     wrapper: &Wrapper, mut cmdline: Vec<String>)
-    -> Result<int, String>
+    -> Result<isize, String>
 {
     // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
@@ -39,12 +39,12 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
-    let mut cmdline = command.run + args;
+    let mut cmdline = command.run.clone() + args.as_slice();
 
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
-    let cconfig = try!(wrapper.config.containers.find(&command.container)
+    let cconfig = try!(wrapper.config.containers.get(&command.container)
         .ok_or(format!("Container {} not found", command.container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
@@ -57,7 +57,7 @@ pub fn commandline_cmd(command: &CommandInfo,
     for (k, v) in command.environ.iter() {
         env.insert(k.clone(), v.clone());
     }
-    let cpath = try!(find_cmd(cmdline.remove(0).unwrap().as_slice(), &env));
+    let cpath = try!(find_cmd(cmdline.remove(0).as_slice(), &env));
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(cmdline.as_slice());

@@ -51,7 +51,7 @@ impl CPipe {
 impl Drop for CPipe {
     fn drop(&mut self) {
         match self {
-            &CPipe(ref pipe) => {
+            &mut CPipe(ref pipe) => {
                 unsafe {
                     close(pipe.reader);
                     close(pipe.writer);

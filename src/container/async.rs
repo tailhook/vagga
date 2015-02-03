@@ -1,16 +1,19 @@
 use std::io::IoError;
+use std::cmp::Ordering;
 use std::time::Duration;
-use std::collections::PriorityQueue;
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
-use time::{Timespec, get_time};
 use libc::{c_int};
 use libc::consts::os::posix88::{EINTR, ETIMEDOUT, EAGAIN};
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 
 use super::signal;
+use super::util::{Time, get_time};
+use self::Event::*;
 
-static SIGCHLD: c_int = 17;
+const SIGCHLD: c_int = 17;
 
+#[derive(Show)]
 pub enum Event<Name> {
     Signal(signal::Signal),
     Timeout(Name),
@@ -22,10 +25,14 @@ struct FileDesc(c_int);
 struct Unordered<T>(T);
 
 impl<T> PartialOrd for Unordered<T> {
-    fn partial_cmp(&self, _: &Unordered<T>) -> Option<Ordering> { Some(Equal) }
+    fn partial_cmp(&self, _: &Unordered<T>) -> Option<Ordering> {
+        Some(Ordering::Equal)
+    }
 }
 impl<T> Ord for Unordered<T> {
-    fn cmp(&self, _: &Unordered<T>) -> Ordering { Equal }
+    fn cmp(&self, _: &Unordered<T>) -> Ordering {
+        Ordering::Equal
+    }
 }
 impl<T> PartialEq for Unordered<T> {
     fn eq(&self, _: &Unordered<T>) -> bool { false }
@@ -33,7 +40,7 @@ impl<T> PartialEq for Unordered<T> {
 impl<T> Eq for Unordered<T> {}
 
 pub struct Loop<Name> {
-    queue: PriorityQueue<(i64, Unordered<Name>)>,
+    queue: BinaryHeap<(i64, Unordered<Name>)>,
     epoll_fd: FileDesc,
     signal_fd: FileDesc,
     inputs: HashMap<c_int, Name>,
@@ -46,14 +53,6 @@ extern {
     fn epoll_add_read(efd: c_int, fd: c_int) -> c_int;
     fn epoll_wait_read(epfd: c_int, timeout: c_int) -> c_int;
     fn read_signal(rd: c_int) -> c_int;
-}
-
-pub fn time_to_ms(ts: Timespec) -> i64 {
-    return (ts.sec as i64) * 1000 + (ts.nsec as i64) / 1000000;
-}
-
-pub fn get_time_ms() -> i64 {
-    return time_to_ms(get_time());
 }
 
 impl<Name: Clone> Loop<Name> {
@@ -72,18 +71,18 @@ impl<Name: Clone> Loop<Name> {
             return Err(IoError::last_error());
         }
         return Ok(Loop {
-            queue: PriorityQueue::new(),
+            queue: BinaryHeap::new(),
             epoll_fd: epoll,
             signal_fd: sig,
             inputs: HashMap::new(),
         });
     }
     pub fn add_timeout(&mut self, duration: Duration, name: Name) {
-        self.queue.push((-time_to_ms(get_time() + duration), Unordered(name)));
+        self.queue.push((-(get_time()*1000.) as i64, Unordered(name)));
     }
     fn get_timeout(&mut self) -> c_int {
-        self.queue.top()
-            .map(|&(ts, _)| (-ts) - get_time_ms())
+        self.queue.peek()
+            .map(|&(ts, _)| (-ts) - (get_time()*1000.0) as i64)
             .map(|ts| if ts >= 0 { ts } else { 0 })
             .unwrap_or(-1)
             as i32
@@ -107,19 +106,20 @@ impl<Name: Clone> Loop<Name> {
             } else if fd == -EINTR {
                 continue
             } else if fd < 0 {
-                fail!(format!("Error in epoll: {}", IoError::last_error()));
+                panic!(format!("Error in epoll: {}", IoError::last_error()));
             } else if fd == sfd { // Signal
                 debug!("Signal");
                 let rc =  unsafe { read_signal(sfd) };
                 if rc == -EINTR || rc == -EAGAIN {
                     continue;
                 } else if rc <= 0 {
-                    fail!(format!("Error in read_signal: {}",
+                    panic!(format!("Error in read_signal: {}",
                         IoError::last_error()));
                 } else {
                     match rc {
                         sig@SIGTERM | sig@SIGINT | sig@SIGQUIT => {
-                            return Signal(signal::Terminate(sig as int));
+                            return Signal(
+                                signal::Signal::Terminate(sig as isize));
                         }
                         SIGCHLD => {
                             continue;  // Will waitpid on next iteration

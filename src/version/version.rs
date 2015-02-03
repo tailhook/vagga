@@ -3,8 +3,10 @@ use std::io::fs::File;
 
 use serialize::json;
 
-use config::builders as B;
+use config::builders::{Builder};
+use config::builders::Builder as B;
 use container::sha256::Digest;
+use self::HashResult::*;
 
 
 pub enum HashResult {
@@ -19,7 +21,7 @@ pub trait VersionHash {
 }
 
 
-impl VersionHash for B::Builder {
+impl VersionHash for Builder {
     fn hash(&self, hash: &mut Digest) -> HashResult {
         match self {
             &B::Depends(ref filename) => {
@@ -27,13 +29,13 @@ impl VersionHash for B::Builder {
                     File::open(&Path::new("/work").join(filename))
                     .and_then(|mut f| {
                         loop {
-                            let mut chunk = [0u8, .. 128*1024];
-                            let bytes = match f.read(chunk) {
+                            let mut chunk = [0u8; 128*1024];
+                            let bytes = match f.read(chunk.as_mut_slice()) {
                                 Ok(bytes) => bytes,
                                 Err(ref e) if e.kind == EndOfFile => break,
                                 Err(e) => return Err(e),
                             };
-                            hash.input(chunk[..bytes]);
+                            hash.input(chunk[..bytes].as_slice());
                         }
                         Ok(())
                     })

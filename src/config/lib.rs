@@ -1,11 +1,11 @@
 #![crate_name="config"]
 #![crate_type="lib"]
-#![feature(phase, if_let, struct_variant)]
+#![feature(box_syntax)]
+
 
 extern crate serialize;
 extern crate quire;
 extern crate regex;
-#[phase(plugin)] extern crate regex_macros;
 extern crate libc;
 
 

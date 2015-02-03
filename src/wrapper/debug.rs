@@ -4,7 +4,7 @@ use super::Wrapper;
 use super::setup::setup_base_filesystem;
 
 
-pub fn run_interactive_build_shell(wrapper: &Wrapper) -> int {
+pub fn run_interactive_build_shell(wrapper: &Wrapper) -> isize {
     if let Err(text) = setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)
     {
