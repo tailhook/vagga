@@ -21,58 +21,6 @@ run sequentially, but some of them are interesting, for example
 the end of the build to keep container smaller and cleaner.
 
 
-Ubuntu
-======
-
-
-To install base ubuntu system use:
-
-.. code-block:: yaml
-
-    setup:
-    - !Ubuntu trusty
-
-Potentially any ubuntu release instead of ``trusty`` should work.
-
-To install any ubuntu package use generic ``!Install`` command:
-
-.. code-block:: yaml
-
-    setup:
-    - !Ubuntu trusty
-    - !Install python
-
-Many interesting ubuntu packages are in the "universe" repository, you may add
-it by series of ``!UbuntuRepo`` commands (see below), but there is shortcut
-``!UbuntuUniverse``:
-
-.. code-block:: yaml
-
-   setup:
-   - !Ubuntu trusty
-   - !UbuntuUniverse
-   - !Install [checkinstall]
-
-The ``!UbuntuRepo`` command adds additional repository. For example to add
-marathon_ repository you may write:
-
-
-.. code-block:: yaml
-
-    setup:
-    - !Ubuntu trusty
-    - !UbuntuRepo
-      url: http://repos.mesosphere.io/ubuntu
-      suite: trusty
-      components: [main]
-    - !Install [mesos, marathon]
-
-This effectively adds repository and installs ``mesos`` and ``marathon``
-packages.
-
-.. note:: Probably the key for repository should be added to be able to install
-    packages.
-
 
 Generic Installers
 ==================
@@ -259,6 +207,81 @@ Mutliple directories may be specified at once.
 
 
 .. _marathon: https://github.com/mesosphere/marathon
+
+
+Ubuntu
+======
+
+
+To install base ubuntu system use:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+
+Potentially any ubuntu release instead of ``trusty`` should work.
+
+To install any ubuntu package use generic ``!Install`` command:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !Install python
+
+Many interesting ubuntu packages are in the "universe" repository, you may add
+it by series of ``!UbuntuRepo`` commands (see below), but there is shortcut
+``!UbuntuUniverse``:
+
+.. code-block:: yaml
+
+   setup:
+   - !Ubuntu trusty
+   - !UbuntuUniverse
+   - !Install [checkinstall]
+
+The ``!UbuntuRepo`` command adds additional repository. For example to add
+marathon_ repository you may write:
+
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuRepo
+      url: http://repos.mesosphere.io/ubuntu
+      suite: trusty
+      components: [main]
+    - !Install [mesos, marathon]
+
+This effectively adds repository and installs ``mesos`` and ``marathon``
+packages.
+
+.. note:: Probably the key for repository should be added to be able to install
+    packages.
+
+
+Alpine
+======
+
+
+To install base alpine system use:
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.1
+
+Potentially any alpine version instead of ``v3.1`` should work.
+
+To install any alpine package use generic ``!Install`` command:
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.1
+    - !Install python
 
 
 Npm Installer
