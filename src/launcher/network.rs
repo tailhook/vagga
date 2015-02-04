@@ -96,6 +96,9 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("PATH") {
+        cmd.set_env("PATH".to_string(), x);
+    }
     if let Some(x) = getenv("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
@@ -553,6 +556,9 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("PATH") {
+        cmd.set_env("PATH".to_string(), x);
+    }
     if let Some(x) = getenv("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
@@ -629,6 +635,9 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
+    if let Some(x) = getenv("PATH") {
+        cmd.set_env("PATH".to_string(), x);
+    }
     if let Some(x) = getenv("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }

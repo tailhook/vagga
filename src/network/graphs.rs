@@ -83,6 +83,8 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             .add_argument("node", Box::new(List::<String>), r#"
                 List of nodes separated in clusters by "--"
                 "#);
+        ap.silence_double_dash(false);
+        ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Err(Ok(0)),
@@ -91,7 +93,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    Ok(try!(_partition(config, nodes, false).map_err(Err)))
+    Ok(try!(_partition(config, nodes, true).map_err(Err)))
 }
 
 pub fn split_graph_cmd(config: &Config, args: Vec<String>)
@@ -109,6 +111,8 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             .add_argument("node", Box::new(List::<String>), r#"
                 List of nodes separated in clusters by "--"
                 "#);
+        ap.silence_double_dash(false);
+        ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Err(Ok(0)),
@@ -138,7 +142,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
         let ip = try!(ips.get(v)
             .ok_or(format!("Node {} does not exists or has no IP", v)));
         cluster.push(ip.to_string());
-        if !visited.insert(ip.to_string()) {
+        if !visited.insert(ip.to_string()) && check_all {
             return Err(format!("Duplicate node {} (or it's IP)", v));
         }
     }
@@ -172,19 +176,17 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
             }
         }
     }
+    for (ref ip, ref mut node) in graph.nodes.iter_mut() {
+        if !visited.contains(*ip) {
+            **node = Isolate;
+        }
+    }
     for (i, j) in pairs.into_iter() {
         let node = graph.nodes.get_mut(&i).unwrap();
         if *node == Full {
-            *node = DropSome(ips.iter()
-                .filter(|&(_, ip)| ip.as_slice() != j.as_slice())
-                .map(|(_, ip)| ip.to_string())
-                .collect())
+            *node = DropSome(vec!(j));
         } else if let DropSome(ref mut items) = *node {
-            let mut old_items = vec!();
-            swap(&mut old_items, items);
-            *items = old_items.into_iter()
-                .filter(|ip| ip.as_slice() != j.as_slice())
-                .collect();
+            items.push(j);
         } else {
             unreachable!();
         }
@@ -199,13 +201,13 @@ pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            Splits graph into few clusters. Each node might participate in
-            multiple clusters. Nodes which are not specified are isolated
-            from all others.
+            Isolates specified nodes from all other nodes in cluster and from
+            each other
             ");
         ap.refer(&mut nodes)
             .add_argument("node", Box::new(List::<String>), r#"
-                List of nodes separated in clusters by "--"
+                List of nodes to be isolated from each other and from all
+                others
                 "#);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

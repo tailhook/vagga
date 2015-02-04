@@ -2,6 +2,7 @@ extern crate argparse;
 extern crate serialize;
 #[macro_use] extern crate log;
 
+use std::os::env;
 use std::io::BufferedReader;
 use std::os::set_exit_status;
 use std::os::self_exe_path;

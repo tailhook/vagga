@@ -48,6 +48,7 @@ fn run() -> Result<(), Result<isize, String>> {
                 for details
                 ");
         ap.stop_on_first_argument(true);
+        ap.silence_double_dash(false);
         match ap.parse_args() {
             Ok(()) => {}
             Err(0) => return Err(Ok(0)),
