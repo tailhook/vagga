@@ -93,7 +93,7 @@ pub fn run() -> isize {
         "_list" => {
             list::print_list(&config, args)
         }
-        "_run" | "_build" | "_build_shell" => {
+        "_run" | "_build" | "_build_shell" | "_clean" => {
             user::run_wrapper(&int_workdir, cname, args, true)
         }
         "_run_in_netns" => {

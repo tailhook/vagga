@@ -11,11 +11,13 @@ extern crate config;
 use std::io::stderr;
 use std::os::{getcwd, set_exit_status};
 
+use argparse::{ArgumentParser, Store, List};
+
 use config::{find_config, Config, Settings};
 use config::command::MainCommand::{Command, Supervise};
 use container::signal;
 use settings::{read_settings, MergedSettings};
-use argparse::{ArgumentParser, Store, List};
+
 
 mod settings;
 mod debug;
@@ -25,6 +27,7 @@ mod supervise;
 mod commandline;
 mod setup;
 mod util;
+mod clean;
 
 
 struct Wrapper<'a> {
@@ -94,6 +97,7 @@ pub fn run() -> isize {
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
         "_run" => run::run_command_cmd(&wrapper, args, true),
         "_run_in_netns" => run::run_command_cmd(&wrapper, args, false),
+        "_clean" => clean::clean_cmd(&wrapper, args),
         _ => {
             match config.commands.get(&cmd) {
                 Some(&Command(ref cmd_info)) => {
