@@ -29,14 +29,6 @@ here
 * ``vagga _run CONTAINER CMD ARG...`` -- run arbitrary command in container
   defined in vagga.yaml
 * ``vagga _build CONTAINER`` -- builds container without running a command
-* ``vagga _chroot DIR CMD ARG...`` -- runs a command in arbitrary folder
-  This is analogous to a ``chroot`` command, except it uses namespaces to
-  allow it to run without root privileges, it also creates and mounts system
-  directories (``/proc``, ``/sys``, ...) like vagga usually do. This is mostly
-  used inside builder scripts not daily tasks.
-* ``vagga _setvariant NAME VALUE`` -- store in ``.vagga/settings.yaml`` the
-  variant to be used, instead of default (yet can be overriden by ``-v``).
-  See :ref:`variants` for more info.
 * ``vagga _clean`` -- removes images and temporary files created by vagga. To
   fully remove ``.vagga`` directory you can run ``vagga _clean --everything``.
   For other operations see ``vagga _clean --help``
