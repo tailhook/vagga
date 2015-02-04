@@ -155,7 +155,9 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
     );
     if network {
         res.push(
-            ("network".to_string(), box V::Structure { members: vec!(
+            ("network".to_string(), box V::Structure {
+                optional: true,
+                members: vec!(
                 ("ip".to_string(), box V::Scalar {
                     optional: true,
                     .. Default::default()} as Box<V::Validator>),
