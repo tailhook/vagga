@@ -17,20 +17,21 @@ by the following example:
         description: Run bash shell inside the container
         container: ubuntu
         run: /bin/bash
-      ping-google: !Supervise
-        description: Run ping google.com and gmail.com simultaneously
-        container: ubuntu
+      download: !Supervise
+        description: Download two files simultaneously
         children:
-          google: !Command
+          amd64: !Command
             container: ubuntu
-            run: ping google.com
-          gmail:
+            run: wget http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
+          i386: !Command
             container: ubuntu
-            run: ping gmail.com
+            run: wget http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-i386.tar.gz
 
 
 Common Parameters
 =================
+
+These parameters work for both kinds of commands:
 
 
 ``description``
