@@ -95,7 +95,7 @@ impl<'a> Executor for RunBuilder<'a> {
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
         try!(rmdir_recursive(path)
-             .map_err(|x| format!("Error creating directory: {}", x)));
+             .map_err(|x| format!("Error removing directory: {}", x)));
     }
     try!(mkdir_recursive(path, ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));

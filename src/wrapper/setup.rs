@@ -88,8 +88,8 @@ fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
     return Ok(());
 }
 
-fn vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Path, String>
+fn _vagga_base(project_root: &Path, settings: &MergedSettings)
+    -> Result<Result<Path, (Path, Path)>, String>
 {
     if let Some(ref dir) = settings.storage_dir {
         let lnkdir = project_root.join(".vagga/.lnk");
@@ -108,7 +108,7 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
                             dir {}. Just remove .vagga/.lnk now.",
                             lnk.display()));
                     }
-                    return Ok(target);
+                    return Ok(Ok(target));
                 } else {
                     return Err(format!(concat!("Bad link .vagga/.lnk: {}.",
                         " You are pobably need to remove it now"),
@@ -116,18 +116,40 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
                 }
             }
             Err(ref e) if e.kind == FileNotFound => {
-                let target = try!(create_storage_dir(dir, project_root));
-                try!(safe_ensure_dir(&target));
-                try_str!(symlink(&target, &lnkdir));
-                try_str!(symlink(project_root, &target.join(".lnk")));
-                return Ok(target)
+                return Ok(Err((lnkdir, dir.clone())));
             }
             Err(ref e) => {
                 return Err(format!("Can't read link .vagga/.lnk: {}", e));
             }
         };
     } else {
-        return Ok(project_root.join(".vagga"));
+        return Ok(Ok(project_root.join(".vagga")));
+    }
+}
+
+pub fn get_vagga_base(project_root: &Path, settings: &MergedSettings)
+    -> Result<Option<Path>, String>
+{
+    return _vagga_base(project_root, settings).map(|x| x.ok());
+}
+
+fn vagga_base(project_root: &Path, settings: &MergedSettings)
+    -> Result<Path, String>
+{
+    match _vagga_base(project_root, settings) {
+        Ok(Err((lnkdir, dir))) => {
+            let target = try!(create_storage_dir(&dir, project_root));
+            try!(safe_ensure_dir(&target));
+            try_str!(symlink(&target, &lnkdir));
+            try_str!(symlink(project_root, &target.join(".lnk")));
+            return Ok(target)
+        }
+        Ok(Ok(path)) => {
+            return Ok(path);
+        }
+        Err(e) => {
+            return Err(e);
+        }
     }
 }
 
