@@ -1,5 +1,6 @@
+use std::io::fs::{readdir, rmdir_recursive, readlink};
 use std::io::stdio::{stdout, stderr};
-use std::io::fs::{readdir, rmdir_recursive};
+use std::collections::HashSet;
 
 use argparse::{ArgumentParser, PushConst, StoreTrue};
 
@@ -67,6 +68,7 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     for action in actions.iter() {
         let res = match *action {
             Action::Temporary => clean_temporary(wrapper, global, dry_run),
+            Action::Old => clean_old(wrapper, global, dry_run),
             _ => unimplemented!(),
         };
         match res {
@@ -101,6 +103,62 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
             .iter()
     {
         if path.filename_str().map(|n| n.starts_with(".tmp")).unwrap_or(false)
+        {
+            if dry_run {
+                println!("Would remove {:?}", path);
+            } else {
+                try!(rmdir_recursive(path)
+                     .map_err(|x| format!("Error removing directory: {}", x)));
+            }
+        }
+    }
+
+    return Ok(());
+}
+
+fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
+    -> Result<(), String>
+{
+    if global {
+        panic!("Global cleanup is not implemented yet");
+    }
+    let base = match try!(setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings))
+    {
+        Some(base) => base,
+        None => {
+            warn!("No vagga directory exists");
+            return Ok(());
+        }
+    };
+    let useful: HashSet<String> = try!(
+        readdir(&wrapper.project_root.join(".vagga"))
+            .map_err(|e| format!("Can't read vagga directory: {}", e)))
+        .into_iter()
+        .filter(|path| !path.filename_str()
+                           .map(|f| f.starts_with("."))
+                           .unwrap_or(true))
+        .map(|path| readlink(&path)
+                    .map_err(|e| warn!("Can't readlink {:?}: {}", path, e))
+                    .ok()
+                    .and_then(|f| {
+                        let mut cmp = f.str_components().rev();
+                        cmp.next();
+                        // The container name is next to the last component
+                        cmp.next().and_then(|x| x).map(ToString::to_string)
+                    }))
+        .filter(|x| x.is_some()).map(|x| x.unwrap())
+        .collect();
+    debug!("Useful images {:?}", useful);
+
+    let roots = base.join(".roots");
+    for path in try!(readdir(&roots)
+            .map_err(|e| format!("Can't read dir {:?}: {}", roots, e)))
+            .iter()
+    {
+        if path.filename_str()
+            .map(|n| !useful.contains(&n.to_string()))
+            .unwrap_or(false)
         {
             if dry_run {
                 println!("Would remove {:?}", path);
