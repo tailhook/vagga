@@ -17,6 +17,7 @@ Contents:
    supervision
    pid1mode
    commandline
+   settings
    compare_to_docker
    compare_to_vagrant
    tips
