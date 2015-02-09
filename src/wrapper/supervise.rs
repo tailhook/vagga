@@ -1,11 +1,13 @@
 use std::io::ALL_PERMISSIONS;
 use std::os::getenv;
+use std::str::FromStr;
 use std::io::fs::{readlink, mkdir, File, PathExtensions};
 use std::io::stdio::{stdout, stderr};
+use libc::pid_t;
 
 use argparse::{ArgumentParser, Store};
 
-use config::command::{SuperviseInfo, CommandInfo};
+use config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use config::command::ChildCommand::{Command, BridgeCommand};
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
@@ -36,6 +38,10 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
             }
         }
     }
+    let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
+        .map_err(|e| format!("Can't read /proc/self: {}", e))
+        .and_then(|v| v.as_str().and_then(FromStr::from_str)
+            .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
@@ -43,9 +49,9 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
         .ok_or(format!("Child {} not found", child)));
     match childtype {
         &Command(ref info) => supervise_child_command(cname,
-            &child, false, info, wrapper, command),
+            &child, false, info, wrapper, command, pid),
         &BridgeCommand(ref info) => supervise_child_command(cname,
-            &child, true, info, wrapper, command),
+            &child, true, info, wrapper, command, pid),
     }
 }
 
@@ -77,7 +83,8 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
 }
 
 fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
-    command: &CommandInfo, wrapper: &Wrapper, supervise: &SuperviseInfo)
+    command: &CommandInfo, wrapper: &Wrapper, supervise: &SuperviseInfo,
+    pid: pid_t)
     -> Result<isize, String>
 {
     let cconfig = try!(wrapper.config.containers.get(&command.container)
@@ -85,15 +92,14 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
 
-    let lnk = try!(readlink(&Path::new("/work/.vagga")
-                   .join(command.container.as_slice()))
-        .map_err(|e| format!("Error reading link: {}", e)));
-    let lnkcmp = lnk.str_components().collect::<Vec<Option<&str>>>();
-    if lnkcmp.len() < 3 || lnkcmp[lnkcmp.len()-2].is_none() {
-        return Err(format!("Broken container link"));
-    }
 
-    try!(setup::setup_filesystem(cconfig, lnkcmp[lnkcmp.len()-2].unwrap()));
+    let write_mode = match command.write_mode {
+        WriteMode::read_only => setup::WriteMode::ReadOnly,
+        WriteMode::transient_hard_link_copy
+        => setup::WriteMode::TransientHardlinkCopy(pid),
+    };
+    let cont_ver = try!(setup::container_ver(&command.container));
+    try!(setup::setup_filesystem(cconfig, write_mode, cont_ver.as_slice()));
 
     try!(_write_hosts(supervise));
 

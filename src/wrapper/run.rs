@@ -22,7 +22,8 @@ pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
     container: &Container, command: &String, args: &[String])
     -> Result<isize, String>
 {
-    try!(setup::setup_filesystem(container, cname.as_slice()));
+    try!(setup::setup_filesystem(container,
+        setup::WriteMode::ReadOnly, cname.as_slice()));
 
     let env = try!(setup::get_environment(container));
     let mut cpath = Path::new(command.as_slice());
@@ -110,12 +111,12 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     let cconfig = try!(wrapper.config.containers.get(&container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = if user_ns {
-            Some(try!(map_users(wrapper.settings,
-                &cconfig.uids, &cconfig.gids)))
-        } else {
-            None
-        };
-    return build::build_container(&container, false, wrapper)
-        .and_then(|cont| run_command(&uid_map, &cont, cconfig,
-                                     &command, args.as_slice()));
+        Some(try!(map_users(wrapper.settings,
+            &cconfig.uids, &cconfig.gids)))
+    } else {
+        None
+    };
+    let cont_ver = try!(setup::container_ver(&container));
+    return run_command(&uid_map, &cont_ver, cconfig,
+                       &command, args.as_slice());
 }

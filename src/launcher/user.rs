@@ -6,7 +6,7 @@ use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
 use config::Config;
 use config::command::MainCommand;
-use config::command::{CommandInfo, Networking};
+use config::command::{CommandInfo, Networking, WriteMode};
 
 use super::supervisor;
 
@@ -53,7 +53,25 @@ pub fn run_simple_command(cfg: &CommandInfo,
         return Err(format!(
             "Network is not supported for !Command use !Supervise"))
     }
-    run_wrapper(workdir, cmdname, args, cfg.network.is_none())
+    match run_wrapper(workdir, "_build".to_string(),
+        vec!(cfg.container.clone()), true)
+    {
+        Ok(0) => {}
+        x => return x,
+    }
+    let res = run_wrapper(workdir, cmdname, args, cfg.network.is_none());
+
+    if cfg.write_mode != WriteMode::read_only {
+        match run_wrapper(workdir, "_clean".to_string(),
+            vec!("--transient".to_string()), true)
+        {
+            Ok(0) => {}
+            x => warn!(
+                "The `vagga _clean --transient` exited with status: {:?}", x),
+        }
+
+    }
+    return res;
 }
 
 // TODO(tailhook) run not only for simple commands

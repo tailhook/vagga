@@ -10,7 +10,7 @@ containers:
     - !Alpine v3.1
     - !Install [alpine-base, py-sphinx, make]
 
-  package:
+  ubuntu-package:
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse ~
@@ -18,7 +18,7 @@ containers:
       url: http://static.rust-lang.org/dist/rust-1.0.0-alpha-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr
-    - !Install [make, checkinstall]
+    - !Install [make, checkinstall, git, uidmap]
 
 commands:
 
@@ -50,6 +50,26 @@ commands:
 
   make: !Command
     description: Build vagga
-    container: package
+    container: ubuntu-package
     run: [make]
+
+  build-ubuntu-package: !Command
+    description: Create an ubuntu (.deb) package using checkinstall in
+      container
+    container: ubuntu-package
+    write-mode: transient-hard-link-copy
+    accepts-arguments: true
+    run: |
+      make all "$@"
+      checkinstall \
+        --default \
+        --maintainer=paul@colomiets.name \
+        --pkglicense=MIT \
+        --pkgname=vagga \
+        --pkgver=${1:-$(git describe | cut -c2-)} \
+        --requires="uidmap" \
+        --backup=no \
+        --nodoc \
+      make install
+
 

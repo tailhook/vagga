@@ -1,6 +1,9 @@
+use std::str::FromStr;
 use std::io::fs::{readdir, rmdir_recursive, readlink};
+use std::io::fs::{PathExtensions};
 use std::io::stdio::{stdout, stderr};
 use std::collections::HashSet;
+use libc::pid_t;
 
 use argparse::{ArgumentParser, PushConst, StoreTrue};
 
@@ -13,6 +16,7 @@ enum Action {
     Old,
     Everything,
     Orphans,
+    Transient,
 }
 
 
@@ -34,6 +38,11 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
           .add_option(&["--old", "--old-containers"],
                 Box::new(PushConst(Action::Old)),
                 "Clean old versions of containers (configurable)")
+          .add_option(&["--transient"],
+                Box::new(PushConst(Action::Transient)),
+                "Clean unneeded transient folders (left from containers with
+                 `write-mode` set to transient-something). The pid of process
+                 is checked for liveness first.")
           .add_option(&["--everything"],
                 Box::new(PushConst(Action::Everything)),
                 "Clean whole `.vagga` folder. Useful when deleting a project.
@@ -69,6 +78,7 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         let res = match *action {
             Action::Temporary => clean_temporary(wrapper, global, dry_run),
             Action::Old => clean_old(wrapper, global, dry_run),
+            Action::Transient => clean_transient(wrapper, global, dry_run),
             _ => unimplemented!(),
         };
         match res {
@@ -80,6 +90,18 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         }
     }
     return Ok(0);
+}
+
+fn clean_dir(path: &Path, dry_run: bool) -> Result<(), String> {
+    // TODO(tailhook) chroot to dir for removing
+    if dry_run {
+        println!("Would remove {:?}", path);
+    } else {
+        debug!("Removing {:?}", path);
+        try!(rmdir_recursive(path)
+             .map_err(|x| format!("Error removing directory: {}", x)));
+    }
+    Ok(())
 }
 
 fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
@@ -104,12 +126,7 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
     {
         if path.filename_str().map(|n| n.starts_with(".tmp")).unwrap_or(false)
         {
-            if dry_run {
-                println!("Would remove {:?}", path);
-            } else {
-                try!(rmdir_recursive(path)
-                     .map_err(|x| format!("Error removing directory: {}", x)));
-            }
+            try!(clean_dir(path, dry_run));
         }
     }
 
@@ -160,13 +177,40 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
-            if dry_run {
-                println!("Would remove {:?}", path);
-            } else {
-                try!(rmdir_recursive(path)
-                     .map_err(|x| format!("Error removing directory: {}", x)));
-            }
+            try!(clean_dir(path, dry_run));
         }
+    }
+
+    return Ok(());
+}
+
+fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
+    -> Result<(), String>
+{
+    if global {
+        panic!("Global cleanup is not implemented yet");
+    }
+    let base = match try!(setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings))
+    {
+        Some(base) => base,
+        None => {
+            warn!("No vagga directory exists");
+            return Ok(());
+        }
+    };
+    let procfs = Path::new("/proc");
+    for dir in try!(readdir(&base.join(".transient"))
+                    .map_err(|e| format!(
+                             "Can't read .vagga/.transient dir: {}", e)))
+                .into_iter()
+                .filter(|path| path.extension_str()
+                               .and_then(|e| FromStr::from_str(e))
+                               .map(|p: pid_t| !procfs.join(format!("{}", p))
+                                              .exists())
+                               .unwrap_or(true))
+    {
+        try!(clean_dir(&dir, dry_run));
     }
 
     return Ok(());

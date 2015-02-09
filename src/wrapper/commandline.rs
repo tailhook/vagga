@@ -1,9 +1,13 @@
 use std::os::getenv;
+use std::str::FromStr;
+use std::io::fs::readlink;
 use std::io::stdio::{stdout, stderr};
+use libc::pid_t;
 
 use argparse::{ArgumentParser};
 
 use config::command::CommandInfo;
+use config::command::WriteMode;
 use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Killed, Exit};
@@ -41,6 +45,10 @@ pub fn commandline_cmd(command: &CommandInfo,
     }
     let mut cmdline = command.run.clone() + args.as_slice();
 
+    let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
+        .map_err(|e| format!("Can't read /proc/self: {}", e))
+        .and_then(|v| v.as_str().and_then(FromStr::from_str)
+            .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
@@ -48,10 +56,15 @@ pub fn commandline_cmd(command: &CommandInfo,
         .ok_or(format!("Container {} not found", command.container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
-    let container = try!(build::build_container(&command.container,
-                                                false, wrapper));
 
-    try!(setup::setup_filesystem(cconfig, container.as_slice()));
+    let write_mode = match command.write_mode {
+        WriteMode::read_only => setup::WriteMode::ReadOnly,
+        WriteMode::transient_hard_link_copy
+        => setup::WriteMode::TransientHardlinkCopy(pid),
+    };
+    let cont_ver = try!(setup::container_ver(&command.container));
+    try!(setup::setup_filesystem(cconfig,
+        write_mode, cont_ver.as_slice()));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {

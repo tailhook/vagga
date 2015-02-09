@@ -77,5 +77,16 @@ vagga_test: tests/*.rs tests/*/*.rs
 test: all vagga_test
 	./vagga_test
 
+install:
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -d $(DESTDIR)$(PREFIX)/lib/vagga
+	install -m 755 vagga_launcher $(DESTDIR)$(PREFIX)/lib/vagga/vagga_launcher
+	install -m 755 vagga_wrapper $(DESTDIR)$(PREFIX)/lib/vagga/vagga_wrapper
+	install -m 755 vagga_build $(DESTDIR)$(PREFIX)/lib/vagga/vagga_build
+	install -m 755 vagga_version $(DESTDIR)$(PREFIX)/lib/vagga/vagga_version
+	install -m 755 vagga_setup_netns $(DESTDIR)$(PREFIX)/lib/vagga/vagga_setup_netns
+	install -m 755 vagga_network $(DESTDIR)$(PREFIX)/lib/vagga/vagga_network
+	ln -s ../lib/vagga/vagga_launcher $(DESTDIR)$(PREFIX)/bin/vagga
+
 
 .PHONY: all

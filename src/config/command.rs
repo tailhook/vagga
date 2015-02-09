@@ -9,7 +9,7 @@ use quire::ast::ScalarKind::{Plain};
 
 type PortNumValidator = V::Numeric<u16>;
 
-#[derive(Decodable, Clone, PartialEq, Eq)]
+#[derive(Decodable, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Pid1Mode {
     exec = 0,
@@ -17,7 +17,7 @@ pub enum Pid1Mode {
     wait_all_children = 2,
 }
 
-#[derive(Decodable, Show, Clone, PartialEq, Eq)]
+#[derive(Decodable, Show, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum SuperviseMode {
     wait_all,
@@ -25,12 +25,12 @@ pub enum SuperviseMode {
     restart,
 }
 
-#[derive(Decodable, Show, Clone, PartialEq, Eq)]
+#[derive(Decodable, Show, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum WriteMode {
     read_only,
-    transient_reflink_copy,
-    transient_hardlink_copy,
+    //transient_reflink_copy, // TODO(tailhook)
+    transient_hard_link_copy,
 }
 
 #[derive(Decodable, Clone, PartialEq, Eq)]

@@ -206,7 +206,7 @@ pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
             debug!("Container version: {:?}", ver.borrow());
             let name = format!("{}.{}", container,
                 ver.borrow().as_slice().slice_to(8));
-            let finalpath = Path::new("/vagga/roots")
+            let finalpath = Path::new("/vagga/base/.roots")
                 .join(name.as_slice());
             if finalpath.exists() {
                 debug!("Path {} is already built",
@@ -218,7 +218,7 @@ pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
         Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
     debug!("Container version: {:?}", ver.borrow());
-    let tmppath = Path::new(format!("/vagga/roots/.tmp.{}", container));
+    let tmppath = Path::new(format!("/vagga/base/.roots/.tmp.{}", container));
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
         Err(x) => {
@@ -256,7 +256,7 @@ pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
     }
     let name = format!("{}.{}", container,
         ver.borrow().as_slice().slice_to(8));
-    let finalpath = Path::new("/vagga/roots").join(name.as_slice());
+    let finalpath = Path::new("/vagga/base/.roots").join(name.as_slice());
     debug!("Committing {} -> {}", tmppath.display(),
                                   finalpath.display());
     match commit_root(&tmppath, &finalpath) {

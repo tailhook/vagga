@@ -20,6 +20,7 @@ mod list;
 mod user;
 mod network;
 mod supervisor;
+mod underscore;
 
 
 pub fn run() -> isize {
@@ -93,11 +94,14 @@ pub fn run() -> isize {
         "_list" => {
             list::print_list(&config, args)
         }
-        "_run" | "_build" | "_build_shell" | "_clean" => {
+        "_build" | "_build_shell" | "_clean" => {
             user::run_wrapper(&int_workdir, cname, args, true)
         }
+        "_run" => {
+            underscore::run_command(&int_workdir, cname, args)
+        }
         "_run_in_netns" => {
-            network::run_in_netns(&int_workdir, cname, args)
+            underscore::run_in_netns(&int_workdir, cname, args)
         }
         _ => {
             user::run_user_command(&config, &int_workdir, cname, args)

@@ -409,49 +409,6 @@ pub fn join_gateway_namespaces() -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_in_netns(workdir: &Path, cname: String, mut args: Vec<String>)
-    -> Result<isize, String>
-{
-    let mut cmdargs = vec!();
-    let mut container = "".to_string();
-    let mut pid = None;
-    {
-        args.insert(0, "vagga ".to_string() + cname.as_slice());
-        let mut ap = ArgumentParser::new();
-        ap.set_description(
-            "Run command (or shell) in one of the vagga's network namespaces");
-        ap.refer(&mut pid)
-            .add_option(&["--pid"], box StoreOption::<pid_t>, "
-                Run in the namespace of the process with PID.
-                By default you get shell in the \"gateway\" namespace.
-                ");
-        ap.refer(&mut container)
-            .add_argument("container", box Store::<String>,
-                "Container to run command in")
-            .required();
-        ap.refer(&mut cmdargs)
-            .add_argument("command", box List::<String>,
-                "Command (with arguments) to run inside container")
-            .required();
-
-        ap.stop_on_first_argument(true);
-        match ap.parse(args, &mut stdout(), &mut stderr()) {
-            Ok(()) => {}
-            Err(0) => return Ok(0),
-            Err(_) => {
-                return Ok(122);
-            }
-        }
-    }
-    cmdargs.insert(0, container);
-    try!(join_gateway_namespaces());
-    if let Some(pid) = pid {
-        try!(set_namespace(&Path::new(format!("/proc/{}/ns/net", pid)), NewNet)
-            .map_err(|e| format!("Error setting networkns: {}", e)));
-    }
-    user::run_wrapper(workdir, cname, cmdargs, false)
-}
-
 pub fn get_nameservers() -> Result<Vec<String>, String> {
     File::open(&Path::new("/etc/resolv.conf"))
         .map(BufferedReader::new)

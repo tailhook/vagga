@@ -3,10 +3,15 @@ use std::os::{getenv};
 use std::io::BufferedReader;
 use std::os::{self_exe_path};
 use std::io::FileType::{Symlink, Directory};
-use std::io::FileNotFound;
+use std::io::{FileType, FileNotFound};
+use std::ffi::CString;
+use std::path::BytesContainer;
 use std::io::fs::{File, PathExtensions};
-use std::io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink};
+use std::io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink, link};
+use std::io::fs::{rmdir_recursive, readdir, chmod};
 use std::collections::BTreeMap;
+//use libc::chmod;
+use libc::pid_t;
 
 use config::Container;
 use config::containers::Volume::{Tmpfs, VaggaBin};
@@ -16,6 +21,11 @@ use container::mount::{mount_tmpfs, mount_pseudo};
 use super::run::DEFAULT_PATH;
 use settings::{MergedSettings};
 
+
+pub enum WriteMode {
+    ReadOnly,
+    TransientHardlinkCopy(pid_t),
+}
 
 fn create_storage_dir(storage_dir: &Path, project_root: &Path)
     -> Result<Path, String>
@@ -195,12 +205,12 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
         .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
 
-    let roots_dir = vagga_dir.join("roots");
-    try_str!(mkdir(&roots_dir, ALL_PERMISSIONS));
+    let local_base = vagga_dir.join("base");
+    try!(safe_ensure_dir(&local_base));
     let vagga_base = try!(vagga_base(project_root, settings));
-    let local_roots = vagga_base.join(".roots");
-    try!(safe_ensure_dir(&local_roots));
-    try!(bind_mount(&local_roots, &roots_dir));
+    try!(bind_mount(&vagga_base, &local_base));
+    try!(safe_ensure_dir(&local_base.join(".roots")));
+    try!(safe_ensure_dir(&local_base.join(".transient")));
 
     let cache_dir = vagga_dir.join("cache");
     try_str!(mkdir(&cache_dir, ALL_PERMISSIONS));
@@ -227,7 +237,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(change_root(&mnt_dir, &old_root));
     try!(unmount(&Path::new("/vagga/old_root")));
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn get_environment(container: &Container)
@@ -264,7 +274,47 @@ pub fn get_environment(container: &Container)
     return Ok(result);
 }
 
-pub fn setup_filesystem(container: &Container, container_ver: &str)
+fn hardlink_dir(old: &Path, new: &Path) -> Result<(), String> {
+    let filelist = try!(readdir(old)
+        .map_err(|e| format!("Error reading directory: {}", e)));
+    for item in filelist.iter() {
+        let stat = try!(item.lstat()
+            .map_err(|e| format!("Error stat for file: {}", e)));
+        let nitem = new.join(item.filename().unwrap());
+        match stat.kind {
+            FileType::RegularFile => {
+                try!(link(item, &nitem)
+                    .map_err(|e| format!("Can't hard-link file: {}", e)));
+            }
+            FileType::Directory => {
+                try!(mkdir(&nitem, ALL_PERMISSIONS)
+                    .map_err(|e| format!("Can't create dir: {}", e)));
+                try!(chmod(&nitem, stat.perm)
+                    .map_err(|e| format!("Can't chmod: {}", e)));
+                try!(hardlink_dir(item, &nitem));
+            }
+            FileType::NamedPipe => {
+                warn!("Skipping named pipe {:?}", item);
+            }
+            FileType::BlockSpecial => {
+                warn!("Can't clone block-special {:?}, skipping", item);
+            }
+            FileType::Symlink => {
+                let lnk = try!(readlink(item)
+                    .map_err(|e| format!("Can't readlink: {}", e)));
+                try!(symlink(&lnk, &nitem)
+                    .map_err(|e| format!("Can't symlink: {}", e)));
+            }
+            FileType::Unknown => {
+                warn!("Unknown file type {:?}", item);
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
+    container_ver: &str)
     -> Result<(), String>
 {
     let root_path = Path::new("/");
@@ -273,11 +323,31 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
         try!(mkdir(&tgtroot, ALL_PERMISSIONS)
              .map_err(|x| format!("Error creating directory: {}", x)));
     }
-    try!(bind_mount(&Path::new("/vagga/roots")
-                     .join(container_ver).join("root"),
-                    &tgtroot)
-         .map_err(|e| format!("Error bind mount: {}", e)));
-    try!(remount_ro(&tgtroot));
+    match write_mode {
+        WriteMode::ReadOnly => {
+            let nroot = Path::new("/vagga/base/.roots")
+                .join(container_ver).join("root");
+            try!(bind_mount(&nroot, &tgtroot)
+                 .map_err(|e| format!("Error bind mount: {}", e)));
+            try!(remount_ro(&tgtroot));
+        }
+        WriteMode::TransientHardlinkCopy(pid) => {
+            let oldpath = Path::new("/vagga/base/.roots")
+                .join(container_ver).join("root");
+            let newpath = Path::new("/vagga/base/.transient")
+                .join(format!("{}.{}", container_ver, pid));
+            if newpath.exists() {
+                try!(rmdir_recursive(&newpath)
+                    .map_err(|e| format!("Error removing dir: {}", e)));
+            }
+            try!(mkdir(&newpath, ALL_PERMISSIONS)
+                .map_err(|e| format!("Error creating directory: {}", e)));
+            try!(hardlink_dir(&oldpath, &newpath));
+            try!(bind_mount(&newpath, &tgtroot)
+                 .map_err(|e| format!("Error bind mount: {}", e)));
+        }
+    };
+
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
 
@@ -314,4 +384,15 @@ pub fn setup_filesystem(container: &Container, container_ver: &str)
     try!(unmount(&Path::new("/tmp"))
          .map_err(|e| format!("Error unmounting `/tmp`: {}", e)));
     Ok(())
+}
+
+pub fn container_ver(name: &String) -> Result<String, String> {
+    let lnk = try!(readlink(&Path::new("/work/.vagga")
+                             .join(name.as_slice()))
+                   .map_err(|e| format!("Error reading link: {}", e)));
+    let lnkcmp = lnk.str_components().collect::<Vec<Option<&str>>>();
+    if lnkcmp.len() < 3 || lnkcmp[lnkcmp.len()-2].is_none() {
+        return Err(format!("Broken container link"));
+    }
+    return Ok(lnkcmp[lnkcmp.len()-2].unwrap().to_string());
 }
