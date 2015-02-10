@@ -18,6 +18,7 @@ containers:
       url: http://static.rust-lang.org/dist/rust-1.0.0-alpha-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr
+    - !Remove /usr/lib/rustlib/i686-unknown-linux-gnu
     - !Install [make, checkinstall, git, uidmap]
 
 commands:
