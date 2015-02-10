@@ -58,6 +58,7 @@ vagga_version: src/version/*.rs
 vagga_build: rust-argparse/libargparse.rlib rust-quire/libquire.rlib
 vagga_build: libconfig.rlib libcontainer.rlib
 vagga_build: src/builder/*.rs src/builder/commands/*.rs
+vagga_build: alpine/MIRRORS.txt
 	$(call rust_compile_static,$@,src/builder/main.rs -g \
 		-L rust-quire -L rust-argparse -L .)
 
@@ -73,6 +74,9 @@ vagga_network: src/network/*.rs
 
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
+
+alpine/MIRRORS.txt apk busybox: ./fetch_binaries.sh
+	./fetch_binaries.sh
 
 test: all vagga_test
 	./vagga_test

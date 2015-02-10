@@ -13,7 +13,7 @@ sha1sum -c <<SHA1SUMS
 SHA1SUMS
 cd ..
 
-tar -xf alpine/apk-tools-static-2.4.4-r0.apk sbin/apk.static -O > apk
-tar -xf alpine/busybox-static-1.22.1-r9.apk bin/busybox.static -O > busybox
+tar -xf alpine/apk-tools-static-2.5.0_rc1-r0.apk sbin/apk.static -O > apk
+tar -xf alpine/busybox-static-1.22.1-r14.apk bin/busybox.static -O > busybox
 
 chmod +x apk busybox
