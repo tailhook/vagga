@@ -25,7 +25,7 @@ Available volume types:
 ``!VaggaBin``
     Mounts vagga binary directory inside the container (usually it's contained
     in ``/usr/lib/vagga`` in host system). This may be needed for
-    network_testing_ or may be for vagga in vagga (i.e. container in container)
-    use cases.
+    :ref:`network_testing` or may be for vagga in vagga (i.e. container in
+    container) use cases.
 
 

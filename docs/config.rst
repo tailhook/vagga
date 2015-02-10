@@ -48,7 +48,7 @@ Container parameters:
         For usual shell must be ``[/bin/sh, -c]``.
 
 ``setup``
-    List of steps that is executed to build container. See build_commands_
+    List of steps that is executed to build container. See :ref:`build_commands`
     for more info.
 
 ``environ-file``
@@ -87,13 +87,13 @@ Container parameters:
 
 ``volumes``
     The mapping of mount points to the definition of volume. Allows to mount
-    some additional filesystems inside the container. See volumes_ for more
+    some additional filesystems inside the container. See :ref:`volumes` for more
     info. Default is::
 
         volumes:
             /tmp: !Tmpfs { size: 100Mi, mode: 0o1777 }
 
-    .. note:: You must create a folder for each volume. See build_commands_ for
+    .. note:: You must create a folder for each volume. See :ref:`build_commands` for
        documentation.
 
 
