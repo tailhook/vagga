@@ -38,13 +38,13 @@ Ubuntu
 
 To install from vagga's repository just add the following to `sources.list`::
 
-    deb http://ubuntu.zerogw.com vagga main
+    deb http://ubuntu.zerogw.com vagga1 main
 
 The process of installation looks like the following:
 
 .. code-block:: console
 
-    $ echo 'deb http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
+    $ echo 'deb http://ubuntu.zerogw.com vagga1 main' | sudo tee /etc/apt/sources.list.d/vagga.list
     deb http://ubuntu.zerogw.com vagga main
     $ sudo apt-get update
     [.. snip ..]
@@ -77,7 +77,7 @@ Now vagga is ready to go.
 Ubuntu: Old Releases (precise, 12.04)
 =====================================
 
-For most packages you need `uidmap`. It has no dependencies. So if your
+For most features you need `uidmap`. It has no dependencies. So if your
 ubuntu release doesn't have `uidmap` package (as 12.04 does), just fetch it
 from newer ubuntu release::
 
