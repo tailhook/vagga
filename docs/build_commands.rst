@@ -108,6 +108,8 @@ To add some environment arguments to subsequent build commands use ``!Env``:
 .. note:: The ``!Env`` command doesn't add environment variables for processes
     run after build. Use ``environ`` setting for that.
 
+.. _depends:
+
 Sometimes you want to rebuild container when some file changes. For example
 if you have used the file in the build. There is a ``!Depends`` command which
 does nothing per se, but add a dependency. The path must be relative to your
