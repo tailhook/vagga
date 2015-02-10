@@ -90,6 +90,8 @@ install:
 	install -m 755 vagga_version $(DESTDIR)$(PREFIX)/lib/vagga/vagga_version
 	install -m 755 vagga_setup_netns $(DESTDIR)$(PREFIX)/lib/vagga/vagga_setup_netns
 	install -m 755 vagga_network $(DESTDIR)$(PREFIX)/lib/vagga/vagga_network
+	install -m 755 apk $(DESTDIR)$(PREFIX)/lib/vagga/apk
+	install -m 755 busybox $(DESTDIR)$(PREFIX)/lib/vagga/busybox
 	ln -s ../lib/vagga/vagga_launcher $(DESTDIR)$(PREFIX)/bin/vagga
 
 

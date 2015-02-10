@@ -2,6 +2,17 @@
 Release Notes
 =============
 
+Vagga 0.2.1
+===========
+
+:Release Date: future
+
+This release fixes small issues appeared right after release:
+
+* ``make install`` did not install vagga's busybox, efectively making vagga
+  work only from source folder
+
+
 Vagga 0.2.0
 ===========
 
