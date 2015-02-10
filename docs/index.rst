@@ -9,6 +9,7 @@ Contents:
 
    vagga_features
    installation
+   upgrading
    config
    commands
    build_commands
