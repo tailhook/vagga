@@ -7,10 +7,13 @@ Vagga 0.2.1
 
 :Release Date: future
 
-This release fixes small issues appeared right after release:
+This release fixes small issues appeared right after release and adds python
+requirements.txt support.
 
-* ``make install`` did not install vagga's busybox, efectively making vagga
+* ``make install`` did not install vagga's busybox, effectively making vagga
   work only from source folder
+* Add Py2Requirements and Py3Requirements
+  `commands<http://vagga.readthedocs.org/en/latest/build_commands.html#pyreq>`_
 
 
 Vagga 0.2.0
@@ -38,12 +41,12 @@ More features:
 * Includes experimental network_ `testing tools`_
 
 
-There are `some features missing<missing-features>`, but we believe it doesn't
+There are `some features missing`_, but we believe it doesn't
 affect a lot of users.
 
 
 .. _Upgrading: http://vagga.readthedocs.org/en/latest/upgrading.html
-.. _missing-features: http://vagga.readthedocs.org/en/latest/upgrading.html#missing-features
+.. _some missing features: http://vagga.readthedocs.org/en/latest/upgrading.html#missing-features
 .. _Depends: http://vagga.readthedocs.org/en/latest/build_commands.html#depends
 .. _network: http://vagga.readthedocs.org/en/latest/network.html
 .. _testing tools: https://medium.com/@paulcolomiets/evaluating-mesos-4a08f85473fb

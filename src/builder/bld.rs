@@ -119,6 +119,12 @@ impl BuildCommand for Builder {
             &B::Py3Install(ref pkgs) => {
                 pip::pip_install(ctx, 3, pkgs)
             }
+            &B::Py2Requirements(ref fname) => {
+                pip::pip_requirements(ctx, 2, fname)
+            }
+            &B::Py3Requirements(ref fname) => {
+                pip::pip_requirements(ctx, 3, fname)
+            }
             &B::NpmInstall(ref pkgs) => {
                 npm::npm_install(ctx, pkgs)
             }

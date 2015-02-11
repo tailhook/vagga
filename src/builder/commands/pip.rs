@@ -1,3 +1,7 @@
+use std::io::BufferedReader;
+use std::io::EndOfFile;
+use std::io::fs::File;
+
 use super::super::context::{BuildContext};
 use super::generic::run_command;
 use super::super::context::Distribution as Distr;
@@ -45,16 +49,9 @@ pub fn scan_features(pkgs: &Vec<String>) -> Vec<PipFeatures> {
     return res;
 }
 
-pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
-    -> Result<(), String>
-{
-    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache"),
-                           "pip-cache".to_string()));
-    ctx.environ.insert("PIP_DOWNLOAD_CACHE".to_string(),
-                       "/tmp/pip-cache".to_string());
-    let pip = try!(ensure_pip(ctx, ver, scan_features(pkgs).as_slice()));
+fn pip_args(ctx: &mut BuildContext, pip_cmd: Path) -> Vec<String> {
     let mut args = vec!(
-        pip.display().to_string(),  // Crappy, but but works in 99.99% cases
+        pip_cmd.display().to_string(),  // TODO(tailhook) fix conversion
         "install".to_string(),
         );
     if ctx.pip_settings.index_urls.len() > 0 {
@@ -72,6 +69,56 @@ pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
     for lnk in ctx.pip_settings.find_links.iter() {
         args.push(format!("--find-links={}", lnk));
     }
-    args.extend(pkgs.clone().into_iter());
-    run_command(ctx, args.as_slice())
+    return args;
+}
+
+fn pip_setup(ctx: &mut BuildContext) -> Result<(), String> {
+    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache"),
+                           "pip-cache".to_string()));
+    ctx.environ.insert("PIP_DOWNLOAD_CACHE".to_string(),
+                       "/tmp/pip-cache".to_string());
+    Ok(())
+}
+
+pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
+    -> Result<(), String>
+{
+    try!(pip_setup(ctx));
+    let pip = try!(ensure_pip(ctx, ver, scan_features(pkgs).as_slice()));
+    let mut pip_cli = pip_args(ctx, pip);
+    pip_cli.extend(pkgs.clone().into_iter());
+    run_command(ctx, pip_cli.as_slice())
+}
+
+pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
+    -> Result<(), String>
+{
+    let f = try!(File::open(&Path::new("/work").join(reqtxt))
+        .map_err(|e| format!("Can't open requirements file: {}", e)));
+    let mut f = BufferedReader::new(f);
+    let mut names = vec!();
+    loop {
+        let line = match f.read_line() {
+            Ok(line) => line,
+            Err(ref e) if e.kind == EndOfFile => {
+                break;
+            }
+            Err(e) => {
+                return Err(format!("Error reading requirements: {}", e));
+            }
+        };
+        let chunk = line.as_slice().trim();
+        // Ignore empty lines and comments
+        if chunk.len() == 0 || chunk.starts_with("#") {
+            continue;
+        }
+        names.push(chunk.to_string());
+    }
+
+    try!(pip_setup(ctx));
+    let pip = try!(ensure_pip(ctx, ver, scan_features(&names).as_slice()));
+    let mut pip_cli = pip_args(ctx, pip);
+    pip_cli.push("--requirement".to_string());
+    pip_cli.push(reqtxt.display().to_string()); // TODO(tailhook) fix conversion
+    run_command(ctx, pip_cli.as_slice())
 }

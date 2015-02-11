@@ -116,7 +116,9 @@ pub enum Builder {
     // -- Python --
     PipConfig(PipSettings),
     Py2Install(Vec<String>),
+    Py2Requirements(Path),
     Py3Install(Vec<String>),
+    Py3Requirements(Path),
 }
 
 pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
@@ -235,9 +237,15 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
+        ("Py2Requirements".to_string(), box V::Scalar {
+            default: Some("requirements.txt".to_string()),
+        .. Default::default() } as Box<V::Validator>),
         ("Py3Install".to_string(), box V::Sequence {
             element: box V::Scalar {
             .. Default::default() } as Box<V::Validator>,
+        .. Default::default() } as Box<V::Validator>),
+        ("Py3Requirements".to_string(), box V::Scalar {
+            default: Some("requirements.txt".to_string()),
         .. Default::default() } as Box<V::Validator>),
 
         // Node.js

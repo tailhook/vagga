@@ -351,8 +351,9 @@ The following ``pip`` package specification formats are supported:
 
 All other forms may work but not supported. Specifying command-line arguments
 instead of package names is not supported. To configure pip use ``!PipConfig``
-directive. In the following example there are full list of paramenters::
+directive. In the example there are full list of parameters:
 
+.. code-block:: yaml
 
     setup:
     - !Ubuntu trusty
@@ -370,5 +371,27 @@ about options
    ``--no-deps`` option. Which is recommended way for setting up isolated
    environments any way. To see list of dependencies and their versions you may
    use ``pip freeze`` command.
+
+.. _pyreq:
+
+Better way to specify python dependencies is to use "requirements.txt":
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !Py3Requirements "requirements.txt"
+
+This works the same as ``Py3Install`` including auto-installing of version
+control packages and changes tracking. I.e. It will rebuild container when
+"requirements.txt" change. So ideally in python projects you may use two lines
+above and that's it.
+
+The ``Py2Requirements`` command exists too.
+
+.. note:: The "requirements.txt" is checked semantically. I.e. empty lines
+   and comments are ignored. In current implementation the order of items
+   is significant but we might remove this restriction in the future.
+
 
 .. _pip: http://pip.pypa.io
