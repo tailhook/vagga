@@ -59,6 +59,9 @@ be used for all contianers unless you have specific needs.
 The ``tmpfs-volumes`` key changed for the generic ``volumes`` key, see
 :ref:`volumes` for more info.
 
+The ``ensure-dirs`` feature is now achieved as ``- !EnsureDir dirname`` build
+step.
+
 
 Commands
 --------
