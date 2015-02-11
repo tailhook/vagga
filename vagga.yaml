@@ -19,7 +19,7 @@ containers:
       script: |
         ./install.sh --prefix=/usr
     - !Remove /usr/lib/rustlib/i686-unknown-linux-gnu
-    - !Install [make, checkinstall, git, uidmap]
+    - !Install [make, checkinstall, git, uidmap, wget]
 
 commands:
 

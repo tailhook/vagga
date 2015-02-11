@@ -2,7 +2,7 @@
 mkdir alpine 2>/dev/null || true
 cd alpine
 rm MIRRORS.txt 2>/dev/null || true
-wget http://nl.alpinelinux.org/alpine/MIRRORS.txt
+wget http://nl.alpinelinux.org/alpine/MIRRORS.txt --no-use-server-timestamp
 mirror=$(sort --random-sort MIRRORS.txt | head -n 1)
 wget -c $mirror/v3.1/main/x86_64/apk-tools-static-2.5.0_rc1-r0.apk
 wget -c $mirror/v3.1/main/x86_64/busybox-static-1.22.1-r14.apk
