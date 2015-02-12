@@ -1,5 +1,5 @@
 use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir_recursive, mkdir};
+use std::io::fs::{mkdir_recursive, mkdir, copy};
 use std::io::fs::PathExtensions;
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
@@ -109,6 +109,11 @@ impl<'a> BuildContext<'a> {
     }
     pub fn start(&mut self) -> Result<(), String> {
         try!(mount_system_dirs());
+        try!(mkdir(&Path::new("/vagga/root/etc"), ALL_PERMISSIONS)
+             .map_err(|e| format!("Error creating /etc dir: {}", e)));
+        try!(copy(&Path::new("/etc/resolv.conf"),
+                  &Path::new("/vagga/root/etc/resolv.conf"))
+            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
         Ok(())
     }
 
