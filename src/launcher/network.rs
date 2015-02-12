@@ -422,7 +422,7 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
             }
             Ok(ns)
         })
-        .map_err(|e| format!("Can't read resolf.conf: {}", e))
+        .map_err(|e| format!("Can't read resolv.conf: {}", e))
 }
 
 fn get_interfaces() -> Result<BitvSet, String> {

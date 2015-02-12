@@ -1,4 +1,5 @@
 use std::io::fs::File;
+use std::io::fs::copy;
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};
@@ -59,6 +60,11 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
             &Path::new("/vagga/root/etc/dpkg/dpkg.cfg.d/02apt-speedup"))
         .and_then(|mut f| f.write(b"force-unsafe-io"))
         .map_err(|e| format!("Error writing dpkg config: {}", e)));
+
+    // Revert resolv.conf back
+    try!(copy(&Path::new("/etc/resolv.conf"),
+              &Path::new("/vagga/root/etc/resolv.conf"))
+        .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
 
     try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
                            "apt-cache".to_string()));
