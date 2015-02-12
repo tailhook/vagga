@@ -61,13 +61,13 @@ commands:
     write-mode: transient-hard-link-copy
     accepts-arguments: true
     run: |
-      make all "$@"
+      make all "$@" || exit 1
       checkinstall \
         --default \
         --maintainer=paul@colomiets.name \
         --pkglicense=MIT \
         --pkgname=vagga \
-        --pkgver=${1:-$(git describe | cut -c2-)} \
+        --pkgver="$(git describe | cut -c2-)" \
         --requires="uidmap" \
         --backup=no \
         --nodoc \
