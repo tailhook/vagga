@@ -27,7 +27,7 @@ pub struct Container {
 
     pub environ_file: Option<Path>,
     pub environ: BTreeMap<String, String>,
-    pub resolv_conf: Option<Path>,
+    pub resolv_conf_path: Option<Path>,
     pub volumes: BTreeMap<Path, Volume>,
 }
 
@@ -65,6 +65,11 @@ pub fn container_validator<'a>() -> Box<V::Validator + 'a> {
             .. Default::default()} as Box<V::Validator>),
         ("environ_file".to_string(), box V::Scalar {
             optional: true,
+            .. Default::default()} as Box<V::Validator>),
+        ("resolv_conf_path".to_string(), box V::Directory {
+            absolute: Some(true),
+            optional: true,
+            default: Some(Path::new("/etc/resolv.conf")),
             .. Default::default()} as Box<V::Validator>),
         ("uids".to_string(), box V::Sequence {
             element: box V::Scalar {

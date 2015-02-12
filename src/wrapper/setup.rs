@@ -22,6 +22,7 @@ use super::run::DEFAULT_PATH;
 use settings::{MergedSettings};
 
 
+#[derive(Clone, Copy, Show, PartialEq, Eq)]
 pub enum WriteMode {
     ReadOnly,
     TransientHardlinkCopy(pid_t),
@@ -329,7 +330,6 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
                 .join(container_ver).join("root");
             try!(bind_mount(&nroot, &tgtroot)
                  .map_err(|e| format!("Error bind mount: {}", e)));
-            try!(remount_ro(&tgtroot));
         }
         WriteMode::TransientHardlinkCopy(pid) => {
             let oldpath = Path::new("/vagga/base/.roots")
@@ -377,6 +377,20 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
              .map_err(|e| format!("Error mounting directory \
                 with namespaces: {}", e)));
     }
+
+    if let Some(ref path) = container.resolv_conf_path {
+        let path = tgtroot.join(path.path_relative_from(&root_path).unwrap());
+        try!(copy(&Path::new("/etc/resolv.conf"), &path)
+            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
+    }
+
+    //  Currently we need the root to be writeable for putting resolv.conf
+    //  It's a bit ugly but bearable for development environments.
+    //  Eventually we'll find a better way
+    if write_mode == WriteMode::ReadOnly {
+        try!(remount_ro(&tgtroot));
+    }
+
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
          .map_err(|e| format!("Error changing root: {}", e)));
     try!(unmount(&Path::new("/work/.vagga/.mnt"))

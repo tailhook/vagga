@@ -96,6 +96,19 @@ Container parameters:
     .. note:: You must create a folder for each volume. See :ref:`build_commands` for
        documentation.
 
+``resolv-conf-path``
+    The path in container where to copy ``resolv.conf`` from host. If the value
+    is ``null``, no file is copied.  Default is ``/etc/resolv.conf``. Its
+    useful if you symlink ``/etc/resolv.conf`` to some tmpfs directory in
+    ``setup`` and point ``resolv-conf-path`` to the directory.
+
+    .. note:: The default behavior for vagga is to overwrite
+       ``/etc/resolv.conf`` inside the container at the start. It's violation
+       of read-only nature of container images (and visible for all
+       containers). But as we are doing only single-machine development
+       environments, it's bearable. We are seeking for a better way without too
+       much hassle for the user. But you can use the symlink if it bothers you.
+
 
 Commands
 ========
