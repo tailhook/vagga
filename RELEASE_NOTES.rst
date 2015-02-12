@@ -16,6 +16,7 @@ requirements.txt support.
   `commands<http://vagga.readthedocs.org/en/latest/build_commands.html#pyreq>`_
 * Implement writing ``/etc/resolv.conf`` (previously worked only by the fact
   that libc tries 127.0.0.1 when the file is empty)
+* Fix positional arguments for shell-wrapped commands
 
 
 Vagga 0.2.0

@@ -113,6 +113,8 @@ fn shell_command(ast: Ast) -> Vec<Ast> {
                           "-c".to_string()),
                 A::Scalar(pos.clone(), NonSpecific, style,
                           value),
+                A::Scalar(pos.clone(), NonSpecific, Plain,
+                          "--".to_string()),
                 );
         }
         _ => unreachable!(),
