@@ -2,10 +2,19 @@
 Release Notes
 =============
 
-Vagga 0.2.1
+
+Vagga 0.2.2
 ===========
 
 :Release Date: future
+
+* Add `_version_hash` command, mostly for scripting
+
+
+Vagga 0.2.1
+===========
+
+:Release Date: 12.02.2015
 
 This release fixes small issues appeared right after release and adds python
 requirements.txt support.

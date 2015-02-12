@@ -94,7 +94,7 @@ pub fn run() -> isize {
         "_list" => {
             list::print_list(&config, args)
         }
-        "_build" | "_build_shell" | "_clean" => {
+        "_build" | "_build_shell" | "_clean" | "_version_hash" => {
             user::run_wrapper(&int_workdir, cname, args, true)
         }
         "_run" => {

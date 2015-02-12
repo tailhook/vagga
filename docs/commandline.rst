@@ -34,3 +34,5 @@ here
   For other operations see ``vagga _clean --help``
 * ``vagga _list`` -- list of commands (including builtin ones when using
   ``--builtin`` flag)
+* ``vagga _version_hash`` -- prints version hash for the container, might be
+  used in some automation scripts

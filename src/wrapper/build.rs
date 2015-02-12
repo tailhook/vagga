@@ -303,6 +303,7 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<isize, String>
 {
     let mut name: String = "".to_string();
+    let mut short = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -313,6 +314,10 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         ap.refer(&mut name)
             .add_argument("container_name", Box::new(Store::<String>),
                 "Container name to build");
+        ap.refer(&mut short)
+            .add_option(&["-s", "--short"], Box::new(StoreTrue),
+                "Print short container version, like used in directory names \
+                 (8 chars)");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -325,7 +330,11 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         wrapper.project_root, wrapper.ext_settings));
     return get_version_hash(name, wrapper)
         .map(|ver| ver
-            .map(|x| println!("{}", x)).map(|()| 0)
+            .map(|x| if short {
+                println!("{}", x.slice_to(8))
+            } else {
+                println!("{}", x)
+            }).map(|()| 0)
             .unwrap_or(29));
 }
 
