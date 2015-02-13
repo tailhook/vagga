@@ -13,6 +13,7 @@ Vagga 0.2.2
 * Fix permission of ubuntu ``policy-rc.d``, which fixes installing packages
   having a daemon that start on install
 * Configure apt to always use ``--no-install-recommends`` in ubuntu
+* Add ``-W`` flag to ``_run`` command, to run writable (copy of) container
 
 
 Vagga 0.2.1

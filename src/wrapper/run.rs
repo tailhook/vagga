@@ -1,8 +1,11 @@
 use std::os::{getenv};
+use std::str::FromStr;
 use std::io::fs::PathExtensions;
+use std::io::fs::readlink;
 use std::io::stdio::{stdout, stderr};
+use libc::pid_t;
 
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store, List, StoreTrue};
 
 use config::{Container};
 use container::uidmap::{map_users, Uidmap};
@@ -18,14 +21,75 @@ pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
 
 
-pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
-    container: &Container, command: &String, args: &[String])
+pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     -> Result<isize, String>
 {
-    try!(setup::setup_filesystem(container,
-        setup::WriteMode::ReadOnly, cname.as_slice()));
+    let mut container: String = "".to_string();
+    let mut command: String = "".to_string();
+    let mut args = Vec::new();
+    let mut copy = false;
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Runs arbitrary command inside the container
+            ");
+        /* TODO(tailhook) implement environment settings
+        ap.refer(&mut env.set_env)
+          .add_option(&["-E", "--env", "--environ"], Box::new(Collect::<String>),
+                "Set environment variable for running command")
+          .metavar("NAME=VALUE");
+        ap.refer(&mut env.propagate_env)
+          .add_option(&["-e", "--use-env"], Box::new(Collect::<String>),
+                "Propagate variable VAR into command environment")
+          .metavar("VAR");
+        */
+        ap.refer(&mut copy)
+            .add_option(&["-W", "--writeable"], Box::new(StoreTrue),
+                "Create translient writeable container for running the command.
+                 Currently we use hard-linked copy of the container, so it's
+                 dangerous for some operations. Still it's ok for installing
+                 packages or similar tasks");
+        ap.refer(&mut container)
+            .add_argument("container_name", Box::new(Store::<String>),
+                "Container name to build");
+        ap.refer(&mut command)
+            .add_argument("command", Box::new(Store::<String>),
+                "Command to run inside the container");
+        ap.refer(&mut args)
+            .add_argument("args", Box::new(List::<String>),
+                "Arguments for the command");
+        ap.stop_on_first_argument(true);
+        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
+        .map_err(|e| format!("Can't read /proc/self: {}", e))
+        .and_then(|v| v.as_str().and_then(FromStr::from_str)
+            .ok_or(format!("Can't parse pid: {:?}", v))));
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
+    let cconfig = try!(wrapper.config.containers.get(&container)
+        .ok_or(format!("Container {} not found", container)));
+    let uid_map = if user_ns {
+        Some(try!(map_users(wrapper.settings,
+            &cconfig.uids, &cconfig.gids)))
+    } else {
+        None
+    };
 
-    let env = try!(setup::get_environment(container));
+    let write_mode = match copy {
+        false => setup::WriteMode::ReadOnly,
+        true => setup::WriteMode::TransientHardlinkCopy(pid),
+    };
+    let cont_ver = try!(setup::container_ver(&container));
+    try!(setup::setup_filesystem(cconfig, write_mode, cont_ver.as_slice()));
+
+    let env = try!(setup::get_environment(cconfig));
     let mut cpath = Path::new(command.as_slice());
     let args = args.clone().to_vec();
     if cpath.is_absolute() {
@@ -65,58 +129,4 @@ pub fn run_command(uid_map: &Option<Uidmap>, cname: &String,
         Killed => return Ok(1),
         Exit(val) => return Ok(val),
     };
-}
-
-pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
-    -> Result<isize, String>
-{
-    let mut container: String = "".to_string();
-    let mut command: String = "".to_string();
-    let mut args = Vec::new();
-    {
-        let mut ap = ArgumentParser::new();
-        ap.set_description("
-            Runs arbitrary command inside the container
-            ");
-        /* TODO(tailhook) implement environment settings
-        ap.refer(&mut env.set_env)
-          .add_option(&["-E", "--env", "--environ"], Box::new(Collect::<String>),
-                "Set environment variable for running command")
-          .metavar("NAME=VALUE");
-        ap.refer(&mut env.propagate_env)
-          .add_option(&["-e", "--use-env"], Box::new(Collect::<String>),
-                "Propagate variable VAR into command environment")
-          .metavar("VAR");
-        */
-        ap.refer(&mut container)
-            .add_argument("container_name", Box::new(Store::<String>),
-                "Container name to build");
-        ap.refer(&mut command)
-            .add_argument("command", Box::new(Store::<String>),
-                "Command to run inside the container");
-        ap.refer(&mut args)
-            .add_argument("args", Box::new(List::<String>),
-                "Arguments for the command");
-        ap.stop_on_first_argument(true);
-        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
-            Ok(()) => {}
-            Err(0) => return Ok(0),
-            Err(_) => {
-                return Ok(122);
-            }
-        }
-    }
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
-    let cconfig = try!(wrapper.config.containers.get(&container)
-        .ok_or(format!("Container {} not found", container)));
-    let uid_map = if user_ns {
-        Some(try!(map_users(wrapper.settings,
-            &cconfig.uids, &cconfig.gids)))
-    } else {
-        None
-    };
-    let cont_ver = try!(setup::container_ver(&container));
-    return run_command(&uid_map, &cont_ver, cconfig,
-                       &command, args.as_slice());
 }

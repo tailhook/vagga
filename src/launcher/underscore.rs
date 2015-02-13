@@ -17,17 +17,19 @@ pub fn run_command(workdir: &Path, cmdname: String, mut args: Vec<String>)
 {
     let mut cmdargs = vec!();
     let mut container = "".to_string();
-    let mut pid = None;
+    let mut copy = false;
     {
         args.insert(0, "vagga ".to_string() + cmdname.as_slice());
         let mut ap = ArgumentParser::new();
-        ap.set_description(
-            "Run command (or shell) in one of the vagga's network namespaces");
-        ap.refer(&mut pid)
-            .add_option(&["--pid"], Box::new(StoreOption::<pid_t>), "
-                Run in the namespace of the process with PID.
-                By default you get shell in the \"gateway\" namespace.
-                ");
+        ap.set_description("
+            Runs arbitrary command inside the container
+            ");
+        ap.refer(&mut copy)
+            .add_option(&["-W", "--writeable"], Box::new(StoreTrue),
+                "Create translient writeable container for running the command.
+                 Currently we use hard-linked copy of the container, so it's
+                 dangerous for some operations. Still it's ok for installing
+                 packages or similar tasks");
         ap.refer(&mut container)
             .add_argument("container", Box::new(Store::<String>),
                 "Container to run command in")
@@ -38,7 +40,7 @@ pub fn run_command(workdir: &Path, cmdname: String, mut args: Vec<String>)
             .required();
 
         ap.stop_on_first_argument(true);
-        match ap.parse(args, &mut stdout(), &mut stderr()) {
+        match ap.parse(args.clone(), &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
             Err(_) => {
@@ -46,14 +48,26 @@ pub fn run_command(workdir: &Path, cmdname: String, mut args: Vec<String>)
             }
         }
     }
-    cmdargs.insert(0, container.clone());
+    args.remove(0);
     match user::run_wrapper(workdir, "_build".to_string(),
         vec!(container), true)
     {
         Ok(0) => {}
         x => return x,
     }
-    user::run_wrapper(workdir, cmdname, cmdargs, true)
+    let res = user::run_wrapper(workdir, cmdname, args, true);
+
+    if copy {
+        match user::run_wrapper(workdir, "_clean".to_string(),
+            vec!("--transient".to_string()), true)
+        {
+            Ok(0) => {}
+            x => warn!(
+                "The `vagga _clean --transient` exited with status: {:?}", x),
+        }
+
+    }
+    return res;
 }
 
 pub fn run_in_netns(workdir: &Path, cname: String, mut args: Vec<String>)
