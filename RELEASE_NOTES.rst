@@ -9,6 +9,7 @@ Vagga 0.2.2
 :Release Date: future
 
 * Add `_version_hash` command, mostly for scripting
+* No need for tilde or null after `!UbuntuUniverse` (and probably other cases)
 
 
 Vagga 0.2.1

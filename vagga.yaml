@@ -13,7 +13,7 @@ containers:
   ubuntu-package:
     setup:
     - !Ubuntu trusty
-    - !UbuntuUniverse ~
+    - !UbuntuUniverse
     - !TarInstall
       url: http://static.rust-lang.org/dist/rust-1.0.0-alpha-x86_64-unknown-linux-gnu.tar.gz
       script: |
