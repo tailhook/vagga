@@ -14,6 +14,8 @@ Vagga 0.2.2
   having a daemon that start on install
 * Configure apt to always use ``--no-install-recommends`` in ubuntu
 * Add ``-W`` flag to ``_run`` command, to run writable (copy of) container
+* Ubuntu will automatically use nearest mirror and allow to customize mirror
+  in personal settings
 
 
 Vagga 0.2.1

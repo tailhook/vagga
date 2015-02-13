@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::util::clean_dir;
 use config::Container;
+use config::Settings;
 use config::builders::PipSettings;
 use super::commands::debian::UbuntuInfo;
 use super::commands::alpine::AlpineInfo;
@@ -29,6 +30,7 @@ pub struct BuildContext<'a> {
     cache_dirs: BTreeMap<Path, String>,
     pub environ: BTreeMap<String, String>,
 
+    pub settings: Settings,
     pub distribution: Distribution,
     pub pip_settings: PipSettings,
     pub packages: BTreeSet<String>,
@@ -36,7 +38,9 @@ pub struct BuildContext<'a> {
 }
 
 impl<'a> BuildContext<'a> {
-    pub fn new<'x>(name: String, container: Container) -> BuildContext<'x> {
+    pub fn new<'x>(name: String, container: Container, settings: Settings)
+        -> BuildContext<'x>
+    {
         return BuildContext {
             container_name: name,
             container_config: container,
@@ -63,6 +67,7 @@ impl<'a> BuildContext<'a> {
                  .to_string()),
                 ).into_iter().collect(),
 
+            settings: settings,
             distribution: Distribution::Unknown,
             pip_settings: Default::default(),
             packages: BTreeSet::new(),

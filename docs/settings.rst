@@ -56,3 +56,9 @@ not to do so.
     use any container with same name already built. It's only useful for
     scripts for performance reasons or if you don't have internet and
     containers are not too outdated.
+
+``ubuntu-mirror``
+    Set to your preferred ubuntu mirror. By default it's
+    ``mirror://mirrors.ubuntu.com/mirrors.txt`` which means mirror will be
+    determined automatically. Note that it's different from default in ubuntu
+    itself where ``http://archive.ubuntu.com/ubuntu/`` is the default.

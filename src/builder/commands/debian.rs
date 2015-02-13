@@ -1,6 +1,8 @@
 use std::io::{USER_RWX, GROUP_READ, GROUP_EXECUTE, OTHER_READ, OTHER_EXECUTE};
+use std::io::BufferedReader;
+use std::io::EndOfFile;
 use std::io::fs::File;
-use std::io::fs::{copy, chmod};
+use std::io::fs::{copy, chmod, rename};
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};
@@ -45,8 +47,35 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
         has_universe: false,
     });
     try!(init_debian_build(ctx));
+    try!(set_mirror(ctx));
 
     return Ok(());
+}
+
+fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
+    let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
+    let mut source = BufferedReader::new(try!(File::open(&sources_list)
+        .map_err(|e| format!("Error reading sources.list file: {}", e))));
+    let tmp = sources_list.with_extension("tmp");
+    try!(File::create(&tmp)
+        .and_then(|mut f| {
+            loop {
+                let line = match source.read_line() {
+                    Ok(line) => line,
+                    Err(ref e) if e.kind == EndOfFile => {
+                        break;
+                    }
+                    Err(e) => return Err(e),
+                };
+                try!(f.write(line.replace("http://archive.ubuntu.com/ubuntu/",
+                     ctx.settings.ubuntu_mirror.as_slice()).as_bytes()));
+            }
+            Ok(())
+        })
+        .map_err(|e| format!("Error writing sources.list file: {}", e)));
+    try!(rename(&tmp, &sources_list)
+        .map_err(|e| format!("Error renaming sources.list file: {}", e)));
+    Ok(())
 }
 
 fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
@@ -191,15 +220,12 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     if let Ubuntu(ref ubuntu) = ctx.distribution {
         try!(File::create(&Path::new(target))
             .and_then(|mut f| {
-            try!(writeln!(&mut f,
-                "deb http://archive.ubuntu.com/ubuntu/ {} universe",
-                ubuntu.release));
-            try!(writeln!(&mut f,
-                "deb http://archive.ubuntu.com/ubuntu/ {}-updates universe",
-                ubuntu.release));
-            try!(writeln!(&mut f,
-                "deb http://archive.ubuntu.com/ubuntu/ {}-security universe",
-                ubuntu.release));
+                try!(writeln!(&mut f, "deb {} {} universe",
+                    ctx.settings.ubuntu_mirror, ubuntu.release));
+                try!(writeln!(&mut f, "deb {} {}-updates universe",
+                    ctx.settings.ubuntu_mirror, ubuntu.release));
+                try!(writeln!(&mut f, "deb {} {}-security universe",
+                    ctx.settings.ubuntu_mirror, ubuntu.release));
                 Ok(())
             })
             .map_err(|e| format!("Error writing universe.list file: {}", e)));

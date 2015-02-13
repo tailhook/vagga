@@ -62,7 +62,8 @@ pub fn run() -> isize {
         .expect("Error parsing configuration file");  // TODO
     let cont = cfg.containers.get(&container)
         .expect("Container not found");  // TODO
-    let mut build_context = BuildContext::new(container, (*cont).clone());
+    let mut build_context = BuildContext::new(
+        container, (*cont).clone(), settings);
     match build_context.start() {
         Ok(()) => {}
         Err(e) => {
