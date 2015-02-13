@@ -8,8 +8,10 @@ Vagga 0.2.2
 
 :Release Date: future
 
-* Add `_version_hash` command, mostly for scripting
-* No need for tilde or null after `!UbuntuUniverse` (and probably other cases)
+* Add ``_version_hash`` command, mostly for scripting
+* No need for tilde or null after ``!UbuntuUniverse`` (and probably other cases)
+* Fix permission of ubuntu ``policy-rc.d``, which fixes installing packages
+  having a daemon that start on install
 
 
 Vagga 0.2.1
@@ -23,7 +25,7 @@ requirements.txt support.
 * ``make install`` did not install vagga's busybox, effectively making vagga
   work only from source folder
 * Add Py2Requirements and Py3Requirements
-  `commands<http://vagga.readthedocs.org/en/latest/build_commands.html#pyreq>`_
+  `commands <http://vagga.readthedocs.org/en/latest/build_commands.html#pyreq>`_
 * Implement writing ``/etc/resolv.conf`` (previously worked only by the fact
   that libc tries 127.0.0.1 when the file is empty)
 * Fix positional arguments for shell-wrapped commands
@@ -59,7 +61,7 @@ affect a lot of users.
 
 
 .. _Upgrading: http://vagga.readthedocs.org/en/latest/upgrading.html
-.. _some missing features: http://vagga.readthedocs.org/en/latest/upgrading.html#missing-features
+.. _some features missing: http://vagga.readthedocs.org/en/latest/upgrading.html#missing-features
 .. _Depends: http://vagga.readthedocs.org/en/latest/build_commands.html#depends
 .. _network: http://vagga.readthedocs.org/en/latest/network.html
 .. _testing tools: https://medium.com/@paulcolomiets/evaluating-mesos-4a08f85473fb

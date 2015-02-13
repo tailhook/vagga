@@ -1,5 +1,6 @@
+use std::io::{USER_RWX, GROUP_READ, GROUP_EXECUTE, OTHER_READ, OTHER_EXECUTE};
 use std::io::fs::File;
-use std::io::fs::copy;
+use std::io::fs::{copy, chmod};
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};
@@ -50,10 +51,13 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
 
 fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
     // Do not attempt to start init scripts
-    try!(File::create(
-            &Path::new("/vagga/root/usr/sbin/policy-rc.d"))
+    let policy_file = Path::new("/vagga/root/usr/sbin/policy-rc.d");
+    try!(File::create(&policy_file)
         .and_then(|mut f| f.write(b"#!/bin/sh\nexit 101\n"))
         .map_err(|e| format!("Error writing policy-rc.d file: {}", e)));
+    try!(chmod(&policy_file,
+        USER_RWX|GROUP_READ|GROUP_EXECUTE|OTHER_READ|OTHER_EXECUTE)
+        .map_err(|e| format!("Can't chmod file: {}", e)));
 
     // Do not need to fsync() after package installation
     try!(File::create(
