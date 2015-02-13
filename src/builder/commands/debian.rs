@@ -65,6 +65,15 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
         .and_then(|mut f| f.write(b"force-unsafe-io"))
         .map_err(|e| format!("Error writing dpkg config: {}", e)));
 
+    // Do not install recommends by default
+    try!(File::create(
+            &Path::new("/vagga/root/etc/apt/apt.conf.d/01norecommend"))
+        .and_then(|mut f| f.write(br#"
+            APT::Install-Recommends "0";
+            APT::Install-Suggests "0";
+        "#))
+        .map_err(|e| format!("Error writing apt config: {}", e)));
+
     // Revert resolv.conf back
     try!(copy(&Path::new("/etc/resolv.conf"),
               &Path::new("/vagga/root/etc/resolv.conf"))
