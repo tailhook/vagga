@@ -1,6 +1,36 @@
+.. _installation:
+
 ============
 Installation
 ============
+
+Runtime Dependencies
+====================
+
+Vagga is compiled as static binary, so it doesn't have too much runtime
+dependencies. It only requires user namespaces properly set up.
+Usually you just need to install package (or compile) and run vagga.
+See one of the following sections for specific instructions.
+
+But if you need to understand gory details, here is what vagga requires in
+order to run:
+
+* ``CONFIG_USER_NS=y`` enabled in kernel (enabled in many  distributions by
+  default, with Archlinux being known exception)
+* ``newuidmap``, ``newgidmap`` binaries (either from ``shadow`` or ``uidmap``
+  package)
+* ``/etc/subuid`` and ``/etc/subgid`` set up, usually you need at least 65536
+  subusers (it's set automatically by ``useradd`` in new distributions,
+  see ``man /etc/subuid`` if not)
+* The ``iptables`` in case you will do network tolerance testing
+
+Some distributions (at least Debian and Fedora) patch kernel to disable
+unprivileged user namespaces with sysctl. So you might need to run (and add it
+to system startup)::
+
+    sysctl -w kernel.unprivileged_userns_clone=1
+
+See instructions specific for your distribution below.
 
 
 Building From Source
@@ -19,12 +49,9 @@ Build-time dependencies:
 
 Run-time dependencies (basically none):
 
-* ``glibc``
-* ``uidmap``
-
-
-.. note:: Vagga uses linux_ namespaces, so works on linux system only.
-
+* ``glibc`` (probably you have it)
+* ``newuidmap/newgidmap`` binaries (in ubuntu is separate ``uidmap`` package,
+  but it's a part of ``shadow`` which is installed everywhere)
 
 Process is as simple as following::
 
@@ -132,7 +159,7 @@ Installing::
     sudo make install PREFIX=/usr
 
 For upgrading you may build vagga using vagga, just run the following in source
-directory of vagga:
+directory of vagga::
 
     vagga build-ubuntu-package
 

@@ -35,5 +35,28 @@ run multiple commands you might use bash:
    done to keep image smaller. So you always need ``apt-get update`` step.
 
 
+I'm Getting "permission denied" Errors
+======================================
+
+If when starting vagga you're getting::
+
+    ERROR:container::monitor: Can't run container wrapper: Error executing: permission denied
+
+Then you're probably don't have apropriate kernel option enabled. You may try::
+
+    sysctl -w kernel.unprivileged_userns_clone=1
+
+If that works, you should add it to your system startup. If it doesn't
+unfortunately it may mean you need to recompile the kernel. It's not that
+complex nowadays, but still disturbing.
+
+Anyway if you didn't find specific instructions for your system on
+:ref:`installation` page please `report an issue`_ with information of your
+distribution (at least ``uname`` and ``/etc/os-release``) so I can add
+instructions.
+
+.. _report an issue: https://github.com/tailhook/vagga/issues
+
+
 
 
