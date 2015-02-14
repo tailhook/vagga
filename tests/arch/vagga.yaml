@@ -1,6 +1,0 @@
-containers:
-  from_tar:
-    setup:
-    - !Tar
-      url: http://mirrors.nix.org.ua/linux/archlinux/iso/2014.12.01/archlinux-bootstrap-2014.12.01-x86_64.tar.gz
-      subdir: root.x86_64
