@@ -9,7 +9,7 @@ specialized for development environments.
 Note version 0.2 changed format of ``vagga.yaml`` see `Release Notes`_ and
 Upgrading_ for more info.
 
-Mayor Features Are:
+Major Features Are:
 
 * Running programs in linux containers (not a full virtualization like Vagrant)
 * Fully userspace containers, no need for elevated privileges like for Docker_
