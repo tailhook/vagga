@@ -21,6 +21,18 @@ containers:
     - !Remove /usr/lib/rustlib/i686-unknown-linux-gnu
     - !Install [make, checkinstall, git, uidmap, wget]
 
+  vagrant:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [vagrant, git]
+    - !Sh |
+        set -ex
+        cd /tmp
+        git clone git://github.com/sstephenson/bats
+        cd bats
+        ./install.sh /usr
+
 commands:
 
   print-env: !Command
@@ -72,5 +84,12 @@ commands:
         --backup=no \
         --nodoc \
       make install
+
+  test: !Command
+    description: Run self tests
+    container: vagrant
+    run:
+    - bats
+    - tests/readonly.bats
 
 
