@@ -21,17 +21,30 @@ containers:
     - !Remove /usr/lib/rustlib/i686-unknown-linux-gnu
     - !Install [make, checkinstall, git, uidmap, wget]
 
-  vagrant:
+  test:
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse
-    - !Install [vagrant, git]
+    - !BuildDeps [wget, git, make]
     - !Sh |
         set -ex
         cd /tmp
         git clone git://github.com/sstephenson/bats
         cd bats
         ./install.sh /usr
+    - !Depends vagga_launcher
+    - !Depends vagga_wrapper
+    - !Depends vagga_build
+    - !Depends vagga_version
+    - !Depends vagga_setup_netns
+    - !Depends vagga_network
+    - !Depends apk
+    - !Depends busybox
+    - !Sh make install
+
+    - !Sh |
+        echo root:0:65536 > /etc/subuid
+        echo root:0:65536 > /etc/subgid
 
 commands:
 
@@ -87,9 +100,10 @@ commands:
 
   test: !Command
     description: Run self tests
-    container: vagrant
-    run:
-    - bats
-    - tests/readonly.bats
+    container: test
+    run: |
+      set -ex
+      rm -rf tests/*/.vagga
+      bats tests
 
 

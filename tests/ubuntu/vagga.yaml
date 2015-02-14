@@ -1,0 +1,39 @@
+containers:
+
+  trusty:
+    setup:
+    - !Ubuntu trusty
+
+  trusty-calc:
+    setup:
+    - !Ubuntu trusty
+    - !Install [bc]
+
+  precise-calc:
+    setup:
+    - !Ubuntu precise
+    - !Install [bc]
+
+commands:
+  echo-cmd: !Command
+    container: trusty
+    run: [echo]
+
+  echo-shell: !Command
+    container: trusty
+    run: echo
+
+  echo-shell-arg: !Command
+    container: trusty
+    accepts-arguments: true
+    run: echo "$@"
+
+  trusty-calc: !Command
+    container: trusty-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  precise-calc: !Command
+    container: precise-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
