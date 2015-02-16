@@ -1,3 +1,4 @@
+use std::fmt;
 use libc::uid_t;
 use regex::Regex;
 use serialize::{Decoder, Decodable};
@@ -8,6 +9,21 @@ use std::str::FromStr;
 pub struct Range {
     pub start: uid_t,
     pub end: uid_t,
+}
+
+impl fmt::String for Vec<Range> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(fmt, "["));
+        let mut iter = self.iter();
+        if let Some(i) = iter.next() {
+            try!(write!(fmt, "{}-{}", i.start, i.start+i.end));
+        }
+        for i in iter {
+            try!(write!(fmt, ", {}-{}", i.start, i.start+i.end));
+        }
+        try!(write!(fmt, "]"));
+        Ok(())
+    }
 }
 
 struct RangeError;

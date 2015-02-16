@@ -67,7 +67,7 @@ fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
 }
 
 pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
-    -> Vec<(uid_t, uid_t, uid_t)>
+    -> Result<Vec<(uid_t, uid_t, uid_t)>, ()>
 {
     let mut res = vec!((0, own_id, 1));
     let mut reqiter = req.iter();
@@ -96,11 +96,11 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
         if allowval.len() == 0 {
             allowval = match allowiter.next() {
                 Some(val) => *val,
-                None => unreachable!(),
+                None => return Err(()),
             };
         }
     }
-    return res;
+    return Ok(res);
 }
 
 pub fn get_max_uidmap() -> Result<Uidmap, String>
@@ -313,9 +313,23 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     let gids = if gids.len() > 0 { gids } else { &default_gids };
     if settings.uid_map.is_none() {
         let ranges = try!(read_outside_ranges("/proc/self/uid_map"));
-        let uid_map = match_ranges(uids, &ranges, 0);
+        let uid_map = try!(match_ranges(uids, &ranges, 0)
+            .map_err(|()| {
+                return format!("Number of allowed subuids is too small. \
+                    Required {}, allowed {}. You either need to increase \
+                    allowed numbers in /etc/subuid (preferred) or decrease \
+                    needed ranges in vagga.yaml by adding `uids` key \
+                    to container config", uids, ranges);
+            }));
         let ranges = try!(read_outside_ranges("/proc/self/gid_map"));
-        let gid_map = match_ranges(gids, &ranges, 0);
+        let gid_map = try!(match_ranges(gids, &ranges, 0)
+            .map_err(|()| {
+                return format!("Number of allowed subgids is too small. \
+                    Required {}, allowed {}. You either need to increase \
+                    allowed numbers in /etc/subgid (preferred) or decrease \
+                    needed ranges in vagga.yaml by adding `gids` key \
+                    to container config", gids, ranges);
+            }));
         return Ok(Ranges(uid_map, gid_map));
     } else {
         let &(ref uids, ref gids) = settings.uid_map.as_ref().unwrap();

@@ -3,6 +3,14 @@ Release Notes
 =============
 
 
+Vagga 0.2.3
+===========
+
+:Release Date: future
+
+* Reasonable error message when not enough uids available (#7)
+
+
 Vagga 0.2.2
 ===========
 

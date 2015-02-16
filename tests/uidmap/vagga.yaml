@@ -1,0 +1,11 @@
+containers:
+
+  too-much-uids:
+    uids: [0-1000000000]
+    setup:
+    - !Ubuntu trusty
+
+  too-much-gids:
+    gids: [0-1000000000]
+    setup:
+    - !Ubuntu trusty
