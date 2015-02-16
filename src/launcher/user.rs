@@ -1,4 +1,4 @@
-use std::os::{getenv};
+use std::os::{env, getenv};
 use std::os::self_exe_path;
 
 use container::monitor::{Monitor};
@@ -26,6 +26,11 @@ pub fn run_user_command(config: &Config, workdir: &Path,
 }
 
 pub fn common_child_command_env(cmd: &mut Command, workdir: &Path) {
+    for (k, v) in env().into_iter() {
+        if k.starts_with("VAGGAENV_") {
+            cmd.set_env(k, v);
+        }
+    }
     cmd.set_env("TERM".to_string(),
                 getenv("TERM").unwrap_or("dumb".to_string()));
     if let Some(x) = getenv("PATH") {

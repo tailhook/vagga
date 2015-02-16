@@ -33,16 +33,6 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         ap.set_description("
             Runs arbitrary command inside the container
             ");
-        /* TODO(tailhook) implement environment settings
-        ap.refer(&mut env.set_env)
-          .add_option(&["-E", "--env", "--environ"], Box::new(Collect::<String>),
-                "Set environment variable for running command")
-          .metavar("NAME=VALUE");
-        ap.refer(&mut env.propagate_env)
-          .add_option(&["-e", "--use-env"], Box::new(Collect::<String>),
-                "Propagate variable VAR into command environment")
-          .metavar("VAR");
-        */
         ap.refer(&mut copy)
             .add_option(&["-W", "--writeable"], Box::new(StoreTrue),
                 "Create translient writeable container for running the command.

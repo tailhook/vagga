@@ -65,3 +65,21 @@ setup() {
     link=$(readlink .vagga/precise-calc)
     [[ $link = ".roots/precise-calc.ba9759ba/root" ]]
 }
+
+@test "Test VAGGAENV_* vars" {
+    VAGGAENV_TESTVAR=testvalue run vagga _run trusty printenv TESTVAR
+    [[ $status -eq 0 ]]
+    [[ $output = testvalue ]]
+}
+
+@test "Test set env" {
+    run vagga --environ TESTVAR=1value1 _run trusty printenv TESTVAR
+    [[ $status -eq 0 ]]
+    [[ $output = 1value1 ]]
+}
+
+@test "Test propagate env" {
+    TESTVAR=2value2 run vagga --use-env TESTVAR _run trusty printenv TESTVAR
+    [[ $status -eq 0 ]]
+    [[ $output = 2value2 ]]
+}

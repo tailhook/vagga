@@ -12,6 +12,11 @@ Vagga 0.2.3
 * When running as root vagga now can use all available uids and doesn't require
   subuid/subgid files setup, mostly useful for container-in-container
   scenarios (#7)
+* The ``VAGGAENV_*`` environment vars will now be propagated to containers with
+  the prefix stripped
+* vagga now supports ``--env`` and ``--use-env`` command-line switch to set
+  envionment variable for child processes and to propagate a variable from
+  parent (i.e. user's) environment
 
 
 Vagga 0.2.2

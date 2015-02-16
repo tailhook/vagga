@@ -1,5 +1,5 @@
 use std::io::ALL_PERMISSIONS;
-use std::os::{getenv};
+use std::os::{getenv, env};
 use std::io::BufferedReader;
 use std::os::{self_exe_path};
 use std::io::FileType::{Symlink, Directory};
@@ -249,6 +249,11 @@ pub fn get_environment(container: &Container)
                   getenv("TERM").unwrap_or("dumb".to_string()));
     result.insert("PATH".to_string(),
                   DEFAULT_PATH.to_string());
+    for (k, v) in env().into_iter() {
+        if k.starts_with("VAGGAENV_") {
+            result.insert(k.slice_from(9).to_string(), v);
+        }
+    }
     if let Some(ref filename) = container.environ_file {
         let mut f = BufferedReader::new(try!(
                 File::open(filename)

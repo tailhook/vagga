@@ -11,10 +11,10 @@ extern crate config;
 extern crate container;
 
 use std::io::stderr;
-use std::os::{getcwd, set_exit_status};
+use std::os::{setenv, unsetenv, getenv, getcwd, set_exit_status};
 use config::find_config;
 use container::signal;
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store, List, Collect};
 
 mod list;
 mod user;
@@ -27,6 +27,8 @@ pub fn run() -> isize {
     let mut err = stderr();
     let mut cname = "".to_string();
     let mut args = vec!();
+    let mut set_env = vec!();
+    let mut propagate_env = vec!();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -35,6 +37,14 @@ pub fn run() -> isize {
 
             Run `vagga` without arguments to see the list of commands.
             ");
+        ap.refer(&mut set_env)
+          .add_option(&["-E", "--env", "--environ"], Box::new(Collect::<String>),
+                "Set environment variable for running command")
+          .metavar("NAME=VALUE");
+        ap.refer(&mut propagate_env)
+          .add_option(&["-e", "--use-env"], Box::new(Collect::<String>),
+                "Propagate variable VAR into command environment")
+          .metavar("VAR");
         ap.refer(&mut cname)
           .add_argument("command", box Store::<String>,
                 "A vagga command to run");
@@ -60,6 +70,20 @@ pub fn run() -> isize {
     };
     let int_workdir = workdir.path_relative_from(&cfg_dir)
                              .unwrap_or(Path::new("."));
+
+    for k in propagate_env.into_iter() {
+        setenv(("VAGGAENV_".to_string() + k.as_slice()).as_slice(),
+            getenv(k.as_slice()).unwrap_or("".to_string()));
+    }
+    for pair in set_env.into_iter() {
+        let mut pairiter = pair.as_slice().splitn(1, '=');
+        let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
+        if let Some(value) = pairiter.next() {
+            setenv(key.as_slice(), value.to_string());
+        } else {
+            unsetenv(key.as_slice());
+        }
+    }
 
     let result:Result<isize, String> = match cname.as_slice() {
         "" => {
