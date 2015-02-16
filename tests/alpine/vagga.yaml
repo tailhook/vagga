@@ -1,0 +1,30 @@
+containers:
+
+  v31:
+    setup:
+    - !Alpine v3.1
+
+  v31-calc:
+    setup:
+    - !Alpine v3.1
+    - !Install [bc]
+
+  v30-calc:
+    setup:
+    - !Alpine v3.0
+    - !Install [bc]
+
+commands:
+  echo-cmd: !Command
+    container: v31
+    run: [echo]
+
+  v31-calc: !Command
+    container: v31-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  v30-calc: !Command
+    container: v30-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
