@@ -42,10 +42,6 @@ containers:
     - !Depends busybox
     - !Sh make install
 
-    - !Sh |
-        echo root:0:65536 > /etc/subuid
-        echo root:0:65536 > /etc/subgid
-
 commands:
 
   print-env: !Command

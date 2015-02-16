@@ -9,6 +9,9 @@ Vagga 0.2.3
 :Release Date: future
 
 * Reasonable error message when not enough uids available (#7)
+* When running as root vagga now can use all available uids and doesn't require
+  subuid/subgid files setup, mostly useful for container-in-container
+  scenarios (#7)
 
 
 Vagga 0.2.2

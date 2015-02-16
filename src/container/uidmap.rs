@@ -123,6 +123,15 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     let uid = unsafe { geteuid() };
     let gid = unsafe { getegid() };
     if let (Some(uid_map), Some(gid_map)) = (uid_map, gid_map) {
+        if uid_map.len() == 0 && gid_map.len() == 0 && uid == 0 {
+            let uid_rng = try!(read_uid_ranges("/proc/self/uid_map", true));
+            let gid_rng = try!(read_uid_ranges("/proc/self/gid_map", true));
+            return Ok(Ranges(
+                uid_rng.into_iter()
+                    .map(|r| (r.start, r.start, r.end-r.start+1)).collect(),
+                gid_rng.into_iter()
+                    .map(|r| (r.start, r.start, r.end-r.start+1)).collect()));
+        }
         let mut uids = vec!((0, uid, 1));
         for &rng in uid_map.iter() {
             let mut rng = rng;
@@ -285,7 +294,8 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
     return Ok(());
 }
 
-fn read_outside_ranges(path: &str) -> Result<Vec<Range>, String> {
+fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
+{
     let mut file = BufferedReader::new(try!(File::open(&Path::new(path))
         .map_err(|e| format!("Error reading uid/gid map: {}", e))));
     let mut result = vec!();
@@ -293,13 +303,17 @@ fn read_outside_ranges(path: &str) -> Result<Vec<Range>, String> {
         let line = try!(line
             .map_err(|e| format!("Error reading uid/gid map: {}", e)));
         let mut words = line.as_slice().words();
-        let outside = try!(words.next().and_then(FromStr::from_str)
+        let inside = try!(words.next().and_then(FromStr::from_str)
             .ok_or(format!("uid/gid map format error")));
-        try!(words.next()
+        let outside = try!(words.next().and_then(FromStr::from_str)
             .ok_or(format!("uid/gid map format error")));
         let count = try!(words.next().and_then(FromStr::from_str)
             .ok_or(format!("uid/gid map format error")));
-        result.push(Range { start: outside, end: outside+count-1 });
+        if read_inside {
+            result.push(Range { start: inside, end: inside+count-1 });
+        } else {
+            result.push(Range { start: outside, end: outside+count-1 });
+        }
     }
     return Ok(result);
 }
@@ -312,7 +326,7 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     let uids = if uids.len() > 0 { uids } else { &default_uids };
     let gids = if gids.len() > 0 { gids } else { &default_gids };
     if settings.uid_map.is_none() {
-        let ranges = try!(read_outside_ranges("/proc/self/uid_map"));
+        let ranges = try!(read_uid_ranges("/proc/self/uid_map", true));
         let uid_map = try!(match_ranges(uids, &ranges, 0)
             .map_err(|()| {
                 return format!("Number of allowed subuids is too small. \
@@ -321,7 +335,7 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
                     needed ranges in vagga.yaml by adding `uids` key \
                     to container config", uids, ranges);
             }));
-        let ranges = try!(read_outside_ranges("/proc/self/gid_map"));
+        let ranges = try!(read_uid_ranges("/proc/self/gid_map", true));
         let gid_map = try!(match_ranges(gids, &ranges, 0)
             .map_err(|()| {
                 return format!("Number of allowed subgids is too small. \
