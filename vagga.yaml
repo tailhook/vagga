@@ -100,6 +100,12 @@ commands:
     run: |
       set -ex
       rm -rf tests/*/.vagga
+      export HOME=/work/tmp/home
+      mkdir -p $HOME /work/tmp/cache || true
+      echo "cache-dir: /work/tmp/cache" > $HOME/.vagga.yaml
+      if [ -n "$UBUNTU_MIRROR" ]; then
+          echo "ubuntu-mirror: $UBUNTU_MIRROR" >> $HOME/.vagga.yaml
+      fi
       bats tests
 
 
