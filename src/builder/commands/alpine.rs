@@ -39,7 +39,11 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
 }
 
 pub fn choose_mirror() -> String {
-    let repos = MIRRORS.split('\n').collect::<Vec<&str>>();
+    let repos = MIRRORS
+        .split('\n')
+        .map(|x| x.trim())
+        .filter(|x| x.len() > 0 && !x.starts_with("#"))
+        .collect::<Vec<&str>>();
     let mirror = thread_rng().choose(repos.as_slice())
         .expect("At least one mirror should work");
     debug!("Chosen mirror {}", mirror);
