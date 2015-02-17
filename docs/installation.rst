@@ -7,31 +7,44 @@ Installation
 Runtime Dependencies
 ====================
 
-Vagga is compiled as static binary, so it doesn't have too much runtime
-dependencies. It only requires user namespaces properly set up.
-Usually you just need to install package (or compile) and run vagga.
-See one of the following sections for specific instructions.
+Vagga is compiled as static binary, so it doesn't have many runtime
+dependencies. It does require user namespaces to be properly set up, which
+allows Vagga to create and administer containers without having root privlege.
+This is increasingly available in modern distributions but may need to be
+enabled manually.
 
-But if you need to understand gory details, here is what vagga requires in
-order to run:
+* the ``newuidmap``, ``newgidmap`` binaries are required (either from
+  ``shadow`` or ``uidmap`` package)
 
-* ``CONFIG_USER_NS=y`` enabled in kernel (enabled in many  distributions by
-  default, with Archlinux being known exception)
-* ``newuidmap``, ``newgidmap`` binaries (either from ``shadow`` or ``uidmap``
-  package)
-* ``/etc/subuid`` and ``/etc/subgid`` set up, usually you need at least 65536
-  subusers (it's set automatically by ``useradd`` in new distributions,
-  see ``man /etc/subuid`` if not)
-* The ``iptables`` in case you will do network tolerance testing
+* known exception for Archlinux: ensure ``CONFIG_USER_NS=y`` enabled in kernel.
 
-Some distributions (at least Debian and Fedora) patch kernel to disable
-unprivileged user namespaces with sysctl. So you might need to run (and add it
-to system startup)::
+* known exception for Debian and Fedora: some distributions disable
+  unprivileged user namespaces by default. You can check with::
 
-    sysctl -w kernel.unprivileged_userns_clone=1
+    $ sysctl kernel.unprivileged_userns_clone
+    kernel.unprivileged_userns_clone = 1
+
+  and to enable::
+
+    $ sudo sysctl -w kernel.unprivileged_userns_clone=1
+    kernel.unprivileged_userns_clone = 1
+    # make available on reboot
+    $ echo kernel.unprivileged_userns_clone=1 | \
+        sudo tee /etc/sysctl.d/50-unprivleged-userns-clone.conf
+    kernel.unprivileged_userns_clone=1
+
+* ``/etc/subuid`` and ``/etc/subgid`` should be set up. Usually you need at
+  least 65536 subusers. This will be setup automatically by ``useradd`` in new
+  distributions.  See ``man /etc/subuid`` if not. To check::
+
+    $ grep -w $(whoami) /etc/sub[ug]id
+    /etc/subgid:<you>:689824:65536
+    /etc/subuid:<you>:689824:65536
+
+The only other optional dependency is ``iptables`` in case you will be doing
+:doc:`network tolerance testing</network>`.
 
 See instructions specific for your distribution below.
-
 
 Building From Source
 ====================
