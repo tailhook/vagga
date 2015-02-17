@@ -119,6 +119,14 @@ The process of installation looks like the following:
 
 Now vagga is ready to go.
 
+.. note:: If you are courageous enough, you may try to use ``vagga-testing``
+   repository to get new versions faster::
+
+       deb http://ubuntu.zerogw.com vagga-testing main
+
+   It's build right from git "master" branch and we are trying to keep "master"
+   branch stable.
+
 Ubuntu: Old Releases (precise, 12.04)
 =====================================
 
