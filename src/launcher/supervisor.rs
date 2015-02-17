@@ -23,6 +23,7 @@ use config::command::ChildCommand::{BridgeCommand};
 
 use super::network;
 use super::user::{run_wrapper, common_child_command_env};
+use super::build::build_container;
 
 
 pub struct RunChild<'a> {
@@ -49,7 +50,7 @@ impl<'a> Executor for RunChild<'a> {
 }
 
 
-pub fn run_supervise_command(_config: &Config, workdir: &Path,
+pub fn run_supervise_command(config: &Config, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>)
     -> Result<isize, String>
 {
@@ -80,13 +81,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            match run_wrapper(workdir,
-                "_build".to_string(), vec!(cont.to_string()),
-                true)
-            {
-                Ok(0) => {}
-                x => return x,
-            }
+            try!(build_container(config, cont));
         }
         if let &BridgeCommand(_) = child {
             bridges.push(name.to_string());
@@ -117,7 +112,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
         cmd.keep_sigmask();
         cmd.arg(cmdname.as_slice());
         cmd.arg(name.as_slice());
-        common_child_command_env(&mut cmd, workdir);
+        common_child_command_env(&mut cmd, Some(workdir));
         cmd.container();
         cmd.set_max_uidmap();
         let name = Rc::new(name.clone());
@@ -154,7 +149,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
             cmd.keep_sigmask();
             cmd.arg(cmdname.as_slice());
             cmd.arg(name.as_slice());
-            common_child_command_env(&mut cmd, workdir);
+            common_child_command_env(&mut cmd, Some(workdir));
             cmd.container();
 
             try!(set_namespace(&bridge_ns, NewNet)

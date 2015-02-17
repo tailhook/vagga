@@ -9,6 +9,7 @@ use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
 
 use super::supervisor;
+use super::build::build_container;
 
 
 pub fn run_user_command(config: &Config, workdir: &Path,
@@ -19,13 +20,13 @@ pub fn run_user_command(config: &Config, workdir: &Path,
         None => Err(format!("Command {} not found. \
                     Run vagga without arguments to see the list.", cmd)),
         Some(&MainCommand::Command(ref info))
-        => run_simple_command(info, workdir, cmd, args),
+        => run_simple_command(config, info, workdir, cmd, args),
         Some(&MainCommand::Supervise(ref sup))
         => supervisor::run_supervise_command(config, workdir, sup, cmd, args),
     }
 }
 
-pub fn common_child_command_env(cmd: &mut Command, workdir: &Path) {
+pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
     for (k, v) in env().into_iter() {
         if k.starts_with("VAGGAENV_") {
             cmd.set_env(k, v);
@@ -45,12 +46,13 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: &Path) {
     if let Some(x) = getenv("HOME") {
         cmd.set_env("VAGGA_USER_HOME".to_string(), x);
     }
-    cmd.set_env("PWD".to_string(), Path::new("/work")
-        .join(workdir)
-        .display().to_string());
+    if let Some(x) = workdir {
+        cmd.set_env("PWD".to_string(),
+            Path::new("/work").join(x).display().to_string());
+    }
 }
 
-pub fn run_simple_command(cfg: &CommandInfo,
+pub fn run_simple_command(config: &Config, cfg: &CommandInfo,
     workdir: &Path, cmdname: String, args: Vec<String>)
     -> Result<isize, String>
 {
@@ -58,16 +60,11 @@ pub fn run_simple_command(cfg: &CommandInfo,
         return Err(format!(
             "Network is not supported for !Command use !Supervise"))
     }
-    match run_wrapper(workdir, "_build".to_string(),
-        vec!(cfg.container.clone()), true)
-    {
-        Ok(0) => {}
-        x => return x,
-    }
-    let res = run_wrapper(workdir, cmdname, args, cfg.network.is_none());
+    try!(build_container(config, &cfg.container));
+    let res = run_wrapper(Some(workdir), cmdname, args, cfg.network.is_none());
 
     if cfg.write_mode != WriteMode::read_only {
-        match run_wrapper(workdir, "_clean".to_string(),
+        match run_wrapper(Some(workdir), "_clean".to_string(),
             vec!("--transient".to_string()), true)
         {
             Ok(0) => {}
@@ -80,7 +77,7 @@ pub fn run_simple_command(cfg: &CommandInfo,
 }
 
 // TODO(tailhook) run not only for simple commands
-pub fn run_wrapper(workdir: &Path, cmdname: String, args: Vec<String>,
+pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     userns: bool)
     -> Result<isize, String>
 {

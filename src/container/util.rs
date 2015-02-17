@@ -1,7 +1,11 @@
+use std::io::ALL_PERMISSIONS;
 use std::ptr::null;
 use std::ffi::c_str_to_bytes;
-use std::io::fs::{readdir, rmdir_recursive, unlink, rmdir};
+use std::io::fs::{readdir, rmdir_recursive, unlink, rmdir, copy, chmod, mkdir};
+use std::io::fs::{readlink, symlink};
 use std::io::fs::PathExtensions;
+use std::io::FileType::{Symlink, Directory};
+use std::io::{FileType, FileNotFound};
 use libc::{c_int, uid_t, gid_t, c_char, c_void, timeval};
 
 use super::root::temporary_change_root;
@@ -72,4 +76,46 @@ pub fn get_time() -> Time {
     let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
     unsafe { gettimeofday(&mut tv, null()) };
     return tv.tv_sec as f64 + 0.000001 * tv.tv_usec as f64;
+}
+
+pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
+    // TODO(tailhook) use reflinks if supported
+    let filelist = try!(readdir(old)
+        .map_err(|e| format!("Error reading directory: {}", e)));
+    for item in filelist.iter() {
+        let stat = try!(item.lstat()
+            .map_err(|e| format!("Error stat for file: {}", e)));
+        let nitem = new.join(item.filename().unwrap());
+        match stat.kind {
+            FileType::RegularFile => {
+                try!(copy(item, &nitem)
+                    .map_err(|e| format!("Can't hard-link file: {}", e)));
+            }
+            FileType::Directory => {
+                if !nitem.is_dir() {
+                    try!(mkdir(&nitem, ALL_PERMISSIONS)
+                        .map_err(|e| format!("Can't create dir: {}", e)));
+                    try!(chmod(&nitem, stat.perm)
+                        .map_err(|e| format!("Can't chmod: {}", e)));
+                }
+                try!(copy_dir(item, &nitem));
+            }
+            FileType::NamedPipe => {
+                warn!("Skipping named pipe {:?}", item);
+            }
+            FileType::BlockSpecial => {
+                warn!("Can't clone block-special {:?}, skipping", item);
+            }
+            FileType::Symlink => {
+                let lnk = try!(readlink(item)
+                    .map_err(|e| format!("Can't readlink: {}", e)));
+                try!(symlink(&lnk, &nitem)
+                    .map_err(|e| format!("Can't symlink: {}", e)));
+            }
+            FileType::Unknown => {
+                warn!("Unknown file type {:?}", item);
+            }
+        }
+    }
+    Ok(())
 }

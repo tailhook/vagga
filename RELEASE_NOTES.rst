@@ -17,6 +17,8 @@ Vagga 0.2.3
 * vagga now supports ``--env`` and ``--use-env`` command-line switch to set
   envionment variable for child processes and to propagate a variable from
   parent (i.e. user's) environment
+* Add ``!Container`` build command, which may be used to build on top of
+  another container
 
 
 Vagga 0.2.2

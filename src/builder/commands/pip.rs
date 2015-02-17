@@ -72,18 +72,9 @@ fn pip_args(ctx: &mut BuildContext, pip_cmd: Path) -> Vec<String> {
     return args;
 }
 
-fn pip_setup(ctx: &mut BuildContext) -> Result<(), String> {
-    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache"),
-                           "pip-cache".to_string()));
-    ctx.environ.insert("PIP_DOWNLOAD_CACHE".to_string(),
-                       "/tmp/pip-cache".to_string());
-    Ok(())
-}
-
 pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    try!(pip_setup(ctx));
     let pip = try!(ensure_pip(ctx, ver, scan_features(pkgs).as_slice()));
     let mut pip_cli = pip_args(ctx, pip);
     pip_cli.extend(pkgs.clone().into_iter());
@@ -115,7 +106,6 @@ pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
         names.push(chunk.to_string());
     }
 
-    try!(pip_setup(ctx));
     let pip = try!(ensure_pip(ctx, ver, scan_features(&names).as_slice()));
     let mut pip_cli = pip_args(ctx, pip);
     pip_cli.push("--requirement".to_string());

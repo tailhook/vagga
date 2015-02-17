@@ -16,8 +16,8 @@ pub static LATEST_VERSION: &'static str = "v3.1";
 
 #[derive(Show)]
 pub struct AlpineInfo {
-    mirror: String,
-    version: String,
+    pub mirror: String,
+    pub version: String,
 }
 
 
@@ -38,24 +38,27 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     }
 }
 
-pub fn setup_base(ctx: &mut BuildContext, version: &String)
-    -> Result<(), String>
-{
-    if let Unknown = ctx.distribution {
-    } else {
-        return Err(format!("Conflicting distribution"));
-    };
-    let apk_dir = Path::new("/vagga/root/etc/apk");
-    let repos = MIRRORS.split('\n').collect::<Vec<&str>>();
+pub fn choose_mirror() -> String {
+    let repos = MIRRORS
+        .split('\n')
+        .map(|x| x.trim())
+        .filter(|x| x.len() > 0 && !x.starts_with("#"))
+        .collect::<Vec<&str>>();
     let mirror = thread_rng().choose(repos.as_slice())
         .expect("At least one mirror should work");
     debug!("Chosen mirror {}", mirror);
+    return mirror.to_string();
+}
 
-    try!(mkdir_recursive(&Path::new("/vagga/root/etc/apk/cache"),
-                         ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating apk dir: {}", e)));
-    try!(ctx.add_cache_dir(Path::new("/etc/apk/cache"),
-                           "alpine-cache".to_string()));
+pub fn setup_base(ctx: &mut BuildContext, version: &String)
+    -> Result<(), String>
+{
+    let apk_dir = Path::new("/vagga/root/etc/apk");
+    let mirror = match ctx.distribution {
+        Alpine(ref distr) => &distr.mirror,
+        _ => return Err(format!("Conflicting distribution")),
+    };
+
     try!(mkdir_recursive(&apk_dir, ALL_PERMISSIONS)
         .map_err(|e| format!("Error creating apk dir: {}", e)));
 
@@ -71,10 +74,6 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
         "add",
         "alpine-base",
         ], &[]));
-    ctx.distribution = Alpine(AlpineInfo {
-        mirror: mirror.to_string(),
-        version: version.to_string(),
-    });
     Ok(())
 }
 

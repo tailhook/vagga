@@ -12,6 +12,7 @@ use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
+use container::vagga::container_ver;
 
 use super::build;
 use super::setup;
@@ -62,7 +63,7 @@ pub fn commandline_cmd(command: &CommandInfo,
         WriteMode::transient_hard_link_copy
         => setup::WriteMode::TransientHardlinkCopy(pid),
     };
-    let cont_ver = try!(setup::container_ver(&command.container));
+    let cont_ver = try!(container_ver(&command.container));
     try!(setup::setup_filesystem(cconfig,
         write_mode, cont_ver.as_slice()));
 

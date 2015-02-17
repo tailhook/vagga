@@ -395,3 +395,49 @@ The ``Py2Requirements`` command exists too.
 
 
 .. _pip: http://pip.pypa.io
+
+.. _dependent_containers:
+
+Dependent Containers
+====================
+
+Sometimes you want to build on top of another container. For example container
+for running tests might be based on production container, but it might add some
+test utils. Use ``!Container`` command for that:
+
+.. code-block:: yaml
+
+   container:
+     base:
+       setup:
+       - !Ubuntu trusty
+       - !Py3Install [django]
+     test:
+       setup:
+       - !Container base
+       - !Py3Install [nosetests]
+
+It's also sometimes useful to freeze some part of container and test next build
+steps on top of of it. For example:
+
+.. code-block:: yaml
+
+   container:
+     temporary:
+       setup:
+       - !Ubuntu trusty
+       - !TarInstall
+         url: http://download.zeromq.org/zeromq-4.1.0-rc1.tar.gz
+     web:
+       setup:
+       - !Container _temporary
+       - !Py3Install [pyzmq]
+
+In this case when you try multiple different versions of pyzmq, the zeromq
+itself will not be rebuilt. When you're done, you can append build steps and
+remove the ``temporary`` container.
+
+
+
+
+

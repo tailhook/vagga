@@ -13,6 +13,7 @@ use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
+use container::vagga::container_ver;
 use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
@@ -98,7 +99,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         WriteMode::transient_hard_link_copy
         => setup::WriteMode::TransientHardlinkCopy(pid),
     };
-    let cont_ver = try!(setup::container_ver(&command.container));
+    let cont_ver = try!(container_ver(&command.container));
     try!(setup::setup_filesystem(cconfig, write_mode, cont_ver.as_slice()));
 
     try!(_write_hosts(supervise));

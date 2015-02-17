@@ -63,7 +63,7 @@ pub fn run() -> isize {
     let cont = cfg.containers.get(&container)
         .expect("Container not found");  // TODO
     let mut build_context = BuildContext::new(
-        container, (*cont).clone(), settings);
+        &cfg, container, cont, settings);
     match build_context.start() {
         Ok(()) => {}
         Err(e) => {
@@ -72,8 +72,10 @@ pub fn run() -> isize {
         }
     }
     for b in cont.setup.iter() {
-        debug!("Versioning setup: {:?}", b);
-        match b.build(&mut build_context) {
+        debug!("Building step: {:?}", b);
+        match b.configure(&mut build_context)
+              .and_then(|()| b.build(&mut build_context))
+        {
             Ok(()) => {}
             Err(e) => {
                 error!("Error build command {:?}: {}", b, e);

@@ -23,14 +23,9 @@ pub struct UbuntuInfo {
     pub has_universe: bool,
 }
 
-
 pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
     -> Result<(), String>
 {
-    if let Unknown = ctx.distribution {
-    } else {
-        return Err(format!("Conflicting distribution"));
-    };
     let kind = "core";
     let arch = "amd64";
     let url = format!(concat!(
@@ -41,11 +36,6 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev")]));
 
-    ctx.distribution = Ubuntu(UbuntuInfo {
-        release: release.to_string(),
-        apt_update: true,
-        has_universe: false,
-    });
     try!(init_debian_build(ctx));
     try!(set_mirror(ctx));
 
@@ -108,14 +98,6 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
               &Path::new("/vagga/root/etc/resolv.conf"))
         .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
 
-    try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
-                           "apt-cache".to_string()));
-    try!(ctx.add_cache_dir(Path::new("/var/lib/apt/lists"),
-                          "apt-lists".to_string()));
-    ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
-                       "noninteractive".to_string());
-    ctx.environ.insert("LANG".to_string(),
-                       "en_US.UTF-8".to_string());
     try!(run_command(ctx, &[
         "/usr/sbin/locale-gen".to_string(),
         "en_US.UTF-8".to_string(),
@@ -233,10 +215,6 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
         return Err(format!("Incompatible distribution: {:?}",
                            ctx.distribution));
     };
-    match ctx.distribution {
-        Ubuntu(ref mut ubuntu) => { ubuntu.has_universe = true; }
-        _ => unreachable!(),
-    }
     Ok(())
 }
 

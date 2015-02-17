@@ -97,6 +97,7 @@ commands:
   test: !Command
     description: Run self tests
     container: test
+    accepts-arguments: true
     run: |
       set -ex
       rm -rf tests/*/.vagga
@@ -106,6 +107,9 @@ commands:
       if [ -n "$UBUNTU_MIRROR" ]; then
           echo "ubuntu-mirror: $UBUNTU_MIRROR" >> $HOME/.vagga.yaml
       fi
-      bats tests
-
+      if [ -n "$*" ]; then
+        bats "$@"
+      else
+        bats tests
+      fi
 

@@ -1,0 +1,29 @@
+containers:
+
+  base:
+    setup:
+    - !Alpine v3.1
+
+  calc:
+    setup:
+    - !Container base
+    - !Install [bc]
+
+  pythonic:
+    setup:
+    - !Container calc
+    - !Py2Install [injections]
+
+commands:
+  echo: !Command
+    container: base
+    run: [echo]
+
+  calc: !Command
+    container: calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  py: !Command
+    container: pythonic
+    run: python -c 'import injections'

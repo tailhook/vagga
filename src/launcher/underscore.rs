@@ -4,15 +4,18 @@ use libc::pid_t;
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
 
+use config::Config;
 use config::command::{CommandInfo, Networking};
 use container::container::Namespace::{NewUser, NewNet};
 use container::nsutil::{set_namespace};
 
 use super::user;
 use super::network;
+use super::build::build_container;
 
 
-pub fn run_command(workdir: &Path, cmdname: String, mut args: Vec<String>)
+pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
+    mut args: Vec<String>)
     -> Result<isize, String>
 {
     let mut cmdargs = vec!();
@@ -49,16 +52,11 @@ pub fn run_command(workdir: &Path, cmdname: String, mut args: Vec<String>)
         }
     }
     args.remove(0);
-    match user::run_wrapper(workdir, "_build".to_string(),
-        vec!(container), true)
-    {
-        Ok(0) => {}
-        x => return x,
-    }
-    let res = user::run_wrapper(workdir, cmdname, args, true);
+    try!(build_container(config, &container));
+    let res = user::run_wrapper(Some(workdir), cmdname, args, true);
 
     if copy {
-        match user::run_wrapper(workdir, "_clean".to_string(),
+        match user::run_wrapper(Some(workdir), "_clean".to_string(),
             vec!("--transient".to_string()), true)
         {
             Ok(0) => {}
@@ -70,7 +68,8 @@ pub fn run_command(workdir: &Path, cmdname: String, mut args: Vec<String>)
     return res;
 }
 
-pub fn run_in_netns(workdir: &Path, cname: String, mut args: Vec<String>)
+pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
+    mut args: Vec<String>)
     -> Result<isize, String>
 {
     let mut cmdargs = vec!();
@@ -105,18 +104,11 @@ pub fn run_in_netns(workdir: &Path, cname: String, mut args: Vec<String>)
         }
     }
     cmdargs.insert(0, container.clone());
-
-    match user::run_wrapper(workdir, "_build".to_string(),
-        vec!(container), true)
-    {
-        Ok(0) => {}
-        x => return x,
-    }
-
+    try!(build_container(config, &container));
     try!(network::join_gateway_namespaces());
     if let Some(pid) = pid {
         try!(set_namespace(&Path::new(format!("/proc/{}/ns/net", pid)), NewNet)
             .map_err(|e| format!("Error setting networkns: {}", e)));
     }
-    user::run_wrapper(workdir, cname, cmdargs, false)
+    user::run_wrapper(Some(workdir), cname, cmdargs, false)
 }
