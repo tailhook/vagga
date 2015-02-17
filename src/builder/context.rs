@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use container::mount::{bind_mount, unmount, mount_system_dirs};
 use container::util::clean_dir;
+use config::Config;
 use config::Container;
 use config::Settings;
 use config::builders::PipSettings;
@@ -22,8 +23,9 @@ pub enum Distribution {
 }
 
 pub struct BuildContext<'a> {
+    pub config: &'a Config,
     pub container_name: String,
-    pub container_config: Container,
+    pub container_config: &'a Container,
     ensure_dirs: BTreeSet<Path>,
     empty_dirs: BTreeSet<Path>,
     remove_dirs: BTreeSet<Path>,
@@ -38,10 +40,12 @@ pub struct BuildContext<'a> {
 }
 
 impl<'a> BuildContext<'a> {
-    pub fn new<'x>(name: String, container: Container, settings: Settings)
+    pub fn new<'x>(cfg: &'x Config, name: String,
+        container: &'x Container, settings: Settings)
         -> BuildContext<'x>
     {
         return BuildContext {
+            config: cfg,
             container_name: name,
             container_config: container,
             ensure_dirs: vec!(

@@ -68,7 +68,7 @@ pub fn run() -> isize {
                .as_slice());
     for b in cont.setup.iter() {
         debug!("Versioning setup: {:?}", b);
-        match b.hash(&mut hash) {
+        match b.hash(&cfg, &mut hash) {
             Hashed => continue,
             New => return 29,  // Always rebuild
             Error(e) => {
