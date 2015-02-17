@@ -8,7 +8,7 @@ Runtime Dependencies
 ====================
 
 Vagga is compiled as static binary, so it doesn't have many runtime
-dependencies. It does require user namespaces to be properly set up; which
+dependencies. It does require user namespaces to be properly set up, which
 allows Vagga to create and administer containers without having root privlege.
 This is increasingly available in modern distributions but may need to be
 enabled manually.
@@ -24,7 +24,7 @@ enabled manually.
     $ sysctl kernel.unprivileged_userns_clone
     kernel.unprivileged_userns_clone = 1
 
-  To enable::
+  and to enable::
 
     $ sudo sysctl -w kernel.unprivileged_userns_clone=1
     kernel.unprivileged_userns_clone = 1
