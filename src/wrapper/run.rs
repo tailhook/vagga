@@ -1,5 +1,6 @@
 use std::os::{getenv};
 use std::str::FromStr;
+use std::path::BytesContainer;
 use std::io::fs::PathExtensions;
 use std::io::fs::readlink;
 use std::io::stdio::{stdout, stderr};
@@ -83,7 +84,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     let env = try!(setup::get_environment(cconfig));
     let mut cpath = Path::new(command.as_slice());
     let args = args.clone().to_vec();
-    if cpath.is_absolute() {
+    if command.contains("/") {
     } else {
         let paths = [
             "/bin",

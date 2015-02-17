@@ -19,6 +19,7 @@ Vagga 0.2.3
   parent (i.e. user's) environment
 * Add ``!Container`` build command, which may be used to build on top of
   another container
+* The ``vagga _run`` now works with relative commands
 
 
 Vagga 0.2.2
