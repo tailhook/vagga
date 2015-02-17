@@ -2,6 +2,14 @@ setup() {
     cd /work/tests/inheritance
 }
 
+@test "inheritance: Deep container" {
+    run vagga py
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/pythonic)
+    [[ $link = ".roots/pythonic.659804b8/root" ]]
+}
+
 @test "inheritance: Run echo command" {
     run vagga echo hello
     printf "%s\n" "${lines[@]}"
@@ -19,11 +27,4 @@ setup() {
     [[ $link = ".roots/calc.dcc4a56e/root" ]]
 }
 
-@test "inheritance: Deep container" {
-    run vagga py
-    printf "%s\n" "${lines[@]}"
-    [[ $status = 0 ]]
-    link=$(readlink .vagga/pythonic)
-    [[ $link = ".roots/pythonic.659804b8/root" ]]
-}
 
