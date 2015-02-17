@@ -34,6 +34,8 @@ run multiple commands you might use bash:
 .. note:: We delete package indexes of ubuntu after container is built. It's
    done to keep image smaller. So you always need ``apt-get update`` step.
 
+Another technique is to use :ref:`dependent_containers`.
+
 
 I'm Getting "permission denied" Errors
 ======================================
