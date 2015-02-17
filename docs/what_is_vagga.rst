@@ -50,7 +50,7 @@ To run command just run ``vagga command_name``::
     >>> import flask
     >>>
 
-This is just a lazy example. Once your project starting to mature you want to
+This is just a lazy example. Once your project starts to mature you want to
 use some specific version of flask and some other dependencies::
 
     containers:
@@ -65,7 +65,7 @@ use some specific version of flask and some other dependencies::
           - Flask==0.10.1
           - sqlalchemy==0.9.8
 
-And if another developer does ``git pull`` and gets this config. Running
+And if another developer does ``git pull`` and gets this config, running
 ``vagga py3`` next time will rebuild container and run command in the new
 environment without any additional effort::
 
@@ -81,7 +81,7 @@ environment without any additional effort::
    package works well. Vagga also uses smart caching of packages to make
    rebuilds fast.
 
-You are probably want to move python dependencies into ``requirements.txt``::
+You probably want to move python dependencies into ``requirements.txt``::
 
     containers:
       flask:

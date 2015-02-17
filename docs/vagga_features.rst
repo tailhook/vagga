@@ -111,7 +111,7 @@ Similarly might be defined test container and command:
      testing:
        builder: ubuntu
        parameters:
-         packabes: make nodejs uglifyjs python-django nosetests
+         packages: make nodejs uglifyjs python-django nosetests
 
    commands:
 
