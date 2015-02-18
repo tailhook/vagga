@@ -21,6 +21,7 @@ pub struct TmpfsInfo {
 #[derive(Decodable, Clone)]
 pub struct Container {
     pub setup: Vec<Builder>,
+    pub auto_clean: bool,
 
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
@@ -56,6 +57,9 @@ pub fn container_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Structure { members: vec!(
         ("setup".to_string(), box V::Sequence {
             element: builder_validator(),
+            .. Default::default()} as Box<V::Validator>),
+        ("auto_clean".to_string(), box V::Scalar {
+            default: Some("false".to_string()),
             .. Default::default()} as Box<V::Validator>),
         ("environ".to_string(), box V::Mapping {
             key_element: box V::Scalar {

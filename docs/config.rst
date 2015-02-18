@@ -109,6 +109,15 @@ Container parameters:
        environments, it's bearable. We are seeking for a better way without too
        much hassle for the user. But you can use the symlink if it bothers you.
 
+``auto-clean``
+    (experimental) Do not leave multiple versions of container lying around.
+    Removes old container version after new is successfully build. This is
+    mostly useful for containers which depend on binaries locally built (i.e.
+    the ones that are never reproduced in future because of timestamp). For
+    most containers it's a bad idea because it doesn't allow to switch between
+    branches using source-control quickly. Better use ``vagga _clean --old``
+    if possible.
+
 
 Commands
 ========

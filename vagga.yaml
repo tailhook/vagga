@@ -41,6 +41,7 @@ containers:
     - !Depends apk
     - !Depends busybox
     - !Sh make install
+    auto-clean: true
 
 commands:
 

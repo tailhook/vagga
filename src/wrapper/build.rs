@@ -18,7 +18,8 @@ use container::monitor::{Monitor, Executor, MonitorStatus};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use container::uidmap::{Uidmap, map_users};
-use config::{Settings};
+use container::vagga::container_ver;
+use config::{Container, Settings};
 use super::Wrapper;
 use super::setup;
 
@@ -163,7 +164,9 @@ pub fn get_version_hash(container: String, wrapper: &Wrapper)
 pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let name = try!(_build_container(container, force, wrapper));
+    let cconfig = try!(wrapper.config.containers.get(container)
+        .ok_or(format!("Container {} not found", container)));
+    let name = try!(_build_container(cconfig, container, force, wrapper));
     let destlink = Path::new("/work/.vagga").join(container.as_slice());
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
@@ -175,19 +178,31 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
     } else {
         Path::new(".roots")
     };
-    try!(symlink(&roots.join(name.as_slice()).join("root"),
-                 &tmplink)
+    let linkval = roots.join(name.as_slice()).join("root");
+    if cconfig.auto_clean {
+        container_ver(container).map(|oldname| {
+            if oldname != name {
+                let base = Path::new("/vagga/base/.roots");
+                let dir = base.join(oldname.as_slice());
+                let tmpdir = base.join(".tmp".to_string() + oldname.as_slice());
+                rename(&dir, &tmpdir)
+                    .map_err(|e| error!("Error renaming old dir: {}", e));
+                rmdir_recursive(&tmpdir)
+                    .map_err(|e| error!("Error removing old dir: {}", e));
+            }
+        });
+    }
+    try!(symlink(&linkval, &tmplink)
          .map_err(|e| format!("Error symlinking container: {}", e)));
     try!(rename(&tmplink, &destlink)
          .map_err(|e| format!("Error renaming symlink: {}", e)));
     return Ok(name);
 }
 
-pub fn _build_container(container: &String, force: bool, wrapper: &Wrapper)
+pub fn _build_container(cconfig: &Container, container: &String,
+    force: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let cconfig = try!(wrapper.config.containers.get(container)
-        .ok_or(format!("Container {} not found", container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
     let mut mon = Monitor::new();
