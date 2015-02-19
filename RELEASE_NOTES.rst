@@ -6,7 +6,7 @@ Release Notes
 Vagga 0.2.3
 ===========
 
-:Release Date: future
+:Release Date: 19.02.2015
 
 * Reasonable error message when not enough uids available (#7)
 * When running as root vagga now can use all available uids and doesn't require
