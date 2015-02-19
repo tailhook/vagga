@@ -3,55 +3,35 @@ use std::io::EndOfFile;
 use std::io::fs::File;
 
 use super::super::context::{BuildContext};
+use super::super::packages;
 use super::generic::run_command;
-use super::super::context::Distribution as Distr;
-use super::super::dev::RevControl;
-use super::debian;
-use super::alpine;
-use self::PipFeatures::*;
 
 
-pub enum PipFeatures {
-    Dev,
-    Pip,
-    Rev(RevControl),
-}
-
-
-pub fn ensure_pip(ctx: &mut BuildContext, ver: u8,
-    features: &[PipFeatures])
-    -> Result<Path, String>
-{
-    match ctx.distribution {
-        Distr::Unknown => {
-            return Err(format!("Unsupported distribution"));
-        }
-        Distr::Ubuntu(_) => {
-            return debian::ensure_pip(ctx, ver, features);
-        }
-        Distr::Alpine(_) => {
-            return alpine::ensure_pip(ctx, ver, features);
-        }
-    }
-}
-
-pub fn scan_features(pkgs: &Vec<String>) -> Vec<PipFeatures> {
+pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
     let mut res = vec!();
-    res.push(Dev);
-    res.push(Pip);
+    res.push(packages::BuildEssential);
+    if ver == 2 {
+        res.push(packages::Python2);
+        res.push(packages::Python2Dev);
+        res.push(packages::PipPy2);
+    } else {
+        res.push(packages::Python3);
+        res.push(packages::Python3Dev);
+        res.push(packages::PipPy3);
+    }
     for name in pkgs.iter() {
         if name.as_slice().starts_with("git+") {
-            res.push(Rev(RevControl::Git));
+            res.push(packages::Git);
         } else if name.as_slice().starts_with("hg+") {
-            res.push(Rev(RevControl::Hg));
+            res.push(packages::Mercurial);
         }
     }
     return res;
 }
 
-fn pip_args(ctx: &mut BuildContext, pip_cmd: Path) -> Vec<String> {
+fn pip_args(ctx: &mut BuildContext, ver: u8) -> Vec<String> {
     let mut args = vec!(
-        pip_cmd.display().to_string(),  // TODO(tailhook) fix conversion
+        format!("/usr/bin/pip{}", ver),
         "install".to_string(),
         );
     if ctx.pip_settings.index_urls.len() > 0 {
@@ -75,8 +55,8 @@ fn pip_args(ctx: &mut BuildContext, pip_cmd: Path) -> Vec<String> {
 pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    let pip = try!(ensure_pip(ctx, ver, scan_features(pkgs).as_slice()));
-    let mut pip_cli = pip_args(ctx, pip);
+    try!(packages::ensure_packages(ctx, &scan_features(ver, pkgs)[0..]));
+    let mut pip_cli = pip_args(ctx, ver);
     pip_cli.extend(pkgs.clone().into_iter());
     run_command(ctx, pip_cli.as_slice())
 }
@@ -106,8 +86,8 @@ pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
         names.push(chunk.to_string());
     }
 
-    let pip = try!(ensure_pip(ctx, ver, scan_features(&names).as_slice()));
-    let mut pip_cli = pip_args(ctx, pip);
+    try!(packages::ensure_packages(ctx, &scan_features(ver, &names)[0..]));
+    let mut pip_cli = pip_args(ctx, ver);
     pip_cli.push("--requirement".to_string());
     pip_cli.push(reqtxt.display().to_string()); // TODO(tailhook) fix conversion
     run_command(ctx, pip_cli.as_slice())

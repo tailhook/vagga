@@ -4,10 +4,8 @@ use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine, Unknown};
-use super::super::dev::RevControl;
 use super::super::capsule;
-use super::pip::PipFeatures as Pip;
-use super::npm::NpmFeatures as Npm;
+use super::super::packages;
 
 
 pub static LATEST_VERSION: &'static str = "v3.1";
@@ -65,64 +63,78 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     remove(ctx, &pkgs)
 }
 
-pub fn ensure_npm(ctx: &mut BuildContext, features: &[Npm])
-    -> Result<Path, String>
-{
-    let mut packages = vec!("nodejs".to_string());
-    ctx.packages.extend(packages.clone().into_iter());
-    for i in features.iter() {
-        let dep = match *i {
-            Npm::Dev => "nodejs-dev".to_string(),
-            Npm::Npm => continue,
-            Npm::Rev(name) => revcontrol_package(name),
-        };
-        if !ctx.packages.contains(&dep) {
-            if ctx.build_deps.insert(dep.clone()) {
-                packages.push(dep);
-            }
-        }
-    }
-    try!(capsule::apk_run(&[
-        "--root", "/vagga/root",
-        "add",
-        ], packages.as_slice()));
-    return Ok(Path::new("/usr/bin/npm"));
-}
-
-pub fn revcontrol_package(name: RevControl) -> String {
-    match name {
-        RevControl::Git => "git".to_string(),
-        RevControl::Hg => "hg".to_string(),
+fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
+    match pkg {
+        packages::BuildEssential => Some(vec!("build-base")),
+        packages::Python2 => Some(vec!()),
+        packages::Python2Dev => Some(vec!("python-dev")),
+        packages::Python3 => None,
+        packages::Python3Dev => None,
+        packages::PipPy2 => None,
+        packages::PipPy3 => None,
+        packages::NodeJs => Some(vec!()),
+        packages::NodeJsDev => Some(vec!("nodejs-dev")),
+        packages::Npm => Some(vec!()),
+        packages::Git => Some(vec!("git")),
+        packages::Mercurial => Some(vec!("hg")),
     }
 }
 
-pub fn ensure_pip(ctx: &mut BuildContext, ver: u8, features: &[Pip])
-    -> Result<Path, String>
-{
-    if ver != 2 {
-        return Err(format!("Python {} is not supported", ver));
+fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
+    match pkg {
+        packages::BuildEssential => Some(vec!()),
+        packages::Python2 => Some(vec!("python")),
+        packages::Python2Dev => Some(vec!()),
+        packages::Python3 => None,
+        packages::Python3Dev => None,
+        packages::PipPy2 => None,
+        packages::PipPy3 => None,
+        packages::NodeJs => Some(vec!("nodejs")),
+        packages::NodeJsDev => Some(vec!()),
+        packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
+        packages::Git => Some(vec!()),
+        packages::Mercurial => Some(vec!()),
     }
-    let mut packages = vec!(
-        (if ver == 2 { "python" } else { "python3" }).to_string(),
-        );
-    ctx.packages.extend(packages.clone().into_iter());
+}
+
+pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
+    -> Result<Vec<packages::Package>, String>
+{
+    let mut to_install = vec!();
+    let mut unsupp = vec!();
     for i in features.iter() {
-        let dep = match *i {
-            Pip::Dev => (if ver == 2 { "python-dev" }
-                         else { "python3-dev" }).to_string(),
-            Pip::Pip => (if ver == 2 { "py-pip" }
-                         else { "py3-pip" }).to_string(),
-            Pip::Rev(name) => "git".to_string(),
-        };
-        if !ctx.packages.contains(&dep) {
-            if ctx.build_deps.insert(dep.clone()) {
-                packages.push(dep);
+        if let Some(lst) = build_deps(*i) {
+            for i in lst.into_iter() {
+                if !ctx.packages.contains(i) {
+                    ctx.build_deps.insert(i.to_string());
+                    to_install.push(i.to_string());
+                }
             }
+        } else {
+            unsupp.push(*i);
+            continue;
+        }
+        if let Some(lst) = system_deps(*i) {
+            for i in lst.into_iter() {
+                let istr = i.to_string();
+                if !ctx.packages.contains(&istr) {
+                    ctx.build_deps.remove(&istr);
+                }
+                if !ctx.packages.contains(&istr) {
+                    ctx.packages.insert(istr.clone());
+                    to_install.push(istr);
+                }
+            }
+        } else {
+            unsupp.push(*i);
+            continue;
         }
     }
-    try!(capsule::apk_run(&[
-        "--root", "/vagga/root",
-        "add",
-        ], packages.as_slice()));
-    return Ok(Path::new("/usr/bin/pip"));
+    if to_install.len() > 0 {
+        try!(capsule::apk_run(&[
+            "--root", "/vagga/root",
+            "add",
+            ], to_install.as_slice()));
+    }
+    return Ok(unsupp);
 }

@@ -24,7 +24,6 @@ mod context;
 mod bld;
 mod download;
 mod tarcmd;
-mod dev;
 mod commands {
     pub mod debian;
     pub mod generic;
@@ -33,6 +32,7 @@ mod commands {
     pub mod npm;
 }
 mod capsule;
+mod packages;
 
 
 pub fn run() -> isize {

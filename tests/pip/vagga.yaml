@@ -1,0 +1,31 @@
+containers:
+
+  py2-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py2Install [urp]
+
+  py2-alpine:
+    setup:
+    - !Alpine v3.1
+    - !Py2Install [urp]
+
+  py2-git-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py2Install ["git+git://github.com/jdp/urp"]
+
+  py2-git-alpine:
+    setup:
+    - !Alpine v3.1
+    - !Py2Install ["git+git://github.com/jdp/urp"]
+
+  py3-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py3Install [urp]
+
+  py3-git-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py3Install ["git+git://github.com/jdp/urp"]
