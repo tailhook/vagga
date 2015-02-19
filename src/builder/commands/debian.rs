@@ -271,7 +271,7 @@ pub fn ensure_npm(ctx: &mut BuildContext, features: &[Npm])
         debug!("Add Universe");
         try!(ubuntu_add_universe(ctx));
     }
-    let mut packages = vec!("nodejs".to_string());
+    let mut packages = vec!("nodejs".to_string(), "nodejs-legacy".to_string());
     ctx.packages.extend(packages.clone().into_iter());
     for i in features.iter() {
         let deps = match *i {

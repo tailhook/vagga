@@ -21,6 +21,8 @@ Vagga 0.2.3
   another container
 * The ``vagga _run`` now works with relative commands
 * Experimantal ``auto-clean`` option for containers
+* Add ``node-legacy`` as dependency of ``!Npm`` for ubuntu (required for many
+  scripts)
 
 
 Vagga 0.2.2
