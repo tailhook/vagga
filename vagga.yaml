@@ -40,6 +40,7 @@ containers:
     - !Depends vagga_network
     - !Depends apk
     - !Depends busybox
+    - !Depends alpine-keys-1.1-r0.apk
     - !Sh make install
     auto-clean: true
 

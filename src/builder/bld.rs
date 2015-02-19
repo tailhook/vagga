@@ -72,7 +72,6 @@ impl BuildCommand for Builder {
             &B::Alpine(ref version) => {
                 if let Distr::Unknown = ctx.distribution {
                     ctx.distribution = Distr::Alpine(alpine::AlpineInfo {
-                        mirror: alpine::choose_mirror(),
                         version: version.to_string(),
                     });
                 } else {

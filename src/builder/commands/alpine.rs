@@ -1,75 +1,38 @@
 use std::io::ALL_PERMISSIONS;
-use std::rand::{thread_rng, Rng};
-use std::io::fs::{File, mkdir_recursive};
+use std::io::fs::{File, mkdir_recursive, copy};
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine, Unknown};
 use super::super::dev::RevControl;
+use super::super::capsule;
 use super::pip::PipFeatures as Pip;
 use super::npm::NpmFeatures as Npm;
 
-static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 pub static LATEST_VERSION: &'static str = "v3.1";
 
 
 #[derive(Show)]
 pub struct AlpineInfo {
-    pub mirror: String,
     pub version: String,
 }
 
 
-pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
-    let mut cmd = Command::new("/vagga/bin/apk");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
-        .env("PATH", "/vagga/bin")
-        .args(args)
-        .args(packages);
-    debug!("Running APK {}", cmd);
-    return match cmd.output()
-        .map_err(|e| format!("Can't run apk: {}", e))
-        .map(|o| o.status)
-    {
-        Ok(ExitStatus(0)) => Ok(()),
-        Ok(val) => Err(format!("Apk exited with status: {}", val)),
-        Err(x) => Err(format!("Error running tar: {}", x)),
-    }
-}
-
-pub fn choose_mirror() -> String {
-    let repos = MIRRORS
-        .split('\n')
-        .map(|x| x.trim())
-        .filter(|x| x.len() > 0 && !x.starts_with("#"))
-        .collect::<Vec<&str>>();
-    let mirror = thread_rng().choose(repos.as_slice())
-        .expect("At least one mirror should work");
-    debug!("Chosen mirror {}", mirror);
-    return mirror.to_string();
-}
-
 pub fn setup_base(ctx: &mut BuildContext, version: &String)
     -> Result<(), String>
 {
-    let apk_dir = Path::new("/vagga/root/etc/apk");
-    let mirror = match ctx.distribution {
-        Alpine(ref distr) => &distr.mirror,
-        _ => return Err(format!("Conflicting distribution")),
-    };
-
-    try!(mkdir_recursive(&apk_dir, ALL_PERMISSIONS)
+    try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
+    try!(mkdir_recursive(&Path::new("/vagga/root/etc/apk"), ALL_PERMISSIONS)
         .map_err(|e| format!("Error creating apk dir: {}", e)));
-
-    try!(File::create(&Path::new("/vagga/root/etc/apk/repositories"))
-         .and_then(|mut f|
-            writeln!(&mut f, "{}{}/main", mirror, version))
+    try!(copy(
+        &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
+        &Path::new("/vagga/root/etc/apk/repositories"))
         .map_err(|e| format!("Error creating apk repo: {}", e)));
-    try!(apk_run(&[
-        "--allow-untrusted",
+    try!(capsule::apk_run(&[
         "--update-cache",
-        "--root", "/vagga/root",
+        "--keys-dir=/etc/apk/keys",  // Use keys from capsule
+        "--root=/vagga/root",
         "--initdb",
         "add",
         "alpine-base",
@@ -81,8 +44,7 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
 pub fn install(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    apk_run(&[
-        "--allow-untrusted",
+    capsule::apk_run(&[
         "--root", "/vagga/root",
         "add",
         ], pkgs.as_slice())
@@ -91,8 +53,7 @@ pub fn install(_ctx: &mut BuildContext, pkgs: &Vec<String>)
 pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    apk_run(&[
-        "--allow-untrusted",
+    capsule::apk_run(&[
         "--root", "/vagga/root",
         "del",
         ], pkgs.as_slice())
@@ -121,8 +82,7 @@ pub fn ensure_npm(ctx: &mut BuildContext, features: &[Npm])
             }
         }
     }
-    try!(apk_run(&[
-        "--allow-untrusted",
+    try!(capsule::apk_run(&[
         "--root", "/vagga/root",
         "add",
         ], packages.as_slice()));
@@ -160,8 +120,7 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8, features: &[Pip])
             }
         }
     }
-    try!(apk_run(&[
-        "--allow-untrusted",
+    try!(capsule::apk_run(&[
         "--root", "/vagga/root",
         "add",
         ], packages.as_slice()));

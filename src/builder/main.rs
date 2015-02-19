@@ -32,6 +32,7 @@ mod commands {
     pub mod pip;
     pub mod npm;
 }
+mod capsule;
 
 
 pub fn run() -> isize {

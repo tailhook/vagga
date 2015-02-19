@@ -2,13 +2,13 @@ setup() {
     cd /work/tests/alpine
 }
 
-@test "Alpine builds" {
+@test "alpine: Alpine builds" {
     vagga _build v31
     link=$(readlink .vagga/v31)
     [[ $link = ".roots/v31.f87ff413/root" ]]
 }
 
-@test "Run echo command" {
+@test "alpine: Run echo command" {
     run vagga echo-cmd hello
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -19,7 +19,7 @@ setup() {
     [[ $output = world ]]
 }
 
-@test "Run bc on v3.1" {
+@test "alpine: Run bc on v3.1" {
     run vagga v31-calc 100*24
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
@@ -28,7 +28,7 @@ setup() {
     [[ $link = ".roots/v31-calc.dcc4a56e/root" ]]
 }
 
-@test "Run bc on v3.0" {
+@test "alpine: Run bc on v3.0" {
     run vagga v30-calc 23*7+3
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
