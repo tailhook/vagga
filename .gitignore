@@ -1,6 +1,7 @@
 /*.rlib
 /*.a
 /*.o
+/*.apk
 .vagga
 /tmp
 docs/_build

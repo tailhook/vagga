@@ -1,46 +1,39 @@
 use super::super::context::{BuildContext};
 use super::generic::run_command;
+use super::super::packages;
 use super::super::context::Distribution as Distr;
-use super::super::dev::RevControl;
-use super::debian;
 use super::alpine;
-use self::NpmFeatures::*;
 
-pub enum NpmFeatures {
-    Dev,
-    Npm,
-    Rev(RevControl),
-}
 
-pub fn scan_features(pkgs: &Vec<String>) -> Vec<NpmFeatures> {
+pub fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
     let mut res = vec!();
-    res.push(Dev);
-    res.push(Npm);
+    res.push(packages::BuildEssential);
+    res.push(packages::NodeJs);
+    res.push(packages::NodeJsDev);
+    res.push(packages::Npm);
     for name in pkgs.iter() {
         if name.as_slice().starts_with("git://") {
-            res.push(Rev(RevControl::Git));
-        }
+            res.push(packages::Git);
+        } // Does npm support mercurial?
     }
     return res;
 }
 
-pub fn ensure_npm(ctx: &mut BuildContext, features: &[NpmFeatures])
-    -> Result<Path, String>
+pub fn ensure_npm(ctx: &mut BuildContext, features: &[packages::Package])
+    -> Result<(), String>
 {
     match ctx.distribution {
         Distr::Unknown => {
             //  Currently use alpine by default as it has smallest disk
             //  footprint
+            ctx.distribution = Distr::Alpine(alpine::AlpineInfo {
+                version: alpine::LATEST_VERSION.to_string(),
+            });
             try!(alpine::setup_base(ctx, &alpine::LATEST_VERSION.to_string()));
-            return alpine::ensure_npm(ctx, features);
         }
-        Distr::Ubuntu(_) => {
-            return debian::ensure_npm(ctx, features);
-        }
-        Distr::Alpine(_) => {
-            return alpine::ensure_npm(ctx, features);
-        }
-    }
+        _ => {}
+    };
+    packages::ensure_packages(ctx, features)
 }
 
 pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
@@ -48,14 +41,12 @@ pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
 {
     try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
                            "npm-cache".to_string()));
-    // TODO(tailhook) configure npm to use /tmp/npm-cache as cache dir
-    //ctx.environ.insert("PIP_DOWNLOAD_CACHE".to_string(),
-    //                   "/tmp/pip-cache".to_string());
-    let npm = try!(ensure_npm(ctx, scan_features(pkgs).as_slice()));
+    try!(ensure_npm(ctx, scan_features(pkgs).as_slice()));
     let mut args = vec!(
-        npm.display().to_string(),  // Crappy, but but works in 99.99% cases
+        "/usr/bin/npm".to_string(),
         "install".to_string(),
-        "--user".to_string(), "root".to_string(),
+        "--user=root".to_string(),
+        "--cache=/tmp/npm-cache".to_string(),
         "--global".to_string(),
         );
     args.extend(pkgs.clone().into_iter());

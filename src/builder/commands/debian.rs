@@ -9,10 +9,8 @@ use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Ubuntu, Unknown};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
-use super::super::dev::RevControl;
+use super::super::packages;
 use super::generic::run_command;
-use super::pip::PipFeatures as Pip;
-use super::npm::NpmFeatures as Npm;
 use container::sha256::{Sha256, Digest};
 
 
@@ -32,7 +30,7 @@ pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
         "http://cdimage.ubuntu.com/ubuntu-{kind}/{release}/",
         "daily/current/{release}-{kind}-{arch}.tar.gz",
         ), kind=kind, arch=arch, release=release);
-    let filename = try!(download_file(ctx, &url));
+    let filename = try!(download_file(ctx, &url[0..]));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev")]));
 
@@ -218,15 +216,44 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
     Ok(())
 }
 
-pub fn revcontrol_package(name: RevControl) -> String {
-    match name {
-        RevControl::Git => "git".to_string(),
-        RevControl::Hg => "hg".to_string(),
+
+fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
+    match pkg {
+        packages::BuildEssential => Some(vec!("build-essential")),
+        packages::Python2 => Some(vec!()),
+        packages::Python2Dev => Some(vec!("python-dev")),
+        packages::Python3 => Some(vec!()),
+        packages::Python3Dev => Some(vec!("python3-dev")),
+        packages::PipPy2 => None,
+        packages::PipPy3 => None,
+        packages::NodeJs => Some(vec!()),
+        packages::NodeJsDev => Some(vec!("nodejs-dev")),
+        packages::Npm => Some(vec!("npm")),
+        packages::Git => Some(vec!("git")),
+        packages::Mercurial => Some(vec!("hg")),
     }
 }
 
-pub fn ensure_pip(ctx: &mut BuildContext, ver: u8, features: &[Pip])
-    -> Result<Path, String>
+fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
+    match pkg {
+        packages::BuildEssential => Some(vec!()),
+        packages::Python2 => Some(vec!("python")),
+        packages::Python2Dev => Some(vec!()),
+        packages::Python3 => Some(vec!("python3")),
+        packages::Python3Dev => Some(vec!()),
+        packages::PipPy2 => None,
+        packages::PipPy3 => None,
+        packages::NodeJs => Some(vec!("nodejs", "nodejs-legacy")),
+        packages::NodeJsDev => Some(vec!()),
+        packages::Npm => Some(vec!()),
+        packages::Git => Some(vec!()),
+        packages::Mercurial => Some(vec!()),
+    }
+}
+
+
+pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
+    -> Result<Vec<packages::Package>, String>
 {
     let needs_universe = match ctx.distribution {
         Ubuntu(ref ubuntu) => !ubuntu.has_universe,
@@ -236,61 +263,38 @@ pub fn ensure_pip(ctx: &mut BuildContext, ver: u8, features: &[Pip])
         debug!("Add Universe");
         try!(ubuntu_add_universe(ctx));
     }
-    let mut packages = vec!(
-        (if ver == 2 { "python" } else { "python3" }).to_string(),
-        );
-    ctx.packages.extend(packages.clone().into_iter());
+    let mut to_install = vec!();
+    let mut unsupp = vec!();
     for i in features.iter() {
-        let dep = match *i {
-            Pip::Dev => (if ver == 2 { "python-dev" }
-                         else { "python3-dev" }).to_string(),
-            Pip::Pip => (if ver == 2 { "python-pip" }
-                         else { "python3-pip" }).to_string(),
-            Pip::Rev(name) => revcontrol_package(name),
-        };
-        if !ctx.packages.contains(&dep) {
-            if ctx.build_deps.insert(dep.clone()) {
-                packages.push(dep);
-            }
-        }
-    }
-    if packages.len() > 0 {
-        try!(apt_install(ctx, &packages));
-    }
-    return Ok(Path::new(format!("/usr/bin/pip{}", ver)));
-}
-
-pub fn ensure_npm(ctx: &mut BuildContext, features: &[Npm])
-    -> Result<Path, String>
-{
-    let needs_universe = match ctx.distribution {
-        Ubuntu(ref ubuntu) => !ubuntu.has_universe,
-        _ => unreachable!(),
-    };
-    if needs_universe {
-        debug!("Add Universe");
-        try!(ubuntu_add_universe(ctx));
-    }
-    let mut packages = vec!("nodejs".to_string(), "nodejs-legacy".to_string());
-    ctx.packages.extend(packages.clone().into_iter());
-    for i in features.iter() {
-        let deps = match *i {
-            Npm::Dev => vec!("nodejs-dev".to_string(),
-                             "npm".to_string(),
-                             "build-essential".to_string()),
-            Npm::Npm => vec!(),
-            Npm::Rev(name) => vec!(revcontrol_package(name)),
-        };
-        for dep in deps.into_iter() {
-            if !ctx.packages.contains(&dep) {
-                if ctx.build_deps.insert(dep.clone()) {
-                    packages.push(dep);
+        if let Some(lst) = build_deps(*i) {
+            for i in lst.into_iter() {
+                if !ctx.packages.contains(i) {
+                    ctx.build_deps.insert(i.to_string());
+                    to_install.push(i.to_string());
                 }
             }
+        } else {
+            unsupp.push(*i);
+            continue;
+        }
+        if let Some(lst) = system_deps(*i) {
+            for i in lst.into_iter() {
+                let istr = i.to_string();
+                if !ctx.packages.contains(&istr) {
+                    ctx.build_deps.remove(&istr);
+                }
+                if !ctx.packages.contains(&istr) {
+                    ctx.packages.insert(istr.clone());
+                    to_install.push(istr);
+                }
+            }
+        } else {
+            unsupp.push(*i);
+            continue;
         }
     }
-    if packages.len() > 0 {
-        try!(apt_install(ctx, &packages));
+    if to_install.len() > 0 {
+        try!(apt_install(ctx, &to_install));
     }
-    return Ok(Path::new("/usr/bin/npm"));
+    return Ok(unsupp);
 }

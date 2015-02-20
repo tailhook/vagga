@@ -1,0 +1,41 @@
+containers:
+
+  py2-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py2Install [setuptools, urp]
+
+  py2-alpine:
+    setup:
+    - !Alpine v3.1
+    - !Py2Install [setuptools, urp]
+
+  py2-git-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py2Install [setuptools, "git+git://github.com/jdp/urp"]
+
+  py2-git-alpine:
+    setup:
+    - !Alpine v3.1
+    - !Py2Install [setuptools, "git+git://github.com/jdp/urp"]
+
+  py3-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py3Install [setuptools, urp]
+
+  py3-git-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py3Install [setuptools, "git+git://github.com/jdp/urp"]
+
+  py2req-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Py2Requirements requirements.txt
+
+  py2req-alpine:
+    setup:
+    - !Alpine v3.1
+    - !Py2Requirements requirements.txt

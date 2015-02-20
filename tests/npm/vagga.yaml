@@ -1,0 +1,29 @@
+containers:
+
+  pkg:
+    setup:
+    - !NpmInstall [resolve-cli]
+
+  pkg-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !NpmInstall [resolve-cli]
+
+  pkg-alpine:
+    setup:
+    - !Alpine v3.1
+    - !NpmInstall [resolve-cli]
+
+  git:
+    setup:
+    - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]
+
+  git-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]
+
+  git-alpine:
+    setup:
+    - !Alpine v3.1
+    - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]

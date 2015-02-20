@@ -8,6 +8,7 @@ use container::container::{Command};
 
 fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {
     let rpath = Path::new("/");
+    let chroot = Path::new("/vagga/root");
     if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {
         for dir in paths.as_slice().split(':') {
             let path = Path::new(dir);
@@ -16,15 +17,19 @@ fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {
                       path.display());
                 continue;
             }
-            if path.path_relative_from(&rpath).unwrap().join(cmd).exists() {
+            if chroot.join(path.path_relative_from(&rpath).unwrap())
+                .join(cmd).exists()
+            {
                 return Ok(path.join(cmd));
             }
         }
+        return Err(format!("Command {:?} not found in {:?}", cmd, paths));
     }
-    return Err(format!("Command {} not found", cmd));
+    return Err(format!("Command {:?} not found (no PATH)", cmd));
 }
 
-pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
+pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
+    path: &Path, env: &[(&str, &str)])
     -> Result<(), String>
 {
     let cmdpath = if cmdline[0].as_slice().starts_with("/") {
@@ -39,6 +44,9 @@ pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
     cmd.args(cmdline[1..].as_slice());
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
+    }
+    for &(k, v) in env.iter() {
+        cmd.set_env(k.to_string(), v.to_string());
     }
 
     debug!("Running {:?}", cmd);
@@ -57,8 +65,14 @@ pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
     }
 }
 
+pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
+    -> Result<(), String>
+{
+    run_command_at_env(ctx, cmdline, path, &[])
+}
+
 pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
     -> Result<(), String>
 {
-    return run_command_at(ctx, cmd, &Path::new("/work"));
+    return run_command_at_env(ctx, cmd, &Path::new("/work"), &[]);
 }

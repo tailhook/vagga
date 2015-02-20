@@ -369,8 +369,9 @@ about options
 
 .. note:: By default ``dependencies`` is false. Which means pip is run with
    ``--no-deps`` option. Which is recommended way for setting up isolated
-   environments any way. To see list of dependencies and their versions you may
-   use ``pip freeze`` command.
+   environments anyway. Even ``setuptools`` are not installed by default.
+   To see list of dependencies and their versions you may use
+   ``pip freeze`` command.
 
 .. _pyreq:
 

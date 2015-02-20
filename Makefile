@@ -92,6 +92,7 @@ install:
 	install -m 755 vagga_network $(DESTDIR)$(PREFIX)/lib/vagga/vagga_network
 	install -m 755 apk $(DESTDIR)$(PREFIX)/lib/vagga/apk
 	install -m 755 busybox $(DESTDIR)$(PREFIX)/lib/vagga/busybox
+	install -m 755 alpine-keys-1.1-r0.apk $(DESTDIR)$(PREFIX)/lib/vagga/alpine-keys-1.1-r0.apk
 	ln -s ../lib/vagga/vagga_launcher $(DESTDIR)$(PREFIX)/bin/vagga
 
 
