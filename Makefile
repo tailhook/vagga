@@ -75,7 +75,7 @@ vagga_network: src/network/*.rs
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
 
-alpine/MIRRORS.txt apk busybox: ./fetch_binaries.sh
+alpine/MIRRORS.txt apk busybox alpine-keys-1.1-r0.apk: ./fetch_binaries.sh
 	./fetch_binaries.sh
 
 test: all vagga_test
