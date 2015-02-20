@@ -118,7 +118,7 @@ pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
     };
     if apt_update {
         if let Ubuntu(ref mut ubuntu) = ctx.distribution {
-            ubuntu.apt_update = true;
+            ubuntu.apt_update = false;
         }
         try!(run_command(ctx, &[
             "/usr/bin/apt-get".to_string(),
