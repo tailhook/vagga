@@ -2,6 +2,20 @@
 Release Notes
 =============
 
+Vagga 0.2.4
+===========
+
+:Release Date: future
+
+* Implement support of ``https`` links for Tar, TarInstall commands
+* The ``!Py*`` commands now download latest pip via `get-pip.py`_. This
+  effectively means (a) that new features (like checkout a git subdirectory)
+  works, (b) the version of pip is uniform across distributions and
+  (c) installing dependencies to not interfere with pip dependencies on ubuntu
+  (e.g. previously requests library where removed when removing build
+  dependencies)
+
+.. _get-pip.py: https://pip.pypa.io/en/latest/installing.html
 
 Vagga 0.2.3
 ===========
