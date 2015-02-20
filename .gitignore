@@ -1,10 +1,9 @@
 /*.rlib
 /*.a
 /*.o
-/*.apk
 .vagga
 /tmp
-docs/_build
+/docs/_build
 
 todo.txt
 
@@ -19,5 +18,5 @@ todo.txt
 
 /apk
 /busybox
+/alpine-keys.apk
 /alpine
-

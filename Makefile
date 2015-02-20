@@ -7,6 +7,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 
+all: downloads
 all: vagga_launcher vagga_wrapper vagga_version vagga_build vagga_setup_netns
 all: vagga_network
 
@@ -75,7 +76,9 @@ vagga_network: src/network/*.rs
 vagga_test: tests/*.rs tests/*/*.rs
 	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire
 
-alpine/MIRRORS.txt apk busybox alpine-keys-1.1-r0.apk: ./fetch_binaries.sh
+downloads: apk busybox alpine-keys.apk
+
+alpine/MIRRORS.txt apk busybox alpine-keys: ./fetch_binaries.sh
 	./fetch_binaries.sh
 
 test: all vagga_test
@@ -92,8 +95,8 @@ install:
 	install -m 755 vagga_network $(DESTDIR)$(PREFIX)/lib/vagga/vagga_network
 	install -m 755 apk $(DESTDIR)$(PREFIX)/lib/vagga/apk
 	install -m 755 busybox $(DESTDIR)$(PREFIX)/lib/vagga/busybox
-	install -m 755 alpine-keys-1.1-r0.apk $(DESTDIR)$(PREFIX)/lib/vagga/alpine-keys-1.1-r0.apk
+	install -m 755 alpine-keys.apk $(DESTDIR)$(PREFIX)/lib/vagga/alpine-keys.apk
 	ln -s ../lib/vagga/vagga_launcher $(DESTDIR)$(PREFIX)/bin/vagga
 
 
-.PHONY: all
+.PHONY: all downloads test

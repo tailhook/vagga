@@ -85,7 +85,7 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
             "--initdb",
             "add",
             "--force",
-            "/vagga/bin/alpine-keys-1.1-r0.apk",
+            "/vagga/bin/alpine-keys.apk",
             ], &[]));
         let mirror = choose_mirror();
         try!(File::create(&Path::new("/etc/apk/repositories"))
