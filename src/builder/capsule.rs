@@ -6,11 +6,13 @@
 /// need more things.
 
 use std::rand::{thread_rng, Rng};
-use std::io::fs::{File, mkdir};
+use std::io::fs::{File, mkdir, mkdir_recursive};
+use std::io::fs::PathExtensions;
 use std::io::ALL_PERMISSIONS;
 use std::collections::HashSet;
 use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
+use container::mount::bind_mount;
 use super::context::BuildContext;
 use super::commands::alpine::LATEST_VERSION;
 
@@ -68,6 +70,16 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
         return Ok(());
     }
     if !ctx.capsule.capsule_base {
+        let cache_dir = Path::new("/vagga/cache/alpine-cache");
+        if !cache_dir.exists() {
+            try!(mkdir(&cache_dir, ALL_PERMISSIONS)
+                 .map_err(|e| format!("Error creating cache dir: {}", e)));
+        }
+        let path = Path::new("/etc/apk/cache");
+        try!(mkdir_recursive(&path, ALL_PERMISSIONS)
+             .map_err(|e| format!("Error creating cache dir: {}", e)));
+        try!(bind_mount(&cache_dir, &path));
+
         try!(apk_run(&[
             "--allow-untrusted",
             "--initdb",
@@ -94,11 +106,11 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
     }
     if pkg_queue.len() > 0 {
         pkg_queue = pkg_queue.into_iter()
-            .filter(|x| ctx.capsule.installed_packages.contains(x))
+            .filter(|x| !ctx.capsule.installed_packages.contains(x))
             .collect();
     }
     if pkg_queue.len() > 0 {
-        if ctx.capsule.installed_packages.len() > 0 { // already have indexes
+        if ctx.capsule.installed_packages.len() == 0 { // already have indexes
             try!(apk_run(&[
                 "--update-cache",
                 "add",
@@ -106,7 +118,6 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
         } else {
             try!(apk_run(&[
                 "add",
-                "alpine-keys-1.1-r0.apk",
                 ], &pkg_queue[0..]));
         }
         ctx.capsule.installed_packages.extend(pkg_queue.into_iter());

@@ -50,6 +50,11 @@ impl BuildCommand for Builder {
                                    "noninteractive".to_string());
                 ctx.environ.insert("LANG".to_string(),
                                    "en_US.UTF-8".to_string());
+                ctx.environ.insert("PATH".to_string(),
+                                   "/usr/local/sbin:/usr/local/bin:\
+                                    /usr/sbin:/usr/bin:/sbin:/bin:\
+                                    /usr/games:/usr/local/games\
+                                    ".to_string());
             }
             &B::UbuntuUniverse => {
                 match ctx.distribution {
@@ -79,6 +84,12 @@ impl BuildCommand for Builder {
                 };
                 try!(ctx.add_cache_dir(Path::new("/etc/apk/cache"),
                                        "alpine-cache".to_string()));
+                ctx.environ.insert("LANG".to_string(),
+                                   "en_US.UTF-8".to_string());
+                ctx.environ.insert("PATH".to_string(),
+                                   "/usr/local/sbin:/usr/local/bin:\
+                                    /usr/sbin:/usr/bin:/sbin:/bin\
+                                    ".to_string());
             }
             &B::PipConfig(ref pip_settings) => {
                 ctx.pip_settings = pip_settings.clone();
@@ -89,7 +100,7 @@ impl BuildCommand for Builder {
             &B::Py3Requirements(_) => {
                 try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache"),
                                        "pip-cache".to_string()));
-                ctx.environ.insert("PIP_DOWNLOAD_CACHE".to_string(),
+                ctx.environ.insert("PIP_CACHE_DIR".to_string(),
                                    "/tmp/pip-cache".to_string());
             }
             _ => {}

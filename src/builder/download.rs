@@ -5,15 +5,20 @@ use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use container::sha256::{Sha256, Digest};
 
+use super::capsule;
 use super::context::BuildContext;
 
 
-pub fn download_file(_ctx: &mut BuildContext, url: &String)
+pub fn download_file(ctx: &mut BuildContext, url: &str)
     -> Result<Path, String>
 {
+    let https = url.starts_with("https:");
+    if https {
+        try!(capsule::ensure_features(ctx, &[capsule::Https]));
+    }
     let mut hash = Sha256::new();
-    hash.input_str(url.as_slice());
-    let urlpath = Path::new(url.as_slice());
+    hash.input_str(url);
+    let urlpath = Path::new(url);
     let name = match urlpath.filename_str() {
         Some(name) => name,
         None => "file.bin",
@@ -30,12 +35,15 @@ pub fn download_file(_ctx: &mut BuildContext, url: &String)
     }
     info!("Downloading image {} -> {}", url, filename.display());
     let tmpfilename = filename.with_filename(name + ".part");
-    let mut cmd = Command::new("/vagga/bin/busybox");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
-       .arg("wget")
-       .arg("-O")
-       .arg(&tmpfilename)
-       .arg(url.as_slice());
+    let mut cmd = Command::new(
+        if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
+    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    if !https {
+        cmd.arg("wget");
+    }
+    cmd.arg("-O");
+    cmd.arg(&tmpfilename);
+    cmd.arg(url);
     debug!("Running: {}", cmd);
     match cmd
         .output()

@@ -1,7 +1,12 @@
+use std::io::fs::copy;
+use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+
 use super::context::Distribution as Distr;
 use super::context::BuildContext;
 use super::commands::debian;
 use super::commands::alpine;
+use super::commands::generic::run_command_at_env;
+use super::download;
 
 pub use self::Package::*;
 
@@ -27,10 +32,34 @@ pub enum Package {
 }
 
 
+fn generic_packages(ctx: &mut BuildContext, features: Vec<Package>)
+    -> Result<Vec<Package>, String>
+{
+    let mut left = vec!();
+    for i in features.into_iter() {
+        match i {
+            PipPy2 | PipPy3 => {
+                let pip_inst = try!(download::download_file(ctx,
+                    "https://bootstrap.pypa.io/get-pip.py"));
+                try!(copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
+                    .map_err(|e| format!("Error copying pip: {}", e)));
+                try!(run_command_at_env(ctx, &[
+                    (if i == PipPy2 {"python2"} else {"python3"}).to_string(),
+                    "/tmp/get-pip.py".to_string(),
+                    "--target=/tmp/pip-install".to_string(),
+                    ], &Path::new("/work"), &[]));
+            }
+            _ => left.push(i),
+        }
+    }
+    return Ok(left);
+}
+
+
 pub fn ensure_packages(ctx: &mut BuildContext, features: &[Package])
     -> Result<(), String>
 {
-    let left = match ctx.distribution {
+    let features = match ctx.distribution {
         Distr::Unknown => {
             return Err(format!("Unsupported distribution"));
         }
@@ -41,12 +70,10 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[Package])
             try!(alpine::ensure_packages(ctx, features))
         }
     };
-    if left == vec!(PipPy2) {
-        unimplemented!();
-    } else if left == vec!(PipPy3) {
-        unimplemented!();
-    } else if left.len() > 0 {
-        Err(format!("Features {:?} are not supported by distribution", left))
+    let features = try!(generic_packages(ctx, features));
+    if features.len() > 0 {
+        Err(format!("Features {:?} are not supported by distribution",
+                    features))
     } else {
         Ok(())
     }
