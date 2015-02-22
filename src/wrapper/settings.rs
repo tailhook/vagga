@@ -15,6 +15,7 @@ struct SecureSettings {
     cache_dir: Option<Path>,
     version_check: Option<bool>,
     ubuntu_mirror: Option<String>,
+    alpine_mirror: Option<String>,
     site_settings: BTreeMap<Path, SecureSettings>,
 }
 
@@ -40,6 +41,9 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         ("ubuntu_mirror".to_string(), Box::new(V::Scalar {
             optional: true,
             .. Default::default()}) as Box<V::Validator>),
+        ("alpine_mirror".to_string(), Box::new(V::Scalar {
+            optional: true,
+            .. Default::default()}) as Box<V::Validator>),
     );
     if has_children {
         members.push(
@@ -59,6 +63,7 @@ struct InsecureSettings {
     version_check: Option<bool>,
     shared_cache: Option<bool>,
     ubuntu_mirror: Option<String>,
+    alpine_mirror: Option<String>,
 }
 
 pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
@@ -70,6 +75,9 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
             optional: true,
             .. Default::default()}) as Box<V::Validator + 'a>),
         ("ubuntu_mirror".to_string(), Box::new(V::Scalar {
+            optional: true,
+            .. Default::default()}) as Box<V::Validator>),
+        ("alpine_mirror".to_string(), Box::new(V::Scalar {
             optional: true,
             .. Default::default()}) as Box<V::Validator>),
     ), .. Default::default()}) as Box<V::Validator>;
@@ -97,6 +105,7 @@ pub fn read_settings(project_root: &Path)
         version_check: true,
         uid_map: None,
         ubuntu_mirror: "mirror://mirrors.ubuntu.com/mirrors.txt".to_string(),
+        alpine_mirror: None,
     };
     let mut secure_files = vec!();
     if let Some(home) = getenv("VAGGA_USER_HOME") {
@@ -127,6 +136,9 @@ pub fn read_settings(project_root: &Path)
         if let Some(ref val) = cfg.ubuntu_mirror {
             int_settings.ubuntu_mirror = val.clone();
         }
+        if let Some(ref val) = cfg.alpine_mirror {
+            int_settings.alpine_mirror = Some(val.clone());
+        }
         if let Some(cfg) = cfg.site_settings.get(project_root) {
             for (k, v) in cfg.allowed_dirs.iter() {
                 ext_settings.allowed_dirs.insert(k.clone(), v.clone());
@@ -144,6 +156,9 @@ pub fn read_settings(project_root: &Path)
             if let Some(ref val) = cfg.ubuntu_mirror {
                 int_settings.ubuntu_mirror = val.clone();
             }
+            if let Some(ref val) = cfg.alpine_mirror {
+                int_settings.alpine_mirror = Some(val.clone());
+            }
         }
     }
     let mut insecure_files = vec!();
@@ -160,6 +175,9 @@ pub fn read_settings(project_root: &Path)
         }
         if let Some(ref val) = cfg.ubuntu_mirror {
             int_settings.ubuntu_mirror = val.clone();
+        }
+        if let Some(ref val) = cfg.alpine_mirror {
+            int_settings.alpine_mirror = Some(val.clone());
         }
         if let Some(val) = cfg.shared_cache {
             ext_settings.shared_cache = val;

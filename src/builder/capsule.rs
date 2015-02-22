@@ -87,7 +87,8 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
             "--force",
             "/vagga/bin/alpine-keys.apk",
             ], &[]));
-        let mirror = choose_mirror();
+        let mirror = ctx.settings.alpine_mirror.clone()
+            .unwrap_or(choose_mirror());
         try!(File::create(&Path::new("/etc/apk/repositories"))
             .and_then(|mut f| write!(&mut f, "{}{}/main\n",
                 mirror, LATEST_VERSION))
