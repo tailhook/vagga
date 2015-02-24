@@ -1,13 +1,13 @@
 use std::rc::Rc;
 use std::os::{Pipe, pipe};
-use std::io::PipeStream;
-use std::io::ALL_PERMISSIONS;
+use std::old_io::PipeStream;
+use std::old_io::ALL_PERMISSIONS;
 use std::os::{getenv};
 use std::cell::RefCell;
-use std::io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename, symlink};
-use std::io::fs::{unlink};
-use std::io::fs::PathExtensions;
-use std::io::stdio::{stdout, stderr};
+use std::old_io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename, symlink};
+use std::old_io::fs::{unlink};
+use std::old_io::fs::PathExtensions;
+use std::old_io::stdio::{stdout, stderr};
 use libc::funcs::posix88::unistd::close;
 use serialize::json;
 
@@ -47,7 +47,7 @@ impl<'a> Executor for RunVersion<'a> {
         cmd.set_uidmap(self.uid_map.clone());
         cmd.arg(self.container.as_slice());
         cmd.arg("--settings");
-        cmd.arg(json::encode(self.settings));
+        cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
         cmd.set_stdout_fd(self.pipe.writer);
         if let Some(x) = getenv("RUST_LOG") {
@@ -58,7 +58,7 @@ impl<'a> Executor for RunVersion<'a> {
         }
         return cmd;
     }
-    fn finish(&mut self, status: isize) -> MonitorStatus {
+    fn finish(&mut self, status: i32) -> MonitorStatus {
         unsafe { close(self.pipe.writer) };
         if status == 0 {
             let mut rd = PipeStream::open(self.pipe.reader);
@@ -80,7 +80,7 @@ impl<'a> Executor for RunBuilder<'a> {
         cmd.container();
         cmd.arg(self.container.as_slice());
         cmd.arg("--settings");
-        cmd.arg(json::encode(self.settings));
+        cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(),
                     getenv("TERM").unwrap_or("dumb".to_string()));
         if let Some(x) = getenv("RUST_LOG") {
@@ -139,12 +139,12 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
 pub fn get_version_hash(container: String, wrapper: &Wrapper)
     -> Result<Option<String>, String>
 {
-    let mut mon = Monitor::new();
-    let ver = Rc::new(RefCell::new("".to_string()));
     let cconfig = try!(wrapper.config.containers.get(&container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
+    let mut mon = Monitor::new();
+    let ver = Rc::new(RefCell::new("".to_string()));
     mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
         container: container,
         pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
@@ -284,7 +284,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
 }
 
 pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut name: String = "".to_string();
     let mut force: bool = false;
@@ -294,10 +294,10 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             Internal vagga tool to setup basic system sandbox
             ");
         ap.refer(&mut name)
-            .add_argument("container_name", Box::new(Store::<String>),
+            .add_argument("container_name", Store,
                 "Container name to build");
         ap.refer(&mut force)
-            .add_option(&["--force"], Box::new(StoreTrue),
+            .add_option(&["--force"], StoreTrue,
                 "Force build even if container is considered up to date");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -315,7 +315,7 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 }
 
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut name: String = "".to_string();
     let mut short = false;
@@ -327,10 +327,10 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             before the build.
             ");
         ap.refer(&mut name)
-            .add_argument("container_name", Box::new(Store::<String>),
+            .add_argument("container_name", Store,
                 "Container name to build");
         ap.refer(&mut short)
-            .add_option(&["-s", "--short"], Box::new(StoreTrue),
+            .add_option(&["-s", "--short"], StoreTrue,
                 "Print short container version, like used in directory names \
                  (8 chars)");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {

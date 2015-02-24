@@ -1,6 +1,6 @@
-use std::io::EndOfFile;
-use std::io::BufferedReader;
-use std::io::fs::File;
+use std::old_io::EndOfFile;
+use std::old_io::BufferedReader;
+use std::old_io::fs::File;
 
 use serialize::json;
 
@@ -98,7 +98,7 @@ impl VersionHash for Builder {
                 Hashed
             }
             _ => {
-                hash.input(json::encode(self).as_bytes());
+                hash.input(json::encode(self).unwrap().as_bytes());
                 Hashed
             }
         }

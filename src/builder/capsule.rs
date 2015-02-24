@@ -6,11 +6,11 @@
 /// need more things.
 
 use std::rand::{thread_rng, Rng};
-use std::io::fs::{File, mkdir, mkdir_recursive};
-use std::io::fs::PathExtensions;
-use std::io::ALL_PERMISSIONS;
+use std::old_io::fs::{File, mkdir, mkdir_recursive};
+use std::old_io::fs::PathExtensions;
+use std::old_io::ALL_PERMISSIONS;
 use std::collections::HashSet;
-use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use container::mount::bind_mount;
 use super::context::BuildContext;
@@ -40,7 +40,7 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
         .env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
-    debug!("Running APK {}", cmd);
+    debug!("Running APK {:?}", cmd);
     return match cmd.output()
         .map_err(|e| format!("Can't run apk: {}", e))
         .map(|o| o.status)

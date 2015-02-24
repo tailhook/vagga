@@ -1,5 +1,5 @@
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir_recursive};
+use std::old_io::ALL_PERMISSIONS;
+use std::old_io::fs::{mkdir_recursive};
 
 use config::builders::Builder;
 use config::builders::Builder as B;

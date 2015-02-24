@@ -1,9 +1,9 @@
 use std::os::{getenv};
 use std::str::FromStr;
-use std::path::BytesContainer;
-use std::io::fs::PathExtensions;
-use std::io::fs::readlink;
-use std::io::stdio::{stdout, stderr};
+use std::old_path::BytesContainer;
+use std::old_io::fs::PathExtensions;
+use std::old_io::fs::readlink;
+use std::old_io::stdio::{stdout, stderr};
 use libc::pid_t;
 
 use argparse::{ArgumentParser, Store, List, StoreTrue};
@@ -24,11 +24,11 @@ pub static DEFAULT_PATH: &'static str =
 
 
 pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut container: String = "".to_string();
     let mut command: String = "".to_string();
-    let mut args = Vec::new();
+    let mut args = Vec::<String>::new();
     let mut copy = false;
     {
         let mut ap = ArgumentParser::new();
@@ -61,7 +61,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     }
     let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(FromStr::from_str)
+        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));

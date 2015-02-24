@@ -1,8 +1,8 @@
-use std::io::{USER_RWX, GROUP_READ, GROUP_EXECUTE, OTHER_READ, OTHER_EXECUTE};
-use std::io::BufferedReader;
-use std::io::EndOfFile;
-use std::io::fs::File;
-use std::io::fs::{copy, chmod, rename};
+use std::old_io::{USER_RWX, GROUP_READ, GROUP_EXECUTE, OTHER_READ, OTHER_EXECUTE};
+use std::old_io::BufferedReader;
+use std::old_io::EndOfFile;
+use std::old_io::fs::File;
+use std::old_io::fs::{copy, chmod, rename};
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};

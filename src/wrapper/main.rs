@@ -7,8 +7,9 @@ extern crate libc;
 extern crate config;
 #[macro_use] extern crate container;
 
-use std::io::stderr;
-use std::os::{getcwd, set_exit_status};
+use std::old_io::stderr;
+use std::env::{set_exit_status};
+use std::os::{getcwd};
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -37,7 +38,7 @@ struct Wrapper<'a> {
 }
 
 
-pub fn run() -> isize {
+pub fn run() -> i32 {
     let mut err = stderr();
     let mut cmd: String = "".to_string();
     let mut args: Vec<String> = Vec::new();

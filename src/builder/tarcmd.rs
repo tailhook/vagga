@@ -1,7 +1,7 @@
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::{mkdir_recursive, readdir};
-use std::io::fs::PathExtensions;
-use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::old_io::ALL_PERMISSIONS;
+use std::old_io::fs::{mkdir_recursive, readdir};
+use std::old_io::fs::PathExtensions;
+use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;
@@ -36,7 +36,7 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
         Some("xz")|Some("txz") => { cmd.arg("-J"); }
         _ => {}
     };
-    debug!("Running: {}", cmd);
+    debug!("Running: {:?}", cmd);
     match cmd.output()
         .map_err(|e| format!("Can't run tar: {}", e))
         .map(|o| o.status)

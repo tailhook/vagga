@@ -1,10 +1,10 @@
-use std::io::process::{Command, InheritFd, ExitStatus, ExitSignal};
+use std::old_io::process::{Command, InheritFd, ExitStatus, ExitSignal};
 
 use super::Wrapper;
 use super::setup::setup_base_filesystem;
 
 
-pub fn run_interactive_build_shell(wrapper: &Wrapper) -> isize {
+pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
     if let Err(text) = setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)
     {
@@ -19,8 +19,8 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> isize {
         .map_err(|e| format!("Can't run tar: {}", e))
         .map(|o| o.status)
     {
-        Ok(ExitStatus(x)) => x,
-        Ok(ExitSignal(x)) => 128+x,
+        Ok(ExitStatus(x)) => x as i32,
+        Ok(ExitSignal(x)) => 128+(x as i32),
         Err(x) => {
             error!("Error running build_shell: {}", x);
             return 127;

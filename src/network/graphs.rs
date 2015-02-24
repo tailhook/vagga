@@ -1,5 +1,5 @@
 use std::os::getenv;
-use std::io::{stdout, stderr};
+use std::old_io::{stdout, stderr};
 use std::mem::swap;
 use std::collections::{HashSet, HashMap};
 
@@ -52,7 +52,7 @@ pub fn get_full_mesh(config: &Config)
 }
 
 pub fn full_mesh_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<isize, String>>
+    -> Result<Graph, Result<i32, String>>
 {
     {
         let mut ap = ArgumentParser::new();
@@ -70,7 +70,7 @@ pub fn full_mesh_cmd(config: &Config, args: Vec<String>)
 }
 
 pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<isize, String>>
+    -> Result<Graph, Result<i32, String>>
 {
     let mut nodes: Vec<String> = vec!();
     {
@@ -97,7 +97,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
 }
 
 pub fn split_graph_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<isize, String>>
+    -> Result<Graph, Result<i32, String>>
 {
     let mut nodes: Vec<String> = vec!();
     {
@@ -195,7 +195,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
 }
 
 pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
-    -> Result<Graph, Result<isize, String>>
+    -> Result<Graph, Result<i32, String>>
 {
     let mut nodes: Vec<String> = vec!();
     {

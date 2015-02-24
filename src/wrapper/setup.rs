@@ -1,14 +1,14 @@
-use std::io::ALL_PERMISSIONS;
+use std::old_io::ALL_PERMISSIONS;
 use std::os::{getenv, env};
-use std::io::BufferedReader;
+use std::old_io::BufferedReader;
 use std::os::{self_exe_path};
-use std::io::FileType::{Symlink, Directory};
-use std::io::{FileType, FileNotFound};
+use std::old_io::FileType::{Symlink, Directory};
+use std::old_io::{FileType, FileNotFound};
 use std::ffi::CString;
-use std::path::BytesContainer;
-use std::io::fs::{File, PathExtensions};
-use std::io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink, link};
-use std::io::fs::{rmdir_recursive, readdir, chmod};
+use std::old_path::BytesContainer;
+use std::old_io::fs::{File, PathExtensions};
+use std::old_io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink, link};
+use std::old_io::fs::{rmdir_recursive, readdir, chmod};
 use std::collections::BTreeMap;
 //use libc::chmod;
 use libc::pid_t;
@@ -151,8 +151,10 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
         Ok(Err((lnkdir, dir))) => {
             let target = try!(create_storage_dir(&dir, project_root));
             try!(safe_ensure_dir(&target));
-            try_str!(symlink(&target, &lnkdir));
-            try_str!(symlink(project_root, &target.join(".lnk")));
+            try!(symlink(&target, &lnkdir)
+                .map_err(|e| format!("Error symlinking storage: {}", e)));
+            try!(symlink(project_root, &target.join(".lnk"))
+                .map_err(|e| format!("Error symlinking storage: {}", e)));
             return Ok(target)
         }
         Ok(Ok(path)) => {
@@ -180,27 +182,33 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(mount_tmpfs(&mnt_dir, "size=10m"));
 
     let proc_dir = mnt_dir.join("proc");
-    try_str!(mkdir(&proc_dir, ALL_PERMISSIONS));
+    try!(mkdir(&proc_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /proc: {}", e)));
     try!(mount_pseudo(&proc_dir, "proc", "", false));
 
     let dev_dir = mnt_dir.join("dev");
-    try_str!(mkdir(&dev_dir, ALL_PERMISSIONS));
+    try!(mkdir(&dev_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /dev: {}", e)));
     try!(bind_mount(&Path::new("/dev"), &dev_dir));
 
     let sys_dir = mnt_dir.join("sys");
-    try_str!(mkdir(&sys_dir, ALL_PERMISSIONS));
+    try!(mkdir(&sys_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /sys: {}", e)));
     try!(bind_mount(&Path::new("/sys"), &sys_dir));
 
     let vagga_dir = mnt_dir.join("vagga");
-    try_str!(mkdir(&vagga_dir, ALL_PERMISSIONS));
+    try!(mkdir(&vagga_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /vagga: {}", e)));
 
     let bin_dir = vagga_dir.join("bin");
-    try_str!(mkdir(&bin_dir, ALL_PERMISSIONS));
+    try!(mkdir(&bin_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /vagga/bin: {}", e)));
     try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
     try!(remount_ro(&bin_dir));
 
     let etc_dir = mnt_dir.join("etc");
-    try_str!(mkdir(&etc_dir, ALL_PERMISSIONS));
+    try!(mkdir(&etc_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /etc: {}", e)));
     try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
         .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
     try!(copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
@@ -214,7 +222,8 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(safe_ensure_dir(&local_base.join(".transient")));
 
     let cache_dir = vagga_dir.join("cache");
-    try_str!(mkdir(&cache_dir, ALL_PERMISSIONS));
+    try!(mkdir(&cache_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /vagga/cache: {}", e)));
     let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
     try!(bind_mount(&locl_cache, &cache_dir));
 
@@ -229,12 +238,14 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     }
 
     let work_dir = mnt_dir.join("work");
-    try_str!(mkdir(&work_dir, ALL_PERMISSIONS));
+    try!(mkdir(&work_dir, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /work: {}", e)));
     try!(bind_mount(project_root, &work_dir));
 
 
     let old_root = vagga_dir.join("old_root");
-    try_str!(mkdir(&old_root, ALL_PERMISSIONS));
+    try!(mkdir(&old_root, ALL_PERMISSIONS)
+        .map_err(|e| format!("Error creating /vagga/old_root: {}", e)));
     try!(change_root(&mnt_dir, &old_root));
     try!(unmount(&Path::new("/vagga/old_root")));
 

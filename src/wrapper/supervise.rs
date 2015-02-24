@@ -1,8 +1,8 @@
-use std::io::ALL_PERMISSIONS;
+use std::old_io::ALL_PERMISSIONS;
 use std::os::getenv;
 use std::str::FromStr;
-use std::io::fs::{readlink, mkdir, File, PathExtensions};
-use std::io::stdio::{stdout, stderr};
+use std::old_io::fs::{readlink, mkdir, File, PathExtensions};
+use std::old_io::stdio::{stdout, stderr};
 use libc::pid_t;
 
 use argparse::{ArgumentParser, Store};
@@ -21,7 +21,7 @@ use super::setup;
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut child = "".to_string();
     {
@@ -41,7 +41,7 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     }
     let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(FromStr::from_str)
+        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
@@ -86,7 +86,7 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
 fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     command: &CommandInfo, wrapper: &Wrapper, supervise: &SuperviseInfo,
     pid: pid_t)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let cconfig = try!(wrapper.config.containers.get(&command.container)
         .ok_or(format!("Container {} not found", command.container)));

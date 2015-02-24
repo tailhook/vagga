@@ -10,9 +10,9 @@ extern crate config;
 #[macro_use] extern crate container;
 
 use std::os::{set_exit_status};
-use std::io::fs::File;
+use std::old_io::fs::File;
 use std::default::Default;
-use std::io::pipe::PipeStream;
+use std::old_io::pipe::PipeStream;
 use libc::funcs::posix88::unistd::dup2;
 
 use config::read_config;

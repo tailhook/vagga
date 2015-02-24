@@ -4,7 +4,7 @@ extern crate argparse;
 extern crate config;
 extern crate container;
 
-use std::os::set_exit_status;
+use std::env::set_exit_status;
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -17,7 +17,7 @@ mod iptables;
 mod run;
 
 
-fn run() -> Result<(), Result<isize, String>> {
+fn run() -> Result<(), Result<i32, String>> {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
     {

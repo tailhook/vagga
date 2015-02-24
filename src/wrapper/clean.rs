@@ -1,7 +1,7 @@
 use std::str::FromStr;
-use std::io::fs::{readdir, rmdir_recursive, readlink};
-use std::io::fs::{PathExtensions};
-use std::io::stdio::{stdout, stderr};
+use std::old_io::fs::{readdir, rmdir_recursive, readlink};
+use std::old_io::fs::{PathExtensions};
+use std::old_io::stdio::{stdout, stderr};
 use std::collections::HashSet;
 use libc::pid_t;
 
@@ -21,7 +21,7 @@ enum Action {
 
 
 pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut global = false;
     let mut dry_run = false;
@@ -201,7 +201,7 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
                              "Can't read .vagga/.transient dir: {}", e)))
                 .into_iter()
                 .filter(|path| path.extension_str()
-                               .and_then(|e| FromStr::from_str(e))
+                               .and_then(|e| FromStr::from_str(e).ok())
                                .map(|p: pid_t| !procfs.join(format!("{}", p))
                                               .exists())
                                .unwrap_or(true))

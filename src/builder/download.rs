@@ -1,7 +1,7 @@
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::PathExtensions;
-use std::io::fs::{unlink, rename, mkdir_recursive};
-use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::old_io::ALL_PERMISSIONS;
+use std::old_io::fs::PathExtensions;
+use std::old_io::fs::{unlink, rename, mkdir_recursive};
+use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use container::sha256::{Sha256, Digest};
 
@@ -44,7 +44,7 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
     cmd.arg("-O");
     cmd.arg(&tmpfilename);
     cmd.arg(url);
-    debug!("Running: {}", cmd);
+    debug!("Running: {:?}", cmd);
     match cmd
         .output()
         .map_err(|e| format!("Can't run wget: {}", e))

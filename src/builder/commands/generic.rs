@@ -1,4 +1,4 @@
-use std::io::fs::PathExtensions;
+use std::old_io::fs::PathExtensions;
 
 use super::super::context::BuildContext;
 use container::monitor::{Monitor};

@@ -3,14 +3,14 @@ extern crate serialize;
 #[macro_use] extern crate log;
 
 use std::os::env;
-use std::io::BufferedReader;
-use std::os::set_exit_status;
+use std::old_io::BufferedReader;
+use std::env::set_exit_status;
 use std::os::self_exe_path;
-use std::io::fs::File;
-use std::io::timer::sleep;
-use std::io::stdio::{stdout, stderr};
+use std::old_io::fs::File;
+use std::old_io::timer::sleep;
+use std::old_io::stdio::{stdout, stderr};
 use std::time::duration::Duration;
-use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
 use serialize::json;
 
 use argparse::{ArgumentParser, Store, List};
@@ -110,11 +110,11 @@ fn setup_gateway_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     for cmd in commands.iter() {
-        debug!("Running {}", cmd);
+        debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
-                error!("Error running command {}: {:?}", cmd, err);
+                error!("Error running command {:?}: {:?}", cmd, err);
                 set_exit_status(1);
                 return;
             }
@@ -225,11 +225,11 @@ fn setup_bridge_namespace(args: Vec<String>) {
     }
 
     for cmd in commands.iter() {
-        debug!("Running {}", cmd);
+        debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
-                error!("Error running command {}: {:?}", cmd, err);
+                error!("Error running command {:?}: {:?}", cmd, err);
                 set_exit_status(1);
                 return;
             }
@@ -315,11 +315,11 @@ fn setup_guest_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     for cmd in commands.iter() {
-        debug!("Running {}", cmd);
+        debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(ExitStatus(0)) => {},
             err => {
-                error!("Error running command {}: {:?}", cmd, err);
+                error!("Error running command {:?}: {:?}", cmd, err);
                 set_exit_status(1);
                 return;
             }

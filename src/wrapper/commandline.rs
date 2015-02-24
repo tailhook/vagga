@@ -1,7 +1,7 @@
 use std::os::getenv;
 use std::str::FromStr;
-use std::io::fs::readlink;
-use std::io::stdio::{stdout, stderr};
+use std::old_io::fs::readlink;
+use std::old_io::stdio::{stdout, stderr};
 use libc::pid_t;
 
 use argparse::{ArgumentParser};
@@ -22,7 +22,7 @@ use super::util::find_cmd;
 
 pub fn commandline_cmd(command: &CommandInfo,
     wrapper: &Wrapper, mut cmdline: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
@@ -48,7 +48,7 @@ pub fn commandline_cmd(command: &CommandInfo,
 
     let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(FromStr::from_str)
+        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));

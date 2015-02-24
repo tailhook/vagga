@@ -1,7 +1,7 @@
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 
-use std::io::process::{Command, InheritFd, ExitStatus};
+use std::old_io::process::{Command, InheritFd, ExitStatus};
 
 use container::nsutil::set_namespace;
 use container::container::Namespace::NewNet;
@@ -27,7 +27,7 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
         .map_err(|e| format!("Can't set namespace: {}", e)));
     let mut cmd = Command::new("iptables-restore");
     cmd.stdout(InheritFd(1)).stderr(InheritFd(2));
-    debug!("Running {} for {}", cmd, ip);
+    debug!("Running {:?} for {}", cmd, ip);
     let mut prc = try!(cmd.spawn()
         .map_err(|e| format!("Can't run iptables-restore: {}", e)));
     {

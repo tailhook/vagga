@@ -1,6 +1,6 @@
 use std::os::getenv;
-use std::io::{stdout, stderr};
-use std::io::process::{Command, InheritFd, ExitStatus};
+use std::old_io::{stdout, stderr};
+use std::old_io::process::{Command, InheritFd, ExitStatus};
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -12,11 +12,11 @@ use container::container::Namespace::NewNet;
 
 
 pub fn run_command_cmd(config: &Config, args: Vec<String>)
-    -> Result<(), Result<isize, String>>
+    -> Result<(), Result<i32, String>>
 {
     let mut subcommand = "".to_string();
     let mut command = "".to_string();
-    let mut cmdargs = vec!();
+    let mut cmdargs = Vec::<String>::new();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("

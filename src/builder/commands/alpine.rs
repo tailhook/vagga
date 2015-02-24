@@ -1,6 +1,6 @@
-use std::io::ALL_PERMISSIONS;
-use std::io::fs::{File, mkdir_recursive, copy};
-use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::old_io::ALL_PERMISSIONS;
+use std::old_io::fs::{File, mkdir_recursive, copy};
+use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
 
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine, Unknown};

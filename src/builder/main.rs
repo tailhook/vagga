@@ -10,7 +10,7 @@ extern crate config;
 #[macro_use] extern crate container;
 
 use std::default::Default;
-use std::os::{set_exit_status};
+use std::env::{set_exit_status};
 
 use config::read_config;
 use config::Settings;
@@ -34,7 +34,7 @@ mod capsule;
 mod packages;
 
 
-pub fn run() -> isize {
+pub fn run() -> i32 {
     signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
