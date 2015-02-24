@@ -1,4 +1,4 @@
-use std::io::{stdout, stderr};
+use std::old_io::{stdout, stderr};
 use libc::pid_t;
 
 use argparse::{ArgumentParser};
@@ -16,9 +16,9 @@ use super::build::build_container;
 
 pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
     mut args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
-    let mut cmdargs = vec!();
+    let mut cmdargs = Vec::<String>::new();
     let mut container = "".to_string();
     let mut copy = false;
     {
@@ -28,17 +28,17 @@ pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
             Runs arbitrary command inside the container
             ");
         ap.refer(&mut copy)
-            .add_option(&["-W", "--writeable"], Box::new(StoreTrue),
+            .add_option(&["-W", "--writeable"], StoreTrue,
                 "Create translient writeable container for running the command.
                  Currently we use hard-linked copy of the container, so it's
                  dangerous for some operations. Still it's ok for installing
                  packages or similar tasks");
         ap.refer(&mut container)
-            .add_argument("container", Box::new(Store::<String>),
+            .add_argument("container", Store,
                 "Container to run command in")
             .required();
         ap.refer(&mut cmdargs)
-            .add_argument("command", Box::new(List::<String>),
+            .add_argument("command", List,
                 "Command (with arguments) to run inside container")
             .required();
 
@@ -70,7 +70,7 @@ pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
 
 pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
     mut args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut cmdargs = vec!();
     let mut container = "".to_string();
@@ -81,16 +81,16 @@ pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
         ap.set_description(
             "Run command (or shell) in one of the vagga's network namespaces");
         ap.refer(&mut pid)
-            .add_option(&["--pid"], Box::new(StoreOption::<pid_t>), "
+            .add_option(&["--pid"], StoreOption, "
                 Run in the namespace of the process with PID.
                 By default you get shell in the \"gateway\" namespace.
                 ");
         ap.refer(&mut container)
-            .add_argument("container", Box::new(Store::<String>),
+            .add_argument("container", Store,
                 "Container to run command in")
             .required();
         ap.refer(&mut cmdargs)
-            .add_argument("command", Box::new(List::<String>),
+            .add_argument("command", List,
                 "Command (with arguments) to run inside container")
             .required();
 
@@ -106,7 +106,7 @@ pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
     cmdargs.insert(0, container.clone());
     try!(build_container(config, &container));
     try!(network::join_gateway_namespaces());
-    if let Some(pid) = pid {
+    if let Some::<i32>(pid) = pid {
         try!(set_namespace(&Path::new(format!("/proc/{}/ns/net", pid)), NewNet)
             .map_err(|e| format!("Error setting networkns: {}", e)));
     }

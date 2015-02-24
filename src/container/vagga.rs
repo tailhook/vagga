@@ -1,4 +1,4 @@
-use std::io::fs::readlink;
+use std::old_io::fs::readlink;
 
 
 pub fn container_ver(name: &String) -> Result<String, String> {

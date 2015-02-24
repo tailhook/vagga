@@ -22,7 +22,7 @@ use super::run::DEFAULT_PATH;
 use settings::{MergedSettings};
 
 
-#[derive(Clone, Copy, Show, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WriteMode {
     ReadOnly,
     TransientHardlinkCopy(pid_t),

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::fmt::{Show, Formatter};
+use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -19,19 +19,19 @@ type ProcRef<'a> = Rc<RefCell<Process<'a>>>;
 
 pub enum MonitorResult {
     Killed,
-    Exit(isize),
+    Exit(i32),
 }
 
 pub enum MonitorStatus {
     Run,
     Error(String),
-    Shutdown(isize),
+    Shutdown(i32),
 }
 
 pub trait Executor {
     fn prepare(&mut self) -> MonitorStatus { Run }
     fn command(&mut self) -> Command;
-    fn finish(&mut self, status: isize) -> MonitorStatus { Shutdown(status) }
+    fn finish(&mut self, status: i32) -> MonitorStatus { Shutdown(status) }
 }
 
 pub struct RunOnce {
@@ -59,11 +59,9 @@ pub struct Process<'a> {
     executor: Box<Executor + 'a>,
 }
 
-impl<'a> Show for Process<'a> {
+impl<'a> Debug for Process<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
-        "Signal(".fmt(fmt)
-        .and(self.name.fmt(fmt))
-        .and(")".fmt(fmt))
+        write!(fmt, "Signal({:?})", self.name)
     }
 }
 
@@ -71,7 +69,7 @@ pub struct Monitor<'a> {
     processes: Vec<ProcRef<'a>>,
     pids: HashMap<pid_t, ProcRef<'a>>,
     aio: Loop<ProcRef<'a>>,
-    status: Option<isize>,
+    status: Option<i32>,
 }
 
 impl<'a> Monitor<'a> {
@@ -118,7 +116,7 @@ impl<'a> Monitor<'a> {
         }
         return prepare_result;
     }
-    fn _reap_child(&mut self, prc: ProcRef, pid: pid_t, status: isize)
+    fn _reap_child(&mut self, prc: ProcRef, pid: pid_t, status: i32)
         -> MonitorStatus
     {
         let mut prc = prc.borrow_mut();
@@ -165,8 +163,7 @@ impl<'a> Monitor<'a> {
                         Shutdown(x) => {
                             self.status = Some(x);
                             for (pid, _) in self.pids.iter() {
-                                signal::send_signal(*pid,
-                                    signal::SIGTERM as isize);
+                                signal::send_signal(*pid, signal::SIGTERM);
                             }
                             break;
                         }
@@ -193,8 +190,7 @@ impl<'a> Monitor<'a> {
                         Shutdown(x) => {
                             self.status = Some(x);
                             for (pid, _) in self.pids.iter() {
-                                signal::send_signal(*pid,
-                                    signal::SIGTERM as isize);
+                                signal::send_signal(*pid, signal::SIGTERM);
                             }
                             break;
                         }

@@ -1,4 +1,4 @@
-use std::io::IoError;
+use std::old_io::IoError;
 use std::cmp::Ordering;
 use std::time::Duration;
 use std::collections::BinaryHeap;
@@ -119,7 +119,7 @@ impl<Name: Clone> Loop<Name> {
                     match rc {
                         sig@SIGTERM | sig@SIGINT | sig@SIGQUIT => {
                             return Signal(
-                                signal::Signal::Terminate(sig as isize));
+                                signal::Signal::Terminate(sig));
                         }
                         SIGCHLD => {
                             continue;  // Will waitpid on next iteration

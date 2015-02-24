@@ -4,14 +4,14 @@ extern crate quire;
 extern crate argparse;
 extern crate serialize;
 extern crate libc;
-extern crate regex;
 #[macro_use] extern crate log;
 
 extern crate config;
 extern crate container;
 
-use std::io::stderr;
-use std::os::{setenv, unsetenv, getenv, getcwd, set_exit_status};
+use std::old_io::stderr;
+use std::os::{setenv, unsetenv, getenv, getcwd};
+use std::env::{set_exit_status};
 use config::find_config;
 use container::signal;
 use argparse::{ArgumentParser, Store, List, Collect};
@@ -24,12 +24,12 @@ mod underscore;
 mod build;
 
 
-pub fn run() -> isize {
+pub fn run() -> i32 {
     let mut err = stderr();
     let mut cname = "".to_string();
     let mut args = vec!();
-    let mut set_env = vec!();
-    let mut propagate_env = vec!();
+    let mut set_env = Vec::<String>::new();
+    let mut propagate_env = Vec::<String>::new();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -39,18 +39,18 @@ pub fn run() -> isize {
             Run `vagga` without arguments to see the list of commands.
             ");
         ap.refer(&mut set_env)
-          .add_option(&["-E", "--env", "--environ"], Box::new(Collect::<String>),
+          .add_option(&["-E", "--env", "--environ"], Collect,
                 "Set environment variable for running command")
           .metavar("NAME=VALUE");
         ap.refer(&mut propagate_env)
-          .add_option(&["-e", "--use-env"], Box::new(Collect::<String>),
+          .add_option(&["-e", "--use-env"], Collect,
                 "Propagate variable VAR into command environment")
           .metavar("VAR");
         ap.refer(&mut cname)
-          .add_argument("command", box Store::<String>,
+          .add_argument("command", Store,
                 "A vagga command to run");
         ap.refer(&mut args)
-          .add_argument("args", box List::<String>,
+          .add_argument("args", List,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         match ap.parse_args() {
@@ -73,7 +73,7 @@ pub fn run() -> isize {
                              .unwrap_or(Path::new("."));
 
     for k in propagate_env.into_iter() {
-        setenv(("VAGGAENV_".to_string() + k.as_slice()).as_slice(),
+        setenv(("VAGGAENV_".to_string() + &k[..]).as_slice(),
             getenv(k.as_slice()).unwrap_or("".to_string()));
     }
     for pair in set_env.into_iter() {
@@ -86,7 +86,7 @@ pub fn run() -> isize {
         }
     }
 
-    let result:Result<isize, String> = match cname.as_slice() {
+    let result:Result<i32, String> = match cname.as_slice() {
         "" => {
             err.write_line("Available commands:").ok();
             for (k, cmd) in config.commands.iter() {

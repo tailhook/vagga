@@ -1,8 +1,9 @@
 use std::fmt;
 use libc::uid_t;
-use regex::Regex;
 use serialize::{Decoder, Decodable};
 use std::str::FromStr;
+use std::error::FromError;
+use quire::decode::YamlDecoder;
 
 
 #[derive(Clone, Show, Copy)]
@@ -28,27 +29,26 @@ impl fmt::String for Vec<Range> {
 
 struct RangeError;
 
+trait StringError<T> {
+    fn create_error(&self, value: String) -> T;
+}
+
 impl Decodable for Range {
-    fn decode<D:Decoder>(d: &mut D) -> Result<Range, D::Error> {
-        match d.read_str() {
-            Ok(val) => {
-                let num:Option<uid_t> = FromStr::from_str(val.as_slice());
-                match num {
-                    Some(num) => return Ok(Range::new(num, num)),
-                    None => {}
-                }
-                let regex = Regex::new(r"^(\d+)-(\d+)$").unwrap();
-                match regex.captures(val.as_slice()) {
-                    Some(caps) => {
-                        return Ok(Range::new(
-                            caps.at(1).and_then(FromStr::from_str).unwrap(),
-                            caps.at(2).and_then(FromStr::from_str).unwrap()));
-                    }
-                    None => unimplemented!(),
-                }
-            }
-            Err(e) => Err(e),
-        }
+    fn decode<D:Decoder>(d: &mut D) -> Result<Range, D::Error>
+    {
+        d.read_str().and_then(|val| {
+            FromStr::from_str(val.as_slice())
+            .map(|num| Range::new(num, num))
+            .or_else(|_| {
+                let mut pair = val.splitn(1, '-');
+                Ok(Range::new(
+                    try!(pair.next().and_then(|x| FromStr::from_str(x).ok())
+                        .ok_or(d.error("Error parsing range"))),
+                    try!(pair.next().and_then(|x| FromStr::from_str(x).ok())
+                        .ok_or(d.error("Error parsing range"))),
+                ))
+            })
+        })
     }
 }
 

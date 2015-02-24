@@ -1,6 +1,6 @@
-use std::io::IoError;
+use std::old_io::IoError;
 use std::ffi::CString;
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 use libc::{c_int, pid_t, size_t};
 use libc::funcs::posix88::fcntl::open;
 use libc::funcs::posix88::unistd::close;

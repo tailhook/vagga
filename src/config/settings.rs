@@ -13,8 +13,9 @@ pub struct Settings {
 }
 
 impl FromStr for Settings {
-    fn from_str(val: &str) -> Option<Settings> {
-        json::decode(val).ok()
+    type Err = ();
+    fn from_str(val: &str) -> Result<Settings, ()> {
+        json::decode(val).map_err(|_| ())
     }
 }
 

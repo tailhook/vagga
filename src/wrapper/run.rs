@@ -36,19 +36,19 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
             Runs arbitrary command inside the container
             ");
         ap.refer(&mut copy)
-            .add_option(&["-W", "--writeable"], Box::new(StoreTrue),
+            .add_option(&["-W", "--writeable"], StoreTrue,
                 "Create translient writeable container for running the command.
                  Currently we use hard-linked copy of the container, so it's
                  dangerous for some operations. Still it's ok for installing
                  packages or similar tasks");
         ap.refer(&mut container)
-            .add_argument("container_name", Box::new(Store::<String>),
+            .add_argument("container_name", Store,
                 "Container name to build");
         ap.refer(&mut command)
-            .add_argument("command", Box::new(Store::<String>),
+            .add_argument("command", Store,
                 "Command to run inside the container");
         ap.refer(&mut args)
-            .add_argument("args", Box::new(List::<String>),
+            .add_argument("args", List,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {

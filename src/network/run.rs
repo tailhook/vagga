@@ -24,13 +24,13 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
             The command runs in current mount namespace (i.e. same file system)
             ");
         ap.refer(&mut subcommand)
-            .add_argument("node", Box::new(Store::<String>),
+            .add_argument("node", Store,
                 "A node (subcommand) which namespace to run in");
         ap.refer(&mut command)
-            .add_argument("command", Box::new(Store::<String>),
+            .add_argument("command", Store,
                 "A command to run in namespace");
         ap.refer(&mut cmdargs)
-            .add_argument("args", Box::new(List::<String>),
+            .add_argument("args", List,
                 "Additional arguments to command");
         ap.stop_on_first_argument(true);
         match ap.parse(args, &mut stdout(), &mut stderr()) {

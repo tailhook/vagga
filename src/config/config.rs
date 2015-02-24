@@ -1,5 +1,5 @@
 use std::default::Default;
-use std::io::fs::PathExtensions;
+use std::old_io::fs::PathExtensions;
 
 use std::collections::BTreeMap;
 use serialize::{Decoder};

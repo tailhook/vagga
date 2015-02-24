@@ -1,12 +1,14 @@
 #![allow(dead_code)]
-use std::io::{IoError};
-use std::io::BufferedReader;
+use std::old_io::{IoError};
+use std::old_io::BufferedReader;
 use std::ptr::null;
 use std::ffi::CString;
-use std::io::fs::File;
-use std::path::BytesContainer;
+use std::old_io::fs::File;
+use std::old_path::BytesContainer;
 use std::str::FromStr;
 use libc::{c_ulong, c_int};
+
+use super::tools::NextValue;
 
 // sys/mount.h
 static MS_RDONLY: c_ulong = 1;                /* Mount read-only.  */
@@ -66,47 +68,43 @@ pub struct MountRecord<'a> {
 }
 
 impl<'a> MountRecord<'a> {
-    pub fn from_str<'x>(line: &'x str) -> Option<MountRecord<'x>> {
+    pub fn from_str<'x>(line: &'x str) -> Result<MountRecord<'x>, ()> {
         let mut parts = line.words();
-        let mount_id = try_opt!(parts.next().and_then(FromStr::from_str));
-        let parent_id = try_opt!(parts.next().and_then(FromStr::from_str));
-        let device = try_opt!(parts.next());
-        let relative_root = try_opt!(parts.next());
-        let mount_point = try_opt!(parts.next());
-        let mount_options = try_opt!(parts.next());
+        let mount_id = try!(parts.next_value());
+        let parent_id = try!(parts.next_value());
+        let device = try!(parts.next().ok_or(()));
+        let relative_root = try!(parts.next().ok_or(()));
+        let mount_point = try!(parts.next().ok_or(()));
+        let mount_options = try!(parts.next().ok_or(()));
         let mut tag_shared = None;
         let mut tag_master = None;
         let mut tag_propagate_from = None;
         let mut tag_unbindable = None;
 
-        for name in parts {
+        for name in &mut parts {
             if name == "-" { break; }
             let mut pair = name.splitn(1, ':');
             let key = pair.next();
-            let value = pair.next();
             match key {
                 Some("shared") => {
-                    tag_shared = Some(try_opt!(
-                        value.and_then(FromStr::from_str)));
+                    tag_shared = Some(try!(pair.next_value()));
                 }
                 Some("master") => {
-                    tag_master = Some(try_opt!(
-                        value.and_then(FromStr::from_str)));
+                    tag_master = Some(try!(pair.next_value()));
                 }
                 Some("propagate_from") => {
-                    tag_propagate_from = Some(try_opt!(
-                        value.and_then(FromStr::from_str)));
+                    tag_propagate_from = Some(try!(pair.next_value()));
                 }
                 Some("unbindable") => tag_unbindable = Some(()),
                 _ => {}
             }
         }
 
-        let fstype = try_opt!(parts.next());
-        let mount_source = try_opt!(parts.next());
-        let super_options = try_opt!(parts.next());
+        let fstype = try!(parts.next().ok_or(()));
+        let mount_source = try!(parts.next().ok_or(()));
+        let super_options = try!(parts.next().ok_or(()));
 
-        return Some(MountRecord {
+        return Ok(MountRecord {
             mount_id: mount_id,
             parent_id: parent_id,
             _device: device,
@@ -133,19 +131,21 @@ impl<'a> MountRecord<'a> {
 pub fn get_submounts_of(dir: &Path)
     -> Result<Vec<Path>, String>
 {
-    let f = try_str!(File::open(&Path::new("/proc/self/mountinfo")));
+    let f = try!(File::open(&Path::new("/proc/self/mountinfo"))
+        .map_err(|e| format!("Can't open mountinfo: {}", e)));
     let mut buf = BufferedReader::new(f);
     let mut result = vec!();
     for line in buf.lines() {
-        let line = try_str!(line);
+        let line = try!(line
+            .map_err(|e| format!("Can't read mountinfo: {}", e)));
         match MountRecord::from_str(line.as_slice()) {
-            Some(rec) => {
+            Ok(rec) => {
                 let path = Path::new(rec.mount_point);
                 if dir.is_ancestor_of(&path) {
                     result.push(path);
                 }
             }
-            None => {
+            Err(()) => {
                 return Err(format!("Can't parse mountinfo line: {}", line));
             }
         }

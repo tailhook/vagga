@@ -14,7 +14,7 @@ use super::build::build_container;
 
 pub fn run_user_command(config: &Config, workdir: &Path,
     cmd: String, args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     match config.commands.get(&cmd) {
         None => Err(format!("Command {} not found. \
@@ -54,7 +54,7 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
 
 pub fn run_simple_command(config: &Config, cfg: &CommandInfo,
     workdir: &Path, cmdname: String, args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     if let Some(_) = cfg.network {
         return Err(format!(
@@ -79,7 +79,7 @@ pub fn run_simple_command(config: &Config, cfg: &CommandInfo,
 // TODO(tailhook) run not only for simple commands
 pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     userns: bool)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut cmd = Command::new("wrapper".to_string(),
         self_exe_path().unwrap().join("vagga_wrapper"));

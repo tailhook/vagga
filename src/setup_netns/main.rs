@@ -45,13 +45,13 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Set up intermediate (gateway) network namespace
             ");
         ap.refer(&mut guest_ip)
-            .add_option(&["--guest-ip"], Box::new(Store::<String>),
+            .add_option(&["--guest-ip"], Store,
                 "IP to use on the vagga_guest interface");
         ap.refer(&mut network)
-            .add_option(&["--network"], Box::new(Store::<String>),
+            .add_option(&["--network"], Store,
                 "Network address");
         ap.refer(&mut gateway_ip)
-            .add_option(&["--gateway-ip"], Box::new(Store::<String>),
+            .add_option(&["--gateway-ip"], Store,
                 "Gateway address");
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -133,19 +133,19 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Set up intermediate (bridge) network namespace
             ");
         ap.refer(&mut interface)
-            .add_option(&["--interface"], Box::new(Store::<String>),
+            .add_option(&["--interface"], Store,
                 "Network interface name")
             .required();
         ap.refer(&mut ip)
-            .add_option(&["--ip"], Box::new(Store::<String>),
+            .add_option(&["--ip"], Store,
                 "IP to use on the interface")
             .required();
         ap.refer(&mut gateway_ip)
-            .add_option(&["--gateway-ip"], Box::new(Store::<String>),
+            .add_option(&["--gateway-ip"], Store,
                 "Gateway to use on the interface")
             .required();
         ap.refer(&mut ports_str)
-            .add_option(&["--port-forwards"], Box::new(Store::<String>),
+            .add_option(&["--port-forwards"], Store,
                 "Port forwards though bridge")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -248,19 +248,19 @@ fn setup_guest_namespace(args: Vec<String>) {
             Set up guest network namespace
             ");
         ap.refer(&mut interface)
-            .add_option(&["--interface"], Box::new(Store::<String>),
+            .add_option(&["--interface"], Store,
                 "Network interface name")
             .required();
         ap.refer(&mut ip)
-            .add_option(&["--ip"], Box::new(Store::<String>),
+            .add_option(&["--ip"], Store,
                 "IP to use on the interface")
             .required();
         ap.refer(&mut gateway_ip)
-            .add_option(&["--gateway-ip"], Box::new(Store::<String>),
+            .add_option(&["--gateway-ip"], Store,
                 "Gateway to use on the interface")
             .required();
         ap.refer(&mut hostname)
-            .add_option(&["--hostname"], Box::new(Store::<String>),
+            .add_option(&["--hostname"], Store,
                 "IP and hostname to use")
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -336,10 +336,10 @@ fn main() {
             Set up network namespace for containers
             ");
         ap.refer(&mut kind)
-            .add_argument("kind", Box::new(Store::<String>),
+            .add_argument("kind", Store,
                 "Kind of namespace to set up (bridge or container)");
         ap.refer(&mut args)
-            .add_argument("options", Box::new(List::<String>),
+            .add_argument("options", List,
                 "Options specific for this kind");
         ap.stop_on_first_argument(true);
         match ap.parse_args() {

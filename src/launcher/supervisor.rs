@@ -1,10 +1,10 @@
 use std::rc::Rc;
-use std::io::ALL_PERMISSIONS;
+use std::old_io::ALL_PERMISSIONS;
 use std::os::self_exe_path;
 use std::cell::Cell;
-use std::io::stdio::{stdout, stderr};
-use std::io::fs::{mkdir};
-use std::io::fs::PathExtensions;
+use std::old_io::stdio::{stdout, stderr};
+use std::old_io::fs::{mkdir};
+use std::old_io::fs::PathExtensions;
 use std::collections::BTreeSet;
 
 use argparse::{ArgumentParser};
@@ -36,7 +36,7 @@ impl<'a> Executor for RunChild<'a> {
     fn command(&mut self) -> Command {
         return self.command.take().expect("Command can't be run twice");
     }
-    fn finish(&mut self, status: isize) -> MonitorStatus {
+    fn finish(&mut self, status: i32) -> MonitorStatus {
         if self.running.get() {
             println!(
                 "---------- \
@@ -52,7 +52,7 @@ impl<'a> Executor for RunChild<'a> {
 
 pub fn run_supervise_command(config: &Config, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     if sup.mode != stop_on_failure {
         panic!("Only stop-on-failure mode implemented");
@@ -104,8 +104,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     }
     debug!("Containers {} with host neworking, {} in netns",
         containers_host_net.len(), containers_in_netns.len());
-    let mut mon = Monitor::new();
     let running = Cell::new(true);
+    let mut mon = Monitor::new();
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("wrapper".to_string(),
             self_exe_path().unwrap().join("vagga_wrapper"));

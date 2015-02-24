@@ -28,7 +28,7 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
         let mut ap = ArgumentParser::new();
         ap.set_description("Runs a single command from supervision suite");
         ap.refer(&mut child)
-            .add_argument("child", Box::new(Store::<String>),
+            .add_argument("child", Store,
                 "Child to run")
             .required();
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {

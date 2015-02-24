@@ -1,12 +1,12 @@
 use std::os::getenv;
-use std::io::{IoError, OtherIoError};
-use std::io::{File, Open, Write};
-use std::io::{BufferedReader, MemWriter};
+use std::old_io::{IoError, OtherIoError};
+use std::old_io::{File, Open, Write};
+use std::old_io::{BufferedReader, MemWriter};
 use std::cmp::min;
 use std::cmp::Ordering;
 use std::str::FromStr;
 use std::str::from_utf8;
-use std::io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
+use std::old_io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
 use libc::{pid_t, uid_t, gid_t};
@@ -32,7 +32,7 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
         let parts: Vec<&str> = line.as_slice().split(':').collect();
         let start = FromStr::from_str(parts[1]);
         let count = FromStr::from_str(parts[2].trim_right());
-        if parts.len() != 3 || start.is_none() || count.is_none() {
+        if parts.len() != 3 || start.is_err() || count.is_err() {
             return Err(format!("/etc/subuid:{}: Bad syntax", num+1));
         }
         if parts[0].eq(username) {
@@ -54,7 +54,7 @@ fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
         let parts: Vec<&str> = line.as_slice().split(':').collect();
         let start = FromStr::from_str(parts[1]);
         let count = FromStr::from_str(parts[2].trim_right());
-        if parts.len() != 3 || start.is_none() || count.is_none() {
+        if parts.len() != 3 || start.is_err() || count.is_err() {
             return Err(format!("/etc/subgid:{}: Bad syntax", num+1));
         }
         if parts[0].eq(username) {
@@ -206,7 +206,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                         .arg(allowed.to_string())
                         .arg(count.to_string());
                 }
-                info!("Uid map command: {}", cmd);
+                info!("Uid map command: {:?}", cmd);
                 match cmd.status() {
                     Ok(ExitStatus(0)) => {},
                     Ok(ExitStatus(x)) => {
@@ -241,7 +241,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                         .arg(allowed.to_string())
                         .arg(count.to_string());
                 }
-                info!("Gid map command: {}", cmd);
+                info!("Gid map command: {:?}", cmd);
                 match cmd.status() {
                     Ok(ExitStatus(0)) => {},
                     Ok(ExitStatus(x)) => {
@@ -303,11 +303,11 @@ fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
         let line = try!(line
             .map_err(|e| format!("Error reading uid/gid map: {}", e)));
         let mut words = line.as_slice().words();
-        let inside = try!(words.next().and_then(FromStr::from_str)
+        let inside = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
-        let outside = try!(words.next().and_then(FromStr::from_str)
+        let outside = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
-        let count = try!(words.next().and_then(FromStr::from_str)
+        let count = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
         if read_inside {
             result.push(Range { start: inside, end: inside+count-1 });

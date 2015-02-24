@@ -1,7 +1,6 @@
 extern crate quire;
 extern crate argparse;
 extern crate serialize;
-extern crate regex;
 extern crate libc;
 #[macro_use] extern crate log;
 
@@ -48,11 +47,11 @@ pub fn run() -> isize {
             Internal vagga tool to setup basic system sandbox
             ");
         ap.refer(&mut cmd)
-          .add_argument("command", Box::new(Store::<String>),
+          .add_argument("command", Store,
                 "A vagga command to run")
           .required();
         ap.refer(&mut args)
-          .add_argument("args", Box::new(List::<String>),
+          .add_argument("args", List,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         match ap.parse_args() {

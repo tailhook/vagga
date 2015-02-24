@@ -3,7 +3,6 @@
 extern crate quire;
 extern crate argparse;
 extern crate serialize;
-extern crate regex;
 extern crate libc;
 #[macro_use] extern crate log;
 
@@ -38,11 +37,11 @@ pub fn run() -> isize {
             A tool which versions containers
             ");
         ap.refer(&mut container)
-          .add_argument("container", Box::new(Store::<String>),
+          .add_argument("container", Store,
                 "A container to version")
           .required();
         ap.refer(&mut settings)
-          .add_option(&["--settings"], Box::new(Store::<Settings>),
+          .add_option(&["--settings"], Store,
                 "User settings for the container build");
         match ap.parse_args() {
             Ok(()) => {}

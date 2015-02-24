@@ -33,33 +33,29 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             ");
         ap.refer(&mut actions)
           .add_option(&["--tmp", "--tmp-folders"],
-                Box::new(PushConst(Action::Temporary)),
+                PushConst(Action::Temporary),
                 "Clean temporary containers (failed builds)")
-          .add_option(&["--old", "--old-containers"],
-                Box::new(PushConst(Action::Old)),
+          .add_option(&["--old", "--old-containers"], PushConst(Action::Old),
                 "Clean old versions of containers (configurable)")
-          .add_option(&["--transient"],
-                Box::new(PushConst(Action::Transient)),
+          .add_option(&["--transient"], PushConst(Action::Transient),
                 "Clean unneeded transient folders (left from containers with
                  `write-mode` set to transient-something). The pid of process
                  is checked for liveness first.")
-          .add_option(&["--everything"],
-                Box::new(PushConst(Action::Everything)),
+          .add_option(&["--everything"], PushConst(Action::Everything),
                 "Clean whole `.vagga` folder. Useful when deleting a project.
                  With ``--global`` cleans whole storage-dir and cache-dir")
-          .add_option(&["--orphans"],
-                Box::new(PushConst(Action::Orphans)),
+          .add_option(&["--orphans"], PushConst(Action::Orphans),
                 "Without `--global` removes containers which are not in
                  vagga.yaml any more. With `--global` removes all folders
                  which have `.lnk` pointing to nowhere (i.e. project dir
                  already deleted while vagga folder is not)")
           .required();
         ap.refer(&mut global)
-          .add_option(&["--global"], Box::new(StoreTrue),
+          .add_option(&["--global"], StoreTrue,
                 "Apply cleanup command to all containers. Works only \
                 if `storage-dir` is configured in settings");
         ap.refer(&mut dry_run)
-          .add_option(&["-n", "--dry-run"], Box::new(StoreTrue),
+          .add_option(&["-n", "--dry-run"], StoreTrue,
                 "Dry run. Don't delete everything, just print");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

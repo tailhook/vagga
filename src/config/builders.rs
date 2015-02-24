@@ -1,4 +1,4 @@
-use std::fmt::{Show, Formatter};
+use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
 use std::default::Default;
 use std::collections::BTreeMap;
@@ -260,9 +260,9 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
     ), .. Default::default() } as Box<V::Validator>;
 }
 
-impl Show for Builder {
+impl Debug for Builder {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
-        json::encode(self).fmt(fmt)
+        write!(fmt, "{}", json::as_json(self))
     }
 }
 

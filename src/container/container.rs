@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-use std::fmt::{Show, Formatter};
+use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
 use std::ffi::{CString};
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 use std::ptr::null;
-use std::io::IoError;
+use std::old_io::IoError;
 use std::os::getcwd;
 use std::collections::BTreeMap;
 use collections::enum_set::{EnumSet, CLike};
@@ -17,7 +17,7 @@ use libc::{c_int, c_char, pid_t};
 use self::Namespace::*;
 
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Namespace {
     NewMount,
     NewUts,
@@ -28,7 +28,7 @@ pub enum Namespace {
 }
 
 impl CLike for Namespace {
-    fn to_uint(&self) -> usize {
+    fn to_usize(&self) -> usize {
         match *self {
             NewMount => 0,
             NewUts => 1,
@@ -38,7 +38,7 @@ impl CLike for Namespace {
             NewNet => 5,
         }
     }
-    fn from_uint(val: usize) -> Namespace {
+    fn from_usize(val: usize) -> Namespace {
         match val {
             0 => NewMount,
             1 => NewUts,
@@ -68,11 +68,9 @@ pub struct Command {
     stderr: i32,
 }
 
-impl Show for Command {
+impl Debug for Command {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
-        self.executable.fmt(fmt)
-        .and_then(|()| " ".fmt(fmt))
-        .and_then(|()| self.arguments.fmt(fmt))
+        write!(fmt, "{:?} {:?}", self.executable, self.arguments)
     }
 }
 

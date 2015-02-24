@@ -1,4 +1,4 @@
-use std::io::{stdout, stderr};
+use std::old_io::{stdout, stderr};
 
 use argparse::{ArgumentParser, StoreTrue};
 
@@ -6,7 +6,7 @@ use config::Config;
 
 
 pub fn print_list(config: &Config, args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let mut all = false;
     let mut builtin = false;
@@ -14,13 +14,13 @@ pub fn print_list(config: &Config, args: Vec<String>)
     {
         let mut ap = ArgumentParser::new();
         ap.refer(&mut all)
-            .add_option(&["-A", "--all"], Box::new(StoreTrue),
+            .add_option(&["-A", "--all"], StoreTrue,
                 "Show all commands");
         ap.refer(&mut builtin)
-            .add_option(&["--builtin"], Box::new(StoreTrue),
+            .add_option(&["--builtin"], StoreTrue,
                 "Show built-in commands (starting with underscore)");
         ap.refer(&mut hidden)
-            .add_option(&["--hidden"], Box::new(StoreTrue),
+            .add_option(&["--hidden"], StoreTrue,
                 "Show hidden commands");
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

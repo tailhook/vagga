@@ -80,7 +80,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             specified exactly once. Clusters are separated by double-dash.
             ");
         ap.refer(&mut nodes)
-            .add_argument("node", Box::new(List::<String>), r#"
+            .add_argument("node", List, r#"
                 List of nodes separated in clusters by "--"
                 "#);
         ap.silence_double_dash(false);
@@ -108,7 +108,7 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             from all others.
             ");
         ap.refer(&mut nodes)
-            .add_argument("node", Box::new(List::<String>), r#"
+            .add_argument("node", List, r#"
                 List of nodes separated in clusters by "--"
                 "#);
         ap.silence_double_dash(false);
@@ -205,7 +205,7 @@ pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
             each other
             ");
         ap.refer(&mut nodes)
-            .add_argument("node", Box::new(List::<String>), r#"
+            .add_argument("node", List, r#"
                 List of nodes to be isolated from each other and from all
                 others
                 "#);

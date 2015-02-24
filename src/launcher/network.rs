@@ -1,18 +1,17 @@
 use std::rc::Rc;
-use std::io::{stdout, stderr};
+use std::old_io::{stdout, stderr};
 use std::os::{getenv, self_exe_path};
-use std::io::{USER_RWX};
-use std::io::{BufferedReader};
+use std::old_io::{USER_RWX};
+use std::old_io::{BufferedReader};
 use std::rand::thread_rng;
-use std::io::fs::{File, PathExtensions};
-use std::io::fs::{mkdir, unlink};
+use std::old_io::fs::{File, PathExtensions};
+use std::old_io::fs::{mkdir, unlink};
 use std::str::FromStr;
-use std::io::process::{Command, Ignored, InheritFd, ExitStatus};
-use std::collections::BitvSet;
+use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::collections::BitSet;
 use std::rand::distributions::{Range, IndependentSample};
 use libc::funcs::posix88::unistd::{geteuid};
 use libc::{pid_t};
-use regex::Regex;
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
@@ -45,7 +44,7 @@ pub fn namespace_dir() -> Path {
 
 
 pub fn create_netns(_config: &Config, mut args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let interface_name = "vagga".to_string();
     let network = "172.18.255.0/30".to_string();
@@ -61,10 +60,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             Set's up network namespace for subsequent container runs
             ");
         ap.refer(&mut dry_run)
-            .add_option(&["--dry-run"], box StoreTrue,
+            .add_option(&["--dry-run"], StoreTrue,
                 "Do not run commands, only show");
         ap.refer(&mut iptables)
-            .add_option(&["--no-iptables"], box StoreFalse,
+            .add_option(&["--no-iptables"], StoreFalse,
                 "Do not update iptables rules (useful you have firewall \
                  other than iptables). You need to update your firewall rules \
                  manually to have functional networking.");
@@ -214,7 +213,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     println!("");
     println!("The following commands will be run:");
     for cmd in commands.iter() {
-        println!("    {}", cmd);
+        println!("    {:?}", cmd);
     }
 
 
@@ -233,7 +232,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             match cmd.status() {
                 Ok(ExitStatus(0)) => {},
                 val => return Err(
-                    format!("Error running command {}: {:?}", cmd, val)),
+                    format!("Error running command {:?}: {:?}", cmd, val)),
             }
         }
 
@@ -261,7 +260,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                     Ok(ExitStatus(0)) => true,
                     Ok(ExitStatus(1)) => false,
                     val => return Err(
-                        format!("Error running command {}: {:?}", cmd, val)),
+                        format!("Error running command {:?}: {:?}", cmd, val)),
                 };
                 debug!("Checked {:?} -> {}", check_rule, exists);
 
@@ -274,7 +273,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                     match cmd.status() {
                         Ok(ExitStatus(0)) => {},
                         val => return Err(
-                            format!("Error setting up iptables {}: {:?}",
+                            format!("Error setting up iptables {:?}: {:?}",
                                 cmd, val)),
                     }
                 }
@@ -286,7 +285,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 }
 
 pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
-    -> Result<isize, String>
+    -> Result<i32, String>
 {
     let interface_name = "vagga".to_string();
     let network = "172.18.255.0/30".to_string();
@@ -300,10 +299,10 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
             Set's up network namespace for subsequent container runs
             ");
         ap.refer(&mut dry_run)
-            .add_option(&["--dry-run"], box StoreTrue,
+            .add_option(&["--dry-run"], StoreTrue,
                 "Do not run commands, only show");
         ap.refer(&mut iptables)
-            .add_option(&["--no-iptables"], box StoreFalse,
+            .add_option(&["--no-iptables"], StoreFalse,
                 "Do not remove iptables rules (useful you have firewall \
                  other than iptables). You need to update your firewall rules \
                  manually to have functional networking.");
@@ -371,7 +370,7 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     println!("");
     println!("The following commands will be run:");
     for cmd in commands.iter() {
-        println!("    {}", cmd);
+        println!("    {:?}", cmd);
     }
 
     if !dry_run {
@@ -379,7 +378,7 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
             match cmd.status() {
                 Ok(ExitStatus(0)) => {}
                 val => {
-                    error!("Error running command {}: {:?}", cmd, val);
+                    error!("Error running command {:?}: {:?}", cmd, val);
                 }
             }
         }
@@ -425,20 +424,25 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
         .map_err(|e| format!("Can't read resolv.conf: {}", e))
 }
 
-fn get_interfaces() -> Result<BitvSet, String> {
-    let child_re = Regex::new(r"^\s*ch(\d+):").unwrap();
+fn get_interfaces() -> Result<BitSet, String> {
     File::open(&Path::new("/proc/net/dev"))
         .map(BufferedReader::new)
         .and_then(|mut f| {
             let mut lineiter = f.lines();
-            let mut result = BitvSet::with_capacity(MAX_INTERFACES);
+            let mut result = BitSet::with_capacity(MAX_INTERFACES);
             try!(lineiter.next().unwrap());  // Two header lines
             try!(lineiter.next().unwrap());
             for line in lineiter {
                 let line = try!(line);
-                child_re.captures(line.as_slice())
-                    .and_then(|capt| FromStr::from_str(capt.at(1).unwrap()))
-                    .map(|&mut: num| result.insert(num));
+                let line = line.trim();
+                let end = line.find(':');
+                if line.starts_with("ch") && end.is_some() {
+                    if let Ok(num) = FromStr::from_str(
+                        &line[3..end.unwrap()])
+                    {
+                        result.insert(num);
+                    }
+                }
             }
             return Ok(result);
         })
@@ -463,10 +467,10 @@ fn get_unused_inteface_no() -> Result<usize, String> {
 }
 
 fn _run_command(cmd: Command) -> Result<(), String> {
-    debug!("Running {}", cmd);
+    debug!("Running {:?}", cmd);
     match cmd.status() {
         Ok(ExitStatus(0)) => Ok(()),
-        code => Err(format!("Error running {}: {:?}",  cmd, code)),
+        code => Err(format!("Error running {:?}: {:?}",  cmd, code)),
     }
 }
 
@@ -507,8 +511,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         "--interface", iif.as_slice(),
         "--ip", iip.as_slice(),
         "--gateway-ip", eip.as_slice(),
-        "--port-forwards",
-            json::encode(port_forwards).as_slice(),
+        "--port-forwards", &json::encode(port_forwards).unwrap()[..],
         ]);
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),

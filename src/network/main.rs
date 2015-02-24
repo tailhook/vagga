@@ -32,7 +32,7 @@ fn run() -> Result<(), Result<isize, String>> {
             the bridge-namespaced nodes and from the internet.
             ");
         ap.refer(&mut kind)
-            .add_argument("kind", Box::new(Store::<String>), r#"
+            .add_argument("kind", Store, r#"
                 Kind of partitioning to do:
                 "disjoint" -- divide into few non-intersecting networks,
                 "split" -- divide into graph of networks that may have some
@@ -43,7 +43,7 @@ fn run() -> Result<(), Result<isize, String>> {
                     still being in same mount (filesystem) namespace.
                 "#);
         ap.refer(&mut args)
-            .add_argument("node", Box::new(List::<String>), "
+            .add_argument("node", List, "
                 A node(s) to operate on. See help of specific command
                 for details
                 ");

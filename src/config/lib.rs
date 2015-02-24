@@ -5,7 +5,6 @@
 
 extern crate serialize;
 extern crate quire;
-extern crate regex;
 extern crate libc;
 
 
