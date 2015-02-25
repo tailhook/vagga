@@ -223,7 +223,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         println!("The following iptables rules will be established:");
 
         for rule in iprules.iter() {
-            println!("    {:?}", rule);
+            print!("    iptables");
+            for i in rule.iter() {
+                print!(" {:?}", i);
+            }
+            println!("");
         }
     }
 
