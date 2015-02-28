@@ -207,8 +207,19 @@ Mutliple directories may be specified at once.
    of the single container). In case user enabled ``shared-cache`` the folder
    will be also shared between containers of different projects.
 
+Sometimes you just want to write a file in target system:
 
-.. _marathon: https://github.com/mesosphere/marathon
+.. code-block:: yaml
+
+   setup:
+   # ...
+   - !Text
+     /etc/locale.conf: |
+        LANG=en_US.UTF-8
+        LC_TIME=uk_UA.UTF-8
+
+.. note:: You can use any YAML'y syntax for file body just the "literal" one
+   which starts with a pipe ``|`` character is the most handy one
 
 
 Ubuntu
@@ -262,6 +273,8 @@ packages.
 
 .. note:: Probably the key for repository should be added to be able to install
     packages.
+
+.. _marathon: https://github.com/mesosphere/marathon
 
 
 Alpine

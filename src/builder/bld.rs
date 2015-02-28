@@ -1,5 +1,5 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{mkdir_recursive};
+use std::old_io::{ALL_PERMISSIONS, USER_RWX, GROUP_READ, OTHER_READ};
+use std::old_io::fs::{File, chmod, mkdir_recursive};
 
 use config::builders::Builder;
 use config::builders::Builder as B;
@@ -138,6 +138,18 @@ impl BuildCommand for Builder {
                 let path = Path::new("/vagga/base/.roots")
                     .join(version).join("root");
                 try!(copy_dir(&path, &Path::new("/vagga/root")));
+                Ok(())
+            }
+            &B::Text(ref files) => {
+                for (path, text) in files.iter() {
+                    let realpath = Path::new("/vagga/root").join(
+                        path.path_relative_from(&Path::new("/")).unwrap());
+                    try!(File::create(&realpath)
+                        .and_then(|mut f| f.write_str(text))
+                        .map_err(|e| format!("Can't chmod file: {}", e)));
+                    try!(chmod(&realpath, USER_RWX|GROUP_READ|OTHER_READ)
+                        .map_err(|e| format!("Can't chmod file: {}", e)));
+                }
                 Ok(())
             }
 

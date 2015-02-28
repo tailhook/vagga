@@ -14,6 +14,8 @@ Vagga 0.2.4
   (c) installing dependencies to not interfere with pip dependencies on ubuntu
   (e.g. previously requests library where removed when removing build
   dependencies)
+* Fix ``!CacheDirs`` command which was broken few versions ago
+* Add ``!Text`` command for easier writing files into container (e.g. configs)
 
 .. _get-pip.py: https://pip.pypa.io/en/latest/installing.html
 

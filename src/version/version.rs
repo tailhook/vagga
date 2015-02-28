@@ -1,6 +1,7 @@
 use std::old_io::EndOfFile;
 use std::old_io::BufferedReader;
 use std::old_io::fs::File;
+use std::old_path::BytesContainer;
 
 use serialize::json;
 
@@ -94,6 +95,24 @@ impl VersionHash for Builder {
                             return Error(format!("{:?}: {}", name, e));
                         }
                     }
+                }
+                Hashed
+            }
+            &B::CacheDirs(ref map) => {
+                for (k, v) in map.iter() {
+                    hash.input(k.container_as_bytes());
+                    hash.input(b"\0");
+                    hash.input(v.as_bytes());
+                    hash.input(b"\0");
+                }
+                Hashed
+            }
+            &B::Text(ref map) => {
+                for (k, v) in map.iter() {
+                    hash.input(k.container_as_bytes());
+                    hash.input(b"\0");
+                    hash.input(v.as_bytes());
+                    hash.input(b"\0");
                 }
                 Hashed
             }

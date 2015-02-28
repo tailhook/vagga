@@ -1,0 +1,13 @@
+containers:
+  text:
+    setup:
+    - !Alpine v3.1
+    - !Text
+      /etc/shakespeare: |
+          Sir, in my heart there was a kind of fighting
+          That would not let me sleep.
+
+  cache_dirs:
+    setup:
+    - !Alpine v3.1
+    - !CacheDirs /var/cache: var-cache

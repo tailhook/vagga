@@ -71,6 +71,7 @@ pub enum Builder {
     Depends(Path),
     Tar(TarInfo),
     TarInstall(TarInstallInfo),
+    Text(BTreeMap<Path, String>),
     //AddFile(FileInfo),
     Remove(Path),
     EnsureDir(Path),
@@ -133,6 +134,13 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
         ("Container".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("Text".to_string(), box V::Mapping {
+            key_element: box V::Directory {
+                absolute: Some(true),
+                .. Default::default() } as Box<V::Validator>,
+            value_element: box V::Scalar {
+                .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
 
         ("Ubuntu".to_string(), box V::Scalar {
