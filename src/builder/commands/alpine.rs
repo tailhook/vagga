@@ -14,27 +14,39 @@ pub static LATEST_VERSION: &'static str = "v3.1";
 #[derive(Show)]
 pub struct AlpineInfo {
     pub version: String,
+    pub base_setup: bool,
 }
 
 
 pub fn setup_base(ctx: &mut BuildContext, version: &String)
     -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
-    try!(mkdir_recursive(&Path::new("/vagga/root/etc/apk"), ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating apk dir: {}", e)));
-    try!(copy(
-        &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
-        &Path::new("/vagga/root/etc/apk/repositories"))
-        .map_err(|e| format!("Error creating apk repo: {}", e)));
-    try!(capsule::apk_run(&[
-        "--update-cache",
-        "--keys-dir=/etc/apk/keys",  // Use keys from capsule
-        "--root=/vagga/root",
-        "--initdb",
-        "add",
-        "alpine-base",
-        ], &[]));
+    let base = if let Alpine(ref alpine) = ctx.distribution {
+        alpine.base_setup
+    } else {
+        return Err(format!("Incompatible distribution: {:?}",
+                           ctx.distribution));
+    };
+    if !base {
+        try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
+        try!(mkdir_recursive(&Path::new("/vagga/root/etc/apk"), ALL_PERMISSIONS)
+            .map_err(|e| format!("Error creating apk dir: {}", e)));
+        try!(copy(
+            &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
+            &Path::new("/vagga/root/etc/apk/repositories"))
+            .map_err(|e| format!("Error creating apk repo: {}", e)));
+        try!(capsule::apk_run(&[
+            "--update-cache",
+            "--keys-dir=/etc/apk/keys",  // Use keys from capsule
+            "--root=/vagga/root",
+            "--initdb",
+            "add",
+            "alpine-base",
+            ], &[]));
+        if let Alpine(ref mut alpine) = ctx.distribution {
+            alpine.base_setup = true;
+        }
+    }
     Ok(())
 }
 

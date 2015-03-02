@@ -78,6 +78,7 @@ impl BuildCommand for Builder {
                 if let Distr::Unknown = ctx.distribution {
                     ctx.distribution = Distr::Alpine(alpine::AlpineInfo {
                         version: version.to_string(),
+                        base_setup: false,
                     });
                 } else {
                     return Err(format!("Conflicting distribution"));
@@ -90,6 +91,12 @@ impl BuildCommand for Builder {
                                    "/usr/local/sbin:/usr/local/bin:\
                                     /usr/sbin:/usr/bin:/sbin:/bin\
                                     ".to_string());
+            }
+            &B::NpmInstall(_) => {
+                if let Distr::Unknown = ctx.distribution {
+                    B::Alpine(alpine::LATEST_VERSION.to_string())
+                        .configure(ctx);
+                }
             }
             &B::PipConfig(ref pip_settings) => {
                 ctx.pip_settings = pip_settings.clone();
@@ -225,6 +232,8 @@ impl BuildCommand for Builder {
                 pip::pip_requirements(ctx, 3, fname)
             }
             &B::NpmInstall(ref pkgs) => {
+                try!(alpine::setup_base(ctx,
+                    &alpine::LATEST_VERSION.to_string()));
                 npm::npm_install(ctx, pkgs)
             }
         }

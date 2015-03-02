@@ -22,17 +22,6 @@ pub fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
 pub fn ensure_npm(ctx: &mut BuildContext, features: &[packages::Package])
     -> Result<(), String>
 {
-    match ctx.distribution {
-        Distr::Unknown => {
-            //  Currently use alpine by default as it has smallest disk
-            //  footprint
-            ctx.distribution = Distr::Alpine(alpine::AlpineInfo {
-                version: alpine::LATEST_VERSION.to_string(),
-            });
-            try!(alpine::setup_base(ctx, &alpine::LATEST_VERSION.to_string()));
-        }
-        _ => {}
-    };
     packages::ensure_packages(ctx, features)
 }
 
