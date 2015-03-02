@@ -232,8 +232,10 @@ impl BuildCommand for Builder {
                 pip::pip_requirements(ctx, 3, fname)
             }
             &B::NpmInstall(ref pkgs) => {
-                try!(alpine::setup_base(ctx,
-                    &alpine::LATEST_VERSION.to_string()));
+                if let Distr::Alpine(_) = ctx.distribution {
+                    try!(alpine::setup_base(ctx,
+                        &alpine::LATEST_VERSION.to_string()));
+                }
                 npm::npm_install(ctx, pkgs)
             }
         }

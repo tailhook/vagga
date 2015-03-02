@@ -3,6 +3,14 @@ Release Notes
 =============
 
 
+Vagga 0.2.5
+===========
+
+:Release Date: 03.03.2015
+
+* A quick bugfix release of NpmInstall command
+
+
 Vagga 0.2.4
 ===========
 
