@@ -96,3 +96,11 @@ pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
     run_command_at_env(ctx, pip_cli.as_slice(), &Path::new("/work"), &[
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }
+
+pub fn configure(ctx: &mut BuildContext) -> Result<(), String> {
+    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache"),
+                           "pip-cache".to_string()));
+    ctx.environ.insert("PIP_CACHE_DIR".to_string(),
+                       "/tmp/pip-cache".to_string());
+    Ok(())
+}

@@ -73,8 +73,7 @@ pub fn run() -> i32 {
     }
     for b in cont.setup.iter() {
         debug!("Building step: {:?}", b);
-        match b.configure(&mut build_context)
-              .and_then(|()| b.build(&mut build_context))
+        match b.build(&mut build_context, true)
         {
             Ok(()) => {}
             Err(e) => {

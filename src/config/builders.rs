@@ -6,26 +6,26 @@ use std::collections::BTreeMap;
 use quire::validate as V;
 use serialize::json;
 
-#[derive(Encodable, Decodable, Show, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct DebianRepo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[derive(Encodable, Decodable, Show, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct AptKey {
     pub key_server: String,
     pub keys: Vec<String>,
 }
 
-#[derive(Encodable, Decodable, Show, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct PacmanRepo {
     pub name: String,
     pub url: String,
 }
 
-#[derive(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct TarInfo {
     pub url: String,
     pub sha256: Option<String>,
@@ -33,7 +33,7 @@ pub struct TarInfo {
     pub subdir: Path,
 }
 
-#[derive(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct TarInstallInfo {
     pub url: String,
     pub sha256: Option<String>,
@@ -41,24 +41,31 @@ pub struct TarInstallInfo {
     pub script: String,
 }
 
-#[derive(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct FileInfo {
     pub name: Path,
     pub contents: String,
 }
 
-#[derive(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct UbuntuRepoInfo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[derive(Default, Clone, Decodable, Encodable)]
+#[derive(Default, Clone, Decodable, Debug, Encodable)]
 pub struct PipSettings {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
     pub dependencies: bool,
+}
+
+#[derive(Clone, Decodable, Encodable, Debug)]
+pub struct SubConfigInfo {
+    pub builder: Option<String>,
+    pub path: Path,
+    pub container: String,
 }
 
 
@@ -83,6 +90,7 @@ pub enum Builder {
     Install(Vec<String>),
     BuildDeps(Vec<String>),
     Container(String),
+    SubConfig(SubConfigInfo),
 
     // -- Ubuntu --
     Ubuntu(String),
@@ -134,6 +142,16 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             .. Default::default() } as Box<V::Validator>,
         .. Default::default() } as Box<V::Validator>),
         ("Container".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("SubConfig".to_string(), box V::Structure {
+            members: vec!(
+                ("builder".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("path".to_string(), box V::Directory {
+                    .. Default::default() } as Box<V::Validator>),
+                ("container".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+            ),
         .. Default::default() } as Box<V::Validator>),
         ("Text".to_string(), box V::Mapping {
             key_element: box V::Directory {

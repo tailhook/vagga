@@ -6,6 +6,7 @@ use std::old_path::BytesContainer;
 use serialize::json;
 
 use config::Config;
+use config::read_config;
 use config::builders::{Builder};
 use config::builders::Builder as B;
 use container::sha256::Digest;
@@ -93,6 +94,35 @@ impl VersionHash for Builder {
                         New => return New,  // Always rebuild
                         Error(e) => {
                             return Error(format!("{:?}: {}", name, e));
+                        }
+                    }
+                }
+                Hashed
+            }
+            &B::SubConfig(ref sconfig) => {
+                assert!(sconfig.builder.is_none());
+                let subcfg = match read_config(
+                    &Path::new("/work").join(&sconfig.path))
+                {
+                    Ok(cfg) => cfg,
+                    Err(e) => return Error(e),
+                };
+                let cont = match subcfg.containers.get(&sconfig.container) {
+                    Some(cont) => cont,
+                    None => {
+                        return Error(format!(
+                            "Container {:?} not found in {:?}",
+                            sconfig.container, sconfig.path));
+                    }
+                };
+                for b in cont.setup.iter() {
+                    debug!("Versioning setup: {:?}", b);
+                    match b.hash(cfg, hash) {
+                        Hashed => continue,
+                        New => return New,  // Always rebuild
+                        Error(e) => {
+                            return Error(format!("{:?}: {}",
+                                sconfig.container, e));
                         }
                     }
                 }
