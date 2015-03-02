@@ -2,10 +2,11 @@
 Release Notes
 =============
 
+
 Vagga 0.2.4
 ===========
 
-:Release Date: future
+:Release Date: 03.03.2015
 
 * Implement support of ``https`` links for Tar, TarInstall commands
 * The ``!Py*`` commands now download latest pip via `get-pip.py`_. This
@@ -18,6 +19,7 @@ Vagga 0.2.4
 * Add ``!Text`` command for easier writing files into container (e.g. configs)
 
 .. _get-pip.py: https://pip.pypa.io/en/latest/installing.html
+
 
 Vagga 0.2.3
 ===========
