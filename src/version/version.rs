@@ -100,7 +100,7 @@ impl VersionHash for Builder {
                 Hashed
             }
             &B::SubConfig(ref sconfig) => {
-                assert!(sconfig.builder.is_none());
+                assert!(sconfig.generator.is_none());
                 let subcfg = match read_config(
                     &Path::new("/work").join(&sconfig.path))
                 {

@@ -1,0 +1,36 @@
+containers:
+
+  docker-parser:
+    setup:
+    - !Alpine v3.1
+    - !Install [python]
+    - !Depends Dockerfile
+    - !Depends docker2vagga.py
+    - !Sh './docker2vagga.py > /vagga.yaml'
+
+  docker-raw:
+    setup:
+    - !SubConfig
+      generator: docker-parser
+      path: /vagga.yaml
+      container: docker-raw
+
+  docker-smart:
+    setup:
+    - !SubConfig
+      generator: docker-parser
+      path: /vagga.yaml
+      container: docker-smart
+
+  subdir:
+    setup:
+    - !SubConfig
+      path: subdir/vagga.yaml
+      container: calc
+    - !Sh "echo 2+3 | bc > /value.txt"
+
+commands:
+  calc: !Command
+    container: subdir
+    accepts-arguments: true
+    run: echo "$*" | bc

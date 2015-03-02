@@ -1,0 +1,6 @@
+containers:
+
+  calc:
+    setup:
+    - !Alpine v3.1
+    - !Install [bc]

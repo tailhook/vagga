@@ -80,7 +80,7 @@ impl BuildCommand for Builder {
                 }
             }
             &B::SubConfig(ref sconfig) => {
-                assert!(sconfig.builder.is_none());
+                assert!(sconfig.generator.is_none());
                 let subcfg = try!(read_config(
                     &Path::new("/work").join(&sconfig.path)));
                 let cont = subcfg.containers.get(&sconfig.container)

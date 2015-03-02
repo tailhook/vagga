@@ -63,7 +63,7 @@ pub struct PipSettings {
 
 #[derive(Clone, Decodable, Encodable, Debug)]
 pub struct SubConfigInfo {
-    pub builder: Option<String>,
+    pub generator: Option<String>,
     pub path: Path,
     pub container: String,
 }
@@ -145,7 +145,8 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
         ("SubConfig".to_string(), box V::Structure {
             members: vec!(
-                ("builder".to_string(), box V::Scalar {
+                ("generator".to_string(), box V::Scalar {
+                    optional: true,
                     .. Default::default() } as Box<V::Validator>),
                 ("path".to_string(), box V::Directory {
                     .. Default::default() } as Box<V::Validator>),
