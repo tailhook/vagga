@@ -119,8 +119,11 @@ pub fn run() -> i32 {
         "_list" => {
             list::print_list(&config, args)
         }
-        "_build" | "_build_shell" | "_clean" | "_version_hash" => {
+        "_build_shell" | "_clean" | "_version_hash" => {
             user::run_wrapper(Some(&int_workdir), cname, args, true)
+        }
+        "_build" => {
+            build::build_command(&config, args)
         }
         "_run" => {
             underscore::run_command(&config, &int_workdir, cname, args)
