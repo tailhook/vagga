@@ -17,7 +17,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/docker-raw)
-    [[ $link = ".roots/docker-raw.b6bc38d1/root" ]]
+    [[ $link = ".roots/docker-raw.88b12496/root" ]]
 }
 
 @test "subconfig: docker-smart" {
@@ -26,5 +26,5 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/docker-smart)
-    [[ $link = ".roots/docker-smart.b6bc38d1/root" ]]
+    [[ $link = ".roots/docker-smart.e2fa942b/root" ]]
 }

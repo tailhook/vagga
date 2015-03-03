@@ -21,6 +21,7 @@ for line in text.splitlines():
         image = line.split()[1]
         assert image.startswith('ubuntu:'), image
         print("    - !Ubuntu", image[7:])
+        print("    - !UbuntuUniverse") # enabled in docker by default
     elif line.startswith('RUN '):
         print("    - !Sh", repr(line[3:].strip()))
 
@@ -33,6 +34,7 @@ for line in text.splitlines():
         image = line.split()[1]
         assert image.startswith('ubuntu:'), image
         print("    - !Ubuntu", image[7:])
+        print("    - !UbuntuUniverse") # enabled in docker by default
     elif line.startswith('RUN '):
         cmd = line[3:].split()
         if cmd[0] == 'apt-get':

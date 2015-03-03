@@ -80,9 +80,15 @@ impl BuildCommand for Builder {
                 }
             }
             &B::SubConfig(ref sconfig) => {
-                assert!(sconfig.generator.is_none());
-                let subcfg = try!(read_config(
-                    &Path::new("/work").join(&sconfig.path)));
+                let path = if let Some(ref container) = sconfig.generator {
+                    let version = try!(container_ver(container));
+                    Path::new("/vagga/base/.roots")
+                        .join(version).join("root")
+                        .join(&sconfig.path)
+                } else {
+                    Path::new("/work").join(&sconfig.path)
+                };
+                let subcfg = try!(read_config(&path));
                 let cont = subcfg.containers.get(&sconfig.container)
                     .expect("Subcontainer not found");  // TODO
                 for b in cont.setup.iter() {

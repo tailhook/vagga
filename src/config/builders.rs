@@ -149,6 +149,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     optional: true,
                     .. Default::default() } as Box<V::Validator>),
                 ("path".to_string(), box V::Directory {
+                    absolute: Some(false),
                     .. Default::default() } as Box<V::Validator>),
                 ("container".to_string(), box V::Scalar {
                     .. Default::default() } as Box<V::Validator>),

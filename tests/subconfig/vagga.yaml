@@ -6,20 +6,20 @@ containers:
     - !Install [python]
     - !Depends Dockerfile
     - !Depends docker2vagga.py
-    - !Sh './docker2vagga.py > /vagga.yaml'
+    - !Sh 'python ./docker2vagga.py > /vagga.yaml'
 
   docker-raw:
     setup:
     - !SubConfig
       generator: docker-parser
-      path: /vagga.yaml
+      path: vagga.yaml
       container: docker-raw
 
   docker-smart:
     setup:
     - !SubConfig
       generator: docker-parser
-      path: /vagga.yaml
+      path: vagga.yaml
       container: docker-smart
 
   subdir:
