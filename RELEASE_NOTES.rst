@@ -3,6 +3,15 @@ Release Notes
 =============
 
 
+Vagga 0.2.6
+===========
+
+:Release Date: future
+
+* Implement ``!SubConfig`` build step
+* Add ``trusted-hosts`` to ``!PipConfig``
+
+
 Vagga 0.2.5
 ===========
 

@@ -58,6 +58,7 @@ pub struct UbuntuRepoInfo {
 pub struct PipSettings {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
+    pub trusted_hosts: Vec<String>,
     pub dependencies: bool,
 }
 

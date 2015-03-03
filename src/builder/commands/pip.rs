@@ -45,6 +45,10 @@ fn pip_args(ctx: &mut BuildContext, ver: u8) -> Vec<String> {
             }
         }
     }
+    ctx.pip_settings.trusted_hosts.iter().map(|h| {
+        args.push("--trusted-host".to_string());
+        args.push(h.to_string());
+    });
     if !ctx.pip_settings.dependencies {
         args.push("--no-deps".to_string());
     }
