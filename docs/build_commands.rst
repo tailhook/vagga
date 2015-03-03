@@ -254,7 +254,7 @@ it by series of ``!UbuntuRepo`` commands (see below), but there is shortcut
    - !UbuntuUniverse
    - !Install [checkinstall]
 
-The ``!UbuntuRepo`` command adds additional repository. For example to add
+The ``!UbuntuRepo`` command adds additional repository. For example, to add
 marathon_ repository you may write:
 
 
@@ -415,7 +415,7 @@ The ``Py2Requirements`` command exists too.
 Dependent Containers
 ====================
 
-Sometimes you want to build on top of another container. For example container
+Sometimes you want to build on top of another container. For example, container
 for running tests might be based on production container, but it might add some
 test utils. Use ``!Container`` command for that:
 
@@ -444,7 +444,7 @@ steps on top of of it. For example:
          url: http://download.zeromq.org/zeromq-4.1.0-rc1.tar.gz
      web:
        setup:
-       - !Container _temporary
+       - !Container temporary
        - !Py3Install [pyzmq]
 
 In this case when you try multiple different versions of pyzmq, the zeromq
@@ -452,6 +452,93 @@ itself will not be rebuilt. When you're done, you can append build steps and
 remove the ``temporary`` container.
 
 
+Sometimes you need to generate (part of) ``vagga.yaml`` itself. For some things
+you may just use shell scripting. For example:
 
+.. code-block:: yaml
 
+    container:
+      setup:
+      - !Ubuntu trusty
+      - !Env { VERSION: 0.1.0 }
+      - !Sh "apt-get install somepackage==$VERSION"
 
+.. note:: Environment of user building container is always ignored during
+   build process (but may be used when running command).
+
+In more complex scenarios you may want to generate real ``vagga.yaml``. You may
+use that with ancillary container and ``!SubConfig`` command. For example, here
+is how we use a docker2vagga_ script to transform ``Dockerfile`` to vagga
+config:
+
+.. code-block:: yaml
+
+  docker-parser: ❶
+    setup:
+    - !Alpine v3.1
+    - !Install [python]
+    - !Depends Dockerfile ❷
+    - !Depends docker2vagga.py ❷
+    - !Sh 'python ./docker2vagga.py > /docker.yaml' ❸
+
+  somecontainer:
+    setup:
+    - !SubConfig
+      generator: docker-parser ❶
+      path: docker.yaml ❹
+      container: docker-smart ❺
+
+Few comments:
+
+* ❶ -- container used for build, it's rebuilt automatically as a dependency for
+  "somecontainer"
+* ❷ -- normal dependency rules apply, so you must add external files that are
+  used to generate the container and vagga file in it
+* ❸ -- put generated vagga file inside a container
+* ❹ -- the "path" is relative to container if "generator" is set
+* ❺ -- name of the container used *inside* a "docker.yaml"
+
+.. _docker2vagga: https://github.com/tailhook/vagga/blob/master/tests/subconfig/docker2vagga.py
+
+.. warning:: The functionality of ``!SubConfig`` is experimental and is a
+   subject to change in future. In particular currently the ``/work`` mount
+   point and current directory used to build container are those of initial
+   ``vagga.yaml`` file. It may change in future.
+
+The ``!SubConfig`` command may be used to include some commands from another
+file without building container. Just omit ``generator`` command:
+
+.. code-block:: yaml
+
+   subdir:
+     setup:
+     - !SubConfig
+       path: subdir/vagga.yaml
+       container: containername
+
+The YAML file used may be a partial container, i.e. it may contain just few
+commands, installing needed packages. The other things (including the name of
+the base distribution) can be set by original container:
+
+.. code-block:: yaml
+
+    # vagga.yaml
+    containers:
+      ubuntu:
+        setup:
+        - !Ubuntu trusty
+        - !SubConfig
+          path: packages.yaml
+          container: packages
+      alpine:
+        setup:
+        - !Alpine v3.1
+        - !SubConfig
+          path: packages.yaml
+          container: packages
+
+    # packages.yaml
+    containers:
+      packages:
+        setup:
+        - !Install [redis, bash, make]
