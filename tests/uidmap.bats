@@ -2,14 +2,18 @@ setup() {
     cd /work/tests/uidmap
 }
 
-@test "Too much uids" {
+@test "uidmap: Too much uids" {
     run vagga _build too-much-uids
-    [[ $status = 124 ]]
+    printf "%s\n" "${lines[@]}"
+    echo "Status: $status"
+    [[ $status = 121 ]]
     [[ $output =~ "Number of allowed subuids is too small" ]]
 }
 
-@test "Too much gids" {
+@test "uidmap: Too much gids" {
     run vagga _build too-much-gids
-    [[ $status = 124 ]]
+    printf "%s\n" "${lines[@]}"
+    echo "Status: $status"
+    [[ $status = 121 ]]
     [[ $output =~ "Number of allowed subgids is too small" ]]
 }
