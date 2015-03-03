@@ -69,7 +69,7 @@ pub struct SubConfigInfo {
 }
 
 
-#[derive(Encodable, Decodable, Clone)]
+#[derive(Encodable, Decodable, Clone, Debug)]
 pub enum Builder {
     // -- Generic --
     Sh(String),
@@ -287,10 +287,3 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
 
     ), .. Default::default() } as Box<V::Validator>;
 }
-
-impl Debug for Builder {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), FormatError> {
-        write!(fmt, "{}", json::as_json(self))
-    }
-}
-
