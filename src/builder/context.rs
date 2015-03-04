@@ -14,6 +14,8 @@ use super::commands::debian::UbuntuInfo;
 use super::commands::alpine::AlpineInfo;
 use super::commands::debian;
 use super::commands::alpine;
+use super::commands::pip;
+use super::commands::npm;
 use super::capsule;
 use super::packages;
 
@@ -133,6 +135,14 @@ impl<'a> BuildContext<'a> {
     }
 
     pub fn finish(&mut self) -> Result<(), String> {
+        if self.featured_packages.contains(&packages::PipPy2) ||
+           self.featured_packages.contains(&packages::PipPy3)
+        {
+            try!(pip::freeze(self));
+        }
+        if self.featured_packages.contains(&packages::Npm) {
+            try!(npm::list(self));
+        }
 
         match self.distribution {
             Distribution::Unknown => {}

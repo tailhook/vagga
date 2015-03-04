@@ -1,5 +1,5 @@
 use super::super::context::{BuildContext};
-use super::generic::run_command;
+use super::generic::{run_command, capture_command};
 use super::super::packages;
 use super::super::context::Distribution as Distr;
 use super::alpine;
@@ -40,4 +40,20 @@ pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
         );
     args.extend(pkgs.clone().into_iter());
     run_command(ctx, args.as_slice())
+}
+
+pub fn list(ctx: &mut BuildContext) -> Result<(), String> {
+    use std::fs::File;  // TODO(tailhook) migrate whole module
+    use std::io::Write;  // TODO(tailhook) migrate whole module
+    try!(capture_command(ctx, &[
+            "/usr/bin/npm".to_string(),
+            "ls".to_string(),
+            "--global".to_string(),
+        ], &[])
+        .and_then(|out| {
+            File::create("/vagga/container/npm-list.txt")
+            .and_then(|mut f| f.write_all(&out))
+            .map_err(|e| format!("Error dumping package list: {}", e))
+        }));
+    Ok(())
 }

@@ -82,7 +82,8 @@ pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
     return run_command_at_env(ctx, cmd, &Path::new("/work"), &[]);
 }
 
-pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String])
+pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
+    env: &[(&str, &str)])
     -> Result<Vec<u8>, String>
 {
     let cmdpath = if cmdline[0].as_slice().starts_with("/") {
@@ -96,6 +97,9 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String])
     cmd.args(cmdline[1..].as_slice());
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
+    }
+    for &(k, v) in env.iter() {
+        cmd.set_env(k.to_string(), v.to_string());
     }
     debug!("Running {:?}", cmd);
     let (res, data) = unsafe {

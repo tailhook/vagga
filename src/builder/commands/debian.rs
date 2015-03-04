@@ -157,7 +157,7 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
         "autoremove".to_string(),
         "-y".to_string(),
         ]));
-    try!(capture_command(ctx, &["dpkg".to_string(), "-l".to_string()])
+    try!(capture_command(ctx, &["dpkg".to_string(), "-l".to_string()], &[])
         .and_then(|out| {
             File::create("/vagga/container/debian-packages.txt")
             .and_then(|mut f| f.write(&out))

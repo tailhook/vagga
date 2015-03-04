@@ -4,7 +4,7 @@ use std::old_io::fs::File;
 
 use super::super::context::{BuildContext};
 use super::super::packages;
-use super::generic::{run_command_at_env};
+use super::generic::{run_command_at_env, capture_command};
 
 
 pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
@@ -106,5 +106,37 @@ pub fn configure(ctx: &mut BuildContext) -> Result<(), String> {
                            "pip-cache".to_string()));
     ctx.environ.insert("PIP_CACHE_DIR".to_string(),
                        "/tmp/pip-cache".to_string());
+    Ok(())
+}
+
+pub fn freeze(ctx: &mut BuildContext) -> Result<(), String> {
+    use std::fs::File;  // TODO(tailhook) migrate whole module
+    use std::io::Write;  // TODO(tailhook) migrate whole module
+    if ctx.featured_packages.contains(&packages::PipPy2) {
+        try!(capture_command(ctx, &[
+                "python2".to_string(),
+                "-m".to_string(),
+                "pip".to_string(),
+                "freeze".to_string(),
+            ], &[("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
+            .and_then(|out| {
+                File::create("/vagga/container/pip2-freeze.txt")
+                .and_then(|mut f| f.write_all(&out))
+                .map_err(|e| format!("Error dumping package list: {}", e))
+            }));
+    }
+    if ctx.featured_packages.contains(&packages::PipPy3) {
+        try!(capture_command(ctx, &[
+                "python3".to_string(),
+                "-m".to_string(),
+                "pip".to_string(),
+                "freeze".to_string(),
+            ], &[("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
+            .and_then(|out| {
+                File::create("/vagga/container/pip3-freeze.txt")
+                .and_then(|mut f| f.write_all(&out))
+                .map_err(|e| format!("Error dumping package list: {}", e))
+            }));
+    }
     Ok(())
 }
