@@ -10,7 +10,7 @@ use super::super::context::Distribution::{Ubuntu, Unknown};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
 use super::super::packages;
-use super::generic::run_command;
+use super::generic::{run_command, capture_command};
 use container::sha256::{Sha256, Digest};
 
 
@@ -148,13 +148,22 @@ pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
 
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
 {
+    use std::fs::File; // TODO(tailhook) migrate all
+    use std::io::Write; // TODO(tailhook) migrate all
     let pkgs = ctx.build_deps.clone().into_iter().collect();
     try!(apt_remove(ctx, &pkgs));
-    run_command(ctx, &[
+    try!(run_command(ctx, &[
         "/usr/bin/apt-get".to_string(),
         "autoremove".to_string(),
         "-y".to_string(),
-        ])
+        ]));
+    try!(capture_command(ctx, &["dpkg".to_string(), "-l".to_string()])
+        .and_then(|out| {
+            File::create("/vagga/container/debian-packages.txt")
+            .and_then(|mut f| f.write(&out))
+            .map_err(|e| format!("Error dumping package list: {}", e))
+        }));
+    Ok(())
 }
 
 pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)

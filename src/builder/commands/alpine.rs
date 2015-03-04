@@ -1,6 +1,8 @@
+use std::fs::File;
+use std::io::Write;
 use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{File, mkdir_recursive, copy};
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::old_io::fs::{mkdir_recursive, copy};
+use std::process::{Command, Stdio};
 
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine, Unknown};
@@ -72,7 +74,21 @@ pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
 {
     let pkgs = ctx.build_deps.clone().into_iter().collect();
-    remove(ctx, &pkgs)
+    try!(remove(ctx, &pkgs));
+    try!(Command::new("/vagga/bin/apk")
+        .stdin(Stdio::null()).stdout(Stdio::capture()).stderr(Stdio::inherit())
+        .env_clear()
+        .arg("--root").arg("/vagga/root")
+        .arg("-vv")
+        .arg("info")
+        .output()
+        .map_err(|e| format!("Error dumping package list: {}", e))
+        .and_then(|out| {
+            File::create("/vagga/container/alpine-packages.txt")
+            .and_then(|mut f| f.write_all(&out.stdout))
+            .map_err(|e| format!("Error dumping package list: {}", e))
+        }));
+    Ok(())
 }
 
 fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
