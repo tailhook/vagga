@@ -296,7 +296,7 @@ To install any alpine package use generic ``!Install`` command:
 
     setup:
     - !Alpine v3.1
-    - !Install python
+    - !Install [python]
 
 
 Npm Installer
