@@ -18,6 +18,7 @@ use super::commands::pip;
 use super::commands::npm;
 use super::capsule;
 use super::packages;
+use super::timer;
 
 #[derive(Show)]
 pub enum Distribution {
@@ -43,6 +44,7 @@ pub struct BuildContext<'a> {
     pub packages: BTreeSet<String>,
     pub build_deps: BTreeSet<String>,
     pub featured_packages: BTreeSet<packages::Package>,
+    pub timelog: timer::TimeLog,
 }
 
 impl<'a> BuildContext<'a> {
@@ -84,6 +86,9 @@ impl<'a> BuildContext<'a> {
             packages: BTreeSet::new(),
             build_deps: BTreeSet::new(),
             featured_packages: BTreeSet::new(),
+            timelog: timer::TimeLog::start("/vagga/container/timings.log")
+                .map_err(|e| format!("Can't write timelog: {}", e))
+                .unwrap(),
         };
     }
 
@@ -131,6 +136,8 @@ impl<'a> BuildContext<'a> {
         try!(copy(&Path::new("/etc/resolv.conf"),
                   &Path::new("/vagga/root/etc/resolv.conf"))
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
+        try!(self.timelog.mark(format_args!("Prepare"))
+            .map_err(|e| format!("Can't write timelog: {}", e)));
         Ok(())
     }
 
@@ -173,6 +180,9 @@ impl<'a> BuildContext<'a> {
             try!(mkdir_recursive(&base.join(dir), ALL_PERMISSIONS)
                 .map_err(|e| format!("Error creating dir: {}", e)));
         }
+
+        try!(self.timelog.mark(format_args!("Finish"))
+            .map_err(|e| format!("Can't write timelog: {}", e)));
 
         return Ok(());
     }

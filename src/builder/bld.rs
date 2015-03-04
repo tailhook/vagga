@@ -259,6 +259,10 @@ impl BuildCommand for Builder {
                 }
             }
         }
+        if build {
+            try!(ctx.timelog.mark(format_args!("Step: {:?}", self))
+                .map_err(|e| format!("Can't write timelog: {}", e)));
+        }
         Ok(())
     }
 }

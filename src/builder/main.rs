@@ -71,25 +71,16 @@ fn _build(container: &String, settings: Settings) -> Result<(), String> {
     let cont = cfg.containers.get(container)
         .expect("Container not found");  // TODO
 
-    let mut timelog = try!(
-        timer::TimeLog::start("/vagga/container/timings.log")
-        .map_err(|e| format!("Can't write timelog: {}", e)));
     let mut build_context = BuildContext::new(
         &cfg, container.clone(), cont, settings);
     try!(build_context.start());
-    try!(timelog.mark(format_args!("Prepare"))
-        .map_err(|e| format!("Can't write timelog: {}", e)));
 
     for b in cont.setup.iter() {
         debug!("Building step: {:?}", b);
         try!(b.build(&mut build_context, true));
-        try!(timelog.mark(format_args!("Step: {:?}", b))
-            .map_err(|e| format!("Can't write timelog: {}", e)));
     }
 
     try!(build_context.finish());
-    try!(timelog.mark(format_args!("Finish"))
-        .map_err(|e| format!("Can't write timelog: {}", e)));
     Ok(())
 }
 
