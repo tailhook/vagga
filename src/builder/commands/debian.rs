@@ -278,8 +278,9 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
         if let Some(lst) = build_deps(*i) {
             for i in lst.into_iter() {
                 if !ctx.packages.contains(i) {
-                    ctx.build_deps.insert(i.to_string());
-                    to_install.push(i.to_string());
+                    if ctx.build_deps.insert(i.to_string()) {
+                        to_install.push(i.to_string());
+                    }
                 }
             }
         } else {
@@ -289,11 +290,8 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
         if let Some(lst) = system_deps(*i) {
             for i in lst.into_iter() {
                 let istr = i.to_string();
-                if !ctx.packages.contains(&istr) {
-                    ctx.build_deps.remove(&istr);
-                }
-                if !ctx.packages.contains(&istr) {
-                    ctx.packages.insert(istr.clone());
+                ctx.build_deps.remove(&istr);
+                if ctx.packages.insert(istr.clone()) {
                     to_install.push(istr);
                 }
             }

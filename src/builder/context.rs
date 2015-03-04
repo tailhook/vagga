@@ -15,6 +15,7 @@ use super::commands::alpine::AlpineInfo;
 use super::commands::debian;
 use super::commands::alpine;
 use super::capsule;
+use super::packages;
 
 #[derive(Show)]
 pub enum Distribution {
@@ -39,6 +40,7 @@ pub struct BuildContext<'a> {
     pub capsule: capsule::State,
     pub packages: BTreeSet<String>,
     pub build_deps: BTreeSet<String>,
+    pub featured_packages: BTreeSet<packages::Package>,
 }
 
 impl<'a> BuildContext<'a> {
@@ -79,6 +81,7 @@ impl<'a> BuildContext<'a> {
             capsule: Default::default(),
             packages: BTreeSet::new(),
             build_deps: BTreeSet::new(),
+            featured_packages: BTreeSet::new(),
         };
     }
 

@@ -12,7 +12,7 @@ pub use self::Package::*;
 
 
 // All packages should be installed as build dependency except specified
-#[derive(Copy, Show, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Package {
     BuildEssential,
 
@@ -49,8 +49,12 @@ fn generic_packages(ctx: &mut BuildContext, features: Vec<Package>)
                     "--target=/tmp/pip-install".to_string(),
                     ], &Path::new("/work"), &[]));
             }
-            _ => left.push(i),
+            _ => {
+                left.push(i);
+                continue;
+            }
         }
+        ctx.featured_packages.insert(i);
     }
     return Ok(left);
 }
@@ -59,18 +63,28 @@ fn generic_packages(ctx: &mut BuildContext, features: Vec<Package>)
 pub fn ensure_packages(ctx: &mut BuildContext, features: &[Package])
     -> Result<(), String>
 {
-    let features = match ctx.distribution {
-        Distr::Unknown => {
-            return Err(format!("Unsupported distribution"));
-        }
-        Distr::Ubuntu(_) => {
-            try!(debian::ensure_packages(ctx, features))
-        }
-        Distr::Alpine(_) => {
-            try!(alpine::ensure_packages(ctx, features))
-        }
-    };
-    let features = try!(generic_packages(ctx, features));
+    let mut features = features.iter().cloned()
+        .filter(|x| !ctx.featured_packages.contains(x))
+        .collect::<Vec<Package>>();
+    if features.len() > 0 {
+        let leftover = match ctx.distribution {
+            Distr::Unknown => {
+                return Err(format!("Unsupported distribution"));
+            }
+            Distr::Ubuntu(_) => {
+                try!(debian::ensure_packages(ctx, &features))
+            }
+            Distr::Alpine(_) => {
+                try!(alpine::ensure_packages(ctx, &features))
+            }
+        };
+        ctx.featured_packages.extend(
+            features.into_iter().filter(|x| !leftover.contains(x)));
+        features = leftover;
+    }
+    if features.len() > 0 {
+        features = try!(generic_packages(ctx, features));
+    }
     if features.len() > 0 {
         Err(format!("Features {:?} are not supported by distribution",
                     features))
