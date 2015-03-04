@@ -103,10 +103,17 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     let rootdir = path.join("root");
     try!(mkdir(&rootdir, ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));
+
+    let tgtroot = Path::new("/vagga/container");
+    try!(mkdir(&tgtroot, ALL_PERMISSIONS)
+         .map_err(|x| format!("Error creating directory: {}", x)));
+    try!(bind_mount(path, &tgtroot));
+
     let tgtroot = Path::new("/vagga/root");
     try!(mkdir(&tgtroot, ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));
     try!(bind_mount(&rootdir, &tgtroot));
+
     try!(mkdir(&tgtroot.join("dev"), ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));
     try!(mkdir(&tgtroot.join("sys"), ALL_PERMISSIONS)

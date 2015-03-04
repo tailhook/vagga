@@ -32,6 +32,7 @@ mod commands {
 }
 mod capsule;
 mod packages;
+mod timer;
 
 
 pub fn run() -> i32 {
@@ -42,7 +43,7 @@ pub fn run() -> i32 {
         let mut ap = ArgumentParser::new();
         ap.set_description("
             A tool which versions containers
-            ");
+           -lang.org/ ");
         ap.refer(&mut container)
           .add_argument("container", Store,
                 "A container to version")
@@ -57,40 +58,39 @@ pub fn run() -> i32 {
         }
     }
 
+    _build(&container, settings)
+        .map(|()| 0)
+        .map_err(|e| error!("Error building container {:?}: {}", container, e))
+        .unwrap_or(1)
+}
+
+fn _build(container: &String, settings: Settings) -> Result<(), String> {
     // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
     let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
         .expect("Error parsing configuration file");  // TODO
-    let cont = cfg.containers.get(&container)
+    let cont = cfg.containers.get(container)
         .expect("Container not found");  // TODO
+
+    let mut timelog = try!(
+        timer::TimeLog::start("/vagga/container/timings.log")
+        .map_err(|e| format!("Can't write timelog: {}", e)));
     let mut build_context = BuildContext::new(
-        &cfg, container, cont, settings);
-    match build_context.start() {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Error preparing for build: {}", e);
-            return 1;
-        }
-    }
+        &cfg, container.clone(), cont, settings);
+    try!(build_context.start());
+    try!(timelog.mark(format_args!("Prepare"))
+        .map_err(|e| format!("Can't write timelog: {}", e)));
+
     for b in cont.setup.iter() {
         debug!("Building step: {:?}", b);
-        match b.build(&mut build_context, true)
-        {
-            Ok(()) => {}
-            Err(e) => {
-                error!("Error build command {:?}: {}", b, e);
-                return 1;
-            }
-        }
+        try!(b.build(&mut build_context, true));
+        try!(timelog.mark(format_args!("Step: {:?}", b))
+            .map_err(|e| format!("Can't write timelog: {}", e)));
     }
 
-    match build_context.finish() {
-        Ok(()) => {}
-        Err(e) => {
-            error!("Error finalizing container: {}", e);
-            return 1;
-        }
-    }
-    return 0;
+    try!(build_context.finish());
+    try!(timelog.mark(format_args!("Finish"))
+        .map_err(|e| format!("Can't write timelog: {}", e)));
+    Ok(())
 }
 
 fn main() {
