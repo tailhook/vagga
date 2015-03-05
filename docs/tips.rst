@@ -37,6 +37,15 @@ run multiple commands you might use bash:
 Another technique is to use :ref:`dependent_containers`.
 
 
+Debug Logging
+=============
+
+You can enable additional debug logging by setting the environment variable
+``RUST_LOG=debug``. For example::
+
+    $ RUST_LOG=debug vagga _build container
+
+
 I'm Getting "permission denied" Errors
 ======================================
 
@@ -58,7 +67,3 @@ distribution (at least ``uname`` and ``/etc/os-release``) so I can add
 instructions.
 
 .. _report an issue: https://github.com/tailhook/vagga/issues
-
-
-
-
