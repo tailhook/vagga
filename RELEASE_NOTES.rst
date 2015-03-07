@@ -10,6 +10,8 @@ Vagga 0.2.6
 
 * Implement ``!SubConfig`` build step
 * Add ``trusted-hosts`` to ``!PipConfig``
+* Add ``timings.log`` and various package lists to the container metadata for
+  easier troubleshooting
 
 
 Vagga 0.2.5
