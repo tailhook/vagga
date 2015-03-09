@@ -24,6 +24,7 @@ static MIRRORS: &'static str = include_str!("../../alpine/MIRRORS.txt");
 pub enum Feature {
     Https,
     AlpineInstaller,
+    Git,
 }
 
 #[derive(Default)]
@@ -101,6 +102,10 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
             AlpineInstaller => {}  // basically capsule_base
             Https => {
                 pkg_queue.push("wget".to_string());
+                pkg_queue.push("ca-certificates".to_string());
+            }
+            Git => {
+                pkg_queue.push("git".to_string());
                 pkg_queue.push("ca-certificates".to_string());
             }
         }

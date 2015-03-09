@@ -179,7 +179,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
 {
     let mnt_dir = project_root.join(".vagga/.mnt");
     try!(make_mountpoint(project_root));
-    try!(mount_tmpfs(&mnt_dir, "size=10m"));
+    try!(mount_tmpfs(&mnt_dir, "size=100m"));
 
     let proc_dir = mnt_dir.join("proc");
     try!(mkdir(&proc_dir, ALL_PERMISSIONS)

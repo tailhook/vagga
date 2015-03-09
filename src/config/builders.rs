@@ -42,6 +42,22 @@ pub struct TarInstallInfo {
 }
 
 #[derive(Encodable, Decodable, Debug, Clone)]
+pub struct GitInfo {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+    pub path: Path,
+}
+
+#[derive(Encodable, Decodable, Debug, Clone)]
+pub struct GitInstallInfo {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+    pub script: String,
+}
+
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct FileInfo {
     pub name: Path,
     pub contents: String,
@@ -79,6 +95,8 @@ pub enum Builder {
     Depends(Path),
     Tar(TarInfo),
     TarInstall(TarInstallInfo),
+    Git(GitInfo),
+    GitInstall(GitInstallInfo),
     Text(BTreeMap<Path, String>),
     //AddFile(FileInfo),
     Remove(Path),
@@ -209,6 +227,39 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
         ("Depends".to_string(), box V::Scalar {
         .. Default::default() } as Box<V::Validator>),
+        ("Git".to_string(), box V::Structure {
+            members: vec!(
+                ("url".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("revision".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("branch".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("path".to_string(), box V::Directory {
+                    absolute: Some(true),
+                    .. Default::default() } as Box<V::Validator>),
+            ),
+        .. Default::default() } as Box<V::Validator>),
+        ("GitInstall".to_string(), box V::Structure {
+            members: vec!(
+                ("url".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("revision".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("branch".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("script".to_string(), box V::Scalar {
+                    default: Some("./configure --prefix=/usr\n\
+                                   make\n\
+                                   make install\n\
+                                   ".to_string()),
+                    .. Default::default() } as Box<V::Validator>),
+            ),
+        .. Default::default() } as Box<V::Validator>),
         ("Tar".to_string(), box V::Structure {
             members: vec!(
                 ("url".to_string(), box V::Scalar {
@@ -217,6 +268,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     optional: true,
                     .. Default::default() } as Box<V::Validator>),
                 ("path".to_string(), box V::Directory {
+                    absolute: Some(true),
                     default: Some(Path::new("/")),
                     .. Default::default() } as Box<V::Validator>),
                 ("subdir".to_string(), box V::Directory {

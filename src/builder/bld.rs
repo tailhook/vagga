@@ -13,6 +13,7 @@ use super::commands::alpine;
 use super::commands::generic;
 use super::commands::pip;
 use super::commands::npm;
+use super::commands::vcs;
 use super::tarcmd;
 use super::context::Distribution as Distr;
 
@@ -190,6 +191,16 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Depends(_) => {
+            }
+            &B::Git(ref git) => {
+                if build {
+                    try!(vcs::git_command(ctx, git));
+                }
+            }
+            &B::GitInstall(ref git) => {
+                if build {
+                    try!(vcs::git_install(ctx, git));
+                }
             }
             &B::Tar(ref tar) => {
                 if build {

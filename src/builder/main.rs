@@ -29,6 +29,7 @@ mod commands {
     pub mod alpine;
     pub mod pip;
     pub mod npm;
+    pub mod vcs;
 }
 mod capsule;
 mod packages;
