@@ -54,6 +54,7 @@ pub struct GitInstallInfo {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
+    pub subdir: Path,
     pub script: String,
 }
 
@@ -251,6 +252,10 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     .. Default::default() } as Box<V::Validator>),
                 ("branch".to_string(), box V::Scalar {
                     optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("subdir".to_string(), box V::Directory {
+                    default: Some(Path::new(".")),
+                    absolute: Some(false),
                     .. Default::default() } as Box<V::Validator>),
                 ("script".to_string(), box V::Scalar {
                     default: Some("./configure --prefix=/usr\n\

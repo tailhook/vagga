@@ -7,9 +7,22 @@ containers:
       url: git://github.com/jdp/urp
       path: /usr/share/urp
 
+  git-install:
+    setup:
+    - !Alpine v3.1
+    - !Install [python, py-setuptools]
+    - !GitInstall
+      url: git://github.com/jdp/urp
+      script: python setup.py install
+
+
 commands:
   urp-git: !Command
     container: git
     environ:
       PYTHONPATH: /usr/share/urp
+    run: [python, -m, urp]
+
+  urp-git-install: !Command
+    container: git-install
     run: [python, -m, urp]
