@@ -9,6 +9,7 @@ use config::Config;
 use config::read_config;
 use config::builders::{Builder};
 use config::builders::Builder as B;
+use config::builders::Source as S;
 use container::sha256::Digest;
 use container::vagga::container_ver;
 use self::HashResult::*;
@@ -101,16 +102,22 @@ impl VersionHash for Builder {
                 Hashed
             }
             &B::SubConfig(ref sconfig) => {
-                let path = if let Some(ref container) = sconfig.generator {
-                    let version = match container_ver(container) {
-                        Ok(ver) => ver,
-                        Err(_) => return New,  // TODO(tailhook) better check
-                    };
-                    Path::new("/vagga/base/.roots")
-                        .join(version).join("root")
-                        .join(&sconfig.path)
-                } else {
-                    Path::new("/work").join(&sconfig.path)
+                let path = match sconfig.source {
+                    S::Container(ref container) => {
+                        let version = match container_ver(container) {
+                            Ok(ver) => ver,
+                            Err(_) => return New,  // TODO(tailhook) better check
+                        };
+                        Path::new("/vagga/base/.roots")
+                            .join(version).join("root")
+                            .join(&sconfig.path)
+                    }
+                    S::Git(ref git) => {
+                        unimplemented!();
+                    }
+                    S::Directory => {
+                        Path::new("/work").join(&sconfig.path)
+                    }
                 };
                 let subcfg = match read_config(&path) {
                     Ok(cfg) => cfg,

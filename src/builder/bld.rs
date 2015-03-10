@@ -3,6 +3,7 @@ use std::old_io::fs::{File, chmod, mkdir_recursive};
 
 use config::builders::Builder;
 use config::builders::Builder as B;
+use config::builders::Source as S;
 use config::read_config;
 use container::util::{clean_dir, copy_dir};
 use container::vagga::container_ver;
@@ -81,13 +82,19 @@ impl BuildCommand for Builder {
                 }
             }
             &B::SubConfig(ref sconfig) => {
-                let path = if let Some(ref container) = sconfig.generator {
-                    let version = try!(container_ver(container));
-                    Path::new("/vagga/base/.roots")
-                        .join(version).join("root")
-                        .join(&sconfig.path)
-                } else {
-                    Path::new("/work").join(&sconfig.path)
+                let path = match sconfig.source {
+                    S::Container(ref container) => {
+                        let version = try!(container_ver(container));
+                        Path::new("/vagga/base/.roots")
+                            .join(version).join("root")
+                            .join(&sconfig.path)
+                    }
+                    S::Git(ref git) => {
+                        unimplemented!();
+                    }
+                    S::Directory => {
+                        Path::new("/work").join(&sconfig.path)
+                    }
                 };
                 let subcfg = try!(read_config(&path));
                 let cont = subcfg.containers.get(&sconfig.container)

@@ -484,7 +484,7 @@ config:
   somecontainer:
     setup:
     - !SubConfig
-      generator: docker-parser ❶
+      source: !Container docker-parser ❶
       path: docker.yaml ❹
       container: docker-smart ❺
 
@@ -495,7 +495,7 @@ Few comments:
 * ❷ -- normal dependency rules apply, so you must add external files that are
   used to generate the container and vagga file in it
 * ❸ -- put generated vagga file inside a container
-* ❹ -- the "path" is relative to container if "generator" is set
+* ❹ -- the "path" is relative to the source if the latter is set
 * ❺ -- name of the container used *inside* a "docker.yaml"
 
 .. _docker2vagga: https://github.com/tailhook/vagga/blob/master/tests/subconfig/docker2vagga.py

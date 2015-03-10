@@ -79,11 +79,26 @@ pub struct PipSettings {
     pub dependencies: bool,
 }
 
+#[derive(Encodable, Decodable, Debug, Clone)]
+pub struct GitSource {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+}
+
+#[derive(Clone, Decodable, Encodable, Debug)]
+pub enum Source {
+    Git(GitSource),
+    Container(String),
+    Directory,
+}
+
 #[derive(Clone, Decodable, Encodable, Debug)]
 pub struct SubConfigInfo {
-    pub generator: Option<String>,
+    pub source: Source,
     pub path: Path,
     pub container: String,
+    pub cache: Option<bool>,
 }
 
 
@@ -165,13 +180,32 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
         ("SubConfig".to_string(), box V::Structure {
             members: vec!(
-                ("generator".to_string(), box V::Scalar {
-                    optional: true,
+                ("source".to_string(), box V::Enum { options: vec!(
+                    ("Directory".to_string(),
+                        box V::Nothing as Box<V::Validator>),
+                    ("Container".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                    ("Git".to_string(), box V::Structure { members: vec!(
+                        ("url".to_string(), box V::Scalar {
+                            .. Default::default() } as Box<V::Validator>),
+                        ("revision".to_string(), box V::Scalar {
+                            optional: true,
+                            .. Default::default() } as Box<V::Validator>),
+                        ("branch".to_string(), box V::Scalar {
+                            optional: true,
+                            .. Default::default() } as Box<V::Validator>),
+                        ), .. Default::default() } as Box<V::Validator>),
+                    ), optional: true,
+                       default_tag: Some("Directory".to_string()),
                     .. Default::default() } as Box<V::Validator>),
                 ("path".to_string(), box V::Directory {
                     absolute: Some(false),
+                    default: Some(Path::new("vagga.yaml")),
                     .. Default::default() } as Box<V::Validator>),
                 ("container".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+                ("cache".to_string(), box V::Scalar {
+                    optional: true,
                     .. Default::default() } as Box<V::Validator>),
             ),
         .. Default::default() } as Box<V::Validator>),
@@ -317,6 +351,10 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                         .. Default::default() } as Box<V::Validator>,
                     .. Default::default() } as Box<V::Validator>),
                 ("index_urls".to_string(), box V::Sequence {
+                    element: box V::Scalar {
+                        .. Default::default() } as Box<V::Validator>,
+                    .. Default::default() } as Box<V::Validator>),
+                ("trusted_hosts".to_string(), box V::Sequence {
                     element: box V::Scalar {
                         .. Default::default() } as Box<V::Validator>,
                     .. Default::default() } as Box<V::Validator>),

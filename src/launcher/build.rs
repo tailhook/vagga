@@ -4,6 +4,7 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 
 use config::Config;
 use config::builders::Builder as B;
+use config::builders::Source as S;
 
 use super::user;
 
@@ -46,8 +47,14 @@ pub fn build_command(config: &Config, mut args: Vec<String>)
                 try!(build_container(config, name));
             }
             &B::SubConfig(ref cfg) => {
-                if let Some(ref name) = cfg.generator {
-                    try!(build_container(config, name));
+                match cfg.source {
+                    S::Directory => {}
+                    S::Container(ref name) => {
+                        try!(build_container(config, name));
+                    }
+                    S::Git(ref git) => {
+                        unimplemented!();
+                    }
                 }
             }
             _ => {}
