@@ -3,8 +3,6 @@ use std::old_io::stdio::{stdout, stderr};
 use argparse::{ArgumentParser, Store, StoreTrue};
 
 use config::Config;
-use config::builders::Builder as B;
-use config::builders::Source as S;
 
 use super::user;
 
@@ -37,27 +35,6 @@ pub fn build_command(config: &Config, mut args: Vec<String>)
             Err(_) => {
                 return Ok(122);
             }
-        }
-    }
-    let container = try!(config.containers.get(&name)
-        .ok_or(format!("Container {:?} not found", name)));
-    for step in container.setup.iter() {
-        match step {
-            &B::Container(ref name) => {
-                try!(build_container(config, name));
-            }
-            &B::SubConfig(ref cfg) => {
-                match cfg.source {
-                    S::Directory => {}
-                    S::Container(ref name) => {
-                        try!(build_container(config, name));
-                    }
-                    S::Git(ref git) => {
-                        unimplemented!();
-                    }
-                }
-            }
-            _ => {}
         }
     }
     match user::run_wrapper(None, "_build".to_string(), args, true) {

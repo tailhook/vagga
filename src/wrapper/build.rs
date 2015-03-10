@@ -5,7 +5,7 @@ use std::old_io::ALL_PERMISSIONS;
 use std::os::{getenv};
 use std::cell::RefCell;
 use std::old_io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename, symlink};
-use std::old_io::fs::{unlink};
+use std::old_io::fs::{unlink, rmdir};
 use std::old_io::fs::PathExtensions;
 use std::old_io::stdio::{stdout, stderr};
 use libc::funcs::posix88::unistd::close;
@@ -13,13 +13,15 @@ use serialize::json;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use container::mount::{bind_mount};
+use container::mount::{bind_mount, unmount};
 use container::monitor::{Monitor, Executor, MonitorStatus};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use container::uidmap::{Uidmap, map_users};
 use container::vagga::container_ver;
 use config::{Container, Settings};
+use config::builders::Builder as B;
+use config::builders::Source as S;
 use super::Wrapper;
 use super::setup;
 
@@ -104,10 +106,10 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     try!(mkdir(&rootdir, ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));
 
-    let tgtroot = Path::new("/vagga/container");
-    try!(mkdir(&tgtroot, ALL_PERMISSIONS)
+    let tgtbase = Path::new("/vagga/container");
+    try!(mkdir(&tgtbase, ALL_PERMISSIONS)
          .map_err(|x| format!("Error creating directory: {}", x)));
-    try!(bind_mount(path, &tgtroot));
+    try!(bind_mount(path, &tgtbase));
 
     let tgtroot = Path::new("/vagga/root");
     try!(mkdir(&tgtroot, ALL_PERMISSIONS)
@@ -252,7 +254,14 @@ pub fn _build_container(cconfig: &Container, container: &String,
         settings: wrapper.settings,
         uid_map: &uid_map,
     }));
-    match mon.run() {
+    let result = mon.run();
+    try!(unmount(&Path::new("/vagga/root")));
+    try!(rmdir(&Path::new("/vagga/root"))
+        .map_err(|e| format!("Can't unlink root: {}", e)));
+    try!(unmount(&Path::new("/vagga/container")));
+    try!(rmdir(&Path::new("/vagga/container"))
+        .map_err(|e| format!("Can't unlink root: {}", e)));
+    match result {
         Killed => return Err(format!("Builder has died")),
         Exit(0) => {},
         Exit(val) => return Err(format!("Builder exited with code {}", val)),
@@ -316,7 +325,40 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
-    return build_container(&name, force, wrapper)
+
+    build_wrapper(&name, force, wrapper)
+}
+
+pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
+    -> Result<i32, String>
+{
+    let container = try!(wrapper.config.containers.get(name)
+        .ok_or(format!("Container {:?} not found", name)));
+    for step in container.setup.iter() {
+        match step {
+            &B::Container(ref name) => {
+                try!(build_wrapper(name, force, wrapper)
+                    .map(|x| debug!("Built container with name {}", x))
+                    .map(|()| 0));
+            }
+            &B::SubConfig(ref cfg) => {
+                match cfg.source {
+                    S::Directory => {}
+                    S::Container(ref name) => {
+                        try!(build_wrapper(name, force, wrapper)
+                            .map(|x| debug!("Built container with name {}", x))
+                            .map(|()| 0));
+                    }
+                    S::Git(ref git) => {
+                        unimplemented!();
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    return build_container(name, force, wrapper)
         .map(|x| debug!("Built container with name {}", x))
         .map(|()| 0);
 }
