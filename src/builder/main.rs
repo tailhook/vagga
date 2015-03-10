@@ -14,8 +14,10 @@ use std::env::{set_exit_status};
 
 use config::read_config;
 use config::Settings;
+use config::builders::Builder as B;
+use config::builders::Source as S;
 use container::signal;
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, StoreTrue};
 use self::context::{BuildContext};
 use self::bld::{BuildCommand};
 
@@ -40,15 +42,19 @@ pub fn run() -> i32 {
     signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
+    let mut sources_only: bool = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            A tool which versions containers
-           -lang.org/ ");
+            A tool which builds containers
+            ");
         ap.refer(&mut container)
           .add_argument("container", Store,
                 "A container to version")
           .required();
+        ap.refer(&mut sources_only)
+          .add_option(&["--sources-only"], StoreTrue,
+                "Only fetch sources, do not build container");
         ap.refer(&mut settings)
           .add_option(&["--settings"], Store,
                 "User settings for the container build");
@@ -59,10 +65,19 @@ pub fn run() -> i32 {
         }
     }
 
-    _build(&container, settings)
-        .map(|()| 0)
-        .map_err(|e| error!("Error building container {:?}: {}", container, e))
-        .unwrap_or(1)
+    if sources_only {
+        _fetch_sources(&container, settings)
+            .map(|()| 0)
+            .map_err(|e| error!("Error fetching sources {:?}: {}",
+                                container, e))
+            .unwrap_or(1)
+    } else {
+        _build(&container, settings)
+            .map(|()| 0)
+            .map_err(|e| error!("Error building container {:?}: {}",
+                                container, e))
+            .unwrap_or(1)
+    }
 }
 
 fn _build(container: &String, settings: Settings) -> Result<(), String> {
@@ -82,6 +97,31 @@ fn _build(container: &String, settings: Settings) -> Result<(), String> {
     }
 
     try!(build_context.finish());
+    Ok(())
+}
+
+fn _fetch_sources(container: &String, settings: Settings)
+    -> Result<(), String>
+{
+    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
+    let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
+        .expect("Error parsing configuration file");  // TODO
+    let cont = cfg.containers.get(container)
+        .expect("Container not found");  // TODO
+    let mut caps = Default::default();
+
+    for b in cont.setup.iter() {
+        match b {
+            &B::SubConfig(ref cfg) => {
+                if let S::Git(ref git) = cfg.source {
+                    try!(commands::vcs::fetch_git_source(
+                        &mut caps, &settings, git));
+                }
+            }
+            _ => {}
+        }
+    }
+
     Ok(())
 }
 

@@ -12,6 +12,7 @@ use std::old_io::ALL_PERMISSIONS;
 use std::collections::HashSet;
 use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
 
+use config::settings::Settings;
 use container::mount::bind_mount;
 use super::context::BuildContext;
 use super::commands::alpine::LATEST_VERSION;
@@ -67,10 +68,16 @@ fn choose_mirror() -> String {
 pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
     -> Result<(), String>
 {
+    return ensure(&mut ctx.capsule, &ctx.settings, features);
+}
+
+pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
+    -> Result<(), String>
+{
     if features.len() == 0 {
         return Ok(());
     }
-    if !ctx.capsule.capsule_base {
+    if !capsule.capsule_base {
         let cache_dir = Path::new("/vagga/cache/alpine-cache");
         if !cache_dir.exists() {
             try!(mkdir(&cache_dir, ALL_PERMISSIONS)
@@ -88,13 +95,13 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
             "--force",
             "/vagga/bin/alpine-keys.apk",
             ], &[]));
-        let mirror = ctx.settings.alpine_mirror.clone()
+        let mirror = settings.alpine_mirror.clone()
             .unwrap_or(choose_mirror());
         try!(File::create(&Path::new("/etc/apk/repositories"))
             .and_then(|mut f| write!(&mut f, "{}{}/main\n",
                 mirror, LATEST_VERSION))
             .map_err(|e| format!("Can't write repositories file: {}", e)));
-        ctx.capsule.capsule_base = true;
+        capsule.capsule_base = true;
     }
     let mut pkg_queue = vec!();
     for value in features.iter() {
@@ -112,11 +119,11 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
     }
     if pkg_queue.len() > 0 {
         pkg_queue = pkg_queue.into_iter()
-            .filter(|x| !ctx.capsule.installed_packages.contains(x))
+            .filter(|x| !capsule.installed_packages.contains(x))
             .collect();
     }
     if pkg_queue.len() > 0 {
-        if ctx.capsule.installed_packages.len() == 0 { // already have indexes
+        if capsule.installed_packages.len() == 0 { // already have indexes
             try!(apk_run(&[
                 "--update-cache",
                 "add",
@@ -126,7 +133,7 @@ pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
                 "add",
                 ], &pkg_queue[0..]));
         }
-        ctx.capsule.installed_packages.extend(pkg_queue.into_iter());
+        capsule.installed_packages.extend(pkg_queue.into_iter());
     }
     Ok(())
 }

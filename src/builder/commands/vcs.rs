@@ -3,8 +3,10 @@ use std::fs::rename;
 use std::old_io::fs::PathExtensions;
 use std::fs::create_dir_all;
 
+use config::settings::Settings;
 use config::builders::GitInfo;
 use config::builders::GitInstallInfo;
+use config::builders::GitSource;
 
 use super::super::capsule;
 use super::super::context::BuildContext;
@@ -111,4 +113,18 @@ pub fn git_install(ctx: &mut BuildContext, git: &GitInstallInfo)
         "-exc".to_string(),
         git.script.to_string()],
         &workdir);
+}
+
+pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
+    git: &GitSource)
+    -> Result<(), String>
+{
+    try!(capsule::ensure(capsule, settings, &[capsule::Git]));
+    let cache_path = try!(git_cache(&git.url));
+    let dest = Path::new("/vagga/sources")
+        .join(cache_path.filename().unwrap());
+    try!(create_dir_all(&dest)
+         .map_err(|e| format!("Error creating dir: {}", e)));
+    try!(git_checkout(&cache_path, &dest, &git.revision, &git.branch));
+    Ok(())
 }
