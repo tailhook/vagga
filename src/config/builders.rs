@@ -99,6 +99,7 @@ pub struct SubConfigInfo {
     pub path: Path,
     pub container: String,
     pub cache: Option<bool>,
+    pub change_dir: Option<bool>,
 }
 
 
@@ -205,6 +206,9 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                 ("container".to_string(), box V::Scalar {
                     .. Default::default() } as Box<V::Validator>),
                 ("cache".to_string(), box V::Scalar {
+                    optional: true,
+                    .. Default::default() } as Box<V::Validator>),
+                ("change_dir".to_string(), box V::Scalar {
                     optional: true,
                     .. Default::default() } as Box<V::Validator>),
             ),
