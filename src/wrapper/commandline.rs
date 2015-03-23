@@ -9,6 +9,7 @@ use argparse::{ArgumentParser};
 use config::command::CommandInfo;
 use config::command::WriteMode;
 use container::uidmap::{map_users};
+use container::uidmap::Uidmap::Ranges;
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
@@ -75,7 +76,14 @@ pub fn commandline_cmd(command: &CommandInfo,
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(cmdline.as_slice());
-    cmd.set_uidmap(uid_map.clone());
+    if let Some(euid) = command.external_user_id {
+        cmd.set_uidmap(Ranges(vec!(
+            (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
+        cmd.set_user_id(command.user_id);
+    } else {
+        cmd.set_user_id(command.user_id);
+        cmd.set_uidmap(uid_map.clone());
+    }
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {

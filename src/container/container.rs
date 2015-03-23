@@ -60,7 +60,7 @@ pub struct Command {
     environment: BTreeMap<String, String>,
     namespaces: EnumSet<Namespace>,
     restore_sigmask: bool,
-    user_id: usize,
+    user_id: i32,
     workdir: CString,
     uidmap: Option<Uidmap>,
     stdin: i32,
@@ -92,7 +92,7 @@ impl Command {
             stderr: 2,
         };
     }
-    pub fn set_user_id(&mut self, uid: usize) {
+    pub fn set_user_id(&mut self, uid: i32) {
         self.user_id = uid;
     }
     pub fn set_stdout_fd(&mut self, fd: i32) {
@@ -177,7 +177,7 @@ impl Command {
             exec_args: exec_args.as_slice().as_ptr(),
             exec_environ: exec_environ.as_slice().as_ptr(),
             namespaces: convert_namespaces(self.namespaces),
-            user_id: self.user_id as i32,
+            user_id: self.user_id,
             restore_sigmask: if self.restore_sigmask { 1 } else { 0 },
             workdir: self.workdir.as_ptr(),
             stdin: self.stdin,

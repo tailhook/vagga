@@ -10,6 +10,7 @@ use argparse::{ArgumentParser, Store};
 use config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use config::command::ChildCommand::{Command, BridgeCommand};
 use container::uidmap::{map_users};
+use container::uidmap::Uidmap::Ranges;
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
@@ -116,7 +117,14 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     cmd.set_env("VAGGA_COMMAND".to_string(), cmdname.to_string());
     cmd.set_env("VAGGA_SUBCOMMAND".to_string(), name.to_string());
     if !bridge {
-        cmd.set_uidmap(uid_map.clone());
+        if let Some(euid) = command.external_user_id {
+            cmd.set_uidmap(Ranges(vec!(
+                (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
+            cmd.set_user_id(command.user_id);
+        } else {
+            cmd.set_user_id(command.user_id);
+            cmd.set_uidmap(uid_map.clone());
+        }
     }
     if let Some(ref wd) = command.work_dir {
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));

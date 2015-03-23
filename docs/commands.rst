@@ -105,6 +105,28 @@ Parameters of `!Command`
     ``vagga _build --force container_name`` to fix base container if that was
     modified.
 
+``user-id``
+    The user id to run command as. If the ``external-user-id`` is omitted this
+    has same effect like using ``sudo -u`` inside container (except it's user
+    id instead of user name)
+
+``external-user-id``
+    (experimental) This option allows to map the ``user-id`` as seen by
+    command itself to some other user id inside container namespace (the
+    namespace which is used to build container). To make things a little less
+    confusing, the following two configuration lines::
+
+        user-id: 1
+        external-user-id: 0
+
+    Will make your command run as user id 1 visible inside the container
+    (which is "daemon" or "bin" depending on distribution). But outside the
+    container it will be visible as your user (i.e. user running vagga). Which
+    effectively means you can create/modify files in project directory without
+    permission errors, but ``tar`` and other commands which have different
+    behaviour when running as root would think they are not root (but has
+    user id 1)
+
 
 Parameters of `!Supervise`
 ==========================

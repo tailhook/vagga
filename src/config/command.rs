@@ -58,6 +58,8 @@ pub struct CommandInfo {
     pub inherit_environ: Vec<String>,
     pub write_mode: WriteMode,
     pub run: Vec<String>,
+    pub user_id: i32,
+    pub external_user_id: Option<i32>,
 }
 
 #[derive(Decodable, Clone, PartialEq, Eq)]
@@ -153,6 +155,16 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
             from_scalar: Some(shell_command as fn(Ast) -> Vec<Ast>),
             element: box V::Scalar {
                 .. Default::default()} as Box<V::Validator>,
+            .. Default::default()} as Box<V::Validator>),
+        ("user_id".to_string(), box V::Numeric {
+            min: Some(0u32),
+            max: Some(1 << 30),
+            default: Some(0u32),
+            .. Default::default()} as Box<V::Validator>),
+        ("external_user_id".to_string(), box V::Numeric {
+            min: Some(0u32),
+            max: Some(1 << 30),
+            optional: true,
             .. Default::default()} as Box<V::Validator>),
     );
     if network {
