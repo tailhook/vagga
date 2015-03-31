@@ -13,6 +13,10 @@ use super::super::packages;
 use super::generic::{run_command, capture_command};
 use container::sha256::{Sha256, Digest};
 
+pub enum BuildType {
+    Daily,
+    Release,
+}
 
 #[derive(Show)]
 pub struct UbuntuInfo {
@@ -21,15 +25,26 @@ pub struct UbuntuInfo {
     pub has_universe: bool,
 }
 
-pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
+pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String, build_type: BuildType)
     -> Result<(), String>
 {
+    let url_base = "http://cdimage.ubuntu.com/ubuntu";
     let kind = "core";
     let arch = "amd64";
-    let url = format!(concat!(
-        "http://cdimage.ubuntu.com/ubuntu-{kind}/{release}/",
-        "daily/current/{release}-{kind}-{arch}.tar.gz",
-        ), kind=kind, arch=arch, release=release);
+    let url = match build_type {
+        BuildType::Daily => {
+            format!(concat!(
+                "{url_base}-{kind}/{release}/daily/current/",
+                "{release}-{kind}-{arch}.tar.gz",
+            ), url_base=url_base, kind=kind, arch=arch, release=release)
+        },
+        BuildType::Release => {
+            format!(concat!(
+                "{url_base}-{kind}/releases/{release}/release/",
+                "ubuntu-{kind}-{release}-{kind}-{arch}.tar.gz",
+            ), url_base=url_base, kind=kind, arch=arch, release=release)
+        },
+    };
     let filename = try!(download_file(ctx, &url[0..]));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev")]));

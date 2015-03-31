@@ -1,0 +1,39 @@
+containers:
+
+  utopic:
+    setup:
+    - !UbuntuRelease { name: utopic, version: 14.10 }
+
+  utopic-calc:
+    setup:
+    - !UbuntuRelease { name: utopic, version: 14.10 }
+    - !Install [bc]
+
+  trusty-calc:
+    setup:
+    - !Ubuntu trusty
+    - !Install [bc]
+
+commands:
+  echo-cmd: !Command
+    container: utopic
+    run: [echo]
+
+  echo-shell: !Command
+    container: utopic
+    run: echo
+
+  echo-shell-arg: !Command
+    container: utopic
+    accepts-arguments: true
+    run: echo "$@"
+
+  utopic-calc: !Command
+    container: utopic-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  trusty-calc: !Command
+    container: trusty-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
