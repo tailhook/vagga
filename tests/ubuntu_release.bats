@@ -63,7 +63,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/trusty-calc)
-    [[ $link = ".roots/trusty-calc.97c8fccd/root" ]]
+    [[ $link = ".roots/trusty-calc.5ccac78d/root" ]]
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {

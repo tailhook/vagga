@@ -11,7 +11,7 @@ containers:
 
   trusty-calc:
     setup:
-    - !Ubuntu trusty
+    - !UbuntuRelease { name: trusty, version: 14.04 }
     - !Install [bc]
 
 commands:
