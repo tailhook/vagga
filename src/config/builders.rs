@@ -66,7 +66,6 @@ pub struct FileInfo {
 
 #[derive(Encodable, Decodable, Debug, Clone)]
 pub struct UbuntuReleaseInfo {
-    pub name: String,
     pub version: String,
 }
 
@@ -232,8 +231,6 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
         ("UbuntuRelease".to_string(), box V::Structure {
             members: vec!(
-                ("name".to_string(), box V::Scalar {
-                    .. Default::default() } as Box<V::Validator>),
                 ("version".to_string(), box V::Scalar {
                     .. Default::default() } as Box<V::Validator>),
             ),

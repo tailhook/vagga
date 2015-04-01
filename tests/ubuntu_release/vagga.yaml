@@ -2,16 +2,16 @@ containers:
 
   utopic:
     setup:
-    - !UbuntuRelease { name: utopic, version: 14.10 }
+    - !UbuntuRelease { version: 14.10 }
 
   utopic-calc:
     setup:
-    - !UbuntuRelease { name: utopic, version: 14.10 }
+    - !UbuntuRelease { version: 14.10 }
     - !Install [bc]
 
   trusty-calc:
     setup:
-    - !UbuntuRelease { name: trusty, version: 14.04 }
+    - !UbuntuRelease { version: 14.04 }
     - !Install [bc]
 
 commands:

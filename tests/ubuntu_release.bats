@@ -5,7 +5,7 @@ setup() {
 @test "UbuntuRelease builds" {
     vagga _build utopic
     link=$(readlink .vagga/utopic)
-    [[ $link = ".roots/utopic.01265ab8/root" ]]
+    [[ $link = ".roots/utopic.ba797cba/root" ]]
 }
 
 @test "Run echo command in ubuntu release" {
@@ -54,7 +54,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/utopic-calc)
-    [[ $link = ".roots/utopic-calc.537bf083/root" ]]
+    [[ $link = ".roots/utopic-calc.b96da427/root" ]]
 }
 
 @test "Run trusty bc in ubuntu release" {
@@ -63,7 +63,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/trusty-calc)
-    [[ $link = ".roots/trusty-calc.5ccac78d/root" ]]
+    [[ $link = ".roots/trusty-calc.2878229b/root" ]]
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {

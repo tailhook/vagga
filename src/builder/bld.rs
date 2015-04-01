@@ -148,13 +148,19 @@ impl BuildCommand for Builder {
 
                 if build {
                     try!(debian::fetch_ubuntu_core(ctx, name, debian::BuildType::Daily));
+                    try!(debian::init_ubuntu_core(ctx));
                 }
             }
             &B::UbuntuRelease(ref release_info) => {
-                try!(configure_ubuntu(ctx, &release_info.name));
-
                 if build {
                     try!(debian::fetch_ubuntu_core(ctx, &release_info.version, debian::BuildType::Release));
+                }
+
+                let codename = try!(debian::read_ubuntu_codename());
+                try!(configure_ubuntu(ctx, &codename));
+
+                if build {
+                    try!(debian::init_ubuntu_core(ctx));
                 }
             }
             &B::UbuntuRepo(ref repo) => {
