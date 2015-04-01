@@ -239,9 +239,7 @@ work. To install a non LTS release, use:
 .. code-block:: yaml
 
     setup:
-    - !UbuntuRelease { name: utopic, version: 14.10 }
-
-The name and version number need to be consistent with one another.
+    - !UbuntuRelease { version: 14.10 }
 
 To install any ubuntu package use generic ``!Install`` command:
 
