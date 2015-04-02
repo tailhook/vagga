@@ -23,6 +23,33 @@ pub trait BuildCommand {
     fn build(&self, ctx: &mut BuildContext, build: bool) -> Result<(), String>;
 }
 
+fn configure_ubuntu(ctx: &mut BuildContext, name: &String)
+    -> Result<(), String>
+{
+    if let Distr::Unknown = ctx.distribution {
+        ctx.distribution = Distr::Ubuntu(debian::UbuntuInfo {
+            release: name.to_string(),
+            apt_update: true,
+            has_universe: false,
+        });
+    } else {
+        return Err(format!("Conflicting distribution"));
+    };
+    try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
+                           "apt-cache".to_string()));
+    try!(ctx.add_cache_dir(Path::new("/var/lib/apt/lists"),
+                          "apt-lists".to_string()));
+    ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
+                       "noninteractive".to_string());
+    ctx.environ.insert("LANG".to_string(),
+                       "en_US.UTF-8".to_string());
+    ctx.environ.insert("PATH".to_string(),
+                       "/usr/local/sbin:/usr/local/bin:\
+                        /usr/sbin:/usr/bin:/sbin:/bin:\
+                        /usr/games:/usr/local/games\
+                        ".to_string());
+    Ok(())
+}
 
 impl BuildCommand for Builder {
     fn build(&self, ctx: &mut BuildContext, build: bool)
@@ -117,30 +144,23 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Ubuntu(ref name) => {
-                if let Distr::Unknown = ctx.distribution {
-                    ctx.distribution = Distr::Ubuntu(debian::UbuntuInfo {
-                        release: name.to_string(),
-                        apt_update: true,
-                        has_universe: false,
-                    });
-                } else {
-                    return Err(format!("Conflicting distribution"));
-                };
-                try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
-                                       "apt-cache".to_string()));
-                try!(ctx.add_cache_dir(Path::new("/var/lib/apt/lists"),
-                                      "apt-lists".to_string()));
-                ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
-                                   "noninteractive".to_string());
-                ctx.environ.insert("LANG".to_string(),
-                                   "en_US.UTF-8".to_string());
-                ctx.environ.insert("PATH".to_string(),
-                                   "/usr/local/sbin:/usr/local/bin:\
-                                    /usr/sbin:/usr/bin:/sbin:/bin:\
-                                    /usr/games:/usr/local/games\
-                                    ".to_string());
+                try!(configure_ubuntu(ctx, name));
+
                 if build {
-                    try!(debian::fetch_ubuntu_core(ctx, name));
+                    try!(debian::fetch_ubuntu_core(ctx, name, debian::BuildType::Daily));
+                    try!(debian::init_ubuntu_core(ctx));
+                }
+            }
+            &B::UbuntuRelease(ref release_info) => {
+                if build {
+                    try!(debian::fetch_ubuntu_core(ctx, &release_info.version, debian::BuildType::Release));
+                }
+
+                let codename = try!(debian::read_ubuntu_codename());
+                try!(configure_ubuntu(ctx, &codename));
+
+                if build {
+                    try!(debian::init_ubuntu_core(ctx));
                 }
             }
             &B::UbuntuRepo(ref repo) => {

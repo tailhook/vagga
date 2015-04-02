@@ -233,7 +233,13 @@ To install base ubuntu system use:
     setup:
     - !Ubuntu trusty
 
-Potentially any ubuntu release instead of ``trusty`` should work.
+Potentially any ubuntu long term support release instead of ``trusty`` should
+work. To install a non LTS release, use:
+
+.. code-block:: yaml
+
+    setup:
+    - !UbuntuRelease { version: 14.10 }
 
 To install any ubuntu package use generic ``!Install`` command:
 

@@ -65,6 +65,11 @@ pub struct FileInfo {
 }
 
 #[derive(Encodable, Decodable, Debug, Clone)]
+pub struct UbuntuReleaseInfo {
+    pub version: String,
+}
+
+#[derive(Encodable, Decodable, Debug, Clone)]
 pub struct UbuntuRepoInfo {
     pub url: String,
     pub suite: String,
@@ -130,6 +135,7 @@ pub enum Builder {
 
     // -- Ubuntu --
     Ubuntu(String),
+    UbuntuRelease(UbuntuReleaseInfo),
     UbuntuRepo(UbuntuRepoInfo),
     UbuntuUniverse,
     //AddUbuntuPPA(String),
@@ -222,6 +228,12 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         .. Default::default() } as Box<V::Validator>),
 
         ("Ubuntu".to_string(), box V::Scalar {
+        .. Default::default() } as Box<V::Validator>),
+        ("UbuntuRelease".to_string(), box V::Structure {
+            members: vec!(
+                ("version".to_string(), box V::Scalar {
+                    .. Default::default() } as Box<V::Validator>),
+            ),
         .. Default::default() } as Box<V::Validator>),
         ("UbuntuRepo".to_string(), box V::Structure {
             members: vec!(

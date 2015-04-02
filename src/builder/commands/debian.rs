@@ -3,6 +3,7 @@ use std::old_io::BufferedReader;
 use std::old_io::EndOfFile;
 use std::old_io::fs::File;
 use std::old_io::fs::{copy, chmod, rename};
+use std::string;
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};
@@ -13,6 +14,10 @@ use super::super::packages;
 use super::generic::{run_command, capture_command};
 use container::sha256::{Sha256, Digest};
 
+pub enum BuildType {
+    Daily,
+    Release,
+}
 
 #[derive(Show)]
 pub struct UbuntuInfo {
@@ -21,23 +26,65 @@ pub struct UbuntuInfo {
     pub has_universe: bool,
 }
 
-pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String)
+pub fn read_ubuntu_codename() -> Result<String, String>
+{
+    let lsb_release_path = "/vagga/root/etc/lsb-release";
+    let mut lsb_release_file = BufferedReader::new(File::open(&Path::new(lsb_release_path)));
+
+    loop {
+        let line = match lsb_release_file.read_line() {
+            Ok(line) => {
+                if let Some(equalsPos) = line.find('=') {
+                    let key = line[..equalsPos].trim();
+
+                    if key == "DISTRIB_CODENAME" {
+                        let value = line[(equalsPos + 1)..].trim();
+                        return Ok(value.to_string());
+                    }
+                }
+            },
+            Err(ref e) if e.kind == EndOfFile => {
+                break;
+            },
+            Err(e) => return Err(e.desc.to_string()),
+        };
+    }
+
+    Err(format!("Coudn't read codename from '{lsb_release_path}'", lsb_release_path=lsb_release_path))
+}
+
+pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String, build_type: BuildType)
     -> Result<(), String>
 {
+    let url_base = "http://cdimage.ubuntu.com/ubuntu";
     let kind = "core";
     let arch = "amd64";
-    let url = format!(concat!(
-        "http://cdimage.ubuntu.com/ubuntu-{kind}/{release}/",
-        "daily/current/{release}-{kind}-{arch}.tar.gz",
-        ), kind=kind, arch=arch, release=release);
+    let url = match build_type {
+        BuildType::Daily => {
+            format!(
+                "{url_base}-{kind}/{release}/daily/current/\
+                 {release}-{kind}-{arch}.tar.gz",
+                url_base=url_base, kind=kind, arch=arch, release=release)
+        },
+        BuildType::Release => {
+            format!(
+                "{url_base}-{kind}/releases/{release}/release/\
+                 ubuntu-{kind}-{release}-{kind}-{arch}.tar.gz",
+                url_base=url_base, kind=kind, arch=arch, release=release)
+        },
+    };
     let filename = try!(download_file(ctx, &url[0..]));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev")]));
 
+    Ok(())
+}
+
+pub fn init_ubuntu_core(ctx: &mut BuildContext) -> Result<(), String> {
     try!(init_debian_build(ctx));
     try!(set_mirror(ctx));
 
-    return Ok(());
+    Ok(())
 }
 
 fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
