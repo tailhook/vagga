@@ -78,14 +78,6 @@ Parameters of `!Command`
     The mapping of environment to pass to command. This overrides environment
     specified in container on value by value basis.
 
-``inherit-environ``
-    The list of variables that will be inherited from user environment, when
-    running a command. These variables override both ``environ`` in command
-    and container's environment only if is set in user environment (including
-    set to empty string). Inheriting variables is in generally discouraged
-    because this makes reproducing environment harder.
-
-
 ``pid1mode``
     This denotes what is run as pid 1 in container. It may be ``wait``,
     ``wait-all-children`` or ``exec``. The default ``wait`` is ok for most
