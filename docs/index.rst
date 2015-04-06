@@ -15,6 +15,7 @@ Contents:
    commands
    build_commands
    volumes
+   environment
    network
    supervision
    pid1mode
