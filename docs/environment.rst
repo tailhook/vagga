@@ -4,8 +4,8 @@
 Environment
 ===========
 
-There a few ways to pass environment variables from the runner's environment
-into a container.
+There are a few ways to pass environment variables from the runner's
+environment into a container.
 
 Firstly, any enviroment variable that starts with ``VAGGAENV_`` will have it's
 prefixed stripped, and be exposed in the container's environment::
