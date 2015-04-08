@@ -14,6 +14,9 @@ default configuration is similar to the following:
             size: 100Mi
             mode: 0o1777
 
+.. note:: Volumes are **not** mounted during container build, only when
+   some command is run.
+
 Available volume types:
 
 ``!Tmpfs``
@@ -28,4 +31,15 @@ Available volume types:
     :ref:`network_testing` or may be for vagga in vagga (i.e. container in
     container) use cases.
 
+
+``!BindRW``
+   Binds some folder inside a countainer to another folder. Essentially it's
+   bind mount (the ``RW`` part means read-writeable). The path must be
+   absolute (inside the container). This directive can't be used to expose
+   some directories not already visible. This is often used to put some
+   temporary directory in development into well-defined production location.
+   For example::
+
+       volumes:
+         /var/lib/mysql: !BindRW /work/tmp/mysql
 

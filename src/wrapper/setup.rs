@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 use libc::pid_t;
 
 use config::Container;
-use config::containers::Volume::{Tmpfs, VaggaBin};
+use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_pseudo};
@@ -381,6 +381,11 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             }
             &VaggaBin => {
                 try!(bind_mount(&Path::new("/vagga/bin"), &dest));
+            }
+            &BindRW(ref bindpath) => {
+                let src = tgtroot.join(
+                    &bindpath.path_relative_from(&root_path).unwrap());
+                try!(bind_mount(&src, &dest));
             }
         }
     }

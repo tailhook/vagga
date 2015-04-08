@@ -12,6 +12,7 @@ Vagga 0.2.6
 * Add ``trusted-hosts`` to ``!PipConfig``
 * Add ``timings.log`` and various package lists to the container metadata for
   easier troubleshooting
+* Add ``BindRW`` subvolume type
 
 
 Vagga 0.2.5
