@@ -148,7 +148,10 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
         "en_US.UTF-8".to_string(),
         ]));
 
-    ctx.add_remove_dir(Path::new("/var/lib/apt"));
+    // TODO(tailhook) reconsider this. It was fun to remove unneeded files
+    //                until we have !Container which fails ot reuse ubuntu
+    //                container when /var/lib/apt is clean
+    // ctx.add_remove_dir(Path::new("/var/lib/apt"));
     // TODO(tailhook) decide if we want to delete package databases
     // ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
     return Ok(());

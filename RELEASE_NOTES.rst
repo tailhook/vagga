@@ -13,6 +13,7 @@ Vagga 0.2.6
 * Add ``timings.log`` and various package lists to the container metadata for
   easier troubleshooting
 * Add ``BindRW`` subvolume type
+* No longer clean ``/var/lib/apt`` by default (better for reusing containers)
 
 
 Vagga 0.2.5
