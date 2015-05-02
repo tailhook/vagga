@@ -210,11 +210,14 @@ Building vagga from sources using AUR package_::
 
     $ yaourt -S vagga-git
 
-After installing you need to fill in ``/etc/subuid`` and ``/etc/subgid``.
-Command should be similar to the following::
+If your ``shadow`` package is older than ``4.1.5``, or you upgraded it without recreating a user, after installation you may need to fill in ``/etc/subuid`` and ``/etc/subgid``. You can check if you need it with::
 
-    $ echo "$(id -un):100000:65536" | sudo tee /etc/subuid
-    $ echo "$(id -un):100000:65536" | sudo tee /etc/subgid
+    $ grep $(id -un) /etc/sub[ug]id
+
+If output is empty, you have to modify these files. Command should be similar to the following::
+
+    $ echo "$(id -un):100000:65536" | sudo tee -a /etc/subuid
+    $ echo "$(id -un):100000:65536" | sudo tee -a /etc/subgid
 
 
 .. _linux-user-ns-enabled: https://aur.archlinux.org/packages/linux-user-ns-enabled/
