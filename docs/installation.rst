@@ -16,7 +16,11 @@ enabled manually.
 * the ``newuidmap``, ``newgidmap`` binaries are required (either from
   ``shadow`` or ``uidmap`` package)
 
-* known exception for Archlinux: ensure ``CONFIG_USER_NS=y`` enabled in kernel.
+* known exception for Archlinux: ensure ``CONFIG_USER_NS=y`` enabled in kernel. Default kernel doesn't contain it, you can check it with::
+
+    $ zgrep CONFIG_USER_NS /proc/config.gz
+
+  See :ref:`archlinux`
 
 * known exception for Debian and Fedora: some distributions disable
   unprivileged user namespaces by default. You can check with::
@@ -187,3 +191,34 @@ directory of vagga::
 It will put ``*.deb`` file in current directory.
 
 
+.. _archlinux:
+
+Arch Linux
+==============================================
+
+Default Arch Linux kernel doesn't contain ``CONFIG_USER_NS=y`` in configuration, you can check it with::
+
+    $ zgrep CONFIG_USER_NS /proc/config.gz
+
+To install kernel with this config enabled you can use linux-user-ns-enabled_ AUR package::
+
+    $ yaourt -S linux-user-ns-enabled
+
+It's based on ``core/linux`` package and differs only with this option. After it's compiled, update your bootloader config (for GRUB it's ``grub-mkconfig``).
+
+Building vagga from sources using AUR package_::
+
+    $ yaourt -S vagga-git
+
+If your ``shadow`` package is older than ``4.1.5``, or you upgraded it without recreating a user, after installation you may need to fill in ``/etc/subuid`` and ``/etc/subgid``. You can check if you need it with::
+
+    $ grep $(id -un) /etc/sub[ug]id
+
+If output is empty, you have to modify these files. Command should be similar to the following::
+
+    $ echo "$(id -un):100000:65536" | sudo tee -a /etc/subuid
+    $ echo "$(id -un):100000:65536" | sudo tee -a /etc/subgid
+
+
+.. _linux-user-ns-enabled: https://aur.archlinux.org/packages/linux-user-ns-enabled/
+.. _package: https://aur.archlinux.org/packages/vagga-git
