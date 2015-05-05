@@ -77,7 +77,7 @@ Process is as simple as following::
     sudo make install PREFIX=/usr
 
 
-.. _Rust: http://rust.org
+.. _Rust: http://www.rust-lang.org
 .. _linux: http://kernel.org
 
 .. _ubuntu:
