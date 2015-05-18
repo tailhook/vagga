@@ -1,25 +1,26 @@
 use std::default::Default;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use quire::validate as V;
 
 use super::builders::{Builder, builder_validator};
 use super::Range;
 
-#[derive(Decodable, Clone, PartialEq, Eq)]
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub enum Volume {
     Tmpfs(TmpfsInfo),
-    BindRW(Path),
+    BindRW(PathBuf),
     VaggaBin,
 }
 
-#[derive(Decodable, Clone, PartialEq, Eq)]
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct TmpfsInfo {
     pub size: usize,
     pub mode: u32,
 }
 
-#[derive(Decodable, Clone)]
+#[derive(RustcDecodable, Clone)]
 pub struct Container {
     pub setup: Vec<Builder>,
     pub auto_clean: bool,
@@ -27,10 +28,10 @@ pub struct Container {
     pub uids: Vec<Range>,
     pub gids: Vec<Range>,
 
-    pub environ_file: Option<Path>,
+    pub environ_file: Option<PathBuf>,
     pub environ: BTreeMap<String, String>,
-    pub resolv_conf_path: Option<Path>,
-    pub volumes: BTreeMap<Path, Volume>,
+    pub resolv_conf_path: Option<PathBuf>,
+    pub volumes: BTreeMap<PathBuf, Volume>,
 }
 
 impl PartialEq for Container {
@@ -41,12 +42,12 @@ pub fn volume_validator<'a>() -> Box<V::Validator + 'a> {
     return box V::Enum { options: vec!(
         ("Tmpfs".to_string(),  box V::Structure { members: vec!(
             ("size".to_string(),  box V::Numeric {
-                min: Some(0us),
+                min: Some(0),
                 default: Some(100*1024*1024),
                 .. Default::default()} as Box<V::Validator>),
             ("mode".to_string(),  box V::Numeric {
-                min: Some(0u32),
-                max: Some(0o1777u32),
+                min: Some(0),
+                max: Some(0o1777),
                 default: Some(0o766),
                 .. Default::default()} as Box<V::Validator>),
             ),.. Default::default()} as Box<V::Validator>),
@@ -76,7 +77,7 @@ pub fn container_validator<'a>() -> Box<V::Validator + 'a> {
         ("resolv_conf_path".to_string(), box V::Directory {
             absolute: Some(true),
             optional: true,
-            default: Some(Path::new("/etc/resolv.conf")),
+            default: Some(PathBuf::from("/etc/resolv.conf")),
             .. Default::default()} as Box<V::Validator>),
         ("uids".to_string(), box V::Sequence {
             element: box V::Scalar {

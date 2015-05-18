@@ -7,9 +7,9 @@ use quire::ast::Ast;
 use quire::ast::Tag::{NonSpecific};
 use quire::ast::ScalarKind::{Plain};
 
-type PortNumValidator = V::Numeric<u16>;
+type PortNumValidator = V::Numeric;
 
-#[derive(Decodable, Clone, PartialEq, Eq, Copy)]
+#[derive(RustcDecodable, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Pid1Mode {
     exec = 0,
@@ -17,7 +17,7 @@ pub enum Pid1Mode {
     wait_all_children = 2,
 }
 
-#[derive(Decodable, Show, Clone, PartialEq, Eq, Copy)]
+#[derive(RustcDecodable, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum SuperviseMode {
     wait_all,
@@ -25,7 +25,7 @@ pub enum SuperviseMode {
     restart,
 }
 
-#[derive(Decodable, Show, Clone, PartialEq, Eq, Copy)]
+#[derive(RustcDecodable, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum WriteMode {
     read_only,
@@ -33,14 +33,14 @@ pub enum WriteMode {
     transient_hard_link_copy,
 }
 
-#[derive(Decodable, Clone, PartialEq, Eq)]
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct Network {
     pub ip: String,
     pub hostname: Option<String>,
     pub ports: BTreeMap<u16, u16>,
 }
 
-#[derive(Decodable, Clone, PartialEq, Eq)]
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common for toplevel commands
     pub description: Option<String>,
@@ -62,7 +62,7 @@ pub struct CommandInfo {
     pub external_user_id: Option<i32>,
 }
 
-#[derive(Decodable, Clone, PartialEq, Eq)]
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SuperviseInfo {
     // Common
     pub description: Option<String>,
@@ -75,7 +75,7 @@ pub struct SuperviseInfo {
     pub children: BTreeMap<String, ChildCommand>,
 }
 
-#[derive(Decodable, PartialEq, Eq, Clone)]
+#[derive(RustcDecodable, PartialEq, Eq, Clone)]
 pub enum MainCommand {
     Command(CommandInfo),
     Supervise(SuperviseInfo),
@@ -90,7 +90,7 @@ impl MainCommand {
     }
 }
 
-#[derive(Decodable, PartialEq, Eq, Clone)]
+#[derive(RustcDecodable, PartialEq, Eq, Clone)]
 pub enum ChildCommand {
     Command(CommandInfo),
     BridgeCommand(CommandInfo),
@@ -157,12 +157,12 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
                 .. Default::default()} as Box<V::Validator>,
             .. Default::default()} as Box<V::Validator>),
         ("user_id".to_string(), box V::Numeric {
-            min: Some(0u32),
+            min: Some(0),
             max: Some(1 << 30),
-            default: Some(0u32),
+            default: Some(0),
             .. Default::default()} as Box<V::Validator>),
         ("external_user_id".to_string(), box V::Numeric {
-            min: Some(0u32),
+            min: Some(0),
             max: Some(1 << 30),
             optional: true,
             .. Default::default()} as Box<V::Validator>),
@@ -180,10 +180,10 @@ fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
                     .. Default::default()} as Box<V::Validator>),
                 ("ports".to_string(), box V::Mapping {
                     key_element: box V::Numeric {
-                        default: None::<u16>,
+                        default: None,
                         .. Default::default()} as Box<V::Validator>,
                     value_element: box V::Numeric {
-                        default: None::<u16>,
+                        default: None,
                         .. Default::default()} as Box<V::Validator>,
                     .. Default::default()} as Box<V::Validator>),
                 ),.. Default::default()} as Box<V::Validator>),
@@ -202,7 +202,7 @@ fn command_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
             .. Default::default()} as Box<V::Validator>),
         ("banner_delay".to_string(), box V::Numeric {
             optional: true,
-            min: Some(0u32),
+            min: Some(0),
             .. Default::default()} as Box<V::Validator>),
         ("epilog".to_string(), box V::Scalar {
             optional: true,

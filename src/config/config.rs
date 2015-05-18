@@ -1,8 +1,9 @@
 use std::default::Default;
-use std::old_io::fs::PathExtensions;
+use std::path::PathBuf;
+use std::fs::PathExt;
 
 use std::collections::BTreeMap;
-use serialize::{Decoder};
+use rustc_serialize::{Decoder};
 
 use quire::parse_config;
 use quire::validate as V;
@@ -11,7 +12,7 @@ use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
 
-#[derive(Decodable)]
+#[derive(RustcDecodable)]
 pub struct Config {
     pub commands: BTreeMap<String, MainCommand>,
     pub containers: BTreeMap<String, Container>,
@@ -32,10 +33,10 @@ pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
     ), .. Default::default()} as Box<V::Validator>;
 }
 
-fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
+fn find_config_path(work_dir: &PathBuf) -> Option<(PathBuf, PathBuf)> {
     let mut dir = work_dir.clone();
     loop {
-        let fname = dir.join_many(&[".vagga", "vagga.yaml"]);
+        let fname = dir.join(".vagga/vagga.yaml");
         if fname.exists() {
             return Some((dir, fname));
         }
@@ -49,7 +50,7 @@ fn find_config_path(work_dir: &Path) -> Option<(Path, Path)> {
     }
 }
 
-pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String> {
+pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
     let (cfg_dir, filename) = match find_config_path(work_dir) {
         Some(pair) => pair,
         None => return Err(format!(
@@ -59,7 +60,7 @@ pub fn find_config(work_dir: &Path) -> Result<(Config, Path), String> {
     return Ok((try!(read_config(&filename)), cfg_dir));
 }
 
-pub fn read_config(filename: &Path) -> Result<Config, String> {
+pub fn read_config(filename: &PathBuf) -> Result<Config, String> {
     let mut config: Config = match parse_config(
         filename, &*config_validator(), Default::default())
     {

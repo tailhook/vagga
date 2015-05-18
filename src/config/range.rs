@@ -1,30 +1,14 @@
 use std::fmt;
 use libc::uid_t;
-use serialize::{Decoder, Decodable};
+use rustc_serialize::{Decoder, Decodable};
 use std::str::FromStr;
-use std::error::FromError;
 use quire::decode::YamlDecoder;
 
 
-#[derive(Clone, Show, Copy)]
+#[derive(Clone, Debug, Copy)]
 pub struct Range {
     pub start: uid_t,
     pub end: uid_t,
-}
-
-impl fmt::String for Vec<Range> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "["));
-        let mut iter = self.iter();
-        if let Some(i) = iter.next() {
-            try!(write!(fmt, "{}-{}", i.start, i.start+i.end));
-        }
-        for i in iter {
-            try!(write!(fmt, ", {}-{}", i.start, i.start+i.end));
-        }
-        try!(write!(fmt, "]"));
-        Ok(())
-    }
 }
 
 struct RangeError;
@@ -37,7 +21,7 @@ impl Decodable for Range {
     fn decode<D:Decoder>(d: &mut D) -> Result<Range, D::Error>
     {
         d.read_str().and_then(|val| {
-            FromStr::from_str(val.as_slice())
+            FromStr::from_str(&val[..])
             .map(|num| Range::new(num, num))
             .or_else(|_| {
                 let mut pair = val.splitn(1, '-');

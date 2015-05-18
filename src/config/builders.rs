@@ -1,82 +1,83 @@
 use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
+use std::path::PathBuf;
 use std::default::Default;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
-use serialize::json;
+use rustc_serialize::json;
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct DebianRepo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct AptKey {
     pub key_server: String,
     pub keys: Vec<String>,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct PacmanRepo {
     pub name: String,
     pub url: String,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct TarInfo {
     pub url: String,
     pub sha256: Option<String>,
-    pub path: Path,
-    pub subdir: Path,
+    pub path: PathBuf,
+    pub subdir: PathBuf,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct TarInstallInfo {
     pub url: String,
     pub sha256: Option<String>,
-    pub subdir: Option<Path>,
+    pub subdir: Option<PathBuf>,
     pub script: String,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GitInfo {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
-    pub path: Path,
+    pub path: PathBuf,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GitInstallInfo {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
-    pub subdir: Path,
+    pub subdir: PathBuf,
     pub script: String,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct FileInfo {
-    pub name: Path,
+    pub name: PathBuf,
     pub contents: String,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct UbuntuReleaseInfo {
     pub version: String,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct UbuntuRepoInfo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
-#[derive(Default, Clone, Decodable, Debug, Encodable)]
+#[derive(Default, Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct PipSettings {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
@@ -84,47 +85,47 @@ pub struct PipSettings {
     pub dependencies: bool,
 }
 
-#[derive(Encodable, Decodable, Debug, Clone)]
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GitSource {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
 }
 
-#[derive(Clone, Decodable, Encodable, Debug)]
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub enum Source {
     Git(GitSource),
     Container(String),
     Directory,
 }
 
-#[derive(Clone, Decodable, Encodable, Debug)]
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct SubConfigInfo {
     pub source: Source,
-    pub path: Path,
+    pub path: PathBuf,
     pub container: String,
     pub cache: Option<bool>,
     pub change_dir: Option<bool>,
 }
 
 
-#[derive(Encodable, Decodable, Clone, Debug)]
+#[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
 pub enum Builder {
     // -- Generic --
     Sh(String),
     Cmd(Vec<String>),
     Env(BTreeMap<String, String>),
-    Depends(Path),
+    Depends(PathBuf),
     Tar(TarInfo),
     TarInstall(TarInstallInfo),
     Git(GitInfo),
     GitInstall(GitInstallInfo),
-    Text(BTreeMap<Path, String>),
+    Text(BTreeMap<PathBuf, String>),
     //AddFile(FileInfo),
-    Remove(Path),
-    EnsureDir(Path),
-    EmptyDir(Path),
-    CacheDirs(BTreeMap<Path, String>),
+    Remove(PathBuf),
+    EnsureDir(PathBuf),
+    EmptyDir(PathBuf),
+    CacheDirs(BTreeMap<PathBuf, String>),
     //Busybox,
 
     // -- Generic --
@@ -168,9 +169,9 @@ pub enum Builder {
     // -- Python --
     PipConfig(PipSettings),
     Py2Install(Vec<String>),
-    Py2Requirements(Path),
+    Py2Requirements(PathBuf),
     Py3Install(Vec<String>),
-    Py3Requirements(Path),
+    Py3Requirements(PathBuf),
 }
 
 pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
@@ -207,7 +208,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     .. Default::default() } as Box<V::Validator>),
                 ("path".to_string(), box V::Directory {
                     absolute: Some(false),
-                    default: Some(Path::new("vagga.yaml")),
+                    default: Some(PathBuf::from("vagga.yaml")),
                     .. Default::default() } as Box<V::Validator>),
                 ("container".to_string(), box V::Scalar {
                     .. Default::default() } as Box<V::Validator>),
@@ -304,7 +305,7 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     optional: true,
                     .. Default::default() } as Box<V::Validator>),
                 ("subdir".to_string(), box V::Directory {
-                    default: Some(Path::new(".")),
+                    default: Some(PathBuf::from(".")),
                     absolute: Some(false),
                     .. Default::default() } as Box<V::Validator>),
                 ("script".to_string(), box V::Scalar {
@@ -324,10 +325,10 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
                     .. Default::default() } as Box<V::Validator>),
                 ("path".to_string(), box V::Directory {
                     absolute: Some(true),
-                    default: Some(Path::new("/")),
+                    default: Some(PathBuf::from("/")),
                     .. Default::default() } as Box<V::Validator>),
                 ("subdir".to_string(), box V::Directory {
-                    default: Some(Path::new("")),
+                    default: Some(PathBuf::from("")),
                     absolute: Some(false),
                     .. Default::default() } as Box<V::Validator>),
             ),

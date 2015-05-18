@@ -18,8 +18,10 @@ containers:
     - !TarInstall
       url: http://static.rust-lang.org/dist/rust-1.0.0-x86_64-unknown-linux-gnu.tar.gz
       script: |
-        ./install.sh --prefix=/usr --components=rustc
-    - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev]
+        ./install.sh --prefix=/usr --components=rustc,cargo
+    - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
+    environ:
+      HOME: /work/run
 
   test:
     setup:

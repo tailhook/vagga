@@ -459,7 +459,7 @@ fn get_unused_inteface_no() -> Result<usize, String> {
     // simultaneously. It fails miserably only if there are > 100 or they
     // are spawning too often.
     let busy = try!(get_interfaces());
-    let start = Range::new(0us, MAX_INTERFACES - 100)
+    let start = Range::new(0usize, MAX_INTERFACES - 100)
                 .ind_sample(&mut thread_rng());
     for index in range(start, MAX_INTERFACES) {
         if busy.contains(&index) {
