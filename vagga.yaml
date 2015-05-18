@@ -3,6 +3,7 @@ containers:
   docs:
     setup:
     - !Ubuntu trusty
+    - !Container docs
     - !Install [python-sphinx, make]
 
   alpine-docs:
@@ -15,7 +16,7 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !TarInstall
-      url: http://static.rust-lang.org/dist/rust-1.0.0-alpha.2-x86_64-unknown-linux-gnu.tar.gz
+      url: http://static.rust-lang.org/dist/rust-1.0.0-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr --components=rustc
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev]
