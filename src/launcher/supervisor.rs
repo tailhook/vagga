@@ -116,11 +116,11 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         cmd.container();
         cmd.set_max_uidmap();
         let name = Rc::new(name.clone());
-        mon.add(name.clone(), box RunChild {
+        mon.add(name.clone(), Box::new(RunChild {
             name: name,
             command: Some(cmd),
             running: &running,
-        });
+        }));
     }
     let mut port_forward_guard;
     if containers_in_netns.len() > 0 {
@@ -176,11 +176,11 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             }
 
             let name = Rc::new(name.clone());
-            mon.add(name.clone(), box RunChild {
+            mon.add(name.clone(), Box::new(RunChild {
                 name: name.clone(),
                 command: Some(cmd),
                 running: &running,
-            });
+            }));
             try!(mon.force_start(name));  // ensure run in correct sequence
         }
 
