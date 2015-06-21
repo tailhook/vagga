@@ -175,7 +175,7 @@ pub enum Builder {
 }
 
 pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
-    return Box::new(V::Enum { options: vec!(
+    return Box::new(V::Enum { options: vec![
         ("Install".to_string(), Box::new(V::Sequence {
             element: Box::new(V::Scalar {
             .. Default::default() }) as Box<V::Validator>,
@@ -274,12 +274,12 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         ("Env".to_string(), Box::new(V::Mapping {
             key_element: Box::new(V::Scalar {
                 .. Default::default() }) as Box<V::Validator>,
-            value_element: Box:new(V::Scalar {
+            value_element: Box::new(V::Scalar {
                 .. Default::default() }) as Box<V::Validator>,
         .. Default::default() }) as Box<V::Validator>),
         ("Depends".to_string(), Box::new(V::Scalar {
         .. Default::default() }) as Box<V::Validator>),
-        ("Git".to_string(), Box:new(V::Structure {
+        ("Git".to_string(), Box::new(V::Structure {
             members: vec!(
                 ("url".to_string(), Box::new(V::Scalar {
                     .. Default::default() }) as Box<V::Validator>),
@@ -398,5 +398,5 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             .. Default::default() }) as Box<V::Validator>,
         .. Default::default() }) as Box<V::Validator>),
 
-    ), .. Default::default() }) as Box<V::Validator>;
+    ], .. Default::default() }) as Box<V::Validator>;
 }

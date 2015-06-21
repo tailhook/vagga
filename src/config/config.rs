@@ -19,18 +19,18 @@ pub struct Config {
 }
 
 pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
-    return box V::Structure { members: vec!(
-        ("containers".to_string(), box V::Mapping {
-            key_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
+    return Box::new(V::Structure { members: vec!(
+        ("containers".to_string(), Box::new(V::Mapping {
+            key_element: Box::new(V::Scalar {
+                .. Default::default()}) as Box<V::Validator>,
             value_element: containers::container_validator(),
-            .. Default::default()} as Box<V::Validator>),
-        ("commands".to_string(), box V::Mapping {
-            key_element: box V::Scalar {
-                .. Default::default()} as Box<V::Validator>,
+            .. Default::default()}) as Box<V::Validator>),
+        ("commands".to_string(), Box::new(V::Mapping {
+            key_element: Box::new(V::Scalar {
+                .. Default::default()}) as Box<V::Validator>,
             value_element: command_validator(),
-            .. Default::default()} as Box<V::Validator>),
-    ), .. Default::default()} as Box<V::Validator>;
+            .. Default::default()}) as Box<V::Validator>),
+    ), .. Default::default()}) as Box<V::Validator>;
 }
 
 fn find_config_path(work_dir: &PathBuf) -> Option<(PathBuf, PathBuf)> {
