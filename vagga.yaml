@@ -11,12 +11,52 @@ containers:
     - !Alpine v3.1
     - !Install [alpine-base, py-sphinx, make]
 
+  rust-musl:
+    setup:
+    - !UbuntuRelease {version: 15.04}
+    - !UbuntuUniverse
+    - !Install [build-essential, ca-certificates]
+    - !BuildDeps [cmake, llvm-dev, libc++-dev, file, curl, python,
+        autoconf, automake, autotools-dev, libtool, texlive-extra-utils]
+    - !GitInstall
+      url: git://git.musl-libc.org/musl
+      script: |
+        ./configure
+        make
+        make install
+    - !EnsureDir /usr/lib/llvm-3.6/share/llvm
+    - !GitInstall
+      url: git://github.com/pathscale/libunwind.git
+      script: |
+        autoreconf -i
+        ./configure --prefix=/usr/local/musl --disable-shared
+        make
+        make install
+    #- !GitInstall
+    #  url: https://github.com/llvm-mirror/libcxxabi
+    #  script: |
+    #    ln -sn /usr/share/llvm-3.6/cmake /usr/lib/llvm-3.6/share/llvm/cmake
+    #    cmake . \
+    #      -DLIBCXXABI_LIBCXX_INCLUDES=/usr/include/c++/v1 \
+    #      -DLIBCXXABI_LIBCXX_PATH=/usr/lib \
+    #      -DCMAKE_CXX_FLAGS=-std=c++11
+    #      #-DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+    #    make
+    #    make install
+    #    cp lib/libunwind.a /usr/local/musl/lib
+    - !TarInstall
+      url: https://static.rust-lang.org/dist/rustc-1.1.0-src.tar.gz
+      script: |
+        ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl
+        make
+        make install
+
   ubuntu-package:
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !TarInstall
-      url: http://static.rust-lang.org/dist/rust-1.0.0-x86_64-unknown-linux-gnu.tar.gz
+      url: https://static.rust-lang.org/dist/rust-beta-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr --components=rustc,cargo
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]

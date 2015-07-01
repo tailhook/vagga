@@ -1,0 +1,16 @@
+[package]
+name = "vagga"
+version = "0.3.0"
+authors = ["Paul Colomiets"]
+links = "container"
+build = "build.rs"
+
+[dependencies]
+libc = "*"
+shaman = "*"
+
+rand = {git = "git://github.com/rust-lang/rand"}
+
+[[bin]]
+name = "vagga"
+path = "src/main.rs"

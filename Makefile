@@ -7,9 +7,10 @@ PREFIX ?= /usr
 DESTDIR ?=
 
 
-all: downloads
-all: vagga_launcher vagga_wrapper vagga_version vagga_build vagga_setup_netns
-all: vagga_network
+all: downloads vagga
+
+vagga:
+	cargo build
 
 
 rust-argparse/libargparse.rlib:
@@ -99,4 +100,4 @@ install:
 	ln -s ../lib/vagga/vagga_launcher $(DESTDIR)$(PREFIX)/bin/vagga
 
 
-.PHONY: all downloads test
+.PHONY: all downloads test vagga install

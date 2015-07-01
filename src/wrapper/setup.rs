@@ -41,7 +41,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
     if !path.exists() {
         return Ok(path);
     }
-    for i in range(1is, 101is) {
+    for i in range(1isize, 101isize) {
         let result = format!("{}-{}", name, i);
         let path = storage_dir.join(result);
         if !path.exists() {
