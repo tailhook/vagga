@@ -1,6 +1,6 @@
-use std::old_io::stderr;
-use std::env::{set_exit_status};
-use std::os::{getcwd};
+use std::io::stderr;
+use std::process::exit;
+use std::env::{current_dir};
 
 use argparse::{ArgumentParser, Store, List};
 

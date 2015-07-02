@@ -1,4 +1,3 @@
-use std::old_io::fs::PathExtensions;
 use std::collections::BTreeMap;
 
 

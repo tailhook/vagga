@@ -1,17 +1,15 @@
+use std::env;
 use std::rc::Rc;
-use std::os::{Pipe, pipe};
-use std::old_io::PipeStream;
-use std::old_io::ALL_PERMISSIONS;
 use std::os::{getenv};
 use std::cell::RefCell;
-use std::old_io::fs::{rmdir_recursive, mkdir_recursive, mkdir, rename, symlink};
-use std::old_io::fs::{unlink, rmdir};
-use std::old_io::fs::PathExtensions;
-use std::old_io::stdio::{stdout, stderr};
-use libc::funcs::posix88::unistd::close;
-use serialize::json;
+use std::fs::{remove_dir_all, crate_dir_all, crate_dir, rename};
+use std::os::unix::fs::symlink;
+use std::fs::{remove_file, remove_dir};
+use std::io::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
+use nix::{close, pipe};
+use rustc_serialize::json;
 
 use container::mount::{bind_mount, unmount};
 use container::monitor::{Monitor, Executor, MonitorStatus};

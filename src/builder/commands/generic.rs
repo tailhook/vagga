@@ -1,9 +1,8 @@
 use std::rc::Rc;
-use std::os::{Pipe, pipe};
 use std::cell::RefCell;
-use std::old_io::PipeStream;
-use std::old_io::fs::PathExtensions;
-use libc::funcs::posix88::unistd::close;
+use std::io::PipeStream;
+
+use nix::{pipe, close};
 
 use super::super::context::BuildContext;
 use container::monitor::{Monitor, Executor, MonitorStatus};

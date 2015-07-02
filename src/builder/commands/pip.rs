@@ -1,6 +1,5 @@
-use std::old_io::BufferedReader;
-use std::old_io::EndOfFile;
-use std::old_io::fs::File;
+use std::io::{BufReader, BufRead};
+use std::fs::File;
 
 use super::super::context::{BuildContext};
 use super::super::packages;
