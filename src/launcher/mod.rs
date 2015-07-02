@@ -1,14 +1,3 @@
-#![feature(box_syntax)]
-
-extern crate quire;
-extern crate argparse;
-extern crate serialize;
-extern crate libc;
-#[macro_use] extern crate log;
-
-extern crate config;
-extern crate container;
-
 use std::old_io::stderr;
 use std::os::{setenv, unsetenv, getenv, getcwd};
 use std::env::{set_exit_status};

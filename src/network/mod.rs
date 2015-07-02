@@ -1,9 +1,3 @@
-extern crate argparse;
-#[macro_use] extern crate log;
-
-extern crate config;
-extern crate container;
-
 use std::env::set_exit_status;
 
 use argparse::{ArgumentParser, Store, List};

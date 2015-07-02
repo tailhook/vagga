@@ -1,17 +1,11 @@
-extern crate argparse;
-extern crate serialize;
-#[macro_use] extern crate log;
-
-use std::os::env;
-use std::old_io::BufferedReader;
-use std::env::set_exit_status;
-use std::os::self_exe_path;
-use std::old_io::fs::File;
-use std::old_io::timer::sleep;
-use std::old_io::stdio::{stdout, stderr};
-use std::time::duration::Duration;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
-use serialize::json;
+use std::env;
+use std::fs::File;
+use std::io::{stdout, stderr};
+use std::io::{BufRead, BufReader};
+use std::process::exit;
+use std::thread::sleep_ms;
+use std::process::{Command, ExitStatus};
+use rustc_serialize::json;
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -72,7 +66,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
                 return;
             }
         }
-        sleep(Duration::milliseconds(100));
+        sleep_ms(100);
     }
 
     let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
@@ -169,7 +163,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
                 return;
             }
         }
-        sleep(Duration::milliseconds(100));
+        sleep_ms(100);
     }
     let mut commands = vec!();
 
@@ -282,7 +276,7 @@ fn setup_guest_namespace(args: Vec<String>) {
                 return;
             }
         }
-        sleep(Duration::milliseconds(100));
+        sleep_ms(100);
     }
     let mut commands = vec!();
 

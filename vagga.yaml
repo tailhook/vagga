@@ -3,7 +3,6 @@ containers:
   docs:
     setup:
     - !Ubuntu trusty
-    - !Container docs
     - !Install [python-sphinx, make]
 
   alpine-docs:

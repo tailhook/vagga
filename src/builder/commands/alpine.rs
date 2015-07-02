@@ -13,7 +13,7 @@ use super::super::packages;
 pub static LATEST_VERSION: &'static str = "v3.1";
 
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct AlpineInfo {
     pub version: String,
     pub base_setup: bool,

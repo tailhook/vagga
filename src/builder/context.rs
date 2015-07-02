@@ -20,7 +20,7 @@ use super::capsule;
 use super::packages;
 use super::timer;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Distribution {
     Unknown,
     Ubuntu(UbuntuInfo),

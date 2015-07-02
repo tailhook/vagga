@@ -13,7 +13,7 @@ use self::Event::*;
 
 const SIGCHLD: c_int = 17;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Event<Name> {
     Signal(signal::Signal),
     Timeout(Name),

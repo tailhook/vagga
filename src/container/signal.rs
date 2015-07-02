@@ -9,7 +9,7 @@ use self::Signal::*;
 
 static WNOHANG: c_int = 1;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Signal {
     Terminate(i32),  // Actual signal for termination: INT, TERM, QUIT...
     Child(pid_t, i32),  //  pid and result code

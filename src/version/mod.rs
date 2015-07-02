@@ -1,14 +1,3 @@
-#![feature(slicing_syntax)]
-
-extern crate quire;
-extern crate argparse;
-extern crate serialize;
-extern crate libc;
-#[macro_use] extern crate log;
-
-extern crate config;
-#[macro_use] extern crate container;
-
 use std::os::{set_exit_status};
 use std::old_io::fs::File;
 use std::default::Default;

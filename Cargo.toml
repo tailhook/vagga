@@ -8,8 +8,12 @@ build = "build.rs"
 [dependencies]
 libc = "*"
 shaman = "*"
-
-rand = {git = "git://github.com/rust-lang/rand"}
+rand = "*"
+argparse = "*"
+quire = "*"
+rustc-serialize = "*"
+log = "*"
+env_logger = "*"
 
 [[bin]]
 name = "vagga"

@@ -19,7 +19,7 @@ pub enum BuildType {
     Release,
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct UbuntuInfo {
     pub release: String,
     pub apt_update: bool,

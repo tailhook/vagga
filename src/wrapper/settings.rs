@@ -8,7 +8,7 @@ use quire::parse_config;
 use quire::validate as V;
 
 
-#[derive(PartialEq, Decodable)]
+#[derive(PartialEq, RustcDecodable)]
 struct SecureSettings {
     allowed_dirs: BTreeMap<String, Path>,
     storage_dir: Option<Path>,
@@ -58,7 +58,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         members: members, .. Default::default()}) as Box<V::Validator>;
 }
 
-#[derive(PartialEq, Decodable)]
+#[derive(PartialEq, RustcDecodable)]
 struct InsecureSettings {
     version_check: Option<bool>,
     shared_cache: Option<bool>,
