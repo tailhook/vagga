@@ -1,5 +1,5 @@
-use std::os::getenv;
-use std::old_io::{stdout, stderr};
+use std::env;
+use std::io::{stdout, stderr};
 use std::mem::swap;
 use std::collections::{HashSet, HashMap};
 

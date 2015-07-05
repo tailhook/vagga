@@ -1,6 +1,6 @@
-use std::os::getenv;
-use std::old_io::{stdout, stderr};
-use std::old_io::process::{Command, InheritFd, ExitStatus};
+use std::env;
+use std::io::{stdout, stderr};
+use std::process::{Command, ExitStatus};
 
 use argparse::{ArgumentParser, Store, List};
 

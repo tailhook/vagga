@@ -3,6 +3,7 @@ extern crate rustc_serialize;
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate argparse;
+extern crate quire;
 
 mod builder;
 mod config;
