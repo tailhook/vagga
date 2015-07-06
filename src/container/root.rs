@@ -1,6 +1,6 @@
-use std::old_io::IoError;
+use std::io::Error as IoError;
 use std::ffi::CString;
-use std::old_path::BytesContainer;
+
 use libc::funcs::posix88::unistd::chdir;
 use libc::{c_int, c_char};
 

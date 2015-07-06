@@ -1,21 +1,20 @@
 use std::rc::Rc;
-use std::old_io::{stdout, stderr};
-use std::os::{getenv, self_exe_path};
-use std::old_io::{USER_RWX};
-use std::old_io::{BufferedReader};
-use std::rand::thread_rng;
-use std::old_io::fs::{File, PathExtensions};
-use std::old_io::fs::{mkdir, unlink};
+use std::io::{stdout, stderr};
+use std::env;
+use std::io::{BufRead, BufReader};
+use std::fs::File;
+use std::fs::{create_dir, remove_file};
 use std::str::FromStr;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::process::{Command, ExitStatus};
 use std::collections::BitSet;
-use std::rand::distributions::{Range, IndependentSample};
-use libc::funcs::posix88::unistd::{geteuid};
-use libc::{pid_t};
 
+use rand::thread_rng;
+use rand::distributions::{Range, IndependentSample};
+use libc::{pid_t};
+use nix::{geteuid};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
-use serialize::json;
+use rustc_serialize::json;
 
 use config::Config;
 use container::mount::{bind_mount};

@@ -1,10 +1,9 @@
 use std::str::FromStr;
-use std::old_io::fs::{readdir, rmdir_recursive, readlink};
-use std::old_io::fs::{PathExtensions};
-use std::old_io::stdio::{stdout, stderr};
+use std::fs::{read_dir, remove_dir_all, read_link};
+use std::io::{stdout, stderr};
 use std::collections::HashSet;
-use libc::pid_t;
 
+use libc::pid_t;
 use argparse::{ArgumentParser, PushConst, StoreTrue};
 
 use super::setup;
@@ -151,7 +150,7 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
         .filter(|path| !path.filename_str()
                            .map(|f| f.starts_with("."))
                            .unwrap_or(true))
-        .map(|path| readlink(&path)
+        .map(|path| read_link(&path)
                     .map_err(|e| warn!("Can't readlink {:?}: {}", path, e))
                     .ok()
                     .and_then(|f| {

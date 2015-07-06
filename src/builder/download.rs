@@ -1,9 +1,8 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::PathExtensions;
-use std::old_io::fs::{unlink, rename, mkdir_recursive};
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::fs::{remove_file, rename, create_dir_all};
+use std::process::{Command, ExitStatus};
 
-use container::sha256::{Sha256, Digest};
+use shaman::digest::Digest;
+use shaman::sha2::Sha256;
 
 use super::capsule;
 use super::context::BuildContext;

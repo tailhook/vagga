@@ -1,4 +1,4 @@
-use std::old_io::{stdout, stderr};
+use std::io::{stdout, stderr};
 
 use argparse::{ArgumentParser, StoreTrue};
 

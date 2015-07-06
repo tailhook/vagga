@@ -1,6 +1,6 @@
-use std::old_io::stderr;
-use std::os::{setenv, unsetenv, getenv, getcwd};
-use std::env::{set_exit_status};
+use std::io::stderr;
+use std::env;
+use std::process::exit;
 use config::find_config;
 use container::signal;
 use argparse::{ArgumentParser, Store, List, Collect};

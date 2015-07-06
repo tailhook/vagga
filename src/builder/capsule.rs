@@ -5,12 +5,11 @@
 /// may need real wget and ca-certificates for https. An other features may
 /// need more things.
 
-use std::rand::{thread_rng, Rng};
-use std::old_io::fs::{File, mkdir, mkdir_recursive};
-use std::old_io::fs::PathExtensions;
-use std::old_io::ALL_PERMISSIONS;
+use std::fs::{File, create_dir, create_dir_all};
 use std::collections::HashSet;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::process::{Command, ExitStatus};
+
+use rand::{thread_rng, Rng};
 
 use config::settings::Settings;
 use container::mount::bind_mount;

@@ -1,8 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::io::PipeStream;
 
-use nix::{pipe, close};
+use nix::unistd::{pipe, close};
 
 use super::super::context::BuildContext;
 use container::monitor::{Monitor, Executor, MonitorStatus};

@@ -1,5 +1,4 @@
-use std::os::{env, getenv};
-use std::os::self_exe_path;
+use std::env;
 
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Exit, Killed};
@@ -82,7 +81,7 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     -> Result<i32, String>
 {
     let mut cmd = Command::new("wrapper".to_string(),
-        self_exe_path().unwrap().join("vagga_wrapper"));
+        env::current_exe().unwrap().join("vagga_wrapper"));
     cmd.keep_sigmask();
     cmd.arg(cmdname.as_slice());
     cmd.args(args.as_slice());

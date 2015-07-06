@@ -1,5 +1,6 @@
-use std::old_io::{ALL_PERMISSIONS, USER_RWX, GROUP_READ, OTHER_READ};
-use std::old_io::fs::{File, chmod, mkdir_recursive};
+use std::fs::{File, create_dir_all};
+
+use libc::chmod;
 
 use config::builders::Builder;
 use config::builders::Builder as B;

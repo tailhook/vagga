@@ -1,10 +1,9 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::os::getenv;
+use std::env;
 use std::str::FromStr;
-use std::old_io::fs::{readlink, mkdir, File, PathExtensions};
-use std::old_io::stdio::{stdout, stderr};
-use libc::pid_t;
+use std::fs::{read_link, create_dir, File};
+use std::io::{stdout, stderr};
 
+use libc::pid_t;
 use argparse::{ArgumentParser, Store};
 
 use config::command::{SuperviseInfo, CommandInfo, WriteMode};

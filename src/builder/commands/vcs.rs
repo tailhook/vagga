@@ -1,6 +1,5 @@
 use std::process::{Command, Stdio};
 use std::fs::rename;
-use std::old_io::fs::PathExtensions;
 use std::fs::create_dir_all;
 
 use config::settings::Settings;

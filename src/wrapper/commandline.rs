@@ -1,9 +1,9 @@
-use std::os::getenv;
+use std::env;
 use std::str::FromStr;
-use std::old_io::fs::readlink;
-use std::old_io::stdio::{stdout, stderr};
-use libc::pid_t;
+use std::fs::read_link;
+use std::io::{stdout, stderr};
 
+use libc::pid_t;
 use argparse::{ArgumentParser};
 
 use config::command::CommandInfo;

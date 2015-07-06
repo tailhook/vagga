@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::Write;
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{mkdir_recursive, copy};
+use std::fs::{create_dir_all, copy};
 use std::process::{Command, Stdio};
 
 use super::super::context::{BuildContext};

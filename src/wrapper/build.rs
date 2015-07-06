@@ -1,14 +1,14 @@
 use std::env;
 use std::rc::Rc;
-use std::os::{getenv};
 use std::cell::RefCell;
-use std::fs::{remove_dir_all, crate_dir_all, crate_dir, rename};
+use std::fs::{remove_dir_all, create_dir_all, create_dir, rename};
 use std::os::unix::fs::symlink;
 use std::fs::{remove_file, remove_dir};
 use std::io::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
-use nix::{close, pipe};
+use nix::unistd::close;
+use nix::unistd::pipe;
 use rustc_serialize::json;
 
 use container::mount::{bind_mount, unmount};

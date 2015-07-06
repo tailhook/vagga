@@ -1,7 +1,7 @@
-use std::old_io::IoError;
-use std::os::errno;
-use std::old_io::process::Process;
+use std::io::Error as IoError;
+use std::process::Process;
 
+use libc::errno;
 pub use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT, EINTR, ECHILD};
 use libc::{c_int, pid_t};
 use self::Signal::*;

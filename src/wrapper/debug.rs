@@ -1,4 +1,4 @@
-use std::old_io::process::{Command, InheritFd, ExitStatus, ExitSignal};
+use std::process::Command;
 
 use super::Wrapper;
 use super::setup::setup_base_filesystem;

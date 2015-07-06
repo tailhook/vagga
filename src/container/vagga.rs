@@ -1,8 +1,8 @@
-use std::old_io::fs::readlink;
+use std::fs::read_link;
 
 
 pub fn container_ver(name: &String) -> Result<String, String> {
-    let lnk = try!(readlink(&Path::new("/work/.vagga")
+    let lnk = try!(read_link(&Path::new("/work/.vagga")
                              .join(name.as_slice()))
                    .map_err(|e| format!("Error reading link: {}", e)));
     let lnkcmp = lnk.str_components().collect::<Vec<Option<&str>>>();

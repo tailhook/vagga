@@ -1,11 +1,12 @@
-use std::old_io::IoError;
+use std::io::Error as IoError;
 use std::cmp::Ordering;
-use std::time::Duration;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
+
 use libc::{c_int};
 use libc::consts::os::posix88::{EINTR, ETIMEDOUT, EAGAIN};
 use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
+use time::Duration;
 
 use super::signal;
 use super::util::{Time, get_time};

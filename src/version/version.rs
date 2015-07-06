@@ -1,9 +1,7 @@
-use std::old_io::EndOfFile;
-use std::old_io::BufferedReader;
-use std::old_io::fs::File;
-use std::old_path::BytesContainer;
+use std::io::{BufReader, BufRead};
+use std::fs::File;
 
-use serialize::json;
+use rustc_serialize::json;
 
 use config::Config;
 use config::read_config;

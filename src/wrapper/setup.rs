@@ -1,16 +1,16 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::os::{getenv, env};
-use std::old_io::BufferedReader;
-use std::os::{self_exe_path};
-use std::old_io::FileType::{Symlink, Directory};
-use std::old_io::{FileType, FileNotFound};
+use std::env;
+use std::io::{BufRead, BufReader};
+use std::env::{current_exe};
+use std::fs::FileType::{Symlink, Directory};
+use std::fs::FileType;
 use std::ffi::CString;
-use std::old_path::BytesContainer;
-use std::old_io::fs::{File, PathExtensions};
-use std::old_io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink, link};
-use std::old_io::fs::{rmdir_recursive, readdir, chmod};
+use std::fs::File;
+use std::fs::{create_dir, create_dir_all, copy, read_link, hard_link};
+use std::os::unix::fs::symlink;
+use std::fs::{remove_dir_all, read_dir};
 use std::collections::BTreeMap;
-//use libc::chmod;
+
+use libc::chmod;
 use libc::pid_t;
 
 use config::Container;
@@ -104,7 +104,7 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
 {
     if let Some(ref dir) = settings.storage_dir {
         let lnkdir = project_root.join(".vagga/.lnk");
-        match readlink(&lnkdir) {
+        match read_link(&lnkdir) {
             Ok(lnk) => {
                 if let Some(name) = lnk.filename() {
                     let target = dir.join(name);

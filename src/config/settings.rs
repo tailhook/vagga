@@ -1,6 +1,7 @@
 use std::str::FromStr;
-use rustc_serialize::json;
+
 use libc::{uid_t, gid_t};
+use rustc_serialize::json;
 
 
 #[derive(RustcDecodable, RustcEncodable, Default, Clone)]

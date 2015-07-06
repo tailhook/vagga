@@ -1,7 +1,8 @@
 use std::fmt;
-use libc::uid_t;
-use rustc_serialize::{Decoder, Decodable};
 use std::str::FromStr;
+
+use nix::uid_t;
+use rustc_serialize::{Decoder, Decodable};
 use quire::decode::YamlDecoder;
 
 

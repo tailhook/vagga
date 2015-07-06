@@ -1,6 +1,4 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{mkdir_recursive, mkdir, copy};
-use std::old_io::fs::PathExtensions;
+use std::fs::{create_dir_all, create_dir, copy};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
 

@@ -1,7 +1,5 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{mkdir_recursive, readdir};
-use std::old_io::fs::PathExtensions;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::fs::{create_dir_all, read_dir};
+use std::process::{Command, ExitStatus};
 
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;

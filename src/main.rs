@@ -1,4 +1,7 @@
 extern crate shaman;
+extern crate libc;
+extern crate nix;
+extern crate rand;
 extern crate rustc_serialize;
 #[macro_use] extern crate log;
 extern crate env_logger;

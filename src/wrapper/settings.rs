@@ -1,5 +1,4 @@
-use std::os::getenv;
-use std::old_io::fs::PathExtensions;
+use std::env;
 use std::default::Default;
 use std::collections::BTreeMap;
 

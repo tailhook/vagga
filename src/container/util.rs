@@ -1,12 +1,10 @@
-use std::old_io::ALL_PERMISSIONS;
 use std::ptr::null;
 use std::ffi::c_str_to_bytes;
-use std::old_io::fs::{readdir, rmdir_recursive, unlink, rmdir, copy, chmod, mkdir};
-use std::old_io::fs::{readlink, symlink};
-use std::old_io::fs::PathExtensions;
-use std::old_io::FileType::{Symlink, Directory};
-use std::old_io::{FileType, FileNotFound};
+use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy, create_dir};
+use std::fs::FileType;
+
 use libc::{c_int, uid_t, gid_t, c_char, c_void, timeval};
+use libc::chmod;
 
 use super::root::temporary_change_root;
 

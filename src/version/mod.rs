@@ -1,8 +1,8 @@
-use std::os::{set_exit_status};
-use std::old_io::fs::File;
+use std::process::exit;
+use std::fs::File;
 use std::default::Default;
-use std::old_io::pipe::PipeStream;
-use libc::funcs::posix88::unistd::dup2;
+
+use nix::unistd::dup2;
 
 use config::read_config;
 use config::Settings;

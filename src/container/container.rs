@@ -3,10 +3,9 @@
 use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
 use std::ffi::{CString};
-use std::old_path::BytesContainer;
 use std::ptr::null;
-use std::old_io::IoError;
-use std::os::getcwd;
+use std::io::Error as IoError;
+use std::env::current_dir;
 use std::collections::BTreeMap;
 use collections::enum_set::{EnumSet, CLike};
 
