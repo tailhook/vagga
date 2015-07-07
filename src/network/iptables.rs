@@ -1,10 +1,10 @@
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 
-use std::old_io::process::{Command, InheritFd, ExitStatus};
+use std::process::{Command, ExitStatus};
 
-use container::nsutil::set_namespace;
-use container::container::Namespace::NewNet;
+use super::super::container::nsutil::set_namespace;
+use super::super::container::container::Namespace::NewNet;
 
 
 fn _rule<W: Writer, S:Str>(out: &mut W, data: S) -> Result<(), String> {

@@ -14,6 +14,7 @@ argparse = "*"
 quire = "*"
 rustc-serialize = "*"
 log = "*"
+time = "*"
 env_logger = "*"
 
 [[bin]]

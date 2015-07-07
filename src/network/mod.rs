@@ -2,9 +2,8 @@ use std::env::set_exit_status;
 
 use argparse::{ArgumentParser, Store, List};
 
-use config::read_config;
-
-use iptables::apply_graph;
+use super::config::read_config;
+use self::iptables::apply_graph;
 
 mod graphs;
 mod iptables;

@@ -12,7 +12,8 @@ use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
 use super::super::packages;
 use super::generic::{run_command, capture_command};
-use container::sha256::{Sha256, Digest};
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 
 pub enum BuildType {
     Daily,

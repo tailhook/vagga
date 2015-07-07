@@ -8,7 +8,8 @@ use config::read_config;
 use config::builders::{Builder};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use container::sha256::Digest;
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 use container::vagga::container_ver;
 use self::HashResult::*;
 

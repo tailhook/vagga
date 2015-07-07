@@ -1,10 +1,8 @@
 use std::rc::Rc;
-use std::old_io::ALL_PERMISSIONS;
-use std::os::self_exe_path;
+use std::env::current_exe;
 use std::cell::Cell;
-use std::old_io::stdio::{stdout, stderr};
-use std::old_io::fs::{mkdir};
-use std::old_io::fs::PathExtensions;
+use std::io::{stdout, stderr};
+use std::fs::{create_dir};
 use std::collections::BTreeSet;
 
 use argparse::{ArgumentParser};

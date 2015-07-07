@@ -1,7 +1,6 @@
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::env::{current_exe};
-use std::fs::FileType::{Symlink, Directory};
 use std::fs::FileType;
 use std::ffi::CString;
 use std::fs::File;
@@ -13,13 +12,13 @@ use std::collections::BTreeMap;
 use libc::chmod;
 use libc::pid_t;
 
-use config::Container;
-use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
-use container::root::{change_root};
-use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
-use container::mount::{mount_tmpfs, mount_pseudo};
+use super::super::config::Container;
+use super::super::config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
+use super::super::container::root::{change_root};
+use super::super::container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
+use super::super::container::mount::{mount_tmpfs, mount_pseudo};
 use super::run::DEFAULT_PATH;
-use settings::{MergedSettings};
+use super::settings::{MergedSettings};
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

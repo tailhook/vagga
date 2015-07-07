@@ -3,12 +3,13 @@ use std::fs::File;
 use std::default::Default;
 
 use nix::unistd::dup2;
+use argparse::{ArgumentParser, Store};
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 
 use config::read_config;
 use config::Settings;
 use container::signal;
-use argparse::{ArgumentParser, Store};
-use container::sha256::{Sha256, Digest};
 use self::version::{VersionHash};
 use self::version::HashResult::{Hashed, New, Error};
 

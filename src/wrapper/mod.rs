@@ -4,10 +4,10 @@ use std::env::{current_dir};
 
 use argparse::{ArgumentParser, Store, List};
 
-use config::{find_config, Config, Settings};
-use config::command::MainCommand::{Command, Supervise};
-use container::signal;
-use settings::{read_settings, MergedSettings};
+use super::config::{find_config, Config, Settings};
+use super::config::command::MainCommand::{Command, Supervise};
+use super::container::signal;
+use self::settings::{read_settings, MergedSettings};
 
 
 mod settings;

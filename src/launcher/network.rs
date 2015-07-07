@@ -11,19 +11,19 @@ use std::collections::BitSet;
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
 use libc::{pid_t};
-use nix::{geteuid};
+use libc::{geteuid};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
 use rustc_serialize::json;
 
-use config::Config;
-use container::mount::{bind_mount};
-use container::nsutil::{set_namespace};
-use container::signal::wait_process;
-use container::container::Namespace::{NewUser, NewNet};
-use container::container::Command as ContainerCommand;
-use container::sha256::{Sha256, Digest};
-
+use super::super::config::Config;
+use super::super::container::mount::{bind_mount};
+use super::super::container::nsutil::{set_namespace};
+use super::super::container::signal::wait_process;
+use super::super::container::container::Namespace::{NewUser, NewNet};
+use super::super::container::container::Command as ContainerCommand;
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 use super::user;
 
 static MAX_INTERFACES: usize = 2048;

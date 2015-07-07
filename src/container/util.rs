@@ -1,5 +1,5 @@
 use std::ptr::null;
-use std::ffi::c_str_to_bytes;
+use std::ffi::CStr;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy, create_dir};
 use std::fs::FileType;
 
@@ -34,7 +34,7 @@ pub fn get_user_name(uid: uid_t) -> Result<String, String> {
         let val = getpwuid(uid);
         if val != null() {
             return Ok(String::from_utf8_lossy(
-                c_str_to_bytes(&((*val).pw_name as *const i8))).to_string());
+                CStr.from_ptr((*val).pw_name).to_bytes()));
         }
     }
     return Err(format!("User {} not found", uid));

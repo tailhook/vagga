@@ -1,12 +1,12 @@
-use std::os::getenv;
-use std::old_io::{IoError, OtherIoError};
-use std::old_io::{File, Open, Write};
-use std::old_io::{BufferedReader, MemWriter};
+use std::env;
+use std::io::Error as IoError;
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, BufRead, Write};
 use std::cmp::min;
 use std::cmp::Ordering;
 use std::str::FromStr;
 use std::str::from_utf8;
-use std::old_io::process::{ExitStatus, ExitSignal, Command, Ignored, InheritFd};
+use std::process::{Command, Stdio};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
 use libc::{pid_t, uid_t, gid_t};

@@ -6,14 +6,14 @@ use std::io::{stdout, stderr};
 use libc::pid_t;
 use argparse::{ArgumentParser, Store};
 
-use config::command::{SuperviseInfo, CommandInfo, WriteMode};
-use config::command::ChildCommand::{Command, BridgeCommand};
-use container::uidmap::{map_users};
-use container::uidmap::Uidmap::Ranges;
-use container::monitor::{Monitor};
-use container::monitor::MonitorResult::{Killed, Exit};
-use container::container::{Command};
-use container::vagga::container_ver;
+use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
+use super::super::config::command::ChildCommand as CC;
+use super::super::container::uidmap::{map_users};
+use super::super::container::uidmap::Uidmap::Ranges;
+use super::super::container::monitor::{Monitor};
+use super::super::container::monitor::MonitorResult::{Killed, Exit};
+use super::super::container::container::{Command};
+use super::super::container::vagga::container_ver;
 use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
@@ -49,9 +49,9 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     let childtype = try!(command.children.get(&child)
         .ok_or(format!("Child {} not found", child)));
     match childtype {
-        &Command(ref info) => supervise_child_command(cname,
+        &CC::Command(ref info) => supervise_child_command(cname,
             &child, false, info, wrapper, command, pid),
-        &BridgeCommand(ref info) => supervise_child_command(cname,
+        &CC::BridgeCommand(ref info) => supervise_child_command(cname,
             &child, true, info, wrapper, command, pid),
     }
 }
@@ -66,7 +66,7 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
     try!((writeln!(&mut file, "127.0.0.1 localhost"))
          .map_err(|e| format!("Error writing hosts: {}", e)));
     for (subname, subcommand) in supervise.children.iter() {
-        if let &Command(ref cmd) = subcommand {
+        if let &CC::Command(ref cmd) = subcommand {
             if let Some(ref netw) = cmd.network {
                 // TODO(tailhook) support multiple commands with same IP
                 if let Some(ref val) = netw.hostname {

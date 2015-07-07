@@ -7,7 +7,6 @@ use std::ptr::null;
 use std::io::Error as IoError;
 use std::env::current_dir;
 use std::collections::BTreeMap;
-use collections::enum_set::{EnumSet, CLike};
 
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
