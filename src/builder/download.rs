@@ -1,5 +1,8 @@
-use std::fs::{remove_file, rename, create_dir_all};
-use std::process::{Command, ExitStatus};
+use std::fs::{remove_file, rename, create_dir_all, set_permissions};
+use std::fs::{Permissions};
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
+use std::process::{Command, ExitStatus, Stdio};
 
 use shaman::digest::Digest;
 use shaman::sha2::Sha256;
@@ -9,7 +12,7 @@ use super::context::BuildContext;
 
 
 pub fn download_file(ctx: &mut BuildContext, url: &str)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     let https = url.starts_with("https:");
     if https {
@@ -25,8 +28,10 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
     let name = hash.result_str()[..8].to_string() + "-" + name;
     let dir = Path::new("/vagga/cache/downloads");
     if !dir.exists() {
-        try!(mkdir_recursive(&dir, ALL_PERMISSIONS)
+        try!(create_dir_all(&dir)
             .map_err(|e| format!("Error moving file: {}", e)));
+        try!(set_permissions(&dir, Permissions::from_mode(0o755))
+            .map_err(|e| format!("Can't chmod file: {}", e)));
     }
     let filename = dir.join(name.as_slice());
     if filename.exists() {
@@ -36,7 +41,9 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
     let tmpfilename = filename.with_filename(name + ".part");
     let mut cmd = Command::new(
         if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdin(Stdio::ignore())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
     if !https {
         cmd.arg("wget");
     }
@@ -55,12 +62,12 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
             Ok(filename)
         }
         Ok(val) => {
-            unlink(&tmpfilename)
+            remove_file(&tmpfilename)
                 .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
             Err(format!("Wget exited with status: {}", val))
         }
         Err(x) => {
-            unlink(&tmpfilename)
+            remove_file(&tmpfilename)
                 .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
             Err(x)
         }

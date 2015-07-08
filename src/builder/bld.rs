@@ -1,7 +1,6 @@
-use std::fs::{File, create_dir_all};
+use std::fs::{File, create_dir_all, set_permissions, Permissions};
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-
-use libc::chmod;
 
 use config::builders::Builder;
 use config::builders::Builder as B;
@@ -139,8 +138,9 @@ impl BuildCommand for Builder {
                             path.path_relative_from(&Path::new("/")).unwrap());
                         try!(File::create(&realpath)
                             .and_then(|mut f| f.write_str(text))
-                            .map_err(|e| format!("Can't chmod file: {}", e)));
-                        try!(chmod(&realpath, USER_RWX|GROUP_READ|OTHER_READ)
+                            .map_err(|e| format!("Can't create file: {}", e)));
+                        try!(set_permissions(&realpath,
+                            Permissions::from_mode(0o755))
                             .map_err(|e| format!("Can't chmod file: {}", e)));
                     }
                 }
@@ -209,9 +209,11 @@ impl BuildCommand for Builder {
             }
             &B::EnsureDir(ref path) => {
                 let fpath = path.path_relative_from(&Path::new("/")).unwrap();
-                try!(mkdir_recursive(
-                    &Path::new("/vagga/root").join(fpath), ALL_PERMISSIONS)
+                let fpath = Path::new("/vagga/root").join(fpath);
+                try!(create_dir_all(&fpath)
                     .map_err(|e| format!("Error creating dir: {}", e)));
+                try!(set_permissions(&fpath, Permissions::from_mode(0o755))
+                    .map_err(|e| format!("Error setting permissions: {}", e)));
                 ctx.add_ensure_dir(path.clone());
             }
             &B::CacheDirs(ref pairs) => {
