@@ -1,5 +1,6 @@
-use std::io::Error as IoError;
 use std::ffi::CString;
+use std::io::Error as IoError;
+use std::path::Path;
 
 use libc::funcs::posix88::unistd::chdir;
 use libc::{c_int, c_char};

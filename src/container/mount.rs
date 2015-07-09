@@ -1,9 +1,10 @@
 #![allow(dead_code)]
-use std::io::Error as IoError;
-use std::io::{BufRead, BufReader};
-use std::ptr::null;
 use std::ffi::CString;
 use std::fs::File;
+use std::io::Error as IoError;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+use std::ptr::null;
 use std::str::FromStr;
 
 use libc::{c_ulong, c_int};

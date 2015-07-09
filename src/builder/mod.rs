@@ -1,5 +1,6 @@
 use std::default::Default;
 use std::env::{set_exit_status};
+use std::path::Path;
 
 use config::read_config;
 use config::Settings;

@@ -1,6 +1,7 @@
 use std::env;
 use std::default::Default;
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use config::Settings;
 use quire::parse_config;

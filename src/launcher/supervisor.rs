@@ -1,9 +1,10 @@
-use std::rc::Rc;
-use std::env::current_exe;
 use std::cell::Cell;
-use std::io::{stdout, stderr};
-use std::fs::{create_dir};
 use std::collections::BTreeSet;
+use std::env::current_exe;
+use std::fs::{create_dir};
+use std::io::{stdout, stderr};
+use std::path::Path;
+use std::rc::Rc;
 
 use argparse::{ArgumentParser};
 

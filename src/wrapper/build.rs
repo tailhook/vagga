@@ -1,10 +1,11 @@
 use std::env;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::fs::{remove_dir_all, create_dir_all, create_dir, rename};
-use std::os::unix::fs::symlink;
-use std::fs::{remove_file, remove_dir};
+use std::fs::{remove_dir_all, create_dir_all, create_dir, rename,
+              remove_file, remove_dir};
 use std::io::{stdout, stderr};
+use std::os::unix::fs::symlink;
+use std::path::Path;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use nix::unistd::close;

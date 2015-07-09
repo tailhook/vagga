@@ -4,6 +4,8 @@ use super::super::packages;
 use super::super::context::Distribution as Distr;
 use super::alpine;
 
+use std::path::Path;
+
 
 pub fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
     let mut res = vec!();

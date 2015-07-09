@@ -1,6 +1,8 @@
-use std::io::stderr;
 use std::env;
+use std::io::stderr;
+use std::path::Path;
 use std::process::exit;
+
 use config::find_config;
 use container::signal;
 use argparse::{ArgumentParser, Store, List, Collect};

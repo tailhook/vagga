@@ -1,6 +1,7 @@
-use std::io::{BufRead, BufReader};
-use std::fs::File;
 use std::fs::{copy, rename};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
 use std::string;
 
 use libc::chmod;

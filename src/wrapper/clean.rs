@@ -1,7 +1,8 @@
-use std::str::FromStr;
+use std::collections::HashSet;
 use std::fs::{read_dir, remove_dir_all, read_link};
 use std::io::{stdout, stderr};
-use std::collections::HashSet;
+use std::path::Path;
+use std::str::FromStr;
 
 use libc::pid_t;
 use argparse::{ArgumentParser, PushConst, StoreTrue};

@@ -1,6 +1,7 @@
-use std::process::exit;
-use std::fs::File;
 use std::default::Default;
+use std::fs::File;
+use std::path::Path;
+use std::process::exit;
 
 use nix::unistd::dup2;
 use argparse::{ArgumentParser, Store};

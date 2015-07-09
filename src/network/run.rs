@@ -1,5 +1,6 @@
 use std::env;
 use std::io::{stdout, stderr};
+use std::path::Path;
 use std::process::{Command, ExitStatus};
 
 use argparse::{ArgumentParser, Store, List};
