@@ -34,3 +34,8 @@ Documentation_
 .. _Vagrant-LXC: https://github.com/fgrehm/vagrant-lxc
 .. _Release Notes: http://github.com/tailhook/vagga/blob/master/RELEASE_NOTES.rst
 .. _Upgrading: http://vagga.readthedocs.org/en/latest/upgrading.html
+
+
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+   :alt: Join the chat at https://gitter.im/tailhook/vagga
+   :target: https://gitter.im/tailhook/vagga?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
