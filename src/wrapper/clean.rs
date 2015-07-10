@@ -2,6 +2,7 @@ use std::str::FromStr;
 use std::fs::{read_dir, remove_dir_all, read_link};
 use std::io::{stdout, stderr};
 use std::collections::HashSet;
+use std::path::Path;
 
 use libc::pid_t;
 use argparse::{ArgumentParser, PushConst, StoreTrue};
@@ -93,7 +94,7 @@ fn clean_dir(path: &Path, dry_run: bool) -> Result<(), String> {
         println!("Would remove {:?}", path);
     } else {
         debug!("Removing {:?}", path);
-        try!(rmdir_recursive(path)
+        try!(remove_dir_all(path)
              .map_err(|x| format!("Error removing directory: {}", x)));
     }
     Ok(())
@@ -115,7 +116,7 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
         }
     };
     let roots = base.join(".roots");
-    for path in try!(readdir(&roots)
+    for path in try!(read_dir(&roots)
             .map_err(|e| format!("Can't read dir {:?}: {}", roots, e)))
             .iter()
     {
@@ -144,7 +145,7 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
         }
     };
     let useful: HashSet<String> = try!(
-        readdir(&wrapper.project_root.join(".vagga"))
+        read_dir(&wrapper.project_root.join(".vagga"))
             .map_err(|e| format!("Can't read vagga directory: {}", e)))
         .into_iter()
         .filter(|path| !path.filename_str()
@@ -164,7 +165,7 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
     debug!("Useful images {:?}", useful);
 
     let roots = base.join(".roots");
-    for path in try!(readdir(&roots)
+    for path in try!(read_dir(&roots)
             .map_err(|e| format!("Can't read dir {:?}: {}", roots, e)))
             .iter()
     {
@@ -195,7 +196,7 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
         }
     };
     let procfs = Path::new("/proc");
-    for dir in try!(readdir(&base.join(".transient"))
+    for dir in try!(read_dir(&base.join(".transient"))
                     .map_err(|e| format!(
                              "Can't read .vagga/.transient dir: {}", e)))
                 .into_iter()
