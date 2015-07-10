@@ -1,7 +1,7 @@
 use std::env;
 use std::io::{stdout, stderr};
 use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -65,7 +65,7 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         .map_err(|e| Err(format!("Can't set namespace: {}", e))));
 
     let mut cmd = Command::new(command.as_slice());
-    cmd.stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     cmd.args(cmdargs.as_slice());
     match cmd.status() {
         Ok(ExitStatus(0)) => Ok(()),

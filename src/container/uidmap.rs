@@ -111,7 +111,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     if let Some(path) = getenv("HOST_PATH") {
         cmd.env("PATH", path);
     }
-    cmd.stdin(Ignored).stderr(InheritFd(2));
+    cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
     let username = try!(cmd.output()
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
         .and_then(|out| if out.status == ExitStatus(0) { Ok(out.output) } else
@@ -199,7 +199,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
             let myuid = unsafe { geteuid() };
             if myuid > 0 {
                 let mut cmd = Command::new("newuidmap");
-                cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+                cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
                 cmd.arg(pid.to_string());
                 for &(req, allowed, count) in uids.iter() {
                     cmd
@@ -234,7 +234,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                 }
 
                 let mut cmd = Command::new("newgidmap");
-                cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+                cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
                 cmd.arg(pid.to_string());
                 for &(req, allowed, count) in gids.iter() {
                     cmd

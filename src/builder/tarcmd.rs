@@ -1,6 +1,6 @@
 use std::fs::{create_dir_all, read_dir};
 use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;
@@ -17,7 +17,7 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
 {
     info!("Unpacking {} -> {}", src.display(), tgt.display());
     let mut cmd = Command::new("/vagga/bin/busybox");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit())
         .arg("tar")
         .arg("-x")
         .arg("-f").arg(src)

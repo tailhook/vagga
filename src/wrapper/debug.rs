@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use super::Wrapper;
 use super::setup::setup_base_filesystem;
@@ -12,7 +12,8 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
         return 122;
     }
     match Command::new("/vagga/bin/busybox")
-            .stdin(InheritFd(0)).stdout(InheritFd(1)).stderr(InheritFd(2))
+            .stdin(Stdio::inherit(0))
+            .stdout(Stdio::inherit()).stderr(Stdio::inherit())
             .arg("sh")
             .env("PATH", "/vagga/bin")
         .output()

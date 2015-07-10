@@ -4,7 +4,7 @@ use std::fs::{create_dir, remove_file};
 use std::fs::File;
 use std::io::{stdout, stderr, BufRead, BufReader};
 use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -119,12 +119,12 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     // If we are root we may skip sudo
     let mut ip_cmd = Command::new("sudo");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     ip_cmd.arg("ip");
 
     // If we are root we may skip sudo
     let mut sysctl = Command::new("sudo");
-    sysctl.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    sysctl.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     sysctl.arg("sysctl");
 
     let mut cmd = ip_cmd.clone();
@@ -172,7 +172,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     // If we are root we may skip sudo
     let mut mount_cmd = Command::new("sudo");
-    mount_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    mount_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     mount_cmd.arg("mount");
 
     let mut cmd = mount_cmd.clone();
@@ -246,7 +246,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         }
         if iptables {
             let mut iptables = Command::new("sudo");
-            iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+            iptables.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
             iptables.arg("iptables");
 
             for rule in iprules.iter() {
@@ -325,11 +325,11 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
 
     // If we are root we may skip sudo
     let mut umount_cmd = Command::new("sudo");
-    umount_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    umount_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     umount_cmd.arg("umount");
 
     let mut iptcmd = Command::new("sudo");
-    iptcmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    iptcmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     iptcmd.arg("iptables");
 
     let mut cmd = umount_cmd.clone();
@@ -491,7 +491,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         .map_err(|e| format!("Can't create namespace file: {}", e)));
 
     let mut ip_cmd = Command::new("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "add", eif.as_slice(), "type", "veth",
@@ -570,10 +570,10 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
         .map_err(|e| format!("Can't create namespace file: {}", e)));
 
     let mut ip_cmd = Command::new("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "add", eif.as_slice(), "type", "veth",
@@ -644,7 +644,7 @@ impl PortForwardGuard {
         try!(set_namespace(&self.nspath, NewNet)
             .map_err(|e| format!("Error joining namespace: {}", e)));
         let mut iptables = Command::new("iptables");
-        iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+        iptables.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
         for port in self.ports.iter() {
             let mut cmd = iptables.clone();
@@ -668,7 +668,7 @@ impl Drop for PortForwardGuard {
             return;
         }
         let mut iptables = Command::new("iptables");
-        iptables.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+        iptables.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
         for port in self.ports.iter() {
             let mut cmd = iptables.clone();
             cmd.args(&["-t", "nat", "-D", "PREROUTING",

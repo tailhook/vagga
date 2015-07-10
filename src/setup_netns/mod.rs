@@ -4,7 +4,7 @@ use std::io::{stdout, stderr};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::exit;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 use std::thread::sleep_ms;
 
 use rustc_serialize::json;
@@ -72,11 +72,11 @@ fn setup_gateway_namespace(args: Vec<String>) {
     }
 
     let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut ip_cmd = busybox.clone();
     ip_cmd.arg("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut commands = vec!();
 
@@ -99,7 +99,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
 
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-o", "vagga_guest",
                "-j", "MASQUERADE"]);
@@ -173,7 +173,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
 
     let mut ip_cmd = busybox.clone();
     ip_cmd.arg("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
@@ -206,14 +206,14 @@ fn setup_bridge_namespace(args: Vec<String>) {
 
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for &(sport, ref dip, dport) in ports.iter() {
         let mut cmd = Command::new("iptables");
-        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+        cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
         cmd.args(&["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
             "--dport", format!("{}", sport).as_slice(), "-j", "DNAT",
             "--to-destination", format!("{}:{}", dip, dport).as_slice()]);
@@ -283,11 +283,11 @@ fn setup_guest_namespace(args: Vec<String>) {
     let mut commands = vec!();
 
     let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut ip_cmd = busybox.clone();
     ip_cmd.arg("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "set", "dev", "lo", "up"]);

@@ -8,7 +8,7 @@
 use std::collections::HashSet;
 use std::fs::{File, create_dir, create_dir_all};
 use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::process::{Command, ExitStatus, Stdio};
 
 use rand::{thread_rng, Rng};
 
@@ -38,7 +38,7 @@ pub struct State {
 // Also used in alpine
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     let mut cmd = Command::new("/vagga/bin/apk");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit())
         .env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
