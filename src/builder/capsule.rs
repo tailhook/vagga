@@ -5,8 +5,9 @@
 /// may need real wget and ca-certificates for https. An other features may
 /// need more things.
 
-use std::fs::{File, create_dir, create_dir_all};
 use std::collections::HashSet;
+use std::fs::{File, create_dir, create_dir_all};
+use std::path::Path;
 use std::process::{Command, ExitStatus};
 
 use rand::{thread_rng, Rng};

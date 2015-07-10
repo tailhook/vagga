@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 
-use std::fmt::{Debug, Formatter};
-use std::fmt::Error as FormatError;
-use std::ffi::{CString};
-use std::ptr::null;
-use std::io::Error as IoError;
 use std::env::current_dir;
 use std::collections::BTreeMap;
+use std::ffi::{CString};
+use std::fmt::{Debug, Formatter};
+use std::fmt::Error as FormatError;
+use std::io::Error as IoError;
+use std::path::Path;
+use std::ptr::null;
 
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};

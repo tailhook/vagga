@@ -2,9 +2,11 @@ use std::env;
 use std::fs::File;
 use std::io::{stdout, stderr};
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use std::process::exit;
-use std::thread::sleep_ms;
 use std::process::{Command, ExitStatus};
+use std::thread::sleep_ms;
+
 use rustc_serialize::json;
 
 use argparse::{ArgumentParser, Store, List};

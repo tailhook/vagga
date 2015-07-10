@@ -1,12 +1,12 @@
-use std::rc::Rc;
-use std::io::{stdout, stderr};
-use std::env;
-use std::io::{BufRead, BufReader};
-use std::fs::File;
-use std::fs::{create_dir, remove_file};
-use std::str::FromStr;
-use std::process::{Command, ExitStatus};
 use std::collections::BitSet;
+use std::env;
+use std::fs::{create_dir, remove_file};
+use std::fs::File;
+use std::io::{stdout, stderr, BufRead, BufReader};
+use std::path::Path;
+use std::process::{Command, ExitStatus};
+use std::rc::Rc;
+use std::str::FromStr;
 
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};

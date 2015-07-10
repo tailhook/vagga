@@ -1,7 +1,9 @@
 use std::env;
-use std::str::FromStr;
 use std::fs::read_link;
 use std::io::{stdout, stderr};
+use std::path::Path;
+use std::str::FromStr;
+
 use libc::pid_t;
 
 use argparse::{ArgumentParser, Store, List, StoreTrue};

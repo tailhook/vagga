@@ -1,7 +1,8 @@
-use std::ptr::null;
 use std::ffi::CStr;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy, create_dir};
 use std::fs::FileType;
+use std::ptr::null;
+use std::path::Path;
 
 use libc::{c_int, uid_t, gid_t, c_char, c_void, timeval};
 use libc::chmod;

@@ -1,6 +1,7 @@
-use std::process::{Command, Stdio};
 use std::fs::rename;
 use std::fs::create_dir_all;
+use std::path::Path;
+use std::process::{Command, Stdio};
 
 use config::settings::Settings;
 use config::builders::GitInfo;

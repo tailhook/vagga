@@ -1,5 +1,6 @@
-use std::io::Error as IoError;
 use std::ffi::CString;
+use std::io::Error as IoError;
+use std::path::Path;
 
 use libc::{c_int, pid_t, size_t};
 use libc::funcs::posix88::fcntl::open;

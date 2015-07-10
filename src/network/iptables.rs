@@ -1,6 +1,7 @@
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 
+use std::path::Path;
 use std::process::{Command, ExitStatus};
 
 use super::super::container::nsutil::set_namespace;
