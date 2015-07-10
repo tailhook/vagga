@@ -109,10 +109,10 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(args.as_slice());
-    cmd.set_workdir(&Path::new(getenv("PWD").unwrap_or("/work".to_string())));
+    cmd.set_workdir(&Path::new(env::var("PWD").unwrap_or("/work".to_string())));
     uid_map.as_ref().map(|v| cmd.set_uidmap(v.clone()));
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
+                env::var("TERM").unwrap_or("dumb".to_string()));
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());
     }

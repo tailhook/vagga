@@ -64,16 +64,16 @@ pub fn run() -> i32 {
                              .unwrap_or(Path::new("."));
 
     for k in propagate_env.into_iter() {
-        setenv(("VAGGAENV_".to_string() + &k[..]).as_slice(),
-            getenv(k.as_slice()).unwrap_or("".to_string()));
+        env::set_var(("VAGGAENV_".to_string() + &k[..]).as_slice(),
+            env::var(k.as_slice()).unwrap_or("".to_string())).unwrap();
     }
     for pair in set_env.into_iter() {
         let mut pairiter = pair.as_slice().splitn(1, '=');
         let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
         if let Some(value) = pairiter.next() {
-            setenv(key.as_slice(), value.to_string());
+            env::set_var(key.as_slice(), value.to_string()).unwrap();
         } else {
-            unsetenv(key.as_slice());
+            env::remove_var(key.as_slice());
         }
     }
 

@@ -227,7 +227,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
     try!(bind_mount(&locl_cache, &cache_dir));
 
-    if let Some(nsdir) = getenv("VAGGA_NAMESPACE_DIR") {
+    if let Ok(nsdir) = env::var("VAGGA_NAMESPACE_DIR") {
         let newns_dir = vagga_dir.join("namespaces");
         try!(mkdir_recursive(&newns_dir, ALL_PERMISSIONS)
             .map_err(|e| format!("Error creating directory \
@@ -257,7 +257,7 @@ pub fn get_environment(container: &Container)
 {
     let mut result = BTreeMap::new();
     result.insert("TERM".to_string(),
-                  getenv("TERM").unwrap_or("dumb".to_string()));
+                  env::var("TERM").unwrap_or("dumb".to_string()));
     result.insert("PATH".to_string(),
                   DEFAULT_PATH.to_string());
     for (k, v) in env().into_iter() {
@@ -389,7 +389,7 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             }
         }
     }
-    if let Some(_) = getenv("VAGGA_NAMESPACE_DIR") {
+    if let Ok(_) = env::var("VAGGA_NAMESPACE_DIR") {
         let newns_dir = tgtroot.join("tmp/vagga/namespaces");
         try!(mkdir_recursive(&newns_dir, ALL_PERMISSIONS)
             .map_err(|e| format!("Error creating directory \

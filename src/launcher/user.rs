@@ -27,23 +27,23 @@ pub fn run_user_command(config: &Config, workdir: &Path,
 }
 
 pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
-    for (k, v) in env().into_iter() {
+    for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             cmd.set_env(k, v);
         }
     }
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
-    if let Some(x) = getenv("PATH") {
+                env::var("TERM").unwrap_or("dumb".to_string()));
+    if let Ok(x) = env::var("PATH") {
         cmd.set_env("HOST_PATH".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_LOG") {
+    if let Ok(x) = env::var("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_BACKTRACE") {
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
-    if let Some(x) = getenv("HOME") {
+    if let Ok(x) = env::var("HOME") {
         cmd.set_env("VAGGA_USER_HOME".to_string(), x);
     }
     if let Some(x) = workdir {

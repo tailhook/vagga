@@ -36,7 +36,7 @@ pub struct PortForwardGuard {
 
 pub fn namespace_dir() -> Path {
     let uid = unsafe { geteuid() };
-    getenv("XDG_RUNTIME_DIR")
+    env::var("XDG_RUNTIME_DIR")
         .map(|v| Path::new(v).join("vagga"))
         .unwrap_or(Path::new(format!("/tmp/vagga-{}", uid)))
 }
@@ -93,14 +93,14 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.set_max_uidmap();
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
-    if let Some(x) = getenv("PATH") {
+                env::var("TERM").unwrap_or("dumb".to_string()));
+    if let Ok(x) = env::var("PATH") {
         cmd.set_env("PATH".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_LOG") {
+    if let Ok(x) = env::var("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_BACKTRACE") {
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
     cmd.arg("gateway");
@@ -518,14 +518,14 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         ]);
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
-    if let Some(x) = getenv("PATH") {
+                env::var("TERM").unwrap_or("dumb".to_string()));
+    if let Ok(x) = env::var("PATH") {
         cmd.set_env("PATH".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_LOG") {
+    if let Ok(x) = env::var("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_BACKTRACE") {
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
     let pid = try!(cmd.spawn());
@@ -597,14 +597,14 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
                         "--gateway-ip", "172.18.0.254"]);
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
-    if let Some(x) = getenv("PATH") {
+                env::var("TERM").unwrap_or("dumb".to_string()));
+    if let Ok(x) = env::var("PATH") {
         cmd.set_env("PATH".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_LOG") {
+    if let Ok(x) = env::var("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_BACKTRACE") {
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
     let pid = try!(cmd.spawn());

@@ -108,7 +108,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
 {
     let mut cmd = Command::new("id");
     cmd.arg("--user").arg("--name");
-    if let Some(path) = getenv("HOST_PATH") {
+    if let Ok(path) = env::var("HOST_PATH") {
         cmd.env("PATH", path);
     }
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());

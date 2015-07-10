@@ -130,7 +130,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
     } else {
         cmd.set_workdir(&Path::new(
-            getenv("PWD").unwrap_or("/work".to_string())));
+            env::var("PWD").unwrap_or("/work".to_string())));
     }
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());

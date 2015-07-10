@@ -42,10 +42,10 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let cmd = try!(getenv("VAGGA_COMMAND")
+    let cmd = try!(env::var("VAGGA_COMMAND")
         .and_then(|cmd| config.commands.get(&cmd))
-        .ok_or(Err(format!("This command is supposed to be run inside \
-                        container started by vagga !Supervise command"))));
+        .map_err(|_| format!("This command is supposed to be run inside \
+                        container started by vagga !Supervise command")));
     let sup = match cmd {
         &MainCommand::Supervise(ref sup) => sup,
         _ => return Err(Err(format!("This command is supposed to be run \

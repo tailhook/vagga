@@ -51,10 +51,10 @@ impl<'a> Executor for RunVersion<'a> {
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
         cmd.set_stdout_fd(self.pipe.writer);
-        if let Some(x) = getenv("RUST_LOG") {
+        if let Ok(x) = env::var("RUST_LOG") {
             cmd.set_env("RUST_LOG".to_string(), x);
         }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
+        if let Ok(x) = env::var("RUST_BACKTRACE") {
             cmd.set_env("RUST_BACKTRACE".to_string(), x);
         }
         return cmd;
@@ -83,11 +83,11 @@ impl<'a> Executor for RunBuilder<'a> {
         cmd.arg("--settings");
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(),
-                    getenv("TERM").unwrap_or("dumb".to_string()));
-        if let Some(x) = getenv("RUST_LOG") {
+                    env::var("TERM").unwrap_or("dumb".to_string()));
+        if let Ok(x) = env::var("RUST_LOG") {
             cmd.set_env("RUST_LOG".to_string(), x);
         }
-        if let Some(x) = getenv("RUST_BACKTRACE") {
+        if let Ok(x) = env::var("RUST_BACKTRACE") {
             cmd.set_env("RUST_BACKTRACE".to_string(), x);
         }
         return cmd;
