@@ -1,6 +1,7 @@
 use std::io::stderr;
 use std::process::exit;
 use std::env::{current_dir};
+use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -55,7 +56,7 @@ pub fn run() -> i32 {
         }
     }
 
-    let workdir = getcwd().unwrap();
+    let workdir = current_dir().unwrap();
 
     let (config, project_root) = match find_config(&workdir) {
         Ok(tup) => tup,
@@ -116,5 +117,5 @@ pub fn run() -> i32 {
 fn main() {
     signal::block_all();
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }
