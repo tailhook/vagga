@@ -1,4 +1,5 @@
-use std::fs::{create_dir_all, read_dir};
+use std::fs::{create_dir_all, read_dir, set_permissions, Permissions};
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -58,11 +59,15 @@ pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
         let tmppath = Path::new("/vagga/root/tmp")
             .join(filename.filename_str().unwrap());
         let tmpsub = tmppath.join(&tar.subdir);
-        try!(mkdir_recursive(&tmpsub, ALL_PERMISSIONS)
+        try!(create_dir_all(&tmpsub)
              .map_err(|e| format!("Error making dir: {}", e)));
+        try!(set_permissions(&tmpsub, Permissions::from_mode(0o755))
+             .map_err(|e| format!("Error setting permissions: {}", e)));
         if !fpath.exists() {
-            try!(mkdir_recursive(&fpath, ALL_PERMISSIONS)
+            try!(create_dir_all(&fpath)
                  .map_err(|e| format!("Error making dir: {}", e)));
+            try!(set_permissions(&fpath, Permissions::from_mode(0o755))
+                 .map_err(|e| format!("Error setting permissions: {}", e)));
         }
         try!(bind_mount(&fpath, &tmpsub));
         let res = unpack_file(ctx, &filename, &tmppath,
@@ -80,8 +85,10 @@ pub fn tar_install(ctx: &mut BuildContext, tar: &TarInstallInfo)
     // TODO(tailhook) check sha256 sum
     let tmppath = Path::new("/vagga/root/tmp")
         .join(filename.filename_str().unwrap());
-    try!(mkdir_recursive(&tmppath, ALL_PERMISSIONS)
+    try!(create_dir_all(&tmppath)
          .map_err(|e| format!("Error making dir: {}", e)));
+    try!(set_permissions(&tmppath, Permissions::from_mode(0o755))
+         .map_err(|e| format!("Error setting permissions: {}", e)));
     try!(unpack_file(ctx, &filename, &tmppath, &[], &[]));
     let workdir = if let Some(ref subpath) = tar.subdir {
         tmppath.join(subpath)

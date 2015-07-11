@@ -1,10 +1,9 @@
-use std::fs::{copy, rename};
+use std::fs::{copy, rename, set_permissions, Permissions};
+use std::os::unix::fs::PermissionsExt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::string;
-
-use libc::chmod;
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};
@@ -121,8 +120,7 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
     try!(File::create(&policy_file)
         .and_then(|mut f| f.write(b"#!/bin/sh\nexit 101\n"))
         .map_err(|e| format!("Error writing policy-rc.d file: {}", e)));
-    try!(chmod(&policy_file,
-        USER_RWX|GROUP_READ|GROUP_EXECUTE|OTHER_READ|OTHER_EXECUTE)
+    try!(set_permissions(&policy_file, Permissions::from_mode(0o755))
         .map_err(|e| format!("Can't chmod file: {}", e)));
 
     // Do not need to fsync() after package installation
