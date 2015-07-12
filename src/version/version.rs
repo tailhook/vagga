@@ -35,17 +35,9 @@ impl VersionHash for Builder {
                 match
                     File::open(&Path::new("/work").join(fname))
                     .and_then(|f| {
-                        let mut f = BufferedReader::new(f);
-                        loop {
-                            let line = match f.read_line() {
-                                Ok(line) => line,
-                                Err(ref e) if e.kind == EndOfFile => {
-                                    break;
-                                }
-                                Err(e) => {
-                                    return Err(e);
-                                }
-                            };
+                        let mut f = BufReader::new(f);
+                        for line in f.lines() {
+                            let line = try!(line);
                             let chunk = line.as_slice().trim();
                             // Ignore empty lines and comments
                             if chunk.len() == 0 || chunk.starts_with("#") {

@@ -266,7 +266,7 @@ pub fn get_environment(container: &Container)
         }
     }
     if let Some(ref filename) = container.environ_file {
-        let mut f = BufferedReader::new(try!(
+        let mut f = BufReader::new(try!(
                 File::open(filename)
                 .map_err(|e| format!("Error reading environment file {}: {}",
                     filename.display(), e))));

@@ -13,7 +13,7 @@ use argparse::{ArgumentParser, Store, List};
 
 fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
-        .map(BufferedReader::new)
+        .map(BufReader::new)
         .and_then(|mut f| {
             let mut lineiter = f.lines();
             try!(lineiter.next().unwrap());  // Two header lines

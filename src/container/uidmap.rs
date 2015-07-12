@@ -26,7 +26,7 @@ pub enum Uidmap {
 fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
     let file = File::open(&Path::new("/etc/subuid"));
     let mut res = Vec::new();
-    let mut reader = BufferedReader::new(file);
+    let mut reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
         let line = try!(line.map_err(
             |e| format!("Error reading /etc/subuid: {}", e)));
@@ -48,7 +48,7 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
 fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
     let file = File::open(&Path::new("/etc/subgid"));
     let mut res = Vec::new();
-    let mut reader = BufferedReader::new(file);
+    let mut reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
         let line = try!(line.map_err(
             |e| format!("Error reading /etc/subgid: {}", e)));
@@ -297,7 +297,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
 
 fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
 {
-    let mut file = BufferedReader::new(try!(File::open(&Path::new(path))
+    let mut file = BufReader::new(try!(File::open(&Path::new(path))
         .map_err(|e| format!("Error reading uid/gid map: {}", e))));
     let mut result = vec!();
     for line in file.lines() {

@@ -73,19 +73,12 @@ pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
 {
     let f = try!(File::open(&Path::new("/work").join(reqtxt))
         .map_err(|e| format!("Can't open requirements file: {}", e)));
-    let mut f = BufferedReader::new(f);
+    let mut f = BufReader::new(f);
     let mut names = vec!();
-    loop {
-        let line = match f.read_line() {
-            Ok(line) => line,
-            Err(ref e) if e.kind == EndOfFile => {
-                break;
-            }
-            Err(e) => {
-                return Err(format!("Error reading requirements: {}", e));
-            }
-        };
-        let chunk = line.as_slice().trim();
+    for line in f.lines() {
+        let line = try!(line
+                .map_err(|e| format!("Error reading requirements: {}", e)));
+        let chunk = line[..].trim();
         // Ignore empty lines and comments
         if chunk.len() == 0 || chunk.starts_with("#") {
             continue;

@@ -30,28 +30,24 @@ pub struct UbuntuInfo {
 pub fn read_ubuntu_codename() -> Result<String, String>
 {
     let lsb_release_path = "/vagga/root/etc/lsb-release";
-    let mut lsb_release_file = BufferedReader::new(File::open(&Path::new(lsb_release_path)));
+    let mut lsb_release_file = BufReader::new(
+        File::open(&Path::new(lsb_release_path)));
 
-    loop {
-        let line = match lsb_release_file.read_line() {
-            Ok(line) => {
-                if let Some(equalsPos) = line.find('=') {
-                    let key = line[..equalsPos].trim();
+    for line in lsb_release_file.lines() {
+        let line = try!(line
+            .map_err(|e| format!("Error reading lsb file: {}", e)));
+        if let Some(equalsPos) = line.find('=') {
+            let key = line[..equalsPos].trim();
 
-                    if key == "DISTRIB_CODENAME" {
-                        let value = line[(equalsPos + 1)..].trim();
-                        return Ok(value.to_string());
-                    }
-                }
-            },
-            Err(ref e) if e.kind == EndOfFile => {
-                break;
-            },
-            Err(e) => return Err(e.desc.to_string()),
-        };
+            if key == "DISTRIB_CODENAME" {
+                let value = line[(equalsPos + 1)..].trim();
+                return Ok(value.to_string());
+            }
+        }
     }
 
-    Err(format!("Coudn't read codename from '{lsb_release_path}'", lsb_release_path=lsb_release_path))
+    Err(format!("Coudn't read codename from '{lsb_release_path}'",
+                lsb_release_path=lsb_release_path))
 }
 
 pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String, build_type: BuildType)
@@ -90,21 +86,15 @@ pub fn init_ubuntu_core(ctx: &mut BuildContext) -> Result<(), String> {
 
 fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
-    let mut source = BufferedReader::new(try!(File::open(&sources_list)
+    let mut source = BufReader::new(try!(File::open(&sources_list)
         .map_err(|e| format!("Error reading sources.list file: {}", e))));
     let tmp = sources_list.with_extension("tmp");
     try!(File::create(&tmp)
         .and_then(|mut f| {
-            loop {
-                let line = match source.read_line() {
-                    Ok(line) => line,
-                    Err(ref e) if e.kind == EndOfFile => {
-                        break;
-                    }
-                    Err(e) => return Err(e),
-                };
-                try!(f.write(line.replace("http://archive.ubuntu.com/ubuntu/",
-                     ctx.settings.ubuntu_mirror.as_slice()).as_bytes()));
+            for line in source.lines() {
+                let line = try!(line);
+                try!(f.write(&line.replace("http://archive.ubuntu.com/ubuntu/",
+                     &ctx.settings.ubuntu_mirror)));
             }
             Ok(())
         })

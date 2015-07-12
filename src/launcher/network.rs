@@ -413,7 +413,7 @@ pub fn join_gateway_namespaces() -> Result<(), String> {
 
 pub fn get_nameservers() -> Result<Vec<String>, String> {
     File::open(&Path::new("/etc/resolv.conf"))
-        .map(BufferedReader::new)
+        .map(BufReader::new)
         .and_then(|mut f| {
             let mut ns = vec!();
             for line in f.lines() {
@@ -429,7 +429,7 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
 
 fn get_interfaces() -> Result<BitSet, String> {
     File::open(&Path::new("/proc/net/dev"))
-        .map(BufferedReader::new)
+        .map(BufReader::new)
         .and_then(|mut f| {
             let mut lineiter = f.lines();
             let mut result = BitSet::with_capacity(MAX_INTERFACES);
