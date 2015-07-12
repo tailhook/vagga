@@ -4,6 +4,7 @@ use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufRead, Write};
 use std::io::Error as IoError;
+use std::io::ErrorKind::{Interrupted, Other};
 use std::str::FromStr;
 use std::str::from_utf8;
 use std::path::Path;
@@ -114,7 +115,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
     let username = try!(cmd.output()
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
-        .and_then(|out| if out.status == ExitStatus(0) { Ok(out.output) } else
+        .and_then(|out| if out.status.status() == 0 { Ok(out.output) } else
             { Err(format!("Error running `id --user --name`")) })
         .and_then(|val| from_utf8(val.as_slice()).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
@@ -170,36 +171,25 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
         &Singleton(uid, gid) => {
             let uid_map = format!("0 {} 1", uid);
             debug!("Writing uid_map: {}", uid_map);
-            match File::open_mode(&Path::new("/proc")
+            let uid_map_file = Path::new("/proc")
                               .join(pid.to_string())
-                              .join("uid_map"), Open, Write)
-                    .write_str(uid_map.as_slice()) {
-                Ok(()) => {}
-                Err(e) => return Err(IoError {
-                    kind: e.kind,
-                    desc: "Error writing uid mapping",
-                    detail: e.detail,
-                    }),
-            }
+                              .join("uid_map");
+            try!(OpenOptions().write(true).open(&uid_map_file)
+                .write_all(&uid_map));
             let gid_map = format!("0 {} 1", gid);
             debug!("Writing gid_map: {}", gid_map);
-            match File::open_mode(&Path::new("/proc")
+            let gid_map_file = Path::new("/proc")
                               .join(pid.to_string())
-                              .join("gid_map"), Open, Write)
-                    .write_str(uid_map.as_slice()) {
-                Ok(()) => {}
-                Err(e) => return Err(IoError {
-                    kind: e.kind,
-                    desc: "Error writing gid mapping",
-                    detail: e.detail
-                    }),
-            }
+                              .join("gid_map");
+            try!(OpenOptions().write().open(&gid_map_file)
+                .write_all(uid_map.as_slice()));
         }
         &Ranges(ref uids, ref gids) => {
             let myuid = unsafe { geteuid() };
             if myuid > 0 {
                 let mut cmd = Command::new("newuidmap");
-                cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+                cmd.stdin(Stdio::null());
+                cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
                 cmd.arg(pid.to_string());
                 for &(req, allowed, count) in uids.iter() {
                     cmd
@@ -209,32 +199,25 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                 }
                 info!("Uid map command: {:?}", cmd);
                 match cmd.status() {
-                    Ok(ExitStatus(0)) => {},
-                    Ok(ExitStatus(x)) => {
-                        return Err(IoError {
-                            kind: OtherIoError,
-                            desc: "Error writing uid mapping",
-                            detail: Some(format!(
-                                "newuidmap exited with status {}", x)),
-                            });
+                    Ok(s) if s.success() => {},
+                    Ok(s) if s.signal().is_some() => {
+                        return Err(IoError::new(Interrupted,
+                            format!("Error writing uid mapping: \
+                                newuidmap was killed on signal {}",
+                                s.signal().unwrap())));
                     }
-                    Ok(ExitSignal(x)) => {
-                        return Err(IoError {
-                            kind: OtherIoError,
-                            desc: "Error writing uid mapping",
-                            detail: Some(format!(
-                                "newuidmap exited with signal {}", x)),
-                            });
+                    Ok(s) => {
+                        return Err(IoError::new(Other,
+                            format!("Error writing uid mapping: \
+                                newuidmap was exit with status {}",
+                                s.status())));
                     }
-                    Err(e) => return Err(IoError {
-                        kind: e.kind,
-                        desc: "Error writing uid mapping",
-                        detail: e.detail
-                        }),
+                    Err(e) => return Err(e),
                 }
 
                 let mut cmd = Command::new("newgidmap");
-                cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+                cmd.stdin(Stdio::null());
+                cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
                 cmd.arg(pid.to_string());
                 for &(req, allowed, count) in gids.iter() {
                     cmd
@@ -244,31 +227,23 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                 }
                 info!("Gid map command: {:?}", cmd);
                 match cmd.status() {
-                    Ok(ExitStatus(0)) => {},
-                    Ok(ExitStatus(x)) => {
-                        return Err(IoError {
-                            kind: OtherIoError,
-                            desc: "Error writing gid mapping",
-                            detail: Some(format!(
-                                "newgidmap exited with status {}", x)),
-                            });
+                    Ok(s) if s.success() => {},
+                    Ok(s) if s.signal().is_some() => {
+                        return Err(IoError::new(Interrupted,
+                            format!("Error writing gid mapping: \
+                                newuidmap was killed on signal {}",
+                                s.signal().unwrap())));
                     }
-                    Ok(ExitSignal(x)) => {
-                        return Err(IoError {
-                            kind: OtherIoError,
-                            desc: "Error writing gid mapping",
-                            detail: Some(format!(
-                                "newgidmap exited with signal {}", x)),
-                            });
+                    Ok(s) => {
+                        return Err(IoError::new(Other,
+                            format!("Error writing gid mapping: \
+                                newuidmap was exit with status {}",
+                                s.status())));
                     }
-                    Err(e) => return Err(IoError {
-                        kind: e.kind,
-                        desc: "Error writing gid mapping",
-                        detail: e.detail
-                        }),
+                    Err(e) => return Err(e),
                 }
             } else {
-                let mut membuf = MemWriter::new();
+                let mut membuf = Vec::with_capacity(100);
                 for &(ins, outs, cnt) in uids.iter() {
                     try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
                 }
@@ -279,7 +254,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                     String::from_utf8_lossy(value.as_slice()));
                 try!(file.write(value.as_slice()));
 
-                let mut membuf = MemWriter::new();
+                let mut membuf = Vec::with_capacity(100);
                 for &(ins, outs, cnt) in gids.iter() {
                     try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
                 }
