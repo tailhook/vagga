@@ -10,6 +10,7 @@ use config::builders::TarInstallInfo;
 use super::context::BuildContext;
 use super::download::download_file;
 use super::commands::generic::run_command_at;
+use super::super::file_util::read_visible_entries;
 
 
 pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
@@ -93,7 +94,7 @@ pub fn tar_install(ctx: &mut BuildContext, tar: &TarInstallInfo)
     let workdir = if let Some(ref subpath) = tar.subdir {
         tmppath.join(subpath)
     } else {
-        let items = try!(readdir(&tmppath)
+        let items = try!(read_visible_entries(&tmppath)
             .map_err(|e| format!("Error reading dir: {}", e)));
         if items.len() != 1 {
             if items.len() == 0 {

@@ -17,6 +17,7 @@ mod network;
 mod setup_netns;
 mod version;
 mod wrapper;
+mod file_util;
 
 fn main() {
     env_logger::init().unwrap();
