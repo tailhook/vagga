@@ -3,7 +3,7 @@ use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader};
 use std::ffi::CString;
-use std::fs::{create_dir, create_dir_all, copy, read_link, hard_link,
+use std::fs::{copy, read_link, hard_link,
               remove_dir_all, read_dir};
 use std::fs::File;
 use std::fs::FileType;
@@ -20,6 +20,7 @@ use super::super::container::mount::{bind_mount, unmount, mount_system_dirs, rem
 use super::super::container::mount::{mount_tmpfs, mount_pseudo};
 use super::run::DEFAULT_PATH;
 use super::settings::{MergedSettings};
+use super::super::file_util::create_dir;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -88,9 +89,8 @@ fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
                                "Please run `unlink {0}`"), dir.display()));
         }
         Err(ref e) if e.kind == FileNotFound => {
-            try!(mkdir(dir, ALL_PERMISSIONS)
-                .map_err(|e| format!("Can't create `{}`: {}",
-                                     dir.display(), e)));
+            try_msg!(create_dir(dir, false),
+                "Can't create {dir:?}: {err}", dir=dir);
         }
         Err(ref e) => {
             return Err(format!("Can't stat `{}`: {}", dir.display(), e));

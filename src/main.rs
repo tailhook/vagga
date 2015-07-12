@@ -9,6 +9,7 @@ extern crate argparse;
 extern crate quire;
 extern crate time;
 
+#[macro_use] mod macros;
 mod builder;
 mod config;
 mod container;
