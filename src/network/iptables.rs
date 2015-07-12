@@ -1,18 +1,17 @@
-use super::graphs::{Graph, NodeLinks};
-use super::graphs::NodeLinks::{Full, Isolate, DropSome};
-
+use std::io::Write;
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
+use super::graphs::{Graph, NodeLinks};
+use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 use super::super::container::nsutil::set_namespace;
 use super::super::container::container::Namespace::NewNet;
 
 
-fn _rule<W: Writer, S:Str>(out: &mut W, data: S) -> Result<(), String> {
-    debug!("Rule: {}", data.as_slice());
-    (writeln!(out, "{}", data.as_slice()))
-    .map_err(|e| format!("Error piping firewall rule {}: {}",
-                         data.as_slice(), e))
+fn _rule<W: Write, S:AsRef<str>>(out: &mut W, data: S) -> Result<(), String> {
+    debug!("Rule: {}", data);
+    (writeln!(out, "{}", data))
+    .map_err(|e| format!("Error piping firewall rule {:?}: {}", data, e))
 }
 
 pub fn apply_graph(graph: Graph) -> Result<(), String> {

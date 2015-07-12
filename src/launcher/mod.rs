@@ -51,7 +51,7 @@ pub fn run() -> i32 {
         }
     }
 
-    let workdir = getcwd().unwrap();
+    let workdir = env::current_dir().unwrap();
 
     let (config, cfg_dir) = match find_config(&workdir) {
         Ok(tup) => tup,
@@ -88,7 +88,7 @@ pub fn run() -> i32 {
                         if k.len() > 19 {
                             err.write_str("\n                        ").ok();
                         } else {
-                            for _ in range(k.len(), 19) {
+                            for _ in k.len()..19 {
                                 err.write_char(' ').ok();
                             }
                             err.write_char(' ').ok();
@@ -141,5 +141,5 @@ pub fn run() -> i32 {
 fn main() {
     signal::block_all();
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }

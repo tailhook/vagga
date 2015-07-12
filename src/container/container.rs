@@ -74,13 +74,13 @@ impl Debug for Command {
 }
 
 impl Command {
-    pub fn new<T:BytesContainer>(name: String, cmd: T) -> Command {
+    pub fn new<T:AsRef<[u8]>>(name: String, cmd: T) -> Command {
         return Command {
             name: name,
             chroot: CString::from_slice("/".as_bytes()),
-            workdir: CString::from_slice(getcwd().unwrap().container_as_bytes()),
-            executable: CString::from_slice(cmd.container_as_bytes()),
-            arguments: vec!(CString::from_slice(cmd.container_as_bytes())),
+            workdir: CString::from_slice(&current_dir().unwrap()),
+            executable: CString::from_slice(&cmd),
+            arguments: vec!(CString::from_slice(&cmd)),
             namespaces: EnumSet::new(),
             environment: BTreeMap::new(),
             restore_sigmask: true,
@@ -112,12 +112,12 @@ impl Command {
     pub fn keep_sigmask(&mut self) {
         self.restore_sigmask = false;
     }
-    pub fn arg<T:BytesContainer>(&mut self, arg: T) {
-        self.arguments.push(CString::from_slice(arg.container_as_bytes()));
+    pub fn arg<T:AsRef<[u8]>>(&mut self, arg: T) {
+        self.arguments.push(CString::from_slice(arg.as_ref()));
     }
-    pub fn args<T:BytesContainer>(&mut self, arg: &[T]) {
+    pub fn args<T:AsRef<[u8]>>(&mut self, arg: &[T]) {
         self.arguments.extend(arg.iter()
-            .map(|v| CString::from_slice(v.container_as_bytes())));
+            .map(|v| CString::from_slice(v.as_ref())));
     }
     pub fn set_env(&mut self, key: String, value: String)
     {

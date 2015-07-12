@@ -107,7 +107,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     let mut mon = Monitor::new();
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("wrapper".to_string(),
-            self_exe_path().unwrap().join("vagga_wrapper"));
+            current_exe().unwrap().parent().unwrap()
+            .join("vagga_wrapper"));
         cmd.keep_sigmask();
         cmd.arg(cmdname.as_slice());
         cmd.arg(name.as_slice());
@@ -144,7 +145,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         for name in containers_in_netns.iter() {
             let child = sup.children.get(name).unwrap();
             let mut cmd = Command::new("wrapper".to_string(),
-                self_exe_path().unwrap().join("vagga_wrapper"));
+                current_exe().unwrap().parent().unwrap()
+                .join("vagga_wrapper"));
             cmd.keep_sigmask();
             cmd.arg(cmdname.as_slice());
             cmd.arg(name.as_slice());

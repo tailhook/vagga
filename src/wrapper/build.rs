@@ -96,7 +96,7 @@ impl<'a> Executor for RunBuilder<'a> {
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
-        try!(rmdir_recursive(path)
+        try!(remove_dir_all(path)
              .map_err(|x| format!("Error removing directory: {}", x)));
     }
     try_msg!(create_dir(path, true),
@@ -138,7 +138,7 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     try!(rename(tmp_path, final_path)
          .map_err(|x| format!("Error renaming dir: {}", x)));
     if let Some(ref path_to_remove) = path_to_remove {
-        try!(rmdir_recursive(path_to_remove)
+        try!(remove_dir_all(path_to_remove)
              .map_err(|x| format!("Error removing old dir: {}", x)));
     }
     return Ok(());
@@ -178,7 +178,7 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
     let destlink = Path::new("/work/.vagga").join(container.as_slice());
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
-        try!(unlink(&tmplink)
+        try!(remove_file(&tmplink)
             .map_err(|e| format!("Error removing temporary link: {}", e)));
     }
     let roots = if wrapper.ext_settings.storage_dir.is_some() {
@@ -195,7 +195,7 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
                 let tmpdir = base.join(".tmp".to_string() + oldname.as_slice());
                 rename(&dir, &tmpdir)
                     .map_err(|e| error!("Error renaming old dir: {}", e));
-                rmdir_recursive(&tmpdir)
+                remove_dir_all(&tmpdir)
                     .map_err(|e| error!("Error removing old dir: {}", e));
             }
         });
@@ -255,10 +255,10 @@ pub fn _build_container(cconfig: &Container, container: &String,
     }));
     let result = mon.run();
     try!(unmount(&Path::new("/vagga/root")));
-    try!(rmdir(&Path::new("/vagga/root"))
+    try!(remove_dir(&Path::new("/vagga/root"))
         .map_err(|e| format!("Can't unlink root: {}", e)));
     try!(unmount(&Path::new("/vagga/container")));
-    try!(rmdir(&Path::new("/vagga/container"))
+    try!(remove_dir(&Path::new("/vagga/container"))
         .map_err(|e| format!("Can't unlink root: {}", e)));
     match result {
         Killed => return Err(format!("Builder has died")),

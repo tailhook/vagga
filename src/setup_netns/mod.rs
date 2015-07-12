@@ -53,7 +53,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
-                set_exit_status(x);
+                exit(x);
                 return;
             }
         }
@@ -64,14 +64,17 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Ok(false) => {}
             Err(x) => {
                 error!("Error setting interface vagga_guest: {}", x);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         }
         sleep_ms(100);
     }
 
-    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    let mut busybox = Command::new(
+        env::current_exe().unwrap()
+        .parent().unwrap()
+        .join("busybox"));
     busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut ip_cmd = busybox.clone();
@@ -111,7 +114,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Ok(ExitStatus(0)) => {},
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         };
@@ -148,7 +151,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
-                set_exit_status(x);
+                exit(x);
                 return;
             }
         }
@@ -161,7 +164,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Ok(false) => {}
             Err(x) => {
                 error!("Error setting interface {}: {}", interface, x);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         }
@@ -169,7 +172,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
     }
     let mut commands = vec!();
 
-    let busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    let busybox = Command::new(env::current_exe().unwrap().parent().unwrap()
+        .join("busybox"));
 
     let mut ip_cmd = busybox.clone();
     ip_cmd.arg("ip");
@@ -226,7 +230,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Ok(ExitStatus(0)) => {},
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         };
@@ -263,7 +267,7 @@ fn setup_guest_namespace(args: Vec<String>) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
-                set_exit_status(x);
+                exit(x);
                 return;
             }
         }
@@ -274,7 +278,7 @@ fn setup_guest_namespace(args: Vec<String>) {
             Ok(false) => {}
             Err(x) => {
                 error!("Error setting interface {}: {}", interface, x);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         }
@@ -282,7 +286,9 @@ fn setup_guest_namespace(args: Vec<String>) {
     }
     let mut commands = vec!();
 
-    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    let mut busybox = Command::new(
+        env::current_exe().unwrap().parent().unwrap()
+        .join("busybox"));
     busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut ip_cmd = busybox.clone();
@@ -316,7 +322,7 @@ fn setup_guest_namespace(args: Vec<String>) {
             Ok(ExitStatus(0)) => {},
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         };
@@ -338,14 +344,7 @@ fn main() {
             .add_argument("options", List,
                 "Options specific for this kind");
         ap.stop_on_first_argument(true);
-        match ap.parse_args() {
-            Ok(()) => {}
-            Err(0) => return,
-            Err(x) => {
-                set_exit_status(x);
-                return;
-            }
-        }
+        ap.parse_args_or_exit();
     }
     args.insert(0, format!("vagga_setup_netns {}", kind));
     match kind.as_slice() {
@@ -353,7 +352,7 @@ fn main() {
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),
         _ => {
-            set_exit_status(1);
+            exit(1);
             error!("Unknown command {}", kind);
         }
     }

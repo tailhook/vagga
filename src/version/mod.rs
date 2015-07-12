@@ -83,5 +83,5 @@ fn main() {
     unsafe { dup2(2, 1) };
 
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }

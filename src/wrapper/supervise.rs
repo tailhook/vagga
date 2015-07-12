@@ -40,7 +40,7 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
             }
         }
     }
-    let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
+    let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
         .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));

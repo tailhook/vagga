@@ -1,6 +1,8 @@
 use std::ffi::CStr;
-use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy, create_dir};
+use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
+use std::fs::{symlink_metadata, read_link};
 use std::fs::FileType;
+use std::os::unix::fs::symlink;
 use std::ptr::null;
 use std::path::Path;
 
@@ -8,6 +10,7 @@ use libc::{c_int, uid_t, gid_t, c_char, c_void, timeval};
 use libc::chmod;
 
 use super::root::temporary_change_root;
+use super::super::file_util::create_dir_mode;
 
 pub type Time = f64;
 
@@ -57,15 +60,15 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
                 try_msg!(remove_dir_all(&entry.path()),
                     "Can't remove directory {dir:?}: {err}", dir=entry.path());
             } else {
-                try_msg!(remove_file(&path),
+                try_msg!(remove_file(&entry.path()),
                     "Can't remove file {dir:?}: {err}", dir=entry.path());
             }
         }
         Ok(())
     }));
     if remove_dir_itself {
-        try!(rmdir(dir).map_err(|e| format!("Can't remove dir {}: {}",
-                                            dir.display(), e)));
+        try_msg!(remove_dir(dir),
+            "Can't remove dir {dir:?}: {err}", dir=dir);
     }
     return Ok(());
 }
@@ -78,12 +81,11 @@ pub fn get_time() -> Time {
 
 pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
     // TODO(tailhook) use reflinks if supported
-    let filelist = try!(readdir(old)
-        .map_err(|e| format!("Error reading directory: {}", e)));
-    for item in filelist.iter() {
-        let stat = try!(item.lstat()
-            .map_err(|e| format!("Error stat for file: {}", e)));
-        let nitem = new.join(item.filename().unwrap());
+    for item in try_msg!(read_dir(old), "Can't open dir {d:?}: {err}", d=old) {
+        let entry = try_msg!(item, "Can't read dir entry {d:?}: {err}", d=old);
+        let stat = try_msg!(symlink_metadata(entry.path()),
+            "Can't stat file {path:?}: {err}", path=entry.path());
+        let nitem = new.join(entry.file_name());
         match stat.kind {
             FileType::RegularFile => {
                 try!(copy(item, &nitem)
@@ -91,7 +93,7 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
             }
             FileType::Directory => {
                 if !nitem.is_dir() {
-                    try_msg!(create_dir_perm(&nitem, stat.perm),
+                    try_msg!(create_dir_mode(&nitem, stat.perm),
                         "Can't create dir {dir:?}: {err}", dir=nitem);
                 }
                 try!(copy_dir(item, &nitem));
@@ -103,7 +105,7 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
                 warn!("Can't clone block-special {:?}, skipping", item);
             }
             FileType::Symlink => {
-                let lnk = try!(readlink(item)
+                let lnk = try!(read_link(item)
                     .map_err(|e| format!("Can't readlink: {}", e)));
                 try!(symlink(&lnk, &nitem)
                     .map_err(|e| format!("Can't symlink: {}", e)));

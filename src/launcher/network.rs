@@ -25,7 +25,7 @@ use super::super::container::container::Command as ContainerCommand;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use super::user;
-use super::super::file_util::create_dir;
+use super::super::file_util::{create_dir, create_dir_mode};
 
 static MAX_INTERFACES: usize = 2048;
 
@@ -90,7 +90,8 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     }
 
     let mut cmd = ContainerCommand::new("setup_netns".to_string(),
-        self_exe_path().unwrap().join("vagga_setup_netns"));
+        env::current_exe().unwrap().parent().unwrap()
+        .join("vagga_setup_netns"));
     cmd.set_max_uidmap();
     cmd.network_ns();
     cmd.set_env("TERM".to_string(),
@@ -386,10 +387,10 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
                 }
             }
         }
-        if let Err(e) = unlink(&netns_file) {
+        if let Err(e) = remove_file(&netns_file) {
             error!("Error removing file: {}", e);
         }
-        if let Err(e) = unlink(&userns_file) {
+        if let Err(e) = remove_file(&userns_file) {
             error!("Error removing file: {}", e);
         }
     }
@@ -461,7 +462,7 @@ fn get_unused_inteface_no() -> Result<usize, String> {
     let busy = try!(get_interfaces());
     let start = Range::new(0usize, MAX_INTERFACES - 100)
                 .ind_sample(&mut thread_rng());
-    for index in range(start, MAX_INTERFACES) {
+    for index in start..MAX_INTERFACES {
         if busy.contains(&index) {
             continue;
         }
@@ -510,7 +511,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
 
     let cmdname = Rc::new("setup_netns".to_string());
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        self_exe_path().unwrap().join("vagga_setup_netns"));
+        env::current_exe().unwrap().parent().unwrap()
+        .join("vagga_setup_netns"));
     cmd.args(&["bridge",
         "--interface", iif.as_slice(),
         "--ip", iip.as_slice(),
@@ -573,7 +575,9 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let mut ip_cmd = Command::new("ip");
     ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
-    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
+    let mut busybox = Command::new(
+        env::current_exe().unwrap().parent().unwrap()
+        .join("busybox"));
     busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
@@ -591,7 +595,8 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
 
     let cmdname = Rc::new("setup_netns".to_string());
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        self_exe_path().unwrap().join("vagga_setup_netns"));
+        env::current_exe().unwrap().parent().unwrap()
+        .join("vagga_setup_netns"));
     cmd.args(&["guest", "--interface", iif.as_slice(),
                         "--ip", ip.as_slice(),
                         "--hostname", hostname,

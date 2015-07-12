@@ -35,7 +35,7 @@ pub fn print_list(config: &Config, args: Vec<String>)
                 if k.len() > 19 {
                     out.write_str("\n                    ").ok();
                 } else {
-                    for _ in range(k.len(), 19) {
+                    for _ in k.len()..19 {
                         out.write_char(' ').ok();
                     }
                     out.write_char(' ').ok();
