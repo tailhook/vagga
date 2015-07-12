@@ -4,7 +4,7 @@ use std::env::{current_exe};
 use std::io::{BufRead, BufReader};
 use std::ffi::CString;
 use std::fs::{copy, read_link, hard_link,
-              remove_dir_all, read_dir};
+              remove_dir_all, read_dir, symlink_metadata};
 use std::fs::File;
 use std::fs::FileType;
 use std::os::unix::fs::symlink;
@@ -42,7 +42,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
     if !path.exists() {
         return Ok(path);
     }
-    for i in range(1isize, 101isize) {
+    for i in 1..101 {
         let result = format!("{}-{}", name, i);
         let path = storage_dir.join(result);
         if !path.exists() {
@@ -203,7 +203,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let bin_dir = vagga_dir.join("bin");
     try_msg!(create_dir(&bin_dir, false),
              "Error creating /vagga/bin: {err}");
-    try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
+    try!(bind_mount(&current_exe().unwrap().parent().unwrap(), &bin_dir));
     try!(remount_ro(&bin_dir));
 
     let etc_dir = mnt_dir.join("etc");
@@ -259,7 +259,7 @@ pub fn get_environment(container: &Container)
                   env::var("TERM").unwrap_or("dumb".to_string()));
     result.insert("PATH".to_string(),
                   DEFAULT_PATH.to_string());
-    for (k, v) in env().into_iter() {
+    for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             result.insert(k.slice_from(9).to_string(), v);
         }
@@ -291,15 +291,14 @@ pub fn get_environment(container: &Container)
 }
 
 fn hardlink_dir(old: &Path, new: &Path) -> Result<(), String> {
-    let filelist = try!(readdir(old)
-        .map_err(|e| format!("Error reading directory: {}", e)));
-    for item in filelist.iter() {
-        let stat = try!(item.lstat()
-            .map_err(|e| format!("Error stat for file: {}", e)));
-        let nitem = new.join(item.filename().unwrap());
+    for item in try_msg!(read_dir(old), "Can't open dir {d:?}: {err}", d=old) {
+        let entry = try_msg!(item, "Can't read dir entry {d:?}: {err}", d=old);
+        let stat = try_msg!(symlink_metadata(entry.path()),
+            "Can't stat file {path:?}: {err}", path=entry.path());
+        let nitem = new.join(entry.file_name());
         match stat.kind {
             FileType::RegularFile => {
-                try!(link(item, &nitem)
+                try!(hard_link(item, &nitem)
                     .map_err(|e| format!("Can't hard-link file: {}", e)));
             }
             FileType::Directory => {
@@ -316,7 +315,7 @@ fn hardlink_dir(old: &Path, new: &Path) -> Result<(), String> {
                 warn!("Can't clone block-special {:?}, skipping", item);
             }
             FileType::Symlink => {
-                let lnk = try!(readlink(item)
+                let lnk = try!(read_link(item)
                     .map_err(|e| format!("Can't readlink: {}", e)));
                 try!(symlink(&lnk, &nitem)
                     .map_err(|e| format!("Can't symlink: {}", e)));
@@ -352,8 +351,8 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             let newpath = Path::new("/vagga/base/.transient")
                 .join(format!("{}.{}", container_ver, pid));
             if newpath.exists() {
-                try!(rmdir_recursive(&newpath)
-                    .map_err(|e| format!("Error removing dir: {}", e)));
+                try_msg!(remove_dir_all(&newpath),
+                        "Error removing dir: {err}");
             }
             try_msg!(create_dir(&newpath, false),
                      "Error creating directory: {err}");

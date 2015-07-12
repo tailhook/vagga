@@ -34,12 +34,6 @@ fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
     if path.is_dir() {
         return Ok(())
     }
-    if recursive {
-        match path.parent() {
-            Some(p) if p != path => try!(create_dir(p, true)),
-            None => {}
-        }
-    }
     try!(fs::create_dir(path));
     try!(fs::set_permissions(path, fs::Permissions::from_mode(mode)));
     Ok(())

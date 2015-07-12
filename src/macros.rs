@@ -4,7 +4,7 @@ macro_rules! try_msg {
         try!(($op)
              .map_err(|e| format!($message, err=e)))
     );
-    ($op:expr, $message:expr, $($key:ident=$value:expr)*) => (
+    ($op:expr, $message:expr, $($key:ident=$value:expr),*) => (
         try!(($op)
              .map_err(|e| format!($message, err=e, $($key=$value),*)))
     );

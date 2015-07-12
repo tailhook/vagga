@@ -48,18 +48,17 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     // We temporarily change root, so that symlinks inside the dir
     // would do no harm. But note that dir itself can be a symlink
     try!(temporary_change_root(dir, || {
-        let dirlist = try!(readdir(&Path::new("/"))
+        let diriter = try!(read_dir(&Path::new("/"))
              .map_err(|e| format!("Can't read directory {}: {}",
                                   dir.display(), e)));
-        for path in dirlist.into_iter() {
-            if path.is_dir() {
-                try!(rmdir_recursive(&path)
-                    .map_err(|e| format!("Can't remove directory {}{}: {}",
-                        dir.display(), path.display(), e)));
+        for entry in diriter {
+            let entry = try_msg!(entry, "Error reading dir entry: {err}");
+            if entry.is_dir() {
+                try_msg!(remove_dir_all(&entry.path()),
+                    "Can't remove directory {dir:?}: {err}", dir=entry.path());
             } else {
-                try!(unlink(&path)
-                    .map_err(|e| format!("Can't remove file {}{}: {}",
-                        dir.display(), path.display(), e)));
+                try_msg!(remove_file(&path),
+                    "Can't remove file {dir:?}: {err}", dir=entry.path());
             }
         }
         Ok(())
