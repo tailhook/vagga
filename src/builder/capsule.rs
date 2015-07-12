@@ -6,7 +6,7 @@
 /// need more things.
 
 use std::collections::HashSet;
-use std::fs::{File, create_dir, create_dir_all};
+use std::fs::{File};
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -16,6 +16,7 @@ use config::settings::Settings;
 use container::mount::bind_mount;
 use super::context::BuildContext;
 use super::commands::alpine::LATEST_VERSION;
+use super::super::file_util::create_dir;
 
 pub use self::Feature::*;
 
@@ -80,12 +81,12 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
     if !capsule.capsule_base {
         let cache_dir = Path::new("/vagga/cache/alpine-cache");
         if !cache_dir.exists() {
-            try!(mkdir(&cache_dir, ALL_PERMISSIONS)
-                 .map_err(|e| format!("Error creating cache dir: {}", e)));
+            try_msg!(create_dir(&cache_dir, false),
+                 "Error creating cache dir: {err}");
         }
         let path = Path::new("/etc/apk/cache");
-        try!(mkdir_recursive(&path, ALL_PERMISSIONS)
-             .map_err(|e| format!("Error creating cache dir: {}", e)));
+        try_msg!(create_dir(&path, true),
+             "Error creating cache dir: {err}");
         try!(bind_mount(&cache_dir, &path));
 
         try!(apk_run(&[

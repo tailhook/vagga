@@ -59,10 +59,8 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
 
 fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
     let basedir = Path::new("/tmp/vagga");
-    if !basedir.is_dir() {
-        try!(mkdir(&basedir, ALL_PERMISSIONS)
-            .map_err(|e| format!("Can't create dir: {}", e)));
-    }
+    try_msg!(create_dir(&basedir, false),
+             "Can't create dir: {err}");
     let mut file = File::create(&basedir.join("hosts"));
     try!((writeln!(&mut file, "127.0.0.1 localhost"))
          .map_err(|e| format!("Error writing hosts: {}", e)));

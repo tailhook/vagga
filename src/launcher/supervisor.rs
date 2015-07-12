@@ -1,7 +1,6 @@
 use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::env::current_exe;
-use std::fs::{create_dir};
 use std::io::{stdout, stderr};
 use std::path::Path;
 use std::rc::Rc;
@@ -23,6 +22,7 @@ use config::command::ChildCommand::{BridgeCommand};
 use super::network;
 use super::user::{run_wrapper, common_child_command_env};
 use super::build::build_container;
+use super::super::file_util::create_dir;
 
 
 pub struct RunChild<'a> {
@@ -126,8 +126,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         let gwdir = network::namespace_dir();
         let nsdir = gwdir.join("children");
         if !nsdir.exists() {
-            try!(mkdir(&nsdir, ALL_PERMISSIONS)
-                .map_err(|e| format!("Failed to create dir: {}", e)));
+            try_msg!(create_dir(&nsdir, false),
+                     "Failed to create dir: {err}");
         }
         try!(network::join_gateway_namespaces());
         try!(unshare_namespace(NewMount)

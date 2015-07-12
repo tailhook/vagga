@@ -99,30 +99,30 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
         try!(rmdir_recursive(path)
              .map_err(|x| format!("Error removing directory: {}", x)));
     }
-    try!(mkdir_recursive(path, ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
+    try_msg!(create_dir(path, true),
+         "Error creating directory: {err}");
     let rootdir = path.join("root");
-    try!(mkdir(&rootdir, ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
+    try_msg!(create_dir(&rootdir, false),
+         "Error creating directory: {err}");
 
     let tgtbase = Path::new("/vagga/container");
-    try!(mkdir(&tgtbase, ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
+    try_msg!(create_dir(&tgtbase, false),
+         "Error creating directory: {err}");
     try!(bind_mount(path, &tgtbase));
 
     let tgtroot = Path::new("/vagga/root");
-    try!(mkdir(&tgtroot, ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
+    try_msg!(create_dir(&tgtroot, false),
+         "Error creating directory: {err}");
     try!(bind_mount(&rootdir, &tgtroot));
 
-    try!(mkdir(&tgtroot.join("dev"), ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
-    try!(mkdir(&tgtroot.join("sys"), ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
-    try!(mkdir(&tgtroot.join("proc"), ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
-    try!(mkdir(&tgtroot.join("work"), ALL_PERMISSIONS)
-         .map_err(|x| format!("Error creating directory: {}", x)));
+    try_msg!(create_dir(&tgtroot.join("dev"), false),
+         "Error creating directory: {err}");
+    try_msg!(create_dir(&tgtroot.join("sys"), false),
+         "Error creating directory: {err}");
+    try_msg!(create_dir(&tgtroot.join("proc"), false),
+         "Error creating directory: {err}");
+    try_msg!(create_dir(&tgtroot.join("work"), false),
+         "Error creating directory: {err}");
     return Ok(());
 }
 

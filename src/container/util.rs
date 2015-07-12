@@ -92,10 +92,8 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
             }
             FileType::Directory => {
                 if !nitem.is_dir() {
-                    try!(mkdir(&nitem, ALL_PERMISSIONS)
-                        .map_err(|e| format!("Can't create dir: {}", e)));
-                    try!(chmod(&nitem, stat.perm)
-                        .map_err(|e| format!("Can't chmod: {}", e)));
+                    try_msg!(create_dir_perm(&nitem, stat.perm),
+                        "Can't create dir {dir:?}: {err}", dir=nitem);
                 }
                 try!(copy_dir(item, &nitem));
             }

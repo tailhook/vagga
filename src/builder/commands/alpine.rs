@@ -1,9 +1,10 @@
 use std::io::Write;
-use std::fs::{create_dir_all, copy};
+use std::fs::{copy};
 use std::fs::File;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+use super::super::super::file_util::create_dir;
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine, Unknown};
 use super::super::capsule;
@@ -31,8 +32,8 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
     };
     if !base {
         try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
-        try!(mkdir_recursive(&Path::new("/vagga/root/etc/apk"), ALL_PERMISSIONS)
-            .map_err(|e| format!("Error creating apk dir: {}", e)));
+        try_msg!(create_dir(&Path::new("/vagga/root/etc/apk"), true),
+            "Error creating apk dir: {err}");
         try!(copy(
             &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
             &Path::new("/vagga/root/etc/apk/repositories"))

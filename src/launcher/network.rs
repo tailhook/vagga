@@ -1,6 +1,6 @@
 use std::collections::BitSet;
 use std::env;
-use std::fs::{create_dir, remove_file};
+use std::fs::{remove_file};
 use std::fs::File;
 use std::io::{stdout, stderr, BufRead, BufReader};
 use std::path::Path;
@@ -25,6 +25,7 @@ use super::super::container::container::Command as ContainerCommand;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use super::user;
+use super::super::file_util::create_dir;
 
 static MAX_INTERFACES: usize = 2048;
 
@@ -77,8 +78,8 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     let runtime_dir = namespace_dir();
     if !runtime_dir.exists() {
-        try!(mkdir(&runtime_dir, USER_RWX)
-            .map_err(|e| format!("Can't create runtime_dir: {}", e)));
+        try_msg!(create_dir_mode(&runtime_dir, 0o755),
+            "Can't create runtime_dir: {err}");
     }
 
     let netns_file = runtime_dir.join("netns");
