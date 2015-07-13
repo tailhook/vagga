@@ -1,3 +1,4 @@
+use std::os::unix::process::ExitStatusExt;
 use std::process::{Command, Stdio};
 
 use super::Wrapper;
@@ -20,8 +21,8 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
         .map_err(|e| format!("Can't run tar: {}", e))
         .map(|o| o.status)
     {
-        Ok(ExitStatus(x)) => x as i32,
-        Ok(ExitSignal(x)) => 128+(x as i32),
+        Ok(x) if x.signal().is_some() => 128+(x.signal().unwrap() as i32),
+        Ok(x) => x.code().unwrap() as i32,
         Err(x) => {
             error!("Error running build_shell: {}", x);
             return 127;

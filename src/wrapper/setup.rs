@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::env::{current_exe};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, ErrorKind};
 use std::ffi::CString;
 use std::fs::{copy, read_link, hard_link,
               remove_dir_all, read_dir, symlink_metadata};
@@ -77,18 +77,18 @@ fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
     match dir.lstat() {
-        Ok(stat) if stat.kind == Symlink => {
+        Ok(stat) if stat.kind == FileType::Symlink => {
             return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
                                "Please run `unlink {0}`"), dir.display()));
         }
-        Ok(stat) if stat.kind == Directory => {
+        Ok(stat) if stat.kind == FileType::Directory => {
             // ok
         }
         Ok(_) => {
             return Err(format!(concat!("The `{0}` must be a directory. ",
                                "Please run `unlink {0}`"), dir.display()));
         }
-        Err(ref e) if e.kind == FileNotFound => {
+        Err(ref e) if e.kind == ErrorKind::NotFound => {
             try_msg!(create_dir(dir, false),
                 "Can't create {dir:?}: {err}", dir=dir);
         }
@@ -126,7 +126,7 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
                         lnk.display()));
                 }
             }
-            Err(ref e) if e.kind == FileNotFound => {
+            Err(ref e) if e.kind == ErrorKind::NotFound => {
                 return Ok(Err((lnkdir, dir.clone())));
             }
             Err(ref e) => {

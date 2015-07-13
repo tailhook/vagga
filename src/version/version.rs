@@ -60,8 +60,8 @@ impl VersionHash for Builder {
                         loop {
                             let mut chunk = [0u8; 128*1024];
                             let bytes = match f.read(chunk.as_mut_slice()) {
+                                Ok(0) => break,
                                 Ok(bytes) => bytes,
-                                Err(ref e) if e.kind == EndOfFile => break,
                                 Err(e) => return Err(e),
                             };
                             hash.input(chunk[..bytes].as_slice());
