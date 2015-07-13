@@ -9,7 +9,7 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
     if let Err(text) = setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)
     {
-        error!("Error setting base file system: {}", text.as_slice());
+        error!("Error setting base file system: {}", &text);
         return 122;
     }
     match Command::new("/vagga/bin/busybox")

@@ -139,7 +139,7 @@ pub fn get_submounts_of(dir: &Path)
     for line in buf.lines() {
         let line = try!(line
             .map_err(|e| format!("Can't read mountinfo: {}", e)));
-        match MountRecord::from_str(line.as_slice()) {
+        match MountRecord::from_str(&line) {
             Ok(rec) => {
                 let path = Path::new(rec.mount_point);
                 if dir.is_ancestor_of(&path) {

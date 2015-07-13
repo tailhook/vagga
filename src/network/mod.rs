@@ -58,7 +58,7 @@ fn run() -> Result<(), Result<i32, String>> {
         .expect("Error parsing configuration file");  // TODO
 
     args.insert(0, format!("vagga_network {}", kind));
-    let graph = match kind.as_slice() {
+    let graph = match &kind[..] {
         "fullmesh" => try!(graphs::full_mesh_cmd(&cfg, args)),
         "disjoint" => try!(graphs::disjoint_graph_cmd(&cfg, args)),
         "split" => try!(graphs::split_graph_cmd(&cfg, args)),

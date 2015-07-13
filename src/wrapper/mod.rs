@@ -61,7 +61,7 @@ pub fn run() -> i32 {
     let (config, project_root) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
-            err.write_line(e.as_slice()).ok();
+            writeln!(&mut err, "{}", e).ok();
             return 126;
         }
     };
@@ -69,7 +69,7 @@ pub fn run() -> i32 {
     {
         Ok(tup) => tup,
         Err(e) => {
-            err.write_line(e.as_slice()).ok();
+            writeln!(&mut err, "{}", e).ok();
             return 126;
         }
     };
@@ -83,7 +83,7 @@ pub fn run() -> i32 {
 
     args.insert(0, format!("vagga {}", cmd));
 
-    let result = match cmd.as_slice() {
+    let result = match &cmd[..] {
         "_build_shell" => Ok(debug::run_interactive_build_shell(&wrapper)),
         "_build" => build::build_container_cmd(&wrapper, args),
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),

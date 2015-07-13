@@ -31,7 +31,7 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
     for (num, line) in reader.lines().enumerate() {
         let line = try!(line.map_err(
             |e| format!("Error reading /etc/subuid: {}", e)));
-        let parts: Vec<&str> = line.as_slice().split(':').collect();
+        let parts: Vec<&str> = line[..].split(':').collect();
         let start = FromStr::from_str(parts[1]);
         let count = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
@@ -53,7 +53,7 @@ fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
     for (num, line) in reader.lines().enumerate() {
         let line = try!(line.map_err(
             |e| format!("Error reading /etc/subgid: {}", e)));
-        let parts: Vec<&str> = line.as_slice().split(':').collect();
+        let parts: Vec<&str> = line[..].split(':').collect();
         let start = FromStr::from_str(parts[1]);
         let count = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
@@ -117,10 +117,10 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
         .and_then(|out| if out.status.status() == 0 { Ok(out.output) } else
             { Err(format!("Error running `id --user --name`")) })
-        .and_then(|val| from_utf8(val.as_slice()).map(|x| x.trim().to_string())
+        .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
-    let uid_map = read_uid_map(username.as_slice()).ok();
-    let gid_map = read_gid_map(username.as_slice()).ok();
+    let uid_map = read_uid_map(&username).ok();
+    let gid_map = read_gid_map(&username).ok();
 
     let uid = unsafe { geteuid() };
     let gid = unsafe { getegid() };
@@ -182,7 +182,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                               .join(pid.to_string())
                               .join("gid_map");
             try!(OpenOptions().write().open(&gid_map_file)
-                .write_all(uid_map.as_slice()));
+                .write_all(&uid_map));
         }
         &Ranges(ref uids, ref gids) => {
             let myuid = unsafe { geteuid() };
@@ -251,8 +251,8 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                     format!("/proc/{}/uid_map", pid))));
                 let value = membuf.into_inner();
                 debug!("Writing uid map ```{}```",
-                    String::from_utf8_lossy(value.as_slice()));
-                try!(file.write(value.as_slice()));
+                    String::from_utf8_lossy(&value));
+                try!(file.write(&value));
 
                 let mut membuf = Vec::with_capacity(100);
                 for &(ins, outs, cnt) in gids.iter() {
@@ -262,8 +262,8 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                     format!("/proc/{}/gid_map", pid))));
                 let value = membuf.into_inner();
                 debug!("Writing gid map ```{}```",
-                    String::from_utf8_lossy(value.as_slice()));
-                try!(file.write(value.as_slice()));
+                    String::from_utf8_lossy(&value));
+                try!(file.write(&value));
             }
         }
     }
@@ -278,7 +278,7 @@ fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
     for line in file.lines() {
         let line = try!(line
             .map_err(|e| format!("Error reading uid/gid map: {}", e)));
-        let mut words = line.as_slice().words();
+        let mut words = line[..].split_whitespace();
         let inside = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
         let outside = try!(words.next().and_then(|x| FromStr::from_str(x).ok())

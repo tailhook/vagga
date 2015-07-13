@@ -131,7 +131,7 @@ impl Command {
         exec_args.push(null());
         let environ_cstr: Vec<CString> = self.environment.iter()
             .map(|(k, v)| CString::from_slice(
-                (k.clone() + "=" + v.as_slice()).as_bytes()))
+                (k.clone() + "=" + &v).as_bytes()))
             .collect();
         let mut exec_environ: Vec<*const u8> = environ_cstr.iter()
             .map(|p| p.as_bytes().as_ptr()).collect();
@@ -149,8 +149,8 @@ impl Command {
             logprefix: logprefix.as_bytes().as_ptr(),
             fs_root: self.chroot.as_bytes().as_ptr(),
             exec_path: self.executable.as_bytes().as_ptr(),
-            exec_args: exec_args.as_slice().as_ptr(),
-            exec_environ: exec_environ.as_slice().as_ptr(),
+            exec_args: exec_args[..].as_ptr(),
+            exec_environ: exec_environ[..].as_ptr(),
             namespaces: convert_namespaces(self.namespaces),
             user_id: self.user_id,
             restore_sigmask: if self.restore_sigmask { 1 } else { 0 },

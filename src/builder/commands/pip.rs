@@ -20,9 +20,9 @@ pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
         res.push(packages::PipPy3);
     }
     for name in pkgs.iter() {
-        if name.as_slice().starts_with("git+") {
+        if name[..].starts_with("git+") {
             res.push(packages::Git);
-        } else if name.as_slice().starts_with("hg+") {
+        } else if name[..].starts_with("hg+") {
             res.push(packages::Mercurial);
         }
     }
@@ -64,7 +64,7 @@ pub fn pip_install(ctx: &mut BuildContext, ver: u8, pkgs: &Vec<String>)
     try!(packages::ensure_packages(ctx, &scan_features(ver, pkgs)[0..]));
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.extend(pkgs.clone().into_iter());
-    run_command_at_env(ctx, pip_cli.as_slice(), &Path::new("/work"), &[
+    run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }
 
@@ -90,7 +90,7 @@ pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.push("--requirement".to_string());
     pip_cli.push(reqtxt.display().to_string()); // TODO(tailhook) fix conversion
-    run_command_at_env(ctx, pip_cli.as_slice(), &Path::new("/work"), &[
+    run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }
 

@@ -60,7 +60,7 @@ fn choose_mirror() -> String {
         .map(|x| x.trim())
         .filter(|x| x.len() > 0 && !x.starts_with("#"))
         .collect::<Vec<&str>>();
-    let mirror = thread_rng().choose(repos.as_slice())
+    let mirror = thread_rng().choose(&repos)
         .expect("At least one mirror should work");
     debug!("Chosen mirror {}", mirror);
     return mirror.to_string();

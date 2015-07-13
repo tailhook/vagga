@@ -28,12 +28,12 @@ pub fn commandline_cmd(command: &CommandInfo,
 {
     // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
-            .unwrap_or(command.run[0].as_slice() != "/bin/sh");
+            .unwrap_or(&command.run[0][..] != "/bin/sh");
     let mut args = Vec::new();
     if !has_args {
         let mut ap = ArgumentParser::new();
         ap.set_description(command.description.as_ref()
-            .map(|x| x.as_slice()).unwrap_or(""));
+            .map(|x| &x[..]).unwrap_or(""));
         ap.stop_on_first_argument(true);
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -46,7 +46,7 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
-    let mut cmdline = command.run.clone() + args.as_slice();
+    let mut cmdline = command.run.clone() + &args;
 
     let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
@@ -67,16 +67,16 @@ pub fn commandline_cmd(command: &CommandInfo,
     };
     let cont_ver = try!(container_ver(&command.container));
     try!(setup::setup_filesystem(cconfig,
-        write_mode, cont_ver.as_slice()));
+        write_mode, &cont_ver));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {
         env.insert(k.clone(), v.clone());
     }
-    let cpath = try!(find_cmd(cmdline.remove(0).as_slice(), &env));
+    let cpath = try!(find_cmd(&cmdline.remove(0), &env));
 
     let mut cmd = Command::new("run".to_string(), &cpath);
-    cmd.args(cmdline.as_slice());
+    cmd.args(&cmdline);
     if let Some(euid) = command.external_user_id {
         cmd.set_uidmap(Ranges(vec!(
             (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
@@ -86,7 +86,7 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmd.set_uidmap(uid_map.clone());
     }
     if let Some(ref wd) = command.work_dir {
-        cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
+        cmd.set_workdir(&Path::new("/work").join(&wd));
     } else {
         cmd.set_workdir(&Path::new(
             env::var("PWD").unwrap_or("/work".to_string())));

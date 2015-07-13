@@ -79,10 +79,10 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         true => setup::WriteMode::TransientHardlinkCopy(pid),
     };
     let cont_ver = try!(container_ver(&container));
-    try!(setup::setup_filesystem(cconfig, write_mode, cont_ver.as_slice()));
+    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
 
     let env = try!(setup::get_environment(cconfig));
-    let mut cpath = Path::new(command.as_slice());
+    let mut cpath = Path::new(&command);
     let args = args.clone().to_vec();
     if command.contains("/") {
     } else {
@@ -103,12 +103,12 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         }
         if !cpath.is_absolute() {
             return Err(format!("Command {} not found in {:?}",
-                cpath.display(), paths.as_slice()));
+                cpath.display(), &paths));
         }
     }
 
     let mut cmd = Command::new("run".to_string(), &cpath);
-    cmd.args(args.as_slice());
+    cmd.args(&args);
     cmd.set_workdir(&Path::new(env::var("PWD").unwrap_or("/work".to_string())));
     uid_map.as_ref().map(|v| cmd.set_uidmap(v.clone()));
     cmd.set_env("TERM".to_string(),

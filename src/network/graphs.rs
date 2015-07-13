@@ -132,7 +132,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
     let mut clusters = vec!();
     let mut cluster: Vec<String> = vec!();
     for v in nodes.iter() {
-        if v.as_slice() == "--" {
+        if &v[..] == "--" {
             if cluster.len() > 0 {
                 clusters.push(cluster);
                 cluster = vec!();

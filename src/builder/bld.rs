@@ -191,7 +191,7 @@ impl BuildCommand for Builder {
             }
             &B::Cmd(ref cmd) => {
                 if build {
-                    try!(generic::run_command(ctx, cmd.as_slice()));
+                    try!(generic::run_command(ctx, &cmd));
                 }
             }
             &B::Env(ref pairs) => {

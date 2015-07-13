@@ -99,7 +99,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         => setup::WriteMode::TransientHardlinkCopy(pid),
     };
     let cont_ver = try!(container_ver(&command.container));
-    try!(setup::setup_filesystem(cconfig, write_mode, cont_ver.as_slice()));
+    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
 
     try!(_write_hosts(supervise));
 
@@ -108,10 +108,10 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         env.insert(k.clone(), v.clone());
     }
     let mut cmdline = command.run.clone();
-    let cpath = try!(find_cmd(cmdline.remove(0).as_slice(), &env));
+    let cpath = try!(find_cmd(&cmdline.remove(0), &env));
 
     let mut cmd = Command::new(name.to_string(), &cpath);
-    cmd.args(cmdline.as_slice());
+    cmd.args(&cmdline);
     cmd.set_env("VAGGA_COMMAND".to_string(), cmdname.to_string());
     cmd.set_env("VAGGA_SUBCOMMAND".to_string(), name.to_string());
     if !bridge {
@@ -125,7 +125,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         }
     }
     if let Some(ref wd) = command.work_dir {
-        cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
+        cmd.set_workdir(&Path::new("/work").join(&wd));
     } else {
         cmd.set_workdir(&Path::new(
             env::var("PWD").unwrap_or("/work".to_string())));

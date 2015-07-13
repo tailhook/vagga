@@ -38,7 +38,7 @@ impl VersionHash for Builder {
                         let mut f = BufReader::new(f);
                         for line in f.lines() {
                             let line = try!(line);
-                            let chunk = line.as_slice().trim();
+                            let chunk = line[..].trim();
                             // Ignore empty lines and comments
                             if chunk.len() == 0 || chunk.starts_with("#") {
                                 continue;
@@ -64,7 +64,7 @@ impl VersionHash for Builder {
                                 Ok(bytes) => bytes,
                                 Err(e) => return Err(e),
                             };
-                            hash.input(chunk[..bytes].as_slice());
+                            hash.input(chunk[..bytes]);
                         }
                         Ok(())
                     })

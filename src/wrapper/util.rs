@@ -9,7 +9,7 @@ pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
         return Ok(Path::new(cmd));
     } else {
         if let Some(paths) = env.get(&"PATH".to_string()) {
-            for dir in paths.as_slice().split(':') {
+            for dir in paths[..].split(':') {
                 let path = Path::new(dir);
                 if !path.is_absolute() {
                     warn!("All items in PATH must be absolute, not {}",
@@ -21,8 +21,8 @@ pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
                     return Ok(path);
                 }
             }
-            return Err(format!("Command {} not found in {}",
-                cmd, paths.as_slice()));
+            return Err(format!("Command {} not found in {:?}",
+                cmd, paths));
         } else {
             return Err(format!("Command {} is not absolute and no PATH set",
                 cmd));

@@ -24,7 +24,7 @@ pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
     let mut container = "".to_string();
     let mut copy = false;
     {
-        args.insert(0, "vagga ".to_string() + cmdname.as_slice());
+        args.insert(0, "vagga ".to_string() + &cmdname);
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Runs arbitrary command inside the container
@@ -78,7 +78,7 @@ pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
     let mut container = "".to_string();
     let mut pid = None;
     {
-        args.insert(0, "vagga ".to_string() + cname.as_slice());
+        args.insert(0, "vagga ".to_string() + &cname);
         let mut ap = ArgumentParser::new();
         ap.set_description(
             "Run command (or shell) in one of the vagga's network namespaces");

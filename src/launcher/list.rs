@@ -29,7 +29,7 @@ pub fn print_list(config: &Config, args: Vec<String>)
     }
     let mut out = stdout();
     for (k, cmd) in config.commands.iter() {
-        out.write_str(k.as_slice()).ok();
+        out.write_all(k.as_bytes()).ok();
         match cmd.description() {
             Some(ref val) => {
                 if k.len() > 19 {
@@ -40,7 +40,7 @@ pub fn print_list(config: &Config, args: Vec<String>)
                     }
                     out.write_char(' ').ok();
                 }
-                out.write_str(val.as_slice()).ok();
+                out.write_all(val.as_bytes()).ok();
             }
             None => {}
         }

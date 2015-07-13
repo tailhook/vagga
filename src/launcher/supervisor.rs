@@ -57,9 +57,9 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         panic!("Only stop-on-failure mode implemented");
     }
     {
-        args.insert(0, "vagga ".to_string() + cmdname.as_slice());
+        args.insert(0, "vagga ".to_string() + &cmdname);
         let mut ap = ArgumentParser::new();
-        ap.set_description(sup.description.as_ref().map(|x| x.as_slice())
+        ap.set_description(sup.description.as_ref().map(|x| &x[..])
             .unwrap_or("Run multiple processes simultaneously"));
         // TODO(tailhook) implement --only and --exclude
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -110,8 +110,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             current_exe().unwrap().parent().unwrap()
             .join("vagga_wrapper"));
         cmd.keep_sigmask();
-        cmd.arg(cmdname.as_slice());
-        cmd.arg(name.as_slice());
+        cmd.arg(&cmdname);
+        cmd.arg(&name);
         common_child_command_env(&mut cmd, Some(workdir));
         cmd.container();
         cmd.set_max_uidmap();
@@ -148,8 +148,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                 current_exe().unwrap().parent().unwrap()
                 .join("vagga_wrapper"));
             cmd.keep_sigmask();
-            cmd.arg(cmdname.as_slice());
-            cmd.arg(name.as_slice());
+            cmd.arg(&cmdname);
+            cmd.arg(&name);
             common_child_command_env(&mut cmd, Some(workdir));
             cmd.container();
 
@@ -164,12 +164,12 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                 let netw = child.network().unwrap();
                 let net_ns;
                 let uts_ns;
-                net_ns = nsdir.join("net.".to_string() + netw.ip.as_slice());
-                uts_ns = nsdir.join("uts.".to_string() + netw.ip.as_slice());
+                net_ns = nsdir.join("net.".to_string() + &netw.ip);
+                uts_ns = nsdir.join("uts.".to_string() + &netw.ip);
                 // TODO(tailhook) support multiple commands with same IP
                 try!(network::setup_container(&net_ns, &uts_ns,
-                    name.as_slice(), netw.ip.as_slice(),
-                    netw.hostname.as_ref().unwrap_or(name).as_slice()));
+                    &name, &netw.ip,
+                    &netw.hostname.as_ref().unwrap_or(name)));
                 try!(set_namespace(&net_ns, NewNet)
                     .map_err(|e| format!("Error setting netns: {}", e)));
                 try!(set_namespace(&uts_ns, NewUts)

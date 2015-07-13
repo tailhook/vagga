@@ -14,7 +14,7 @@ fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
     let rpath = Path::new("/");
     let chroot = Path::new("/vagga/root");
     if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {
-        for dir in paths.as_slice().split(':') {
+        for dir in paths[..].split(':') {
             let path = Path::new(dir);
             if !path.is_absolute() {
                 warn!("All items in PATH must be absolute, not {}",
@@ -36,16 +36,16 @@ pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
     path: &Path, env: &[(&str, &str)])
     -> Result<(), String>
 {
-    let cmdpath = if cmdline[0].as_slice().starts_with("/") {
-        Path::new(cmdline[0].as_slice())
+    let cmdpath = if cmdline[0][..].starts_with("/") {
+        Path::new(&cmdline[0])
     } else {
-        try!(find_cmd(ctx, cmdline[0].as_slice()))
+        try!(find_cmd(ctx, &cmdline[0]))
     };
 
     let mut cmd = Command::new("run".to_string(), &cmdpath);
     cmd.set_workdir(path);
     cmd.chroot(&Path::new("/vagga/root"));
-    cmd.args(cmdline[1..].as_slice());
+    cmd.args(&cmdline[1..]);
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
     }
@@ -85,15 +85,15 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
     env: &[(&str, &str)])
     -> Result<Vec<u8>, String>
 {
-    let cmdpath = if cmdline[0].as_slice().starts_with("/") {
-        Path::new(cmdline[0].as_slice())
+    let cmdpath = if cmdline[0][..].starts_with("/") {
+        Path::new(&cmdline[0])
     } else {
-        try!(find_cmd(ctx, cmdline[0].as_slice()))
+        try!(find_cmd(ctx, &cmdline[0]))
     };
 
     let mut cmd = Command::new("run".to_string(), &cmdpath);
     cmd.chroot(&Path::new("/vagga/root"));
-    cmd.args(cmdline[1..].as_slice());
+    cmd.args(&cmdline[1..]);
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
     }

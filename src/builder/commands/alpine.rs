@@ -60,7 +60,7 @@ pub fn install(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     capsule::apk_run(&[
         "--root", "/vagga/root",
         "add",
-        ], pkgs.as_slice())
+        ], &pkgs[..])
 }
 
 pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
@@ -69,7 +69,7 @@ pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     capsule::apk_run(&[
         "--root", "/vagga/root",
         "del",
-        ], pkgs.as_slice())
+        ], &pkgs[..])
 }
 
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
@@ -161,7 +161,7 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
         try!(capsule::apk_run(&[
             "--root", "/vagga/root",
             "add",
-            ], to_install.as_slice()));
+            ], &to_install[..]));
     }
     return Ok(unsupp);
 }

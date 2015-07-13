@@ -20,7 +20,7 @@ fn has_interface(name: &str) -> Result<bool, String> {
             try!(lineiter.next().unwrap());
             for line in lineiter {
                 let line = try!(line);
-                let mut splits = line.as_slice().splitn(1, ':');
+                let mut splits = line[..].splitn(1, ':');
                 let interface = splits.next().unwrap();
                 if interface.trim() == name {
                     return Ok(true);
@@ -89,7 +89,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
 
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", guest_ip.as_slice(), "dev", "vagga_guest"]);
+    cmd.args(&["addr", "add", &guest_ip[..], "dev", "vagga_guest"]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
@@ -97,7 +97,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
     // Unfortunately there is no iptables in busybox so use iptables from host
@@ -156,10 +156,10 @@ fn setup_bridge_namespace(args: Vec<String>) {
             }
         }
     }
-    let ports: Vec<(u16, String, u16)> = json::decode(ports_str.as_slice())
+    let ports: Vec<(u16, String, u16)> = json::decode(&ports_str)
         .ok().expect("Port-forwards JSON is invalid");
     loop {
-        match has_interface(interface.as_slice()) {
+        match has_interface(&interface) {
             Ok(true) => break,
             Ok(false) => {}
             Err(x) => {
@@ -184,16 +184,16 @@ fn setup_bridge_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", format!("{}/30", ip).as_slice(),
-                       "dev", interface.as_slice()]);
+    cmd.args(&["addr", "add", &format!("{}/30", ip)[..],
+                       "dev", &interface]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    cmd.args(&["link", "set", "dev", &interface[..], "up"]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
     let mut cmd = busybox.clone();
@@ -219,8 +219,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
         let mut cmd = Command::new("iptables");
         cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
         cmd.args(&["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
-            "--dport", format!("{}", sport).as_slice(), "-j", "DNAT",
-            "--to-destination", format!("{}:{}", dip, dport).as_slice()]);
+            "--dport", &format!("{}", sport)[..], "-j", "DNAT",
+            "--to-destination", &format!("{}:{}", dip, dport)[..]]);
         commands.push(cmd);
     }
 
@@ -273,7 +273,7 @@ fn setup_guest_namespace(args: Vec<String>) {
         }
     }
     loop {
-        match has_interface(interface.as_slice()) {
+        match has_interface(&interface) {
             Ok(true) => break,
             Ok(false) => {}
             Err(x) => {
@@ -300,20 +300,20 @@ fn setup_guest_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", format!("{}/24", ip).as_slice(),
-                       "dev", interface.as_slice()]);
+    cmd.args(&["addr", "add", &format!("{}/24", ip)[..],
+                       "dev", &interface[..]]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    cmd.args(&["link", "set", "dev", &interface[..], "up"]);
     commands.push(cmd);
 
     let mut cmd = busybox.clone();
-    cmd.args(&["hostname", hostname.as_slice()]);
+    cmd.args(&["hostname", &hostname[..]]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
     for cmd in commands.iter() {
@@ -347,7 +347,7 @@ fn main() {
         ap.parse_args_or_exit();
     }
     args.insert(0, format!("vagga_setup_netns {}", kind));
-    match kind.as_slice() {
+    match &kind[..] {
         "gateway" => setup_gateway_namespace(args),
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),

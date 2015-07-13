@@ -56,7 +56,7 @@ pub fn run() -> i32 {
     let (config, cfg_dir) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
-            err.write_line(e.as_slice()).ok();
+            writeln!(&mut err, "{}", e).ok();
             return 126;
         }
     };
@@ -64,40 +64,39 @@ pub fn run() -> i32 {
                              .unwrap_or(Path::new("."));
 
     for k in propagate_env.into_iter() {
-        env::set_var(("VAGGAENV_".to_string() + &k[..]).as_slice(),
-            env::var(k.as_slice()).unwrap_or("".to_string())).unwrap();
+        env::set_var(&("VAGGAENV_".to_string() + &k[..]),
+            env::var(&k).unwrap_or("".to_string())).unwrap();
     }
     for pair in set_env.into_iter() {
-        let mut pairiter = pair.as_slice().splitn(1, '=');
+        let mut pairiter = pair[..].splitn(1, '=');
         let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
         if let Some(value) = pairiter.next() {
-            env::set_var(key.as_slice(), value.to_string()).unwrap();
+            env::set_var(&key, value.to_string()).unwrap();
         } else {
-            env::remove_var(key.as_slice());
+            env::remove_var(&key);
         }
     }
 
-    let result:Result<i32, String> = match cname.as_slice() {
+    let result:Result<i32, String> = match &cname[..] {
         "" => {
             err.write_line("Available commands:").ok();
             for (k, cmd) in config.commands.iter() {
-                err.write_str("    ").ok();
-                err.write_str(k.as_slice()).ok();
+                write!(&mut err, "    {}", k).ok();
                 match cmd.description() {
                     Some(ref val) => {
                         if k.len() > 19 {
-                            err.write_str("\n                        ").ok();
+                            write!(&mut err, "\n                        ").ok();
                         } else {
                             for _ in k.len()..19 {
-                                err.write_char(' ').ok();
+                                err.write_all(b' ').ok();
                             }
-                            err.write_char(' ').ok();
+                            err.write_all(b" ").ok();
                         }
-                        err.write_str(val.as_slice()).ok();
+                        err.write_all(&val).ok();
                     }
                     None => {}
                 }
-                err.write_char('\n').ok();
+                err.write_all(b"\n").ok();
             }
             return 127;
         }
@@ -132,7 +131,7 @@ pub fn run() -> i32 {
             return rc;
         }
         Err(text) =>  {
-            err.write_line(text.as_slice()).ok();
+            writeln!(&mut err, "{}", text).ok();
             return 121;
         }
     }

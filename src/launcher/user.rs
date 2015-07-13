@@ -84,8 +84,8 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     let mut cmd = Command::new("wrapper".to_string(),
         env::current_exe().unwrap().join("vagga_wrapper"));
     cmd.keep_sigmask();
-    cmd.arg(cmdname.as_slice());
-    cmd.args(args.as_slice());
+    cmd.arg(&cmdname);
+    cmd.args(&args);
     common_child_command_env(&mut cmd, workdir);
     cmd.container();
     if userns {

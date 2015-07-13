@@ -273,7 +273,7 @@ pub fn get_environment(container: &Container)
             let line = try!(line_read
                 .map_err(|e| format!("Error reading environment file {}: {}",
                     filename.display(), e)));
-            let mut pair = line.as_slice().splitn(2, '=');
+            let mut pair = line[..].splitn(2, '=');
             let key = pair.next().unwrap();
             let mut value = try!(pair.next()
                 .ok_or(format!("Error reading environment file {}: bad format",
@@ -374,8 +374,7 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
         match vol {
             &Tmpfs(ref params) => {
                 try!(mount_tmpfs(&dest,
-                    format!("size={},mode=0{:o}", params.size, params.mode)
-                    .as_slice()));
+                    &format!("size={},mode=0{:o}", params.size, params.mode)));
             }
             &VaggaBin => {
                 try!(bind_mount(&Path::new("/vagga/bin"), &dest));

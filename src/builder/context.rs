@@ -99,7 +99,7 @@ impl<'a> BuildContext<'a> {
         assert!(path.is_absolute());
         let path = path.path_relative_from(&Path::new("/")).unwrap();
         if self.cache_dirs.insert(path.clone(), name.clone()).is_none() {
-            let cache_dir = Path::new("/vagga/cache").join(name.as_slice());
+            let cache_dir = Path::new("/vagga/cache").join(&name);
             if !cache_dir.exists() {
                 try!(create_dir(&cache_dir)
                      .map_err(|e| format!("Error creating cache dir: {}", e)));

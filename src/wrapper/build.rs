@@ -47,7 +47,7 @@ impl<'a> Executor for RunVersion<'a> {
             Path::new("/vagga/bin/vagga_version"));
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
-        cmd.arg(self.container.as_slice());
+        cmd.arg(&self.contaer);
         cmd.arg("--settings");
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
@@ -76,7 +76,7 @@ impl<'a> Executor for RunBuilder<'a> {
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
         cmd.container();
-        cmd.arg(self.container.as_slice());
+        cmd.arg(&self.container);
         cmd.arg("--settings");
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(),
@@ -172,7 +172,7 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
     let cconfig = try!(wrapper.config.containers.get(container)
         .ok_or(format!("Container {} not found", container)));
     let name = try!(_build_container(cconfig, container, force, wrapper));
-    let destlink = Path::new("/work/.vagga").join(container.as_slice());
+    let destlink = Path::new("/work/.vagga").join(&container);
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
         try!(remove_file(&tmplink)
@@ -183,13 +183,13 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
     } else {
         Path::new(".roots")
     };
-    let linkval = roots.join(name.as_slice()).join("root");
+    let linkval = roots.join(&name).join("root");
     if cconfig.auto_clean {
         container_ver(container).map(|oldname| {
             if oldname != name {
                 let base = Path::new("/vagga/base/.roots");
-                let dir = base.join(oldname.as_slice());
-                let tmpdir = base.join(".tmp".to_string() + oldname.as_slice());
+                let dir = base.join(&oldname);
+                let tmpdir = base.join(".tmp".to_string() + &oldname);
                 rename(&dir, &tmpdir)
                     .map_err(|e| error!("Error renaming old dir: {}", e));
                 remove_dir_all(&tmpdir)
@@ -225,9 +225,9 @@ pub fn _build_container(cconfig: &Container, container: &String,
         Exit(0) => {
             debug!("Container version: {:?}", ver.borrow());
             let name = format!("{}.{}", container,
-                ver.borrow().as_slice().slice_to(8));
+                &ver.borrow()[..8]);
             let finalpath = Path::new("/vagga/base/.roots")
-                .join(name.as_slice());
+                .join(&name);
             if finalpath.exists() {
                 debug!("Path {} is already built",
                        finalpath.display());
@@ -282,8 +282,8 @@ pub fn _build_container(cconfig: &Container, container: &String,
         };
     }
     let name = format!("{}.{}", container,
-        ver.borrow().as_slice().slice_to(8));
-    let finalpath = Path::new("/vagga/base/.roots").join(name.as_slice());
+        &ver.borrow()[..8]);
+    let finalpath = Path::new("/vagga/base/.roots").join(&name);
     debug!("Committing {} -> {}", tmppath.display(),
                                   finalpath.display());
     match commit_root(&tmppath, &finalpath) {

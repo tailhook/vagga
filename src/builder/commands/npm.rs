@@ -14,7 +14,7 @@ pub fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
     res.push(packages::NodeJsDev);
     res.push(packages::Npm);
     for name in pkgs.iter() {
-        if name.as_slice().starts_with("git://") {
+        if name[..].starts_with("git://") {
             res.push(packages::Git);
         } // Does npm support mercurial?
     }
@@ -32,7 +32,7 @@ pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
 {
     try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
                            "npm-cache".to_string()));
-    try!(ensure_npm(ctx, scan_features(pkgs).as_slice()));
+    try!(ensure_npm(ctx, &scan_features(pkgs)[..]));
     let mut args = vec!(
         "/usr/bin/npm".to_string(),
         "install".to_string(),
@@ -41,7 +41,7 @@ pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
         "--global".to_string(),
         );
     args.extend(pkgs.clone().into_iter());
-    run_command(ctx, args.as_slice())
+    run_command(ctx, &args[..])
 }
 
 pub fn list(ctx: &mut BuildContext) -> Result<(), String> {

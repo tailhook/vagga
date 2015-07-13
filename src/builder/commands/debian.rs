@@ -171,7 +171,7 @@ pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
         "-y".to_string(),
         );
     args.extend(pkgs.clone().into_iter());
-    run_command(ctx, args.as_slice())
+    run_command(ctx, &args[..])
 }
 
 pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
@@ -183,7 +183,7 @@ pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
         "-y".to_string(),
         );
     args.extend(pkgs.clone().into_iter());
-    run_command(ctx, args.as_slice())
+    run_command(ctx, &args[..])
 }
 
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
@@ -210,12 +210,12 @@ pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)
     -> Result<(), String>
 {
     let mut hash = Sha256::new();
-    hash.input_str(repo.url.as_slice());
+    hash.input_str(&repo.url);
     hash.input(&[0]);
-    hash.input_str(repo.suite.as_slice());
+    hash.input_str(&repo.suite);
     hash.input(&[0]);
     for cmp in repo.components.iter() {
-        hash.input_str(cmp.as_slice());
+        hash.input_str(&cmp);
         hash.input(&[0]);
     }
     let name = format!("{}-{}.list",
@@ -230,7 +230,7 @@ pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)
     };
 
     File::create(&Path::new("/vagga/root/etc/apt/sources.list.d")
-                 .join(name.as_slice()))
+                 .join(&name))
         .and_then(|mut f| {
             try!(write!(&mut f, "deb {} {}", repo.url, repo.suite));
             for item in repo.components.iter() {

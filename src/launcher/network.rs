@@ -107,11 +107,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     }
     cmd.arg("gateway");
     cmd.arg("--guest-ip");
-    cmd.arg(guest_ip.as_slice());
+    cmd.arg(&guest_ip);
     cmd.arg("--gateway-ip");
-    cmd.arg(host_ip.as_slice());
+    cmd.arg(&host_ip);
     cmd.arg("--network");
-    cmd.arg(network.as_slice());
+    cmd.arg(&network);
     let child_pid = if dry_run { 123456 } else { try!(cmd.spawn()) };
 
     println!("We will run network setup commands with sudo.");
@@ -131,7 +131,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["link", "add", "vagga_guest", "type", "veth",
-              "peer", "name", interface_name.as_slice()]);
+              "peer", "name", &interface_name[..]]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
@@ -140,20 +140,20 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     commands.push(cmd);
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", host_ip_net.as_slice(),
-              "dev", interface_name.as_slice()]);
+    cmd.args(&["addr", "add", &host_ip_net[..],
+              "dev", &interface_name[..]]);
     commands.push(cmd);
 
     let nforward = try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
         .and_then(|mut f| f.read_to_string())
         .map_err(|e| format!("Can't read sysctl: {}", e)));
 
-    if nforward.as_slice().trim() == "0" {
+    if nforward[..].trim() == "0" {
         let mut cmd = sysctl.clone();
         cmd.arg("net.ipv4.ip_forward=1");
         commands.push(cmd);
     } else {
-        info!("Sysctl is ok [{}]", nforward.as_slice().trim());
+        info!("Sysctl is ok [{}]", nforward[..].trim());
     }
 
     let mut cmd = sysctl.clone();
@@ -163,7 +163,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     let nameservers = try!(get_nameservers());
     info!("Detected nameservers: {:?}", nameservers);
 
-    let local_dns = nameservers.as_slice() == ["127.0.0.1".to_string()];
+    let local_dns = &nameservers[..] == ["127.0.0.1".to_string()];
 
     if !dry_run {
         try!(File::create(&netns_file)
@@ -192,7 +192,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     let mut iprules = vec!();
     if local_dns {
         iprules.push(vec!("-I", "INPUT",
-                          "-i", interface_name.as_slice(),
+                          "-i", &interface_name[..],
                           "-d", "127.0.0.1",
                           "-j", "ACCEPT"));
         //  The "tcp" rule doesn't actually work for now for dnsmasq
@@ -200,15 +200,15 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         //  It may work for bind though.
         iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
                           "-p", "tcp", "-i", "vagga",
-                          "-d", host_ip.as_slice(), "--dport", "53",
+                          "-d", &host_ip[..], "--dport", "53",
                           "-j", "DNAT", "--to-destination", "127.0.0.1"));
         iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
                           "-p", "udp", "-i", "vagga",
-                          "-d", host_ip.as_slice(), "--dport", "53",
+                          "-d", &host_ip[..], "--dport", "53",
                           "-j", "DNAT", "--to-destination", "127.0.0.1"));
     }
     iprules.push(vec!("-t", "nat", "-A", "POSTROUTING",
-                      "-s", network.as_slice(), "-j", "MASQUERADE"));
+                      "-s", &network[..], "-j", "MASQUERADE"));
 
 
     println!("");
@@ -263,7 +263,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                         *item = "-C";
                     }
                 }
-                cmd.args(check_rule.as_slice());
+                cmd.args(&check_rule[..]);
                 let exists = match cmd.status() {
                     Ok(ExitStatus(0)) => true,
                     Ok(ExitStatus(1)) => false,
@@ -276,7 +276,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                     info!("Rule {:?} already setup. Skipping...", rule);
                 } else {
                     let mut cmd = iptables.clone();
-                    cmd.args(rule.as_slice());
+                    cmd.args(&rule[..]);
                     debug!("Running {:?}", rule);
                     match cmd.status() {
                         Ok(ExitStatus(0)) => {},
@@ -348,12 +348,12 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     if iptables {
         let mut cmd = iptcmd.clone();
         cmd.args(&["-t", "nat", "-D", "POSTROUTING",
-                   "-s", network.as_slice(), "-j", "MASQUERADE"]);
+                   "-s", &network[..], "-j", "MASQUERADE"]);
         commands.push(cmd);
 
         let mut cmd = iptcmd.clone();
         cmd.args(&["-D", "INPUT",
-                   "-i", interface_name.as_slice(),
+                   "-i", &interface_name[..],
                    "-d", "127.0.0.1",
                    "-j", "ACCEPT"]);
         commands.push(cmd);
@@ -361,14 +361,14 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
         let mut cmd = iptcmd.clone();
         cmd.args(&["-t", "nat", "-D", "PREROUTING",
                    "-p", "tcp", "-i", "vagga",
-                   "-d", host_ip.as_slice(), "--dport", "53",
+                   "-d", &host_ip[..], "--dport", "53",
                    "-j", "DNAT", "--to-destination", "127.0.0.1"]);
         commands.push(cmd);
 
         let mut cmd = iptcmd.clone();
         cmd.args(&["-t", "nat", "-D", "PREROUTING",
                    "-p", "udp", "-i", "vagga",
-                   "-d", host_ip.as_slice(), "--dport", "53",
+                   "-d", &host_ip[..], "--dport", "53",
                    "-j", "DNAT", "--to-destination", "127.0.0.1"]);
         commands.push(cmd);
     }
@@ -423,7 +423,7 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
             let mut ns = vec!();
             for line in f.lines() {
                 let line = try!(line);
-                if line.as_slice().starts_with("nameserver ") {
+                if line[..].starts_with("nameserver ") {
                     ns.push(line[11..].trim().to_string());
                 }
             }
@@ -499,17 +499,17 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "add", eif.as_slice(), "type", "veth",
-               "peer", "name", iif.as_slice()]);
+    cmd.args(&["link", "add", &eif[..], "type", "veth",
+               "peer", "name", &iif[..]]);
     try!(_run_command(cmd));
 
     let mut cmd = ip_cmd.clone();
     cmd.args(&["addr", "add"]);
-    cmd.arg(eip.clone() + "/30").arg("dev").arg(eif.as_slice());
+    cmd.arg(eip.clone() + "/30").arg("dev").arg(&eif);
     try!(_run_command(cmd));
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", eif.as_slice(), "up"]);
+    cmd.args(&["link", "set", "dev", &eif[..], "up"]);
     try!(_run_command(cmd));
 
     let cmdname = Rc::new("setup_netns".to_string());
@@ -517,9 +517,9 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         env::current_exe().unwrap().parent().unwrap()
         .join("vagga_setup_netns"));
     cmd.args(&["bridge",
-        "--interface", iif.as_slice(),
-        "--ip", iip.as_slice(),
-        "--gateway-ip", eip.as_slice(),
+        "--interface", &iif[..],
+        "--ip", &iip[..],
+        "--gateway-ip", &eip[..],
         "--port-forwards", &json::encode(port_forwards).unwrap()[..],
         ]);
     cmd.network_ns();
@@ -537,8 +537,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     let pid = try!(cmd.spawn());
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", iif.as_slice(),
-               "netns", format!("{}", pid).as_slice()]);
+    cmd.args(&["link", "set", "dev", &iif[..],
+               "netns", &format!("{}", pid)[..]]);
     let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_to)
         .and(_run_command(cmd));
     match wait_process(pid) {
@@ -550,7 +550,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         Ok(()) => Ok(iip),
         Err(e) => {
             let mut cmd = ip_cmd.clone();
-            cmd.args(&["link", "del", eif.as_slice()]);
+            cmd.args(&["link", "del", &eif[..]]);
             try!(_run_command(cmd));
             Err(e)
         }
@@ -564,7 +564,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let eif = if name.as_bytes().len() > 14 {
         let mut hash = Sha256::new();
         hash.input(name.as_bytes());
-        "eh".to_string() + hash.result_str().as_slice().slice_to(12)
+        "eh".to_string() + &hash.result_str()[..12]
     } else {
         name.to_string()
     };
@@ -584,24 +584,24 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "add", eif.as_slice(), "type", "veth",
-               "peer", "name", iif.as_slice()]);
+    cmd.args(&["link", "add", &eif[..], "type", "veth",
+               "peer", "name", &iif[..]]);
     try!(_run_command(cmd));
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", eif.as_slice(), "up"]);
+    cmd.args(&["link", "set", "dev", &eif[..], "up"]);
     try!(_run_command(cmd));
 
     let mut cmd = busybox.clone();
-    cmd.args(&["brctl", "addif", "children", eif.as_slice()]);
+    cmd.args(&["brctl", "addif", "children", &eif[..]]);
     try!(_run_command(cmd));
 
     let cmdname = Rc::new("setup_netns".to_string());
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
         env::current_exe().unwrap().parent().unwrap()
         .join("vagga_setup_netns"));
-    cmd.args(&["guest", "--interface", iif.as_slice(),
-                        "--ip", ip.as_slice(),
+    cmd.args(&["guest", "--interface", &iif[..],
+                        "--ip", &ip[..],
                         "--hostname", hostname,
                         "--gateway-ip", "172.18.0.254"]);
     cmd.network_ns();
@@ -619,8 +619,8 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let pid = try!(cmd.spawn());
 
     let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", iif.as_slice(),
-               "netns", format!("{}", pid).as_slice()]);
+    cmd.args(&["link", "set", "dev", &iif[..],
+               "netns", &format!("{}", pid)[..]]);
     let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_net)
         .and(bind_mount(&Path::new(format!("/proc/{}/ns/uts", pid)), link_uts))
         .and(_run_command(cmd));
@@ -634,7 +634,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
         Ok(()) => Ok(()),
         Err(e) => {
             let mut cmd = ip_cmd.clone();
-            cmd.args(&["link", "del", eif.as_slice()]);
+            cmd.args(&["link", "del", &eif[..]]);
             try!(_run_command(cmd));
             Err(e)
         }
@@ -659,9 +659,9 @@ impl PortForwardGuard {
             let mut cmd = iptables.clone();
             cmd.args(&["-t", "nat", "-I", "PREROUTING",
                        "-p", "tcp", "-m", "tcp",
-                       "--dport", format!("{}", port).as_slice(),
+                       "--dport", &format!("{}", port)[..],
                        "-j", "DNAT",
-                       "--to-destination", self.ip.as_slice()]);
+                       "--to-destination", &self.ip[..]]);
             try!(_run_command(cmd));
         }
 
@@ -682,9 +682,9 @@ impl Drop for PortForwardGuard {
             let mut cmd = iptables.clone();
             cmd.args(&["-t", "nat", "-D", "PREROUTING",
                        "-p", "tcp", "-m", "tcp",
-                       "--dport", format!("{}", port).as_slice(),
+                       "--dport", &format!("{}", port)[..],
                        "-j", "DNAT",
-                       "--to-destination", self.ip.as_slice()]);
+                       "--to-destination", &self.ip[..]]);
             _run_command(cmd)
             .unwrap_or_else(|e| error!("Error deleting firewall rule: {}", e));
         }

@@ -64,9 +64,9 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| Err(format!("Can't set namespace: {}", e))));
 
-    let mut cmd = Command::new(command.as_slice());
+    let mut cmd = Command::new(&command);
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    cmd.args(cmdargs.as_slice());
+    cmd.args(&cmdargs);
     match cmd.status() {
         Ok(ExitStatus(0)) => Ok(()),
         e => Err(Err(format!("Error running {}: {:?}", command, e))),

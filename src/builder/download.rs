@@ -33,7 +33,7 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
         try!(set_permissions(&dir, Permissions::from_mode(0o755))
             .map_err(|e| format!("Can't chmod file: {}", e)));
     }
-    let filename = dir.join(name.as_slice());
+    let filename = dir.join(&name);
     if filename.exists() {
         return Ok(filename);
     }
