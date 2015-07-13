@@ -2,6 +2,7 @@
 
 use std::env::current_dir;
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::ffi::{CString};
 use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
@@ -16,7 +17,7 @@ use libc::{c_int, c_char, pid_t};
 use self::Namespace::*;
 
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub enum Namespace {
     NewMount,
     NewUts,
@@ -26,38 +27,13 @@ pub enum Namespace {
     NewNet,
 }
 
-impl CLike for Namespace {
-    fn to_usize(&self) -> usize {
-        match *self {
-            NewMount => 0,
-            NewUts => 1,
-            NewIpc => 2,
-            NewUser => 3,
-            NewPid => 4,
-            NewNet => 5,
-        }
-    }
-    fn from_usize(val: usize) -> Namespace {
-        match val {
-            0 => NewMount,
-            1 => NewUts,
-            2 => NewIpc,
-            3 => NewUser,
-            4 => NewPid,
-            5 => NewNet,
-            _ => unreachable!(),
-        }
-    }
-}
-
-
 pub struct Command {
     pub name: String,
     chroot: CString,
     executable: CString,
     arguments: Vec<CString>,
     environment: BTreeMap<String, String>,
-    namespaces: EnumSet<Namespace>,
+    namespaces: HashSet<Namespace>,
     restore_sigmask: bool,
     user_id: i32,
     workdir: CString,
@@ -81,7 +57,7 @@ impl Command {
             workdir: CString::from_slice(&current_dir().unwrap()),
             executable: CString::from_slice(&cmd),
             arguments: vec!(CString::from_slice(&cmd)),
-            namespaces: EnumSet::new(),
+            namespaces: HashSet::new(),
             environment: BTreeMap::new(),
             restore_sigmask: true,
             user_id: 0,
@@ -209,7 +185,7 @@ pub fn convert_namespace(value: Namespace) -> c_int {
 }
 
 
-fn convert_namespaces(set: EnumSet<Namespace>) -> c_int {
+fn convert_namespaces(set: HashSet<Namespace>) -> c_int {
     let mut ns = 0;
     for i in set.iter() {
         ns |= convert_namespace(i);
