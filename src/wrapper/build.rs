@@ -18,6 +18,7 @@ use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use container::uidmap::{Uidmap, map_users};
 use container::vagga::container_ver;
+use container::pipe::CPipe;
 use config::{Container, Settings};
 use config::builders::Builder as B;
 use config::builders::Source as S;
@@ -33,7 +34,7 @@ struct RunBuilder<'a> {
 
 struct RunVersion<'a> {
     container: String,
-    pipe: Pipe,
+    pipe: Option<CPipe>,
     result: Rc<RefCell<String>>,
     uid_map: &'a Uidmap,
     settings: &'a Settings,
@@ -60,13 +61,9 @@ impl<'a> Executor for RunVersion<'a> {
         return cmd;
     }
     fn finish(&mut self, status: i32) -> MonitorStatus {
-        unsafe { close(self.pipe.writer) };
         if status == 0 {
-            let mut rd = PipeStream::open(self.pipe.reader);
-            *self.result.borrow_mut() = rd.read_to_string()
-                                          .unwrap_or("".to_string());
-        } else {
-            unsafe { close(self.pipe.reader) };
+            *self.result.borrow_mut() = String::from_utf8(
+                pipe.take().unwrap().read());
         }
         return MonitorStatus::Shutdown(status)
     }
@@ -155,7 +152,7 @@ pub fn get_version_hash(container: String, wrapper: &Wrapper)
     let ver = Rc::new(RefCell::new("".to_string()));
     mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
         container: container,
-        pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
+        pipe: Some(CPipe::new().ok().expect("Can't create pipe")),
         result: ver.clone(),
         settings: wrapper.settings,
         uid_map: &uid_map,
@@ -217,7 +214,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
     let ver = Rc::new(RefCell::new("".to_string()));
     mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
         container: container.clone(),
-        pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
+        pipe: Some(CPipe::new().ok().expect("Can't create pipe")),
         result: ver.clone(),
         settings: wrapper.settings,
         uid_map: &uid_map,
@@ -268,7 +265,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
     if ver.borrow().len() != 64 {
         mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
             container: container.to_string(),
-            pipe: unsafe { pipe() }.ok().expect("Can't create pipe"),
+            pipe: Some(CPipe::new().ok().expect("Can't create pipe")),
             result: ver.clone(),
             settings: wrapper.settings,
             uid_map: &uid_map,

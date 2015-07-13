@@ -2,6 +2,7 @@ use std::default::Default;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
+use std::io::stderr;
 
 use nix::unistd::dup2;
 use argparse::{ArgumentParser, Store};
@@ -67,7 +68,7 @@ pub fn run() -> isize {
             }
         }
     }
-    match PipeStream::open(3).write_str(hash.result_str().as_slice()) {
+    match stderr().write_all(hash.result_str().as_bytes()) {
         Ok(()) => {}
         Err(e) => {
             error!("Error writing hash: {}", e);

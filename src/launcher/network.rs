@@ -253,7 +253,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
             for rule in iprules.iter() {
                 let mut cmd = iptables.clone();
-                iptables.stderr(InheritFd(1));  // Message not an error actually
+
+                // Message not an error actually
+                iptables.stderr(1);
+
                 let mut check_rule = rule.clone();
                 for item in check_rule.iter_mut() {
                     if *item == "-A" || *item == "-I" {

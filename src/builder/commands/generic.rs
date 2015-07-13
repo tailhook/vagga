@@ -106,8 +106,7 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
             .map_err(|e| format!("Can't create pipe: {}", e)));
         cmd.set_stdout_fd(pipe.writer);
         let res = Monitor::run_command(cmd);
-        close(pipe.writer);
-        (res, PipeStream::open(pipe.reader).read_to_end().unwrap_or(vec!()))
+        (res, pipe.read())
     };
 
     match res {
