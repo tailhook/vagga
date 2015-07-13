@@ -1,6 +1,6 @@
 use std::fs::rename;
 use std::fs::create_dir_all;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use config::settings::Settings;
@@ -13,7 +13,7 @@ use super::super::context::BuildContext;
 use super::generic::run_command_at;
 
 
-fn git_cache(url: &String) -> Result<Path, String> {
+fn git_cache(url: &String) -> Result<PathBuf, String> {
     let dirname = url.replace("%", "%25").replace("/", "%2F");
     let cache_path = Path::new("/vagga/cache/git").join(&dirname);
     if cache_path.is_dir() {

@@ -8,7 +8,7 @@ use std::fs::{copy, read_link, hard_link,
 use std::fs::File;
 use std::fs::FileType;
 use std::os::unix::fs::symlink;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use libc::chmod;
 use libc::pid_t;
@@ -30,7 +30,7 @@ pub enum WriteMode {
 }
 
 fn create_storage_dir(storage_dir: &Path, project_root: &Path)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     let name = match project_root.filename_str() {
         Some(name) => name,
@@ -56,7 +56,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
 
 fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
     settings: &MergedSettings)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     match settings.cache_dir {
         Some(ref dir) if settings.shared_cache => {
@@ -100,7 +100,7 @@ fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
 }
 
 fn _vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Result<Path, (Path, Path)>, String>
+    -> Result<Result<PathBuf, (PathBuf, PathBuf)>, String>
 {
     if let Some(ref dir) = settings.storage_dir {
         let lnkdir = project_root.join(".vagga/.lnk");
@@ -139,13 +139,13 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
 }
 
 pub fn get_vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Option<Path>, String>
+    -> Result<Option<PathBuf>, String>
 {
     return _vagga_base(project_root, settings).map(|x| x.ok());
 }
 
 fn vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     match _vagga_base(project_root, settings) {
         Ok(Err((lnkdir, dir))) => {

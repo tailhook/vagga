@@ -10,7 +10,7 @@ use argparse::{ArgumentParser, PushConst, StoreTrue};
 use super::setup;
 use super::Wrapper;
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 enum Action {
     Temporary,
     Old,

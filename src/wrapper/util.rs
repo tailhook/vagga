@@ -1,9 +1,9 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 
 
 pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     if cmd.contains("/") {
         return Ok(Path::new(cmd));

@@ -22,7 +22,7 @@ pub use self::Feature::*;
 
 static MIRRORS: &'static str = include_str!("../../alpine/MIRRORS.txt");
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum Feature {
     Https,
     AlpineInstaller,

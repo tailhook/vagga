@@ -3,7 +3,7 @@ use std::env;
 use std::fs::{remove_file};
 use std::fs::File;
 use std::io::{stdout, stderr, BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -30,7 +30,7 @@ use super::super::file_util::{create_dir, create_dir_mode};
 static MAX_INTERFACES: usize = 2048;
 
 pub struct PortForwardGuard {
-    nspath: Path,
+    nspath: PathBuf,
     ip: String,
     ports: Vec<u16>,
 }

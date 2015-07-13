@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use nix::unistd::{pipe, close};
 
@@ -10,7 +10,7 @@ use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
 
 
-fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {
+fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
     let rpath = Path::new("/");
     let chroot = Path::new("/vagga/root");
     if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {

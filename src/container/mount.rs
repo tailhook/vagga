@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io::Error as IoError;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::null;
 use std::str::FromStr;
 
@@ -130,7 +130,7 @@ impl<'a> MountRecord<'a> {
 }
 
 pub fn get_submounts_of(dir: &Path)
-    -> Result<Vec<Path>, String>
+    -> Result<Vec<PathBuf>, String>
 {
     let f = try!(File::open(&Path::new("/proc/self/mountinfo"))
         .map_err(|e| format!("Can't open mountinfo: {}", e)));
