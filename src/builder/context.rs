@@ -1,5 +1,6 @@
 use std::fs::{create_dir_all, create_dir, copy, set_permissions};
 use std::fs::Permissions;
+use std::fs::PathExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::default::Default;
@@ -117,19 +118,19 @@ impl<'a> BuildContext<'a> {
         return Ok(());
     }
 
-    pub fn add_remove_dir(&mut self, path: Path) {
+    pub fn add_remove_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
         let path = path.path_relative_from(&Path::new("/")).unwrap();
         self.remove_dirs.insert(path);
     }
 
-    pub fn add_empty_dir(&mut self, path: Path) {
+    pub fn add_empty_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
         let path = path.path_relative_from(&Path::new("/")).unwrap();
         self.empty_dirs.insert(path);
     }
 
-    pub fn add_ensure_dir(&mut self, path: Path) {
+    pub fn add_ensure_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
         let path = path.path_relative_from(&Path::new("/")).unwrap();
         self.ensure_dirs.insert(path);

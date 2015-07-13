@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::fs::{read_dir, remove_dir_all, read_link};
+use std::fs::PathExt;
 use std::io::{stdout, stderr};
 use std::path::Path;
 use std::str::FromStr;
@@ -165,15 +166,16 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
     debug!("Useful images {:?}", useful);
 
     let roots = base.join(".roots");
-    for path in try!(read_dir(&roots)
-            .map_err(|e| format!("Can't read dir {:?}: {}", roots, e)))
-            .iter()
+    for entry in try_msg!(read_dir(&roots),
+                         "Can't read dir {dir:?}: {err}", dir=roots)
     {
-        if path.filename_str()
+        let entry = try_msg!(entry,
+                             "Can't read dir {dir:?}: {err}", dir=roots);
+        if entry.file_name()[..].to_str()
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
-            try!(clean_dir(path, dry_run));
+            try!(clean_dir(&entry.path(), dry_run));
         }
     }
 
@@ -196,17 +198,20 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
         }
     };
     let procfs = Path::new("/proc");
-    for dir in try!(read_dir(&base.join(".transient"))
-                    .map_err(|e| format!(
-                             "Can't read .vagga/.transient dir: {}", e)))
-                .into_iter()
-                .filter(|path| path.extension_str()
-                               .and_then(|e| FromStr::from_str(e).ok())
-                               .map(|p: pid_t| !procfs.join(format!("{}", p))
-                                              .exists())
-                               .unwrap_or(true))
+    for entry in try_msg!(read_dir(&base.join(".transient")),
+                        "Can't read .vagga/.transient dir: {err}")
     {
-        try!(clean_dir(&dir, dry_run));
+        let entry = try_msg!(entry, "Error reading .vagga/transient: {err}");
+        if let Some(fname) = entry.file_name()[..].to_str() {
+            if let Some(idx) = fname.find('.') {
+                if u32::from_str(&fname[idx+1..]).is_ok() &&
+                    procfs.join(&fname[idx+1..]).exists()
+                {
+                    continue;
+                }
+            }
+        }
+        try!(clean_dir(&entry.path(), dry_run));
     }
 
     return Ok(());

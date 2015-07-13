@@ -1,5 +1,5 @@
 use std::env::{current_dir};
-use std::io::stderr;
+use std::io::{stderr, Write};
 use std::path::Path;
 use std::process::exit;
 

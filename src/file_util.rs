@@ -1,4 +1,5 @@
 use std::io::Error;
+use std::fs::PathExt;
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -8,7 +9,9 @@ fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let res = vec!();
     for entry_ in try!(fs::read_dir(dir)) {
         let entry = try!(entry_);
-        if !entry.file_name().starts_with(".") {
+        if !entry.file_name()[..].to_str().map(|x| x.starts_with("."))
+            .unwrap_or(false)
+        {
             res.push(entry.path().to_path_buf());
         }
     }
