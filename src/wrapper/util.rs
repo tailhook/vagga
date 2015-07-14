@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::fs::PathExt;
 use std::collections::BTreeMap;
 
 
@@ -6,7 +7,7 @@ pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
     -> Result<PathBuf, String>
 {
     if cmd.contains("/") {
-        return Ok(Path::new(cmd));
+        return Ok(PathBuf::from(cmd));
     } else {
         if let Some(paths) = env.get(&"PATH".to_string()) {
             for dir in paths[..].split(':') {
