@@ -7,6 +7,7 @@ use std::ffi::{CString};
 use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
 use std::io::Error as IoError;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::ptr::null;
 
@@ -50,13 +51,15 @@ impl Debug for Command {
 }
 
 impl Command {
-    pub fn new<T:AsRef<[u8]>>(name: String, cmd: T) -> Command {
+    pub fn new(name: String, cmd: &Path) -> Command {
+        let slc = cmd.as_os_str().as_bytes();
         return Command {
             name: name,
-            chroot: CString::from_slice("/".as_bytes()),
-            workdir: CString::from_slice(&current_dir().unwrap()),
-            executable: CString::from_slice(&cmd),
-            arguments: vec!(CString::from_slice(&cmd)),
+            chroot: CString::new("/").unwrap(),
+            workdir: CString::new(current_dir().unwrap()
+                .as_os_str().as_bytes().to_vec()).unwrap(),
+            executable: CString::new(slc.to_vec()).unwrap(),
+            arguments: vec!(CString::new(slc.to_vec()).unwrap()),
             namespaces: HashSet::new(),
             environment: BTreeMap::new(),
             restore_sigmask: true,

@@ -1,7 +1,7 @@
 use std::env;
 use std::fs::read_link;
 use std::io::{stdout, stderr};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use libc::pid_t;
@@ -82,7 +82,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
 
     let env = try!(setup::get_environment(cconfig));
-    let mut cpath = Path::new(&command);
+    let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
     if command.contains("/") {
     } else {

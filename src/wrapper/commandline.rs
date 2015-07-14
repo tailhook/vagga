@@ -46,11 +46,12 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
-    let mut cmdline = command.run.clone() + &args;
+    let mut cmdline = command.run.clone();
+    cmdline.extend(args.into_iter());
 
     let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
+        .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
@@ -89,7 +90,7 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmd.set_workdir(&Path::new("/work").join(&wd));
     } else {
         cmd.set_workdir(&Path::new(
-            env::var("PWD").unwrap_or("/work".to_string())));
+            &env::var("PWD").unwrap_or("/work".to_string())));
     }
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());

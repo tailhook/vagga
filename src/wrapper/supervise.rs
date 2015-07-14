@@ -1,6 +1,6 @@
 use std::env;
-use std::fs::{read_link, create_dir, File};
-use std::io::{stdout, stderr};
+use std::fs::{read_link, File};
+use std::io::{stdout, stderr, Write};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -18,6 +18,7 @@ use super::super::container::vagga::container_ver;
 use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
+use super::super::file_util::create_dir;
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
@@ -42,7 +43,7 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     }
     let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
+        .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
@@ -61,7 +62,8 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
     let basedir = Path::new("/tmp/vagga");
     try_msg!(create_dir(&basedir, false),
              "Can't create dir: {err}");
-    let mut file = File::create(&basedir.join("hosts"));
+    let mut file = try_msg!(File::create(&basedir.join("hosts")),
+        "Can't create hosts file: {err}");
     try!((writeln!(&mut file, "127.0.0.1 localhost"))
          .map_err(|e| format!("Error writing hosts: {}", e)));
     for (subname, subcommand) in supervise.children.iter() {
@@ -128,7 +130,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         cmd.set_workdir(&Path::new("/work").join(&wd));
     } else {
         cmd.set_workdir(&Path::new(
-            env::var("PWD").unwrap_or("/work".to_string())));
+            &env::var("PWD").unwrap_or("/work".to_string())));
     }
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());
