@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::read_link;
+use std::fs::{read_link, PathExt};
 use std::io::{stdout, stderr};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -61,7 +61,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     }
     let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
+        .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
@@ -109,7 +109,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
 
     let mut cmd = Command::new("run".to_string(), &cpath);
     cmd.args(&args);
-    cmd.set_workdir(&Path::new(env::var("PWD").unwrap_or("/work".to_string())));
+    cmd.set_workdir(&Path::new(
+        &env::var("PWD").unwrap_or("/work".to_string())));
     uid_map.as_ref().map(|v| cmd.set_uidmap(v.clone()));
     cmd.set_env("TERM".to_string(),
                 env::var("TERM").unwrap_or("dumb".to_string()));
