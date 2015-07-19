@@ -1,8 +1,8 @@
 use std::env;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::fs::{remove_dir_all, create_dir_all, create_dir, rename,
-              remove_file, remove_dir};
+use std::fs::{remove_dir_all, create_dir_all, rename};
+use std::fs::{remove_file, remove_dir, PathExt};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
 use std::path::Path;
@@ -22,6 +22,7 @@ use container::pipe::CPipe;
 use config::{Container, Settings};
 use config::builders::Builder as B;
 use config::builders::Source as S;
+use super::super::file_util::create_dir;
 use super::Wrapper;
 use super::setup;
 
@@ -47,11 +48,11 @@ impl<'a> Executor for RunVersion<'a> {
             Path::new("/vagga/bin/vagga_version"));
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
-        cmd.arg(&self.contaer);
+        cmd.arg(&self.container);
         cmd.arg("--settings");
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
-        cmd.set_stdout_fd(self.pipe.writer);
+        cmd.set_stdout_fd(self.pipe.as_ref().unwrap().writer);
         if let Ok(x) = env::var("RUST_LOG") {
             cmd.set_env("RUST_LOG".to_string(), x);
         }
@@ -63,7 +64,8 @@ impl<'a> Executor for RunVersion<'a> {
     fn finish(&mut self, status: i32) -> MonitorStatus {
         if status == 0 {
             *self.result.borrow_mut() = String::from_utf8(
-                pipe.take().unwrap().read());
+                // TODO(tailhook) graceful process of few unwraps
+                self.pipe.take().unwrap().read().unwrap()).unwrap();
         }
         return MonitorStatus::Shutdown(status)
     }
@@ -126,8 +128,10 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
 pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     let mut path_to_remove = None;
     if final_path.exists() {
-        let rempath = tmp_path.with_filename(
-            tmp_path.filename_str().unwrap().to_string() + ".old");
+        let rempath = tmp_path.with_file_name(
+            // TODO(tailhook) consider these unwraps
+            tmp_path.file_name().unwrap().to_str()
+            .unwrap().to_string() + ".old");
         try!(rename(final_path, &rempath)
              .map_err(|x| format!("Error renaming old dir: {}", x)));
         path_to_remove = Some(rempath);
@@ -238,7 +242,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
         Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
     debug!("Container version: {:?}", ver.borrow());
-    let tmppath = Path::new(format!("/vagga/base/.roots/.tmp.{}", container));
+    let tmppath = Path::new(&format!("/vagga/base/.roots/.tmp.{}", container));
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
         Err(x) => {
@@ -391,7 +395,7 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     return get_version_hash(name, wrapper)
         .map(|ver| ver
             .map(|x| if short {
-                println!("{}", x.slice_to(8))
+                println!("{}", &x[..8])
             } else {
                 println!("{}", x)
             }).map(|()| 0)
