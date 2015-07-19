@@ -13,7 +13,7 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
         return 122;
     }
     match Command::new("/vagga/bin/busybox")
-            .stdin(Stdio::inherit(0))
+            .stdin(Stdio::inherit())
             .stdout(Stdio::inherit()).stderr(Stdio::inherit())
             .arg("sh")
             .env("PATH", "/vagga/bin")
