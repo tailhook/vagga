@@ -1,4 +1,5 @@
 use std::env;
+use std::fs::{PathExt};
 use std::default::Default;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -109,7 +110,7 @@ pub fn read_settings(project_root: &Path)
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("VAGGA_USER_HOME") {
-        let home = Path::new(home);
+        let home = Path::new(&home);
         secure_files.push(home.join(".config/vagga/settings.yaml"));
         secure_files.push(home.join(".vagga/settings.yaml"));
         secure_files.push(home.join(".vagga.yaml"));
