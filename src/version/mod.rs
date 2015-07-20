@@ -2,7 +2,7 @@ use std::default::Default;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
-use std::io::stderr;
+use std::io::{stderr, Read, Write};
 
 use nix::unistd::dup2;
 use argparse::{ArgumentParser, Store};
@@ -19,7 +19,7 @@ use self::version::HashResult::{Hashed, New, Error};
 mod version;
 
 
-pub fn run() -> isize {
+pub fn run() -> i32 {
     signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
@@ -48,15 +48,21 @@ pub fn run() -> isize {
     let cont = cfg.containers.get(&container)
         .expect("Container not found");  // TODO
     debug!("Versioning items: {}", cont.setup.len());
+
     let mut hash = Sha256::new();
-    hash.input(File::open(&Path::new("/proc/self/uid_map"))
-               .and_then(|mut f| f.read_to_end())
-               .ok().expect("Can't read uid_map")
-               .as_slice());
-    hash.input(File::open(&Path::new("/proc/self/gid_map"))
-               .and_then(|mut f| f.read_to_end())
-               .ok().expect("Can't read gid_map")
-               .as_slice());
+
+    let buf = Vec::with_capacity(1000);
+    File::open(&Path::new("/proc/self/uid_map"))
+               .and_then(|mut f| f.read_to_end(&mut buf))
+               .ok().expect("Can't read uid_map");
+    hash.input(&buf);
+
+    let buf = Vec::with_capacity(1000);
+    File::open(&Path::new("/proc/self/gid_map"))
+               .and_then(|mut f| f.read_to_end(&mut buf))
+               .ok().expect("Can't read gid_map");
+    hash.input(&buf);
+
     for b in cont.setup.iter() {
         debug!("Versioning setup: {:?}", b);
         match b.hash(&cfg, &mut hash) {

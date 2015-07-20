@@ -1,5 +1,6 @@
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Read};
 use std::fs::File;
+use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
 use rustc_serialize::json;
@@ -59,12 +60,12 @@ impl VersionHash for Builder {
                     .and_then(|mut f| {
                         loop {
                             let mut chunk = [0u8; 128*1024];
-                            let bytes = match f.read(chunk.as_mut_slice()) {
+                            let bytes = match f.read(&mut chunk[..]) {
                                 Ok(0) => break,
                                 Ok(bytes) => bytes,
                                 Err(e) => return Err(e),
                             };
-                            hash.input(chunk[..bytes]);
+                            hash.input(&chunk[..bytes]);
                         }
                         Ok(())
                     })
@@ -138,7 +139,7 @@ impl VersionHash for Builder {
             }
             &B::CacheDirs(ref map) => {
                 for (k, v) in map.iter() {
-                    hash.input(k.container_as_bytes());
+                    hash.input(k.as_os_str().as_bytes());
                     hash.input(b"\0");
                     hash.input(v.as_bytes());
                     hash.input(b"\0");
@@ -147,7 +148,7 @@ impl VersionHash for Builder {
             }
             &B::Text(ref map) => {
                 for (k, v) in map.iter() {
-                    hash.input(k.container_as_bytes());
+                    hash.input(k.as_os_str().as_bytes());
                     hash.input(b"\0");
                     hash.input(v.as_bytes());
                     hash.input(b"\0");

@@ -1,5 +1,5 @@
 use std::default::Default;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::fs::PathExt;
 
 use std::collections::BTreeMap;
@@ -60,7 +60,7 @@ pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
     return Ok((try!(read_config(&filename)), cfg_dir));
 }
 
-pub fn read_config(filename: &PathBuf) -> Result<Config, String> {
+pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut config: Config = match parse_config(
         filename, &*config_validator(), Default::default())
     {
