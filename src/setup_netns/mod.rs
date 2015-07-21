@@ -4,7 +4,7 @@ use std::io::{stdout, stderr};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::exit;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 use std::thread::sleep_ms;
 
 use rustc_serialize::json;
@@ -29,6 +29,24 @@ fn has_interface(name: &str) -> Result<bool, String> {
             return Ok(false);
         })
         .map_err(|e| format!("Can't read interfaces: {}", e))
+}
+
+fn busybox_cmd() -> Command {
+    let mut busybox = Command::new(
+        env::current_exe().unwrap()
+        .parent().unwrap()
+        .join("busybox"));
+    busybox.stdin(Stdio::null());
+    busybox.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    busybox
+}
+
+fn ip_cmd() -> Command {
+    let mut ip_cmd = busybox_cmd();
+    ip_cmd.arg("ip");
+    ip_cmd.stdin(Stdio::null());
+    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    ip_cmd
 }
 
 fn setup_gateway_namespace(args: Vec<String>) {
@@ -71,32 +89,23 @@ fn setup_gateway_namespace(args: Vec<String>) {
         sleep_ms(100);
     }
 
-    let mut busybox = Command::new(
-        env::current_exe().unwrap()
-        .parent().unwrap()
-        .join("busybox"));
-    busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-
-    let mut ip_cmd = busybox.clone();
-    ip_cmd.arg("ip");
-    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
     let mut commands = vec!();
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["addr", "add", &guest_ip[..], "dev", "vagga_guest"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "vagga_guest", "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
@@ -111,7 +120,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
     for cmd in commands.iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
-            Ok(ExitStatus(0)) => {},
+            Ok(status) if status.success() => {},
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
                 exit(1);
@@ -172,39 +181,32 @@ fn setup_bridge_namespace(args: Vec<String>) {
     }
     let mut commands = vec!();
 
-    let busybox = Command::new(env::current_exe().unwrap().parent().unwrap()
-        .join("busybox"));
-
-    let mut ip_cmd = busybox.clone();
-    ip_cmd.arg("ip");
-    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["addr", "add", &format!("{}/30", ip)[..],
                        "dev", &interface]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &interface[..], "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
-    let mut cmd = busybox.clone();
+    let mut cmd = busybox_cmd();
     cmd.args(&["brctl", "addbr", "children"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["addr", "add", "172.18.0.254/24", "dev", "children"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "children", "up"]);
     commands.push(cmd);
 
@@ -227,7 +229,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
     for cmd in commands.iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
-            Ok(ExitStatus(0)) => {},
+            Ok(status) if status.success() => {}
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
                 exit(1);
@@ -286,40 +288,31 @@ fn setup_guest_namespace(args: Vec<String>) {
     }
     let mut commands = vec!();
 
-    let mut busybox = Command::new(
-        env::current_exe().unwrap().parent().unwrap()
-        .join("busybox"));
-    busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-
-    let mut ip_cmd = busybox.clone();
-    ip_cmd.arg("ip");
-    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["addr", "add", &format!("{}/24", ip)[..],
                        "dev", &interface[..]]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &interface[..], "up"]);
     commands.push(cmd);
 
-    let mut cmd = busybox.clone();
+    let mut cmd = busybox_cmd();
     cmd.args(&["hostname", &hostname[..]]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
     for cmd in commands.iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
-            Ok(ExitStatus(0)) => {},
+            Ok(status) if status.success() => {}
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
                 exit(1);
