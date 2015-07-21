@@ -42,10 +42,10 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let cmd = try!(env::var("VAGGA_COMMAND")
+    let cmd = try!(env::var("VAGGA_COMMAND").ok()
         .and_then(|cmd| config.commands.get(&cmd))
-        .map_err(|_| format!("This command is supposed to be run inside \
-                        container started by vagga !Supervise command")));
+        .ok_or(Err(format!("This command is supposed to be run inside \
+                        container started by vagga !Supervise command"))));
     let sup = match cmd {
         &MainCommand::Supervise(ref sup) => sup,
         _ => return Err(Err(format!("This command is supposed to be run \
@@ -61,14 +61,14 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         return Err(Err(format!("Node {} is missing", subcommand)));
     };
     try!(set_namespace(
-        &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
+        &Path::new(&format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| Err(format!("Can't set namespace: {}", e))));
 
     let mut cmd = Command::new(&command);
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     cmd.args(&cmdargs);
     match cmd.status() {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(status) if status.success() => Ok(()),
         e => Err(Err(format!("Error running {}: {:?}", command, e))),
     }
 }
