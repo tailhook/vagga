@@ -9,9 +9,10 @@ use super::super::container::container::Namespace::NewNet;
 
 
 fn _rule<W: Write, S:AsRef<str>>(out: &mut W, data: S) -> Result<(), String> {
-    debug!("Rule: {}", data);
-    (writeln!(out, "{}", data))
-    .map_err(|e| format!("Error piping firewall rule {:?}: {}", data, e))
+    debug!("Rule: {}", data.as_ref());
+    (writeln!(out, "{}", data.as_ref()))
+    .map_err(|e| format!("Error piping firewall rule {:?}: {}",
+        data.as_ref(), e))
 }
 
 pub fn apply_graph(graph: Graph) -> Result<(), String> {
@@ -23,7 +24,7 @@ pub fn apply_graph(graph: Graph) -> Result<(), String> {
 
 fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
     try!(set_namespace(
-        &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
+        &Path::new(&format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| format!("Can't set namespace: {}", e)));
     let mut cmd = Command::new("iptables-restore");
     cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
@@ -69,7 +70,7 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
         try!(_rule(pipe, "COMMIT"));
     }
     match prc.wait() {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(status) if status.success() => Ok(()),
         e => Err(format!("Error running iptables-restore: {:?}", e)),
     }
 }
