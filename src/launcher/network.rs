@@ -205,7 +205,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     commands.push(cmd);
 
     let nforward = String::with_capacity(100);
-    nforward = try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
+    try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
         .and_then(|mut f| f.read_to_string(&mut nforward))
         .map_err(|e| format!("Can't read sysctl: {}", e)));
 

@@ -82,7 +82,7 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     -> Result<i32, String>
 {
     let mut cmd = Command::new("wrapper".to_string(),
-        env::current_exe().unwrap().join("vagga_wrapper"));
+        &env::current_exe().unwrap().join("vagga_wrapper"));
     cmd.keep_sigmask();
     cmd.arg(&cmdname);
     cmd.args(&args);
