@@ -44,7 +44,7 @@ containers:
     #    make install
     #    cp lib/libunwind.a /usr/local/musl/lib
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rustc-1.1.0-src.tar.gz
+      url: https://static.rust-lang.org/dist/rustc-beta-src.tar.gz
       script: |
         ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl
         make
@@ -55,7 +55,7 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rust-beta-x86_64-unknown-linux-gnu.tar.gz
+      url: https://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr --components=rustc,cargo
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]

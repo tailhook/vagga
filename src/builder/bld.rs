@@ -9,6 +9,7 @@ use config::read_config;
 use container::util::{clean_dir, copy_dir};
 use container::vagga::container_ver;
 
+use super::super::path_util::ToRelative;
 use super::context::BuildContext;
 use super::commands::debian;
 use super::commands::alpine;
@@ -134,10 +135,10 @@ impl BuildCommand for Builder {
             &B::Text(ref files) => {
                 if build {
                     for (path, text) in files.iter() {
-                        let realpath = Path::new("/vagga/root").join(
-                            path.path_relative_from(&Path::new("/")).unwrap());
+                        let realpath = Path::new("/vagga/root")
+                            .join(path.rel());
                         try!(File::create(&realpath)
-                            .and_then(|mut f| f.write_str(text))
+                            .and_then(|mut f| f.write_all(text.as_bytes()))
                             .map_err(|e| format!("Can't create file: {}", e)));
                         try!(set_permissions(&realpath,
                             Permissions::from_mode(0o755))
@@ -201,24 +202,23 @@ impl BuildCommand for Builder {
             }
             &B::Remove(ref path) => {
                 try!(clean_dir(path, true));
-                ctx.add_remove_dir(path.clone());
+                ctx.add_remove_dir(&path);
             }
             &B::EmptyDir(ref path) => {
                 try!(clean_dir(path, false));
-                ctx.add_empty_dir(path.clone());
+                ctx.add_empty_dir(&path);
             }
             &B::EnsureDir(ref path) => {
-                let fpath = path.path_relative_from(&Path::new("/")).unwrap();
-                let fpath = Path::new("/vagga/root").join(fpath);
+                let fpath = Path::new("/vagga/root").join(path.rel());
                 try!(create_dir_all(&fpath)
                     .map_err(|e| format!("Error creating dir: {}", e)));
                 try!(set_permissions(&fpath, Permissions::from_mode(0o755))
                     .map_err(|e| format!("Error setting permissions: {}", e)));
-                ctx.add_ensure_dir(path.clone());
+                ctx.add_ensure_dir(path);
             }
             &B::CacheDirs(ref pairs) => {
                 for (k, v) in pairs.iter() {
-                    try!(ctx.add_cache_dir(k.clone(), v.clone()));
+                    try!(ctx.add_cache_dir(k, v.clone()));
                 }
             }
             &B::Depends(_) => {

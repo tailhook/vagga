@@ -109,7 +109,8 @@ pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
     try!(build_container(config, &container));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
-        try!(set_namespace(&Path::new(format!("/proc/{}/ns/net", pid)), NewNet)
+        try!(set_namespace(
+                &Path::new(&format!("/proc/{}/ns/net", pid)), NewNet)
             .map_err(|e| format!("Error setting networkns: {}", e)));
     }
     user::run_wrapper(Some(workdir), cname, cmdargs, false)

@@ -1,10 +1,11 @@
 use std::collections::BitSet;
 use std::env;
 use std::fs::{remove_file};
-use std::fs::File;
-use std::io::{stdout, stderr, BufRead, BufReader};
+use std::fs::{File, PathExt};
+use std::io::{stdout, stderr, BufRead, BufReader, Read};
+use std::os::unix::io::{RawFd, FromRawFd};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 use std::rc::Rc;
 use std::str::FromStr;
 
@@ -35,11 +36,80 @@ pub struct PortForwardGuard {
     ports: Vec<u16>,
 }
 
-pub fn namespace_dir() -> Path {
+pub fn namespace_dir() -> PathBuf {
     let uid = unsafe { geteuid() };
     env::var("XDG_RUNTIME_DIR")
-        .map(|v| Path::new(v).join("vagga"))
-        .unwrap_or(Path::new(format!("/tmp/vagga-{}", uid)))
+        .map(|v| Path::new(&v).join("vagga"))
+        .unwrap_or(PathBuf::from(format!("/tmp/vagga-{}", uid)))
+}
+
+pub fn sudo_ip_cmd() -> Command {
+    // If we are root we may skip sudo
+    let mut ip_cmd = Command::new("sudo");
+    ip_cmd.stdin(Stdio::null());
+    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    ip_cmd.arg("ip");
+    ip_cmd
+}
+
+pub fn sudo_sysctl() -> Command {
+    // If we are root we may skip sudo
+    let mut sysctl = Command::new("sudo");
+    sysctl.stdin(Stdio::null());
+    sysctl.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    sysctl.arg("sysctl");
+    sysctl
+}
+
+pub fn ip_cmd() -> Command {
+    let mut ip_cmd = Command::new("ip");
+    ip_cmd.stdin(Stdio::null());
+    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    ip_cmd
+}
+
+pub fn sudo_mount() -> Command {
+    // If we are root we may skip sudo
+    let mut mount_cmd = Command::new("sudo");
+    mount_cmd.stdin(Stdio::null());
+    mount_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    mount_cmd.arg("mount");
+    mount_cmd
+}
+
+pub fn sudo_umount() -> Command {
+    // If we are root we may skip sudo
+    let mut umount_cmd = Command::new("sudo");
+    umount_cmd.stdin(Stdio::null());
+    umount_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    umount_cmd.arg("umount");
+    umount_cmd
+}
+
+pub fn sudo_iptables() -> Command {
+    // If we are root we may skip sudo
+    let mut iptables_cmd = Command::new("sudo");
+    iptables_cmd.stdin(Stdio::null());
+    iptables_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    iptables_cmd.arg("iptables");
+    iptables_cmd
+}
+
+pub fn iptables() -> Command {
+    // If we are root we may skip sudo
+    let mut iptables_cmd = Command::new("iptables");
+    iptables_cmd.stdin(Stdio::null());
+    iptables_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    iptables_cmd
+}
+
+pub fn busybox() -> Command {
+    let mut busybox = Command::new(
+        &env::current_exe().unwrap().parent().unwrap()
+        .join("busybox"));
+    busybox.stdin(Stdio::null());
+    busybox.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    busybox
 }
 
 
@@ -90,7 +160,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     }
 
     let mut cmd = ContainerCommand::new("setup_netns".to_string(),
-        env::current_exe().unwrap().parent().unwrap()
+        &env::current_exe().unwrap().parent().unwrap()
         .join("vagga_setup_netns"));
     cmd.set_max_uidmap();
     cmd.network_ns();
@@ -119,44 +189,35 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     let mut commands = vec!();
 
-    // If we are root we may skip sudo
-    let mut ip_cmd = Command::new("sudo");
-    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    ip_cmd.arg("ip");
-
-    // If we are root we may skip sudo
-    let mut sysctl = Command::new("sudo");
-    sysctl.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    sysctl.arg("sysctl");
-
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = sudo_ip_cmd();
     cmd.args(&["link", "add", "vagga_guest", "type", "veth",
               "peer", "name", &interface_name[..]]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = sudo_ip_cmd();
     cmd.args(&["link", "set", "vagga_guest", "netns"]);
-    cmd.arg(format!("{}", child_pid));
+    cmd.arg(&format!("{}", child_pid));
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = sudo_ip_cmd();
     cmd.args(&["addr", "add", &host_ip_net[..],
               "dev", &interface_name[..]]);
     commands.push(cmd);
 
-    let nforward = try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
-        .and_then(|mut f| f.read_to_string())
+    let nforward = String::with_capacity(100);
+    nforward = try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
+        .and_then(|mut f| f.read_to_string(&mut nforward))
         .map_err(|e| format!("Can't read sysctl: {}", e)));
 
     if nforward[..].trim() == "0" {
-        let mut cmd = sysctl.clone();
+        let mut cmd = sudo_sysctl();
         cmd.arg("net.ipv4.ip_forward=1");
         commands.push(cmd);
     } else {
         info!("Sysctl is ok [{}]", nforward[..].trim());
     }
 
-    let mut cmd = sysctl.clone();
+    let mut cmd = sudo_sysctl();
     cmd.arg("net.ipv4.conf.vagga.route_localnet=1");
     commands.push(cmd);
 
@@ -172,18 +233,13 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             .map_err(|e| format!("Error creating userns file: {}", e)));
     }
 
-    // If we are root we may skip sudo
-    let mut mount_cmd = Command::new("sudo");
-    mount_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    mount_cmd.arg("mount");
-
-    let mut cmd = mount_cmd.clone();
+    let mut cmd = sudo_mount();
     cmd.arg("--bind");
     cmd.arg(format!("/proc/{}/ns/net", child_pid));
     cmd.arg(netns_file);
     commands.push(cmd);
 
-    let mut cmd = mount_cmd.clone();
+    let mut cmd = sudo_mount();
     cmd.arg("--bind");
     cmd.arg(format!("/proc/{}/ns/user", child_pid));
     cmd.arg(userns_file);
@@ -235,7 +291,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     if !dry_run {
         for cmd in commands.iter() {
             match cmd.status() {
-                Ok(ExitStatus(0)) => {},
+                Ok(status) if status.success() => {},
                 val => return Err(
                     format!("Error running command {:?}: {:?}", cmd, val)),
             }
@@ -247,15 +303,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 format!("vagga_setup_netns exited with code: {:?}", code)),
         }
         if iptables {
-            let mut iptables = Command::new("sudo");
-            iptables.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-            iptables.arg("iptables");
-
             for rule in iprules.iter() {
-                let mut cmd = iptables.clone();
+                let mut cmd = sudo_iptables();
 
                 // Message not an error actually
-                iptables.stderr(1);
+                cmd.stderr(unsafe { FromRawFd::from_raw_fd(1) });
 
                 let mut check_rule = rule.clone();
                 for item in check_rule.iter_mut() {
@@ -265,8 +317,8 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 }
                 cmd.args(&check_rule[..]);
                 let exists = match cmd.status() {
-                    Ok(ExitStatus(0)) => true,
-                    Ok(ExitStatus(1)) => false,
+                    Ok(status) if status.success() => true,
+                    Ok(status) if status.code() == Some(1) => false,
                     val => return Err(
                         format!("Error running command {:?}: {:?}", cmd, val)),
                 };
@@ -275,11 +327,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 if exists {
                     info!("Rule {:?} already setup. Skipping...", rule);
                 } else {
-                    let mut cmd = iptables.clone();
+                    let mut cmd = sudo_iptables();
                     cmd.args(&rule[..]);
                     debug!("Running {:?}", rule);
                     match cmd.status() {
-                        Ok(ExitStatus(0)) => {},
+                        Ok(status) if status.success() => {}
                         val => return Err(
                             format!("Error setting up iptables {:?}: {:?}",
                                 cmd, val)),
@@ -328,44 +380,35 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
 
     let mut commands = vec!();
 
-    // If we are root we may skip sudo
-    let mut umount_cmd = Command::new("sudo");
-    umount_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    umount_cmd.arg("umount");
-
-    let mut iptcmd = Command::new("sudo");
-    iptcmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-    iptcmd.arg("iptables");
-
-    let mut cmd = umount_cmd.clone();
+    let mut cmd = sudo_umount();
     cmd.arg(&netns_file);
     commands.push(cmd);
 
-    let mut cmd = umount_cmd.clone();
+    let mut cmd = sudo_umount();
     cmd.arg(&userns_file);
     commands.push(cmd);
 
     if iptables {
-        let mut cmd = iptcmd.clone();
+        let mut cmd = sudo_iptables();
         cmd.args(&["-t", "nat", "-D", "POSTROUTING",
                    "-s", &network[..], "-j", "MASQUERADE"]);
         commands.push(cmd);
 
-        let mut cmd = iptcmd.clone();
+        let mut cmd = sudo_iptables();
         cmd.args(&["-D", "INPUT",
                    "-i", &interface_name[..],
                    "-d", "127.0.0.1",
                    "-j", "ACCEPT"]);
         commands.push(cmd);
 
-        let mut cmd = iptcmd.clone();
+        let mut cmd = sudo_iptables();
         cmd.args(&["-t", "nat", "-D", "PREROUTING",
                    "-p", "tcp", "-i", "vagga",
                    "-d", &host_ip[..], "--dport", "53",
                    "-j", "DNAT", "--to-destination", "127.0.0.1"]);
         commands.push(cmd);
 
-        let mut cmd = iptcmd.clone();
+        let mut cmd = sudo_iptables();
         cmd.args(&["-t", "nat", "-D", "PREROUTING",
                    "-p", "udp", "-i", "vagga",
                    "-d", &host_ip[..], "--dport", "53",
@@ -384,7 +427,7 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     if !dry_run {
         for cmd in commands.iter() {
             match cmd.status() {
-                Ok(ExitStatus(0)) => {}
+                Ok(status) if status.success() => {}
                 val => {
                     error!("Error running command {:?}: {:?}", cmd, val);
                 }
@@ -477,7 +520,7 @@ fn get_unused_inteface_no() -> Result<usize, String> {
 fn _run_command(cmd: Command) -> Result<(), String> {
     debug!("Running {:?}", cmd);
     match cmd.status() {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(status) if status.success() => Ok(()),
         code => Err(format!("Error running {:?}: {:?}",  cmd, code)),
     }
 }
@@ -495,26 +538,24 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     try!(File::create(link_to)
         .map_err(|e| format!("Can't create namespace file: {}", e)));
 
-    let mut ip_cmd = Command::new("ip");
-    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",
                "peer", "name", &iif[..]]);
     try!(_run_command(cmd));
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["addr", "add"]);
     cmd.arg(eip.clone() + "/30").arg("dev").arg(&eif);
     try!(_run_command(cmd));
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
     try!(_run_command(cmd));
 
     let cmdname = Rc::new("setup_netns".to_string());
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        env::current_exe().unwrap().parent().unwrap()
+        &env::current_exe().unwrap().parent().unwrap()
         .join("vagga_setup_netns"));
     cmd.args(&["bridge",
         "--interface", &iif[..],
@@ -536,10 +577,10 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     }
     let pid = try!(cmd.spawn());
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", pid)[..]]);
-    let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_to)
+    let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_to)
         .and(_run_command(cmd));
     match wait_process(pid) {
         Ok(0) => {}
@@ -549,7 +590,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     match res {
         Ok(()) => Ok(iip),
         Err(e) => {
-            let mut cmd = ip_cmd.clone();
+            let mut cmd = ip_cmd();
             cmd.args(&["link", "del", &eif[..]]);
             try!(_run_command(cmd));
             Err(e)
@@ -575,30 +616,22 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     try!(File::create(link_uts)
         .map_err(|e| format!("Can't create namespace file: {}", e)));
 
-    let mut ip_cmd = Command::new("ip");
-    ip_cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-
-    let mut busybox = Command::new(
-        env::current_exe().unwrap().parent().unwrap()
-        .join("busybox"));
-    busybox.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
-
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",
                "peer", "name", &iif[..]]);
     try!(_run_command(cmd));
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
     try!(_run_command(cmd));
 
-    let mut cmd = busybox.clone();
+    let mut cmd = busybox();
     cmd.args(&["brctl", "addif", "children", &eif[..]]);
     try!(_run_command(cmd));
 
     let cmdname = Rc::new("setup_netns".to_string());
     let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        env::current_exe().unwrap().parent().unwrap()
+        &env::current_exe().unwrap().parent().unwrap()
         .join("vagga_setup_netns"));
     cmd.args(&["guest", "--interface", &iif[..],
                         "--ip", &ip[..],
@@ -618,11 +651,11 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     }
     let pid = try!(cmd.spawn());
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", pid)[..]]);
-    let res = bind_mount(&Path::new(format!("/proc/{}/ns/net", pid)), link_net)
-        .and(bind_mount(&Path::new(format!("/proc/{}/ns/uts", pid)), link_uts))
+    let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_net)
+        .and(bind_mount(&Path::new(&format!("/proc/{}/ns/uts", pid)), link_uts))
         .and(_run_command(cmd));
     match wait_process(pid) {
         Ok(0) => {}
@@ -633,7 +666,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     match res {
         Ok(()) => Ok(()),
         Err(e) => {
-            let mut cmd = ip_cmd.clone();
+            let mut cmd = ip_cmd();
             cmd.args(&["link", "del", &eif[..]]);
             try!(_run_command(cmd));
             Err(e)
@@ -642,9 +675,9 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
 }
 
 impl PortForwardGuard {
-    pub fn new(ns: Path, ip: String, ports: Vec<u16>) -> PortForwardGuard {
+    pub fn new(ns: &Path, ip: String, ports: Vec<u16>) -> PortForwardGuard {
         return PortForwardGuard {
-            nspath: ns,
+            nspath: ns.to_path_buf(),
             ip: ip,
             ports: ports,
         };
@@ -652,11 +685,9 @@ impl PortForwardGuard {
     pub fn start_forwarding(&self) -> Result<(), String> {
         try!(set_namespace(&self.nspath, NewNet)
             .map_err(|e| format!("Error joining namespace: {}", e)));
-        let mut iptables = Command::new("iptables");
-        iptables.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
         for port in self.ports.iter() {
-            let mut cmd = iptables.clone();
+            let mut cmd = iptables();
             cmd.args(&["-t", "nat", "-I", "PREROUTING",
                        "-p", "tcp", "-m", "tcp",
                        "--dport", &format!("{}", port)[..],
@@ -676,10 +707,8 @@ impl Drop for PortForwardGuard {
                     Unable to clean firewall rules", self.nspath.display(), e);
             return;
         }
-        let mut iptables = Command::new("iptables");
-        iptables.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
         for port in self.ports.iter() {
-            let mut cmd = iptables.clone();
+            let mut cmd = iptables();
             cmd.args(&["-t", "nat", "-D", "PREROUTING",
                        "-p", "tcp", "-m", "tcp",
                        "--dport", &format!("{}", port)[..],

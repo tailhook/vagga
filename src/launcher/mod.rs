@@ -1,11 +1,12 @@
 use std::env;
-use std::io::stderr;
-use std::path::Path;
+use std::io::{stderr, Write};
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 use config::find_config;
 use container::signal;
 use argparse::{ArgumentParser, Store, List, Collect};
+use super::path_util::ToRelative;
 
 mod list;
 mod user;
@@ -60,18 +61,18 @@ pub fn run() -> i32 {
             return 126;
         }
     };
-    let int_workdir = workdir.path_relative_from(&cfg_dir)
-                             .unwrap_or(Path::new("."));
+    let int_workdir = workdir.rel_to(&cfg_dir)
+                             .unwrap_or(&Path::new("."));
 
     for k in propagate_env.into_iter() {
         env::set_var(&("VAGGAENV_".to_string() + &k[..]),
-            env::var(&k).unwrap_or("".to_string())).unwrap();
+            env::var(&k).unwrap_or("".to_string()));
     }
     for pair in set_env.into_iter() {
         let mut pairiter = pair[..].splitn(1, '=');
         let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
         if let Some(value) = pairiter.next() {
-            env::set_var(&key, value.to_string()).unwrap();
+            env::set_var(&key, value.to_string());
         } else {
             env::remove_var(&key);
         }
@@ -79,7 +80,7 @@ pub fn run() -> i32 {
 
     let result:Result<i32, String> = match &cname[..] {
         "" => {
-            err.write_line("Available commands:").ok();
+            writeln!(&mut err, "Available commands:").ok();
             for (k, cmd) in config.commands.iter() {
                 write!(&mut err, "    {}", k).ok();
                 match cmd.description() {
@@ -88,11 +89,11 @@ pub fn run() -> i32 {
                             write!(&mut err, "\n                        ").ok();
                         } else {
                             for _ in k.len()..19 {
-                                err.write_all(b' ').ok();
+                                err.write_all(b" ").ok();
                             }
                             err.write_all(b" ").ok();
                         }
-                        err.write_all(&val).ok();
+                        err.write_all(val[..].as_bytes()).ok();
                     }
                     None => {}
                 }

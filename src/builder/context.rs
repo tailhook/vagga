@@ -1,6 +1,7 @@
-use std::fs::{create_dir_all, create_dir, copy, set_permissions};
+use std::fs::{create_dir_all, copy, set_permissions};
 use std::fs::Permissions;
 use std::fs::PathExt;
+use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::default::Default;
@@ -21,6 +22,8 @@ use super::commands::npm;
 use super::capsule;
 use super::packages;
 use super::timer;
+use super::super::path_util::ToRelative;
+use super::super::file_util::create_dir;
 
 #[derive(Debug)]
 pub enum Distribution {
@@ -88,7 +91,8 @@ impl<'a> BuildContext<'a> {
             packages: BTreeSet::new(),
             build_deps: BTreeSet::new(),
             featured_packages: BTreeSet::new(),
-            timelog: timer::TimeLog::start("/vagga/container/timings.log")
+            timelog: timer::TimeLog::start(
+                    &Path::new("/vagga/container/timings.log"))
                 .map_err(|e| format!("Can't write timelog: {}", e))
                 .unwrap(),
         };
@@ -98,20 +102,16 @@ impl<'a> BuildContext<'a> {
         -> Result<(), String>
     {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        if self.cache_dirs.insert(path.clone(), name.clone()).is_none() {
+        let path = path.rel();
+        if self.cache_dirs.insert(path.to_path_buf(), name.clone()).is_none() {
             let cache_dir = Path::new("/vagga/cache").join(&name);
             if !cache_dir.exists() {
-                try!(create_dir(&cache_dir)
-                     .map_err(|e| format!("Error creating cache dir: {}", e)));
-                try!(set_permissions(&cache_dir,
-                    Permissions::from_mode(0o755)));
+                try_msg!(create_dir(&cache_dir, false),
+                     "Error creating cache dir: {err}");
             }
             let path = Path::new("/vagga/root").join(path);
-            try!(create_dir_all(&path)
-                 .map_err(|e| format!("Error creating cache dir: {}", e)));
-            try!(set_permissions(&path,
-                Permissions::from_mode(0o755)));
+            try_msg!(create_dir(&path, true),
+                 "Error creating cache dir: {err}");
             try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
         }
@@ -120,27 +120,22 @@ impl<'a> BuildContext<'a> {
 
     pub fn add_remove_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        self.remove_dirs.insert(path);
+        self.remove_dirs.insert(path.rel().to_path_buf());
     }
 
     pub fn add_empty_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        self.empty_dirs.insert(path);
+        self.empty_dirs.insert(path.rel().to_path_buf());
     }
 
     pub fn add_ensure_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        self.ensure_dirs.insert(path);
+        self.ensure_dirs.insert(path.rel().to_path_buf());
     }
     pub fn start(&mut self) -> Result<(), String> {
         try!(mount_system_dirs());
-        try!(create_dir("/vagga/root/etc")
-             .map_err(|e| format!("Error creating /etc dir: {}", e)));
-        try!(set_permissions("/vagga/root/etc", Permissions::from_mode(0o755))
-             .map_err(|e| format!("Error chmod /etc dir: {}", e)));
+        try_msg!(create_dir(&Path::new("/vagga/root/etc"), false),
+             "Error creating /etc dir: {err}");
         try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
         try!(self.timelog.mark(format_args!("Prepare"))
@@ -185,10 +180,8 @@ impl<'a> BuildContext<'a> {
 
         for dir in self.ensure_dirs.iter() {
             let fulldir = base.join(dir);
-            try!(create_dir_all(&fulldir)
-                .map_err(|e| format!("Error creating dir: {}", e)));
-            try!(set_permissions(&fulldir, Permissions::from_mode(0o755))
-                .map_err(|e| format!("Error chmod dir: {}", e)));
+            try_msg!(create_dir(&fulldir, true),
+                "Error creating dir: {err}");
         }
 
         try!(self.timelog.mark(format_args!("Finish"))

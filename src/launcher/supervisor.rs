@@ -3,6 +3,7 @@ use std::collections::BTreeSet;
 use std::env::current_exe;
 use std::io::{stdout, stderr};
 use std::path::Path;
+use std::fs::PathExt;
 use std::rc::Rc;
 
 use argparse::{ArgumentParser};
@@ -107,7 +108,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     let mut mon = Monitor::new();
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("wrapper".to_string(),
-            current_exe().unwrap().parent().unwrap()
+            &current_exe().unwrap().parent().unwrap()
             .join("vagga_wrapper"));
         cmd.keep_sigmask();
         cmd.arg(&cmdname);
@@ -139,13 +140,13 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         let ip = try!(network::setup_bridge(&bridge_ns, &forwards));
 
         port_forward_guard = network::PortForwardGuard::new(
-            gwdir.join("netns"), ip, ports);
+            &gwdir.join("netns"), ip, ports);
         try!(port_forward_guard.start_forwarding());
 
         for name in containers_in_netns.iter() {
             let child = sup.children.get(name).unwrap();
             let mut cmd = Command::new("wrapper".to_string(),
-                current_exe().unwrap().parent().unwrap()
+                &current_exe().unwrap().parent().unwrap()
                 .join("vagga_wrapper"));
             cmd.keep_sigmask();
             cmd.arg(&cmdname);
