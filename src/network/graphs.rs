@@ -25,9 +25,9 @@ pub struct Graph {
 pub fn get_full_mesh(config: &Config)
     -> Result<(HashMap<String, String>, Graph), String>
 {
-    let cmd = try!(env::var("VAGGA_COMMAND")
+    let cmd = try!(env::var("VAGGA_COMMAND").ok()
         .and_then(|cmd| config.commands.get(&cmd))
-        .map_err(|_| format!("This command is supposed to be run inside \
+        .ok_or(format!("This command is supposed to be run inside \
                         container started by vagga !Supervise command")));
     let sup = match cmd {
         &MainCommand::Supervise(ref sup) => sup,
