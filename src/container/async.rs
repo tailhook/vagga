@@ -60,16 +60,16 @@ impl<Name: Clone> Loop<Name> {
     pub fn new() -> Result<Loop<Name>, IoError> {
         let efd = unsafe { create_epoll() };
         if efd < 0 {
-            return Err(IoError::last_error());
+            return Err(IoError::last_os_error());
         }
         let epoll = FileDesc(efd);
         let sfd = unsafe { create_signalfd() };
         if sfd < 0 {
-            return Err(IoError::last_error());
+            return Err(IoError::last_os_error());
         }
         let sig = FileDesc(sfd);
         if unsafe { epoll_add_read(efd, sfd) } < 0 {
-            return Err(IoError::last_error());
+            return Err(IoError::last_os_error());
         }
         return Ok(Loop {
             queue: BinaryHeap::new(),
@@ -107,7 +107,7 @@ impl<Name: Clone> Loop<Name> {
             } else if fd == -EINTR {
                 continue
             } else if fd < 0 {
-                panic!(format!("Error in epoll: {}", IoError::last_error()));
+                panic!(format!("Error in epoll: {}", IoError::last_os_error()));
             } else if fd == sfd { // Signal
                 debug!("Signal");
                 let rc =  unsafe { read_signal(sfd) };
@@ -115,7 +115,7 @@ impl<Name: Clone> Loop<Name> {
                     continue;
                 } else if rc <= 0 {
                     panic!(format!("Error in read_signal: {}",
-                        IoError::last_error()));
+                        IoError::last_os_error()));
                 } else {
                     match rc {
                         sig@SIGTERM | sig@SIGINT | sig@SIGQUIT => {
@@ -133,7 +133,7 @@ impl<Name: Clone> Loop<Name> {
                 }
             } else {
                 debug!("Input {}", fd);
-                return Input(self.inputs[fd].clone());
+                return Input(self.inputs[&fd].clone());
             }
             unreachable!();
         }
