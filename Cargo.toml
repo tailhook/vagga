@@ -16,6 +16,7 @@ rustc-serialize = "*"
 log = "*"
 time = "*"
 env_logger = "*"
+url = "*"
 
 [[bin]]
 name = "vagga"

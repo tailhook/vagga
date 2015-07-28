@@ -59,7 +59,7 @@ pub fn wait_process(pid: pid_t) -> Result<i32, IoError> {
         if errno() == EINTR {
             continue;
         }
-        return Err(IoError::last_error());
+        return Err(IoError::last_os_error());
     }
 }
 

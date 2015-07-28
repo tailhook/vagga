@@ -1,5 +1,6 @@
 use std::fs::{remove_file, rename, create_dir_all, set_permissions};
 use std::fs::{Permissions};
+use std::fs::PathExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
@@ -21,7 +22,7 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
     let mut hash = Sha256::new();
     hash.input_str(url);
     let urlpath = Path::new(url);
-    let name = match urlpath.filename_str() {
+    let name = match urlpath.file_name().and_then(|x| x.to_str()) {
         Some(name) => name,
         None => "file.bin",
     };
@@ -38,10 +39,10 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
         return Ok(filename);
     }
     info!("Downloading image {} -> {}", url, filename.display());
-    let tmpfilename = filename.with_filename(name + ".part");
+    let tmpfilename = filename.with_file_name(name + ".part");
     let mut cmd = Command::new(
         if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
-    cmd.stdin(Stdio::ignore())
+    cmd.stdin(Stdio::null())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
     if !https {
@@ -56,7 +57,7 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
         .map_err(|e| format!("Can't run wget: {}", e))
         .map(|o| o.status)
     {
-        Ok(ExitStatus(0)) => {
+        Ok(st) if st.success() => {
             try!(rename(&tmpfilename, &filename)
                 .map_err(|e| format!("Error moving file: {}", e)));
             Ok(filename)

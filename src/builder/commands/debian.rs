@@ -1,7 +1,7 @@
 use std::fs::{copy, rename, set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::string;
 
@@ -31,11 +31,11 @@ pub fn read_ubuntu_codename() -> Result<String, String>
 {
     let lsb_release_path = "/vagga/root/etc/lsb-release";
     let mut lsb_release_file = BufReader::new(
-        File::open(&Path::new(lsb_release_path)));
+        try_msg!(File::open(&Path::new(lsb_release_path)),
+            "Error reading /etc/lsb-release: {err}"));
 
     for line in lsb_release_file.lines() {
-        let line = try!(line
-            .map_err(|e| format!("Error reading lsb file: {}", e)));
+        let line = try_msg!(line, "Error reading lsb file: {err}");
         if let Some(equalsPos) = line.find('=') {
             let key = line[..equalsPos].trim();
 
@@ -93,7 +93,7 @@ fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
         .and_then(|mut f| {
             for line in source.lines() {
                 let line = try!(line);
-                try!(f.write(&line.replace("http://archive.ubuntu.com/ubuntu/",
+                try!(f.write_all(&line.replace("http://archive.ubuntu.com/ubuntu/",
                      &ctx.settings.ubuntu_mirror)));
             }
             Ok(())
@@ -108,7 +108,7 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
     // Do not attempt to start init scripts
     let policy_file = Path::new("/vagga/root/usr/sbin/policy-rc.d");
     try!(File::create(&policy_file)
-        .and_then(|mut f| f.write(b"#!/bin/sh\nexit 101\n"))
+        .and_then(|mut f| f.write_all(b"#!/bin/sh\nexit 101\n"))
         .map_err(|e| format!("Error writing policy-rc.d file: {}", e)));
     try!(set_permissions(&policy_file, Permissions::from_mode(0o755))
         .map_err(|e| format!("Can't chmod file: {}", e)));
@@ -116,13 +116,13 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
     // Do not need to fsync() after package installation
     try!(File::create(
             &Path::new("/vagga/root/etc/dpkg/dpkg.cfg.d/02apt-speedup"))
-        .and_then(|mut f| f.write(b"force-unsafe-io"))
+        .and_then(|mut f| f.write_all(b"force-unsafe-io"))
         .map_err(|e| format!("Error writing dpkg config: {}", e)));
 
     // Do not install recommends by default
     try!(File::create(
             &Path::new("/vagga/root/etc/apt/apt.conf.d/01norecommend"))
-        .and_then(|mut f| f.write(br#"
+        .and_then(|mut f| f.write_all(br#"
             APT::Install-Recommends "0";
             APT::Install-Suggests "0";
         "#))
@@ -200,7 +200,7 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     try!(capture_command(ctx, &["dpkg".to_string(), "-l".to_string()], &[])
         .and_then(|out| {
             File::create("/vagga/container/debian-packages.txt")
-            .and_then(|mut f| f.write(&out))
+            .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping package list: {}", e))
         }));
     Ok(())

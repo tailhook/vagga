@@ -1,3 +1,5 @@
+use std::ffi::CString;
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::path::Component::RootDir;
 
@@ -29,5 +31,21 @@ impl ToRelative for PathBuf {
     }
     fn rel_to<'x>(&'x self, other: &Path) -> Option<&'x Path> {
         self.as_path().rel_to(other)
+    }
+}
+
+trait ToCString {
+    fn to_cstring(&self) -> CString;
+}
+
+impl ToCString for Path {
+    fn to_cstring(&self) -> CString {
+        CString::new(self.as_os_str().as_bytes()).unwrap()
+    }
+}
+
+impl<'a> ToCString for &'a str {
+    fn to_cstring(&self) -> CString {
+        CString::new(self.as_bytes()).unwrap()
     }
 }

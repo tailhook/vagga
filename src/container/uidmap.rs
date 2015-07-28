@@ -25,12 +25,12 @@ pub enum Uidmap {
 
 
 fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
-    let file = File::open(&Path::new("/etc/subuid"));
+    let file = try_msg!(File::open(&Path::new("/etc/subuid")),
+        "Can't open /etc/subuid: {err}");
     let mut res = Vec::new();
     let mut reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
-        let line = try!(line.map_err(
-            |e| format!("Error reading /etc/subuid: {}", e)));
+        let line = try_msg!(line, "Error reading /etc/subuid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
         let start = FromStr::from_str(parts[1]);
         let count = FromStr::from_str(parts[2].trim_right());
@@ -47,12 +47,12 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
 }
 
 fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
-    let file = File::open(&Path::new("/etc/subgid"));
+    let file = try_msg!(File::open(&Path::new("/etc/subgid")),
+        "Can't open /etc/subgid: {err}");
     let mut res = Vec::new();
     let mut reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
-        let line = try!(line.map_err(
-            |e| format!("Error reading /etc/subgid: {}", e)));
+        let line = try_msg!(line, "Error reading /etc/subgid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
         let start = FromStr::from_str(parts[1]);
         let count = FromStr::from_str(parts[2].trim_right());
@@ -115,7 +115,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
     let username = try!(cmd.output()
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
-        .and_then(|out| if out.status.status() == 0 { Ok(out.output) } else
+        .and_then(|out| if out.status.success() { Ok(out.output) } else
             { Err(format!("Error running `id --user --name`")) })
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
