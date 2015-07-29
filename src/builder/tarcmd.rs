@@ -55,7 +55,7 @@ pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
     let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
     let filename = try!(download_file(ctx, &tar.url[0..]));
     // TODO(tailhook) check sha256 sum
-    if tar.subdir == Path::new(".").to_path() {
+    if tar.subdir == &Path::new(".") {
         try!(unpack_file(ctx, &filename, &fpath, &[], &[]));
     } else {
         let tmppath = PathBuf::from("/vagga/root/tmp")
@@ -67,7 +67,7 @@ pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
         }
         try!(bind_mount(&fpath, &tmpsub));
         let res = unpack_file(ctx, &filename, &tmppath,
-            &[tar.subdir.clone()], &[]);
+            &[&tar.subdir.clone()], &[]);
         try!(unmount(&tmpsub));
         try!(res);
     }

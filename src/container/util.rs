@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
 use std::fs::{symlink_metadata, read_link};
-use std::fs::FileType;
+use std::fs::{FileType, PathExt};
 use std::os::unix::fs::symlink;
 use std::ptr::null;
 use std::path::Path;
@@ -83,36 +83,27 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
     // TODO(tailhook) use reflinks if supported
     for item in try_msg!(read_dir(old), "Can't open dir {d:?}: {err}", d=old) {
         let entry = try_msg!(item, "Can't read dir entry {d:?}: {err}", d=old);
-        let stat = try_msg!(symlink_metadata(entry.path()),
-            "Can't stat file {path:?}: {err}", path=entry.path());
         let nitem = new.join(entry.file_name());
-        match stat.kind {
-            FileType::RegularFile => {
-                try!(copy(item, &nitem)
-                    .map_err(|e| format!("Can't hard-link file: {}", e)));
+        let typ = try_msg!(entry.file_type(),
+            "Can't stat {f:?}: {err}", f=entry.path());
+        if typ.is_file() {
+            try!(copy(item, &nitem)
+                .map_err(|e| format!("Can't hard-link file: {}", e)));
+        } else if typ.is_dir() {
+            let stat = try_msg!(symlink_metadata(entry.path()),
+                "Can't stat file {path:?}: {err}", path=entry.path());
+            if !nitem.is_dir() {
+                try_msg!(create_dir_mode(&nitem, stat.perm),
+                    "Can't create dir {dir:?}: {err}", dir=nitem);
             }
-            FileType::Directory => {
-                if !nitem.is_dir() {
-                    try_msg!(create_dir_mode(&nitem, stat.perm),
-                        "Can't create dir {dir:?}: {err}", dir=nitem);
-                }
-                try!(copy_dir(item, &nitem));
-            }
-            FileType::NamedPipe => {
-                warn!("Skipping named pipe {:?}", item);
-            }
-            FileType::BlockSpecial => {
-                warn!("Can't clone block-special {:?}, skipping", item);
-            }
-            FileType::Symlink => {
-                let lnk = try!(read_link(item)
-                    .map_err(|e| format!("Can't readlink: {}", e)));
-                try!(symlink(&lnk, &nitem)
-                    .map_err(|e| format!("Can't symlink: {}", e)));
-            }
-            FileType::Unknown => {
-                warn!("Unknown file type {:?}", item);
-            }
+            try!(copy_dir(item, &nitem));
+        } else if typ.is_symlink() {
+            let lnk = try!(read_link(item)
+                .map_err(|e| format!("Can't readlink: {}", e)));
+            try!(symlink(&lnk, &nitem)
+                .map_err(|e| format!("Can't symlink: {}", e)));
+        } else {
+            warn!("Unknown file type {:?}", entry.path());
         }
     }
     Ok(())

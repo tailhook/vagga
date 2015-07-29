@@ -7,6 +7,8 @@
 
 use std::collections::HashSet;
 use std::fs::{File};
+use std::fs::PathExt;
+use std::io::{Write};
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -48,7 +50,7 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
         .map_err(|e| format!("Can't run apk: {}", e))
         .map(|o| o.status)
     {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(s) if s.success() => Ok(()),
         Ok(val) => Err(format!("Apk exited with status: {}", val)),
         Err(x) => Err(format!("Error running tar: {}", x)),
     }

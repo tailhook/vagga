@@ -8,10 +8,10 @@ use super::super::context::BuildContext;
 use container::monitor::{Monitor, Executor, MonitorStatus};
 use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
+use super::super::super::path_util::ToRelative;
 
 
 fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
-    let rpath = Path::new("/");
     let chroot = Path::new("/vagga/root");
     if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {
         for dir in paths[..].split(':') {
@@ -21,7 +21,7 @@ fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
                       path.display());
                 continue;
             }
-            if chroot.join(path.path_relative_from(&rpath).unwrap())
+            if chroot.join(path.rel())
                 .join(cmd).exists()
             {
                 return Ok(path.join(cmd));
@@ -37,7 +37,7 @@ pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
     -> Result<(), String>
 {
     let cmdpath = if cmdline[0][..].starts_with("/") {
-        Path::new(&cmdline[0])
+        PathBuf::new(&cmdline[0])
     } else {
         try!(find_cmd(ctx, &cmdline[0]))
     };
@@ -103,7 +103,7 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
     debug!("Running {:?}", cmd);
     let (res, data) = unsafe {
         let pipe = try!(pipe()
-            .map_err(|e| format!("Can't create pipe: {}", e)));
+            .map_err(|e| format!("Can't create pipe: {:?}", e)));
         cmd.set_stdout_fd(pipe.writer);
         let res = Monitor::run_command(cmd);
         (res, pipe.read())

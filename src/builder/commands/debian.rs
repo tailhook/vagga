@@ -93,8 +93,9 @@ fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
         .and_then(|mut f| {
             for line in source.lines() {
                 let line = try!(line);
-                try!(f.write_all(&line.replace("http://archive.ubuntu.com/ubuntu/",
-                     &ctx.settings.ubuntu_mirror)));
+                try!(f.write_all(
+                    line.replace("http://archive.ubuntu.com/ubuntu/",
+                     &ctx.settings.ubuntu_mirror).as_bytes()));
             }
             Ok(())
         })
