@@ -44,8 +44,9 @@ impl ToCString for Path {
     }
 }
 
-impl<'a> ToCString for &'a str {
+impl<'a, T:AsRef<[u8]>> ToCString for T {
     fn to_cstring(&self) -> CString {
-        CString::new(self.as_bytes()).unwrap()
+        CString::new(self.as_ref()).unwrap()
     }
 }
+

@@ -16,9 +16,10 @@ use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 
 use libc::{c_int, c_char, pid_t};
 use self::Namespace::*;
+use super::super::path_util::ToCString;
 
 
-#[derive(Debug, Hash)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub enum Namespace {
     NewMount,
     NewUts,
@@ -55,11 +56,10 @@ impl Command {
         let slc = cmd.as_os_str().as_bytes();
         return Command {
             name: name,
-            chroot: CString::new("/").unwrap(),
-            workdir: CString::new(current_dir().unwrap()
-                .as_os_str().as_bytes().to_vec()).unwrap(),
-            executable: CString::new(slc.to_vec()).unwrap(),
-            arguments: vec!(CString::new(slc.to_vec()).unwrap()),
+            chroot: "/".to_cstring(),
+            workdir: current_dir().unwrap().to_cstring(),
+            executable: slc.to_cstring(),
+            arguments: vec!(slc.to_cstring()),
             namespaces: HashSet::new(),
             environment: BTreeMap::new(),
             restore_sigmask: true,
@@ -83,20 +83,20 @@ impl Command {
         self.stdin = fd;
     }
     pub fn chroot(&mut self, dir: &Path) {
-        self.chroot = CString::from_slice(dir.container_as_bytes());
+        self.chroot = dir.to_cstring();
     }
     pub fn set_workdir(&mut self, dir: &Path) {
-        self.workdir = CString::from_slice(dir.container_as_bytes());
+        self.workdir = dir.to_cstring();
     }
     pub fn keep_sigmask(&mut self) {
         self.restore_sigmask = false;
     }
     pub fn arg<T:AsRef<[u8]>>(&mut self, arg: T) {
-        self.arguments.push(CString::from_slice(arg.as_ref()));
+        self.arguments.push(arg.to_cstring());
     }
     pub fn args<T:AsRef<[u8]>>(&mut self, arg: &[T]) {
         self.arguments.extend(arg.iter()
-            .map(|v| CString::from_slice(v.as_ref())));
+            .map(|v| v.to_cstring()));
     }
     pub fn set_env(&mut self, key: String, value: String)
     {
@@ -133,17 +133,16 @@ impl Command {
             .map(|a| a.as_bytes().as_ptr()).collect();
         exec_args.push(null());
         let environ_cstr: Vec<CString> = self.environment.iter()
-            .map(|(k, v)| CString::from_slice(
-                (k.clone() + "=" + &v).as_bytes()))
+            .map(|(k, v)| (k.clone() + "=" + &v).to_cstring())
             .collect();
         let mut exec_environ: Vec<*const u8> = environ_cstr.iter()
             .map(|p| p.as_bytes().as_ptr()).collect();
         exec_environ.push(null());
 
-        let logprefix = CString::from_slice(format!(
+        let logprefix = format!(
             // Only errors are logged from C code
-            "ERROR:lithos::container.c: [{}]", self.name
-            ).as_bytes());
+            "ERROR:vagga::container.c: [{}]", self.namej
+            ).to_cstring();
 
         let pipe = try!(CPipe::new()
                         .map_err(|e| format!("Error creating pipe: {}", e)));
@@ -163,7 +162,7 @@ impl Command {
             stderr: self.stderr,
         }) };
         if pid < 0 {
-            return Err(format!("Error executing: {}", IoError::last_error()));
+            return Err(format!("Error executing: {}", IoError::last_os_error()));
         }
         if let Some(uidmap) = self.uidmap.as_ref() {
             try!(apply_uidmap(pid, uidmap)
@@ -190,7 +189,7 @@ pub fn convert_namespace(value: Namespace) -> c_int {
 
 fn convert_namespaces(set: HashSet<Namespace>) -> c_int {
     let mut ns = 0;
-    for i in set.iter() {
+    for &i in set.iter() {
         ns |= convert_namespace(i);
     }
     return ns;

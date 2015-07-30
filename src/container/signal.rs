@@ -65,5 +65,5 @@ pub fn wait_process(pid: pid_t) -> Result<i32, IoError> {
 
 
 pub fn send_signal(pid: pid_t, sig: i32) {
-    kill(pid, sig as isize).ok();
+    kill(pid, sig).ok();
 }
