@@ -5,6 +5,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufRead, Write};
 use std::io::Error as IoError;
 use std::io::ErrorKind::{Interrupted, Other};
+use std::os::unix::process::ExitStatusExt;
 use std::str::FromStr;
 use std::str::from_utf8;
 use std::path::Path;
@@ -115,7 +116,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
     let username = try!(cmd.output()
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
-        .and_then(|out| if out.status.success() { Ok(out.output) } else
+        .and_then(|out| if out.status.success() { Ok(out.stdout) } else
             { Err(format!("Error running `id --user --name`")) })
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
@@ -174,15 +175,15 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
             let uid_map_file = Path::new("/proc")
                               .join(pid.to_string())
                               .join("uid_map");
-            try!(OpenOptions().write(true).open(&uid_map_file)
-                .write_all(&uid_map));
+            try!(OpenOptions::new().write(true).open(&uid_map_file)
+                .and_then(|mut f| f.write_all(uid_map.as_bytes())));
             let gid_map = format!("0 {} 1", gid);
             debug!("Writing gid_map: {}", gid_map);
             let gid_map_file = Path::new("/proc")
                               .join(pid.to_string())
                               .join("gid_map");
-            try!(OpenOptions().write().open(&gid_map_file)
-                .write_all(&uid_map));
+            try!(OpenOptions::new().write(true).open(&gid_map_file)
+                .and_then(|mut f| f.write_all(uid_map.as_bytes())));
         }
         &Ranges(ref uids, ref gids) => {
             let myuid = unsafe { geteuid() };
@@ -209,8 +210,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                     Ok(s) => {
                         return Err(IoError::new(Other,
                             format!("Error writing uid mapping: \
-                                newuidmap was exit with status {}",
-                                s.status())));
+                                newuidmap was exit with status {}", s)));
                     }
                     Err(e) => return Err(e),
                 }
@@ -237,8 +237,7 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                     Ok(s) => {
                         return Err(IoError::new(Other,
                             format!("Error writing gid mapping: \
-                                newuidmap was exit with status {}",
-                                s.status())));
+                                newuidmap was exit with status {}", s)));
                     }
                     Err(e) => return Err(e),
                 }
@@ -247,23 +246,21 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
                 for &(ins, outs, cnt) in uids.iter() {
                     try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
                 }
-                let mut file = try!(File::create(&Path::new(
-                    format!("/proc/{}/uid_map", pid))));
-                let value = membuf.into_inner();
+                let mut file = try!(File::create(
+                    &format!("/proc/{}/uid_map", pid)));
                 debug!("Writing uid map ```{}```",
-                    String::from_utf8_lossy(&value));
-                try!(file.write(&value));
+                    String::from_utf8_lossy(&membuf[..]));
+                try!(file.write(&membuf));
 
                 let mut membuf = Vec::with_capacity(100);
                 for &(ins, outs, cnt) in gids.iter() {
                     try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
                 }
-                let mut file = try!(File::create(&Path::new(
-                    format!("/proc/{}/gid_map", pid))));
-                let value = membuf.into_inner();
+                let mut file = try!(File::create(
+                    &format!("/proc/{}/gid_map", pid)));
                 debug!("Writing gid map ```{}```",
-                    String::from_utf8_lossy(&value));
-                try!(file.write(&value));
+                    String::from_utf8_lossy(&membuf[..]));
+                try!(file.write(&membuf));
             }
         }
     }
@@ -277,13 +274,13 @@ fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
     let mut result = vec!();
     for line in file.lines() {
         let line = try!(line
-            .map_err(|e| format!("Error reading uid/gid map: {}", e)));
+            .map_err(|e| format!("Error reading uid/gid map")));
         let mut words = line[..].split_whitespace();
-        let inside = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
+        let inside: u32 = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
-        let outside = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
+        let outside: u32 = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
-        let count = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
+        let count: u32 = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
         if read_inside {
             result.push(Range { start: inside, end: inside+count-1 });
@@ -306,7 +303,7 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
         let uid_map = try!(match_ranges(uids, &ranges, 0)
             .map_err(|()| {
                 return format!("Number of allowed subuids is too small. \
-                    Required {}, allowed {}. You either need to increase \
+                    Required {:?}, allowed {:?}. You either need to increase \
                     allowed numbers in /etc/subuid (preferred) or decrease \
                     needed ranges in vagga.yaml by adding `uids` key \
                     to container config", uids, ranges);
@@ -315,7 +312,7 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
         let gid_map = try!(match_ranges(gids, &ranges, 0)
             .map_err(|()| {
                 return format!("Number of allowed subgids is too small. \
-                    Required {}, allowed {}. You either need to increase \
+                    Required {:?}, allowed {:?}. You either need to increase \
                     allowed numbers in /etc/subgid (preferred) or decrease \
                     needed ranges in vagga.yaml by adding `gids` key \
                     to container config", gids, ranges);
