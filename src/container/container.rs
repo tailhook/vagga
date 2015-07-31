@@ -219,7 +219,6 @@ pub struct CCommand {
     workdir: *const c_char,
 }
 
-#[link(name="container", kind="static")]
 extern {
     fn execute_command(cmd: *const CCommand) -> pid_t;
 }
