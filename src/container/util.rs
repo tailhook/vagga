@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
 use std::fs::{symlink_metadata, read_link};
 use std::fs::{FileType, PathExt};
-use std::os::unix::fs::symlink;
+use std::os::unix::fs::{symlink, DirEntryExt, MetadataExt};
 use std::ptr::null;
 use std::path::Path;
 
@@ -37,8 +37,9 @@ pub fn get_user_name(uid: uid_t) -> Result<String, String> {
     unsafe {
         let val = getpwuid(uid);
         if val != null() {
-            return Ok(String::from_utf8_lossy(
-                CStr::from_ptr((*val).pw_name).to_bytes()));
+            return String::from_utf8(
+                CStr::from_ptr((*val).pw_name).to_bytes().to_vec())
+                .map_err(|e| format!("Can't decode user name: {}", e));
         }
     }
     return Err(format!("User {} not found", uid));
@@ -56,7 +57,7 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
                                   dir.display(), e)));
         for entry in diriter {
             let entry = try_msg!(entry, "Error reading dir entry: {err}");
-            if entry.is_dir() {
+            if entry.file_type().map(|x| x.is_dir()).unwrap_or(false) {
                 try_msg!(remove_dir_all(&entry.path()),
                     "Can't remove directory {dir:?}: {err}", dir=entry.path());
             } else {
@@ -87,18 +88,18 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
         let typ = try_msg!(entry.file_type(),
             "Can't stat {f:?}: {err}", f=entry.path());
         if typ.is_file() {
-            try!(copy(item, &nitem)
+            try!(copy(entry.path(), &nitem)
                 .map_err(|e| format!("Can't hard-link file: {}", e)));
         } else if typ.is_dir() {
             let stat = try_msg!(symlink_metadata(entry.path()),
                 "Can't stat file {path:?}: {err}", path=entry.path());
             if !nitem.is_dir() {
-                try_msg!(create_dir_mode(&nitem, stat.perm),
+                try_msg!(create_dir_mode(&nitem, stat.mode()),
                     "Can't create dir {dir:?}: {err}", dir=nitem);
             }
-            try!(copy_dir(item, &nitem));
+            try!(copy_dir(entry.path(), &nitem));
         } else if typ.is_symlink() {
-            let lnk = try!(read_link(item)
+            let lnk = try!(read_link(entry.path())
                 .map_err(|e| format!("Can't readlink: {}", e)));
             try!(symlink(&lnk, &nitem)
                 .map_err(|e| format!("Can't symlink: {}", e)));

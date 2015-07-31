@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::path::{Path, PathBuf};
+use std::fs::PathExt;
 
 use nix::unistd::{pipe, close};
 
@@ -37,7 +38,7 @@ pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
     -> Result<(), String>
 {
     let cmdpath = if cmdline[0][..].starts_with("/") {
-        PathBuf::new(&cmdline[0])
+        PathBuf::from(&cmdline[0])
     } else {
         try!(find_cmd(ctx, &cmdline[0]))
     };
@@ -86,7 +87,7 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
     -> Result<Vec<u8>, String>
 {
     let cmdpath = if cmdline[0][..].starts_with("/") {
-        Path::new(&cmdline[0])
+        PathBuf::from(&cmdline[0])
     } else {
         try!(find_cmd(ctx, &cmdline[0]))
     };

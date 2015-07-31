@@ -12,6 +12,7 @@ use config::builders::GitSource;
 use super::super::capsule;
 use super::super::context::BuildContext;
 use super::generic::run_command_at;
+use super::super::super::path_util::ToRelative;
 
 
 fn git_cache(url: &String) -> Result<PathBuf, String> {
@@ -87,7 +88,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 pub fn git_command(ctx: &mut BuildContext, git: &GitInfo) -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::Git]));
-    let dest = Path::new("/vagga/root").join(&git.path.rel());
+    let dest = PathBuf::from("/vagga/root").join(&git.path.rel());
     let cache_path = try!(git_cache(&git.url));
     try!(create_dir_all(&dest)
          .map_err(|e| format!("Error creating dir: {}", e)));
@@ -106,7 +107,7 @@ pub fn git_install(ctx: &mut BuildContext, git: &GitInstallInfo)
          .map_err(|e| format!("Error creating dir: {}", e)));
     try!(git_checkout(&cache_path, &tmppath, &git.revision, &git.branch));
     let workdir = PathBuf::from("/")
-        .join(tmppath.rel_to(&Path::new("/vagga/root")))
+        .join(tmppath.rel_to(&Path::new("/vagga/root")).unwrap())
         .join(&git.subdir);
     return run_command_at(ctx, &[
         "/bin/sh".to_string(),

@@ -10,7 +10,7 @@ use std::str::FromStr;
 
 use libc::{c_ulong, c_int};
 
-use super::super::path_util::ToCString;
+use super::super::path_util::{ToCString, ToRelative};
 use super::tools::NextValue;
 
 // sys/mount.h
@@ -144,7 +144,7 @@ pub fn get_submounts_of(dir: &Path)
         match MountRecord::from_str(&line) {
             Ok(rec) => {
                 let path = Path::new(rec.mount_point);
-                if dir.is_ancestor_of(&path) {
+                if dir.is_ancestor(&path) {
                     result.push(path.to_path_buf());
                 }
             }

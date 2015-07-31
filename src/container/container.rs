@@ -141,7 +141,7 @@ impl Command {
 
         let logprefix = format!(
             // Only errors are logged from C code
-            "ERROR:vagga::container.c: [{}]", self.namej
+            "ERROR:vagga::container.c: [{}]", self.name
             ).to_cstring();
 
         let pipe = try!(CPipe::new()

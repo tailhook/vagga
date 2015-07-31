@@ -6,6 +6,7 @@ use std::path::Component::RootDir;
 trait ToRelative {
     fn rel<'x>(&'x self) -> &'x Path;
     fn rel_to<'x>(&'x self, &Path) -> Option<&'x Path>;
+    fn is_ancestor(&self, &Path) -> bool;
 }
 
 impl ToRelative for Path {
@@ -23,6 +24,9 @@ impl ToRelative for Path {
         }
         Some(iter.as_path())
     }
+    fn is_ancestor(&self, path: &Path) -> bool {
+      return self.rel_to(path).is_some();
+    }
 }
 
 impl ToRelative for PathBuf {
@@ -31,6 +35,9 @@ impl ToRelative for PathBuf {
     }
     fn rel_to<'x>(&'x self, other: &Path) -> Option<&'x Path> {
         self.as_path().rel_to(other)
+    }
+    fn is_ancestor(&self, path: &Path) -> bool {
+      return self.rel_to(path).is_some();
     }
 }
 

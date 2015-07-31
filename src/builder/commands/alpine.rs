@@ -77,7 +77,7 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     let pkgs = ctx.build_deps.clone().into_iter().collect();
     try!(remove(ctx, &pkgs));
     try!(Command::new("/vagga/bin/apk")
-        .stdin(Stdio::null()).stdout(Stdio::capture()).stderr(Stdio::inherit())
+        .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::inherit())
         .env_clear()
         .arg("--root").arg("/vagga/root")
         .arg("-vv")
