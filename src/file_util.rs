@@ -5,7 +5,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
 
-fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
+pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let res = vec!();
     for entry_ in try!(fs::read_dir(dir)) {
         let entry = try!(entry_);
@@ -18,7 +18,7 @@ fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     Ok(res)
 }
 
-fn create_dir(path: &Path, recursive: bool) -> Result<(), Error> {
+pub fn create_dir(path: &Path, recursive: bool) -> Result<(), Error> {
     if path.is_dir() {
         return Ok(())
     }
@@ -33,7 +33,7 @@ fn create_dir(path: &Path, recursive: bool) -> Result<(), Error> {
     Ok(())
 }
 
-fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
+pub fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
     if path.is_dir() {
         return Ok(())
     }

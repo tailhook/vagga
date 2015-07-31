@@ -12,8 +12,8 @@ use libc::consts::os::posix88::{EINTR, EAGAIN};
 
 
 pub struct CPipe {
-    reader: RawFd,
-    writer: RawFd,
+    pub reader: RawFd,
+    pub writer: RawFd,
 }
 
 impl CPipe {

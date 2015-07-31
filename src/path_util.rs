@@ -3,7 +3,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf, Components};
 use std::path::Component::RootDir;
 
-trait ToRelative {
+pub trait ToRelative {
     fn rel<'x>(&'x self) -> &'x Path;
     fn rel_to<'x>(&'x self, &'x Path) -> Option<&'x Path>;
     fn is_ancestor(&self, &Path) -> bool;
@@ -41,7 +41,7 @@ impl ToRelative for PathBuf {
     }
 }
 
-trait ToCString {
+pub trait ToCString {
     fn to_cstring(&self) -> CString;
 }
 
