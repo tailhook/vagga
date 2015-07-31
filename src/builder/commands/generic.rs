@@ -3,12 +3,11 @@ use std::rc::Rc;
 use std::path::{Path, PathBuf};
 use std::fs::PathExt;
 
-use nix::unistd::{pipe, close};
-
 use super::super::context::BuildContext;
 use container::monitor::{Monitor, Executor, MonitorStatus};
 use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
+use container::pipe::{CPipe};
 use super::super::super::path_util::ToRelative;
 
 
@@ -103,11 +102,11 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
     }
     debug!("Running {:?}", cmd);
     let (res, data) = unsafe {
-        let pipe = try!(pipe()
+        let pipe = try!(CPipe::new()
             .map_err(|e| format!("Can't create pipe: {:?}", e)));
         cmd.set_stdout_fd(pipe.writer);
         let res = Monitor::run_command(cmd);
-        (res, pipe.read())
+        (res, try_msg!(pipe.read(), "Can't read frome pipe: {err}"))
     };
 
     match res {

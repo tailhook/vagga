@@ -1,6 +1,7 @@
 use std::io::Error as IoError;
+use std::io::{Read, Write};
 use std::fs::File;
-use std::os::unix::io::RawFd;
+use std::os::unix::io::{RawFd, FromRawFd};
 use nix::unistd::{pipe};
 use nix::Error::{Sys, InvalidPath};
 use nix::errno::Errno::EPIPE;
@@ -28,11 +29,15 @@ impl CPipe {
     pub fn read(self) -> Result<Vec<u8>, IoError> {
         let CPipe {reader, writer} = self;
         let mut buf = Vec::new();
-        close(reader);
-        let res = File::from_raw_fd(self.reader).read_to_end(&mut buf);
         close(writer);
+        let res = File::from_raw_fd(self.reader).read_to_end(&mut buf);
         try!(res);
         Ok(buf)
+    }
+    pub fn wakeup(self) -> Result<(), IoError> {
+        let CPipe {reader, writer} = self;
+        close(reader);
+        File::from_raw_fd(self.writer).write_all(b"x")
     }
 }
 

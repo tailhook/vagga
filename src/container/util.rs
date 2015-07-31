@@ -97,7 +97,7 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
                 try_msg!(create_dir_mode(&nitem, stat.mode()),
                     "Can't create dir {dir:?}: {err}", dir=nitem);
             }
-            try!(copy_dir(entry.path(), &nitem));
+            try!(copy_dir(&entry.path(), &nitem));
         } else if typ.is_symlink() {
             let lnk = try!(read_link(entry.path())
                 .map_err(|e| format!("Can't readlink: {}", e)));

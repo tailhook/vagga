@@ -1,11 +1,11 @@
 use std::ffi::CString;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, Components};
 use std::path::Component::RootDir;
 
 trait ToRelative {
     fn rel<'x>(&'x self) -> &'x Path;
-    fn rel_to<'x>(&'x self, &Path) -> Option<&'x Path>;
+    fn rel_to<'x>(&'x self, &'x Path) -> Option<&'x Path>;
     fn is_ancestor(&self, &Path) -> bool;
 }
 
@@ -15,9 +15,9 @@ impl ToRelative for Path {
         assert!(iter.next() == Some(RootDir));
         iter.as_path()
     }
-    fn rel_to<'x>(&'x self, other: &Path) -> Option<&'x Path> {
+    fn rel_to<'x>(&'x self, other: &'x Path) -> Option<&'x Path> {
         let mut iter = self.components();
-        for (my, their) in iter.as_ref() {
+        for (their, my) in other.components().zip(iter.by_ref()) {
             if my != their {
                 return None;
             }
@@ -33,7 +33,7 @@ impl ToRelative for PathBuf {
     fn rel<'x>(&'x self) -> &'x Path {
         self.as_path().rel()
     }
-    fn rel_to<'x>(&'x self, other: &Path) -> Option<&'x Path> {
+    fn rel_to<'x>(&'x self, other: &'x Path) -> Option<&'x Path> {
         self.as_path().rel_to(other)
     }
     fn is_ancestor(&self, path: &Path) -> bool {

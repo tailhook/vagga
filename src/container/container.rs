@@ -147,7 +147,7 @@ impl Command {
         let pipe = try!(CPipe::new()
                         .map_err(|e| format!("Error creating pipe: {}", e)));
         let pid = unsafe { execute_command(&CCommand {
-            pipe_reader: pipe.reader_fd(),
+            pipe_reader: pipe.reader,
             logprefix: logprefix.as_bytes().as_ptr(),
             fs_root: self.chroot.as_bytes().as_ptr(),
             exec_path: self.executable.as_bytes().as_ptr(),

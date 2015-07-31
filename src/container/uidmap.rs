@@ -34,7 +34,7 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
         let line = try_msg!(line, "Error reading /etc/subuid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
         let start = FromStr::from_str(parts[1]);
-        let count = FromStr::from_str(parts[2].trim_right());
+        let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
             return Err(format!("/etc/subuid:{}: Bad syntax", num+1));
         }
@@ -56,7 +56,7 @@ fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
         let line = try_msg!(line, "Error reading /etc/subgid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
         let start = FromStr::from_str(parts[1]);
-        let count = FromStr::from_str(parts[2].trim_right());
+        let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
             return Err(format!("/etc/subgid:{}: Bad syntax", num+1));
         }
