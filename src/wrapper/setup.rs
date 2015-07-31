@@ -78,11 +78,11 @@ fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
     match symlink_metadata(dir) {
-        Ok(stat) if stat.file_type().is_symlink() => {
+        Ok(ref stat) if stat.file_type().is_symlink() => {
             return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
                                "Please run `unlink {0}`"), dir.display()));
         }
-        Ok(stat) if stat.file_type().is_dir() => {
+        Ok(ref stat) if stat.file_type().is_dir() => {
             // ok
         }
         Ok(_) => {

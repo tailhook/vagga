@@ -27,17 +27,20 @@ impl CPipe {
         }
     }
     pub fn read(self) -> Result<Vec<u8>, IoError> {
-        let CPipe {reader, writer} = self;
         let mut buf = Vec::new();
-        close(writer);
-        let res = File::from_raw_fd(self.reader).read_to_end(&mut buf);
-        try!(res);
+        unsafe {
+          let CPipe {reader, writer} = self;
+          close(writer);
+          try!(File::from_raw_fd(self.reader).read_to_end(&mut buf));
+        }
         Ok(buf)
     }
     pub fn wakeup(self) -> Result<(), IoError> {
-        let CPipe {reader, writer} = self;
-        close(reader);
-        File::from_raw_fd(self.writer).write_all(b"x")
+        unsafe {
+          let CPipe {reader, writer} = self;
+          close(reader);
+          File::from_raw_fd(self.writer).write_all(b"x")
+        }
     }
 }
 

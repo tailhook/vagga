@@ -22,7 +22,7 @@ mod util;
 mod clean;
 
 
-struct Wrapper<'a> {
+pub struct Wrapper<'a> {
     config: &'a Config,
     settings: &'a Settings,
     project_root: &'a Path,

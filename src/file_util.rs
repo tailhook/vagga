@@ -25,7 +25,7 @@ pub fn create_dir(path: &Path, recursive: bool) -> Result<(), Error> {
     if recursive {
         match path.parent() {
             Some(p) if p != path => try!(create_dir(p, true)),
-            None => {}
+            _ => {}
         }
     }
     try!(fs::create_dir(path));
