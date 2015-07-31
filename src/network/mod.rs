@@ -1,4 +1,4 @@
-use std::env::set_exit_status;
+use std::process::exit;
 use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
@@ -79,12 +79,11 @@ fn main() {
     match run() {
         Ok(()) => {}
         Err(Ok(x)) => {
-            set_exit_status(x);
+            exit(x);
         }
         Err(Err(e)) => {
             error!("{}", e);
-            set_exit_status(1);
-            return
+            exit(1);
         }
     }
 }

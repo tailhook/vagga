@@ -117,7 +117,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
                "-j", "MASQUERADE"]);
     commands.push(cmd);
 
-    for cmd in commands.iter() {
+    for mut cmd in commands.into_iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(status) if status.success() => {},
@@ -226,7 +226,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
         commands.push(cmd);
     }
 
-    for cmd in commands.iter() {
+    for mut cmd in commands.into_iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(status) if status.success() => {}
@@ -309,7 +309,7 @@ fn setup_guest_namespace(args: Vec<String>) {
     cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
-    for cmd in commands.iter() {
+    for mut cmd in commands.into_iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(status) if status.success() => {}

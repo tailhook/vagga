@@ -1,4 +1,3 @@
-use std::collections::BitSet;
 use std::env;
 use std::fs::{remove_file};
 use std::fs::{File, PathExt};
@@ -8,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 use std::str::FromStr;
+use std::collections::HashSet;
 
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
@@ -28,7 +28,7 @@ use shaman::digest::Digest;
 use super::user;
 use super::super::file_util::{create_dir, create_dir_mode};
 
-static MAX_INTERFACES: usize = 2048;
+static MAX_INTERFACES: u32 = 2048;
 
 pub struct PortForwardGuard {
     nspath: PathBuf,
@@ -204,7 +204,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
               "dev", &interface_name[..]]);
     commands.push(cmd);
 
-    let nforward = String::with_capacity(100);
+    let mut nforward = String::with_capacity(100);
     try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
         .and_then(|mut f| f.read_to_string(&mut nforward))
         .map_err(|e| format!("Can't read sysctl: {}", e)));
@@ -289,7 +289,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     }
 
     if !dry_run {
-        for cmd in commands.iter() {
+        for mut cmd in commands.into_iter() {
             match cmd.status() {
                 Ok(status) if status.success() => {},
                 val => return Err(
@@ -425,7 +425,7 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     }
 
     if !dry_run {
-        for cmd in commands.iter() {
+        for mut cmd in commands.into_iter() {
             match cmd.status() {
                 Ok(status) if status.success() => {}
                 val => {
@@ -475,12 +475,12 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
         .map_err(|e| format!("Can't read resolv.conf: {}", e))
 }
 
-fn get_interfaces() -> Result<BitSet, String> {
+fn get_interfaces() -> Result<HashSet<u32>, String> {
     File::open(&Path::new("/proc/net/dev"))
         .map(BufReader::new)
         .and_then(|mut f| {
             let mut lineiter = f.lines();
-            let mut result = BitSet::with_capacity(MAX_INTERFACES);
+            let mut result = HashSet::with_capacity(MAX_INTERFACES as usize);
             try!(lineiter.next().unwrap());  // Two header lines
             try!(lineiter.next().unwrap());
             for line in lineiter {
@@ -500,13 +500,13 @@ fn get_interfaces() -> Result<BitSet, String> {
         .map_err(|e| format!("Can't read interfaces: {}", e))
 }
 
-fn get_unused_inteface_no() -> Result<usize, String> {
+fn get_unused_inteface_no() -> Result<u32, String> {
     // Algorithm is not perfect but should be good enough as there are 2048
     // slots in total, and average user only runs a couple of commands
     // simultaneously. It fails miserably only if there are > 100 or they
     // are spawning too often.
     let busy = try!(get_interfaces());
-    let start = Range::new(0usize, MAX_INTERFACES - 100)
+    let start = Range::new(0u32, MAX_INTERFACES - 100)
                 .ind_sample(&mut thread_rng());
     for index in start..MAX_INTERFACES {
         if busy.contains(&index) {
@@ -517,7 +517,7 @@ fn get_unused_inteface_no() -> Result<usize, String> {
     return Err(format!("Can't find unused inteface"));
 }
 
-fn _run_command(cmd: Command) -> Result<(), String> {
+fn _run_command(mut cmd: Command) -> Result<(), String> {
     debug!("Running {:?}", cmd);
     match cmd.status() {
         Ok(status) if status.success() => Ok(()),

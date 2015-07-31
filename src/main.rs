@@ -1,3 +1,5 @@
+#![feature(path_ext)]
+
 extern crate shaman;
 extern crate libc;
 extern crate nix;

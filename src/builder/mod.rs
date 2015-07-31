@@ -1,6 +1,7 @@
 use std::default::Default;
 use std::env::{set_exit_status};
 use std::path::Path;
+use std::process::exit;
 
 use config::read_config;
 use config::Settings;
@@ -117,5 +118,5 @@ fn _fetch_sources(container: &String, settings: Settings)
 
 fn main() {
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }

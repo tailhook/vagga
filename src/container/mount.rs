@@ -72,7 +72,7 @@ pub struct MountRecord<'a> {
 
 impl<'a> MountRecord<'a> {
     pub fn from_str<'x>(line: &'x str) -> Result<MountRecord<'x>, ()> {
-        let mut parts = line.words();
+        let mut parts = line.split_whitespace();
         let mount_id = try!(parts.next_value());
         let parent_id = try!(parts.next_value());
         let device = try!(parts.next().ok_or(()));

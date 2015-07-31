@@ -19,7 +19,7 @@ use self::Namespace::*;
 use super::super::path_util::ToCString;
 
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum Namespace {
     NewMount,
     NewUts,
@@ -153,7 +153,7 @@ impl Command {
             exec_path: self.executable.as_bytes().as_ptr(),
             exec_args: exec_args[..].as_ptr(),
             exec_environ: exec_environ[..].as_ptr(),
-            namespaces: convert_namespaces(self.namespaces),
+            namespaces: convert_namespaces(&self.namespaces),
             user_id: self.user_id,
             restore_sigmask: if self.restore_sigmask { 1 } else { 0 },
             workdir: self.workdir.as_ptr(),
@@ -187,7 +187,7 @@ pub fn convert_namespace(value: Namespace) -> c_int {
 }
 
 
-fn convert_namespaces(set: HashSet<Namespace>) -> c_int {
+fn convert_namespaces(set: &HashSet<Namespace>) -> c_int {
     let mut ns = 0;
     for &i in set.iter() {
         ns |= convert_namespace(i);

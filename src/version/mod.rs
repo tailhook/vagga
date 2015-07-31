@@ -51,13 +51,13 @@ pub fn run() -> i32 {
 
     let mut hash = Sha256::new();
 
-    let buf = Vec::with_capacity(1000);
+    let mut buf = Vec::with_capacity(1000);
     File::open(&Path::new("/proc/self/uid_map"))
                .and_then(|mut f| f.read_to_end(&mut buf))
                .ok().expect("Can't read uid_map");
     hash.input(&buf);
 
-    let buf = Vec::with_capacity(1000);
+    let mut buf = Vec::with_capacity(1000);
     File::open(&Path::new("/proc/self/gid_map"))
                .and_then(|mut f| f.read_to_end(&mut buf))
                .ok().expect("Can't read gid_map");

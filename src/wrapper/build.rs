@@ -5,7 +5,7 @@ use std::fs::{remove_dir_all, create_dir_all, rename};
 use std::fs::{remove_file, remove_dir, PathExt};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use nix::unistd::close;
@@ -242,7 +242,8 @@ pub fn _build_container(cconfig: &Container, container: &String,
         Exit(val) => return Err(format!("Builder exited with code {}", val)),
     };
     debug!("Container version: {:?}", ver.borrow());
-    let tmppath = Path::new(&format!("/vagga/base/.roots/.tmp.{}", container));
+    let tmppath = PathBuf::from(
+        &format!("/vagga/base/.roots/.tmp.{}", container));
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
         Err(x) => {
