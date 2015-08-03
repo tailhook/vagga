@@ -44,8 +44,7 @@ struct RunVersion<'a> {
 
 impl<'a> Executor for RunVersion<'a> {
     fn command(&mut self) -> Command {
-        let mut cmd = Command::new("vagga_version".to_string(),
-            Path::new("/vagga/bin/vagga_version"));
+        let mut cmd = Command::vagga("vagga_version");
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
         cmd.arg(&self.container);
@@ -73,8 +72,7 @@ impl<'a> Executor for RunVersion<'a> {
 
 impl<'a> Executor for RunBuilder<'a> {
     fn command(&mut self) -> Command {
-        let mut cmd = Command::new("vagga_build".to_string(),
-            Path::new("/vagga/bin/vagga_build"));
+        let mut cmd = Command::vagga("vagga_build");
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
         cmd.container();

@@ -18,7 +18,7 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
             .arg("sh")
             .env("PATH", "/vagga/bin")
         .output()
-        .map_err(|e| format!("Can't run tar: {}", e))
+        .map_err(|e| format!("Can't run busybox: {}", e))
         .map(|o| o.status)
     {
         Ok(x) if x.signal().is_some() => 128+(x.signal().unwrap() as i32),
