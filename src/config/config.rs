@@ -72,10 +72,10 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
     };
     for (_, ref mut container) in config.containers.iter_mut() {
         if container.uids.len() == 0 {
-            container.uids.push(Range { start: 0, end: 65535 });
+            container.uids.push(Range::new(0, 65535));
         }
         if container.gids.len() == 0 {
-            container.gids.push(Range { start: 0, end: 65535 });
+            container.gids.push(Range::new(0, 65535));
         }
     }
     return Ok(config);

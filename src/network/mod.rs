@@ -75,7 +75,7 @@ fn run() -> Result<(), Result<i32, String>> {
     Ok(())
 }
 
-fn main() {
+pub fn main() {
     match run() {
         Ok(()) => {}
         Err(Ok(x)) => {

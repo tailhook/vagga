@@ -322,7 +322,7 @@ fn setup_guest_namespace(args: Vec<String>) {
     }
 }
 
-fn main() {
+pub fn main() {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
     {

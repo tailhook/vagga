@@ -78,15 +78,15 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
     let mut allowiter = allowed.iter();
     let mut allowval = *allowiter.next().unwrap();
     loop {
-        if reqval.start == 0 {
+        if reqval.start() == 0 {
             reqval = reqval.shift(1);
         }
-        if allowval.start == 0 {
+        if allowval.start() == 0 {
             allowval = allowval.shift(1);
         }
         let clen = min(reqval.len(), allowval.len());
         if clen > 0 {
-            res.push((reqval.start, allowval.start, clen));
+            res.push((reqval.start(), allowval.start(), clen));
         }
         reqval = reqval.shift(clen);
         allowval = allowval.shift(clen);
@@ -131,32 +131,32 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
             let gid_rng = try!(read_uid_ranges("/proc/self/gid_map", true));
             return Ok(Ranges(
                 uid_rng.into_iter()
-                    .map(|r| (r.start, r.start, r.end-r.start+1)).collect(),
+                    .map(|r| (r.start(), r.start(), r.len())).collect(),
                 gid_rng.into_iter()
-                    .map(|r| (r.start, r.start, r.end-r.start+1)).collect()));
+                    .map(|r| (r.start(), r.start(), r.len())).collect()));
         }
         let mut uids = vec!((0, uid, 1));
         for &rng in uid_map.iter() {
             let mut rng = rng;
-            if uid >= rng.start && uid <= rng.end {
+            if uid >= rng.start() && uid <= rng.end() {
                 // TODO(tailhook) implement better heuristic
-                assert!(uid == rng.start);
+                assert!(uid == rng.start());
                 rng = rng.shift(1);
                 if rng.len() == 0 { continue; }
             }
-            uids.push((rng.start, rng.start, rng.len()));
+            uids.push((rng.start(), rng.start(), rng.len()));
         }
 
         let mut gids = vec!((0, gid, 1));
         for &rng in gid_map.iter() {
             let mut rng = rng;
-            if gid >= rng.start && gid <= rng.end {
+            if gid >= rng.start() && gid <= rng.end() {
                 // TODO(tailhook) implement better heuristic
-                assert!(gid == rng.start);
+                assert!(gid == rng.start());
                 rng = rng.shift(1);
                 if rng.len() == 0 { continue; }
             }
-            gids.push((rng.start, rng.start, rng.len()));
+            gids.push((rng.start(), rng.start(), rng.len()));
         }
 
         return Ok(Ranges(uids, gids));
@@ -283,9 +283,9 @@ fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
         let count: u32 = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));
         if read_inside {
-            result.push(Range { start: inside, end: inside+count-1 });
+            result.push(Range::new(inside, inside+count-1));
         } else {
-            result.push(Range { start: outside, end: outside+count-1 });
+            result.push(Range::new(outside, outside+count-1));
         }
     }
     return Ok(result);
@@ -294,8 +294,8 @@ fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
 pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     -> Result<Uidmap, String>
 {
-    let default_uids = vec!(Range { start: 0, end: 0 });
-    let default_gids = vec!(Range { start: 0, end: 0 });
+    let default_uids = vec!(Range::new(0, 0));
+    let default_gids = vec!(Range::new(0, 0));
     let uids = if uids.len() > 0 { uids } else { &default_uids };
     let gids = if gids.len() > 0 { gids } else { &default_gids };
     if settings.uid_map.is_none() {

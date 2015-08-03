@@ -114,7 +114,7 @@ pub fn run() -> i32 {
     };
 }
 
-fn main() {
+pub fn main() {
     signal::block_all();
     let val = run();
     exit(val);

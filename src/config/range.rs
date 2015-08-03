@@ -8,8 +8,8 @@ use quire::decode::YamlDecoder;
 
 #[derive(Clone, Debug, Copy)]
 pub struct Range {
-    pub start: uid_t,
-    pub end: uid_t,
+    start: uid_t,
+    end: uid_t,
 }
 
 struct RangeError;
@@ -39,14 +39,21 @@ impl Decodable for Range {
 
 impl Range {
     pub fn new(start: uid_t, end: uid_t) -> Range {
-        return Range { start: start, end: end };
+        assert!(end >= start);
+        return Range { start: start, end: end+1 };
     }
     pub fn len(&self) -> uid_t {
-        return self.end - self.start + 1;
+        return self.end - self.start;
     }
     pub fn shift(&self, val: uid_t) -> Range {
-        assert!(self.end - self.start + 1 >= val);
-        return Range::new(self.start + val, self.end);
+        assert!(self.end - self.start >= val);
+        return Range { start: self.start + val, end: self.end };
+    }
+    pub fn start(&self) -> uid_t {
+        self.start
+    }
+    pub fn end(&self) -> uid_t {
+        self.end + 1
     }
 }
 

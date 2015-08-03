@@ -70,6 +70,23 @@ impl Command {
             stderr: 2,
         };
     }
+    pub fn vagga(name: &str) -> Command {
+        return Command {
+            name: name.to_string(),
+            chroot: "/".to_cstring(),
+            workdir: current_dir().unwrap().to_cstring(),
+            executable: "/proc/self/exe".to_cstring(),
+            arguments: vec!(name.to_cstring()),
+            namespaces: HashSet::new(),
+            environment: BTreeMap::new(),
+            restore_sigmask: true,
+            user_id: 0,
+            uidmap: None,
+            stdin: 0,
+            stdout: 1,
+            stderr: 2,
+        };
+    }
     pub fn set_user_id(&mut self, uid: i32) {
         self.user_id = uid;
     }
@@ -141,7 +158,7 @@ impl Command {
 
         let logprefix = format!(
             // Only errors are logged from C code
-            "ERROR:vagga::container.c: [{}]", self.name
+            "ERROR:vagga::container.c: [{}]", self.name,
             ).to_cstring();
 
         let pipe = try!(CPipe::new()

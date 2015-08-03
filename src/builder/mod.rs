@@ -116,7 +116,7 @@ fn _fetch_sources(container: &String, settings: Settings)
     Ok(())
 }
 
-fn main() {
+pub fn main() {
     let val = run();
     exit(val);
 }
