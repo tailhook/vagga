@@ -10,7 +10,8 @@ DESTDIR ?=
 all: downloads vagga
 
 vagga:
-	cargo build
+	cargo build --target=x86_64-unknown-linux-musl
+	cp --remove-destination target/x86_64-unknown-linux-musl/debug/vagga .
 
 
 rust-argparse/libargparse.rlib:
