@@ -81,7 +81,7 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     userns: bool)
     -> Result<i32, String>
 {
-    let mut cmd = Command::vagga("vagga_wrapper");
+    let mut cmd = Command::vagga("vagga_wrapper", "/proc/self/exe");
     cmd.keep_sigmask();
     cmd.arg(&cmdname);
     cmd.args(&args);

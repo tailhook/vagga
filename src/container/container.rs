@@ -70,12 +70,12 @@ impl Command {
             stderr: 2,
         };
     }
-    pub fn vagga(name: &str) -> Command {
+    pub fn vagga<P:AsRef<Path>>(name: &str, executable: P) -> Command {
         return Command {
             name: name.to_string(),
             chroot: "/".to_cstring(),
             workdir: current_dir().unwrap().to_cstring(),
-            executable: "/proc/self/exe".to_cstring(),
+            executable: executable.as_ref().to_cstring(),
             arguments: vec!(name.to_cstring()),
             namespaces: HashSet::new(),
             environment: BTreeMap::new(),

@@ -44,13 +44,16 @@ struct RunVersion<'a> {
 
 impl<'a> Executor for RunVersion<'a> {
     fn command(&mut self) -> Command {
-        let mut cmd = Command::vagga("vagga_version");
+        let mut cmd = Command::vagga("vagga_version", "/vagga/bin/vagga");
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
         cmd.arg(&self.container);
         cmd.arg("--settings");
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
+        println!("Pipe {} / {}",
+            self.pipe.as_ref().unwrap().reader,
+            self.pipe.as_ref().unwrap().writer);
         cmd.set_stdout_fd(self.pipe.as_ref().unwrap().writer);
         if let Ok(x) = env::var("RUST_LOG") {
             cmd.set_env("RUST_LOG".to_string(), x);
@@ -72,7 +75,7 @@ impl<'a> Executor for RunVersion<'a> {
 
 impl<'a> Executor for RunBuilder<'a> {
     fn command(&mut self) -> Command {
-        let mut cmd = Command::vagga("vagga_build");
+        let mut cmd = Command::vagga("vagga_build", "/vagga/bin/vagga");
         cmd.keep_sigmask();
         cmd.set_uidmap(self.uid_map.clone());
         cmd.container();

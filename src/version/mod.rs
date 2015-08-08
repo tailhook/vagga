@@ -2,7 +2,8 @@ use std::default::Default;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
-use std::io::{stderr, Read, Write};
+use std::io::{stdout, Read, Write};
+use std::os::unix::io::FromRawFd;
 
 use nix::unistd::dup2;
 use argparse::{ArgumentParser, Store};
@@ -74,7 +75,8 @@ pub fn run() -> i32 {
             }
         }
     }
-    match stderr().write_all(hash.result_str().as_bytes()) {
+    debug!("Got hash {:?}", hash.result_str());
+    match unsafe { File::from_raw_fd(3) }.write_all(hash.result_str().as_bytes()) {
         Ok(()) => {}
         Err(e) => {
             error!("Error writing hash: {}", e);
