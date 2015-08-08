@@ -11,51 +11,60 @@ containers:
     - !Install [alpine-base, py-sphinx, make]
 
   rust-musl:
+    environ:
+      LD_LIBRARY_PATH: /usr/local/musl/lib:/usr/local/musl/lib/rustlib/x86_64-unknown-linux-gnu/lib
+      PATH: /usr/local/musl/bin:/usr/local/bin:/usr/bin:/bin
+      HOME: /work/target
+      LIBC_PATH: /usr/local/musl/lib
     setup:
     - !UbuntuRelease {version: 15.04}
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates]
     - !BuildDeps [cmake, llvm-dev, libc++-dev, file, curl, python,
         autoconf, automake, autotools-dev, libtool, texlive-extra-utils]
-    - !GitInstall
-      url: git://git.musl-libc.org/musl
+    # Build instructions from
+    # https://github.com/rust-lang/rust/blob/master/src/doc/trpl/advanced-linking.md
+    - !TarInstall
+      url: http://www.musl-libc.org/releases/musl-1.1.10.tar.gz
       script: |
-        ./configure
+        ./configure --disable-shared --prefix=/usr/local/musl
         make
         make install
+        du -h /usr/local/musl/lib/libc.a
     - !EnsureDir /usr/lib/llvm-3.6/share/llvm
-    - !GitInstall
-      url: git://github.com/pathscale/libunwind.git
+    - !BuildDeps [subversion]
+    - !TarInstall
+      url: http://llvm.org/releases/3.6.1/llvm-3.6.1.src.tar.xz
       script: |
-        autoreconf -i
-        ./configure --prefix=/usr/local/musl --disable-shared
+        cd projects
+        svn co http://llvm.org/svn/llvm-project/libcxxabi/trunk/ libcxxabi
+        svn co http://llvm.org/svn/llvm-project/libunwind/trunk/ libunwind
+        sed -i 's#^\(include_directories\).*$#\0\n\1(../libcxxabi/include)#' libunwind/CMakeLists.txt
+        mkdir libunwind/build
+        cd libunwind/build
+        cmake -DLLVM_PATH=../../.. -DLIBUNWIND_ENABLE_SHARED=0 ..
         make
-        make install
-    #- !GitInstall
-    #  url: https://github.com/llvm-mirror/libcxxabi
-    #  script: |
-    #    ln -sn /usr/share/llvm-3.6/cmake /usr/lib/llvm-3.6/share/llvm/cmake
-    #    cmake . \
-    #      -DLIBCXXABI_LIBCXX_INCLUDES=/usr/include/c++/v1 \
-    #      -DLIBCXXABI_LIBCXX_PATH=/usr/lib \
-    #      -DCMAKE_CXX_FLAGS=-std=c++11
-    #      #-DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-    #    make
-    #    make install
-    #    cp lib/libunwind.a /usr/local/musl/lib
+        cp lib/libunwind.a /usr/local/musl/lib/
+        du -h /usr/local/musl/lib/libunwind.a
     - !TarInstall
       url: https://static.rust-lang.org/dist/rustc-nightly-src.tar.gz
       script: |
-        ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl
+        ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl --prefix=/usr/local/musl
         make
         make install
+        # fixes: multiple dylib candidates for `std` found
+        rm /usr/local/musl/lib/lib*-*.so
+        du -h /usr/local/musl/bin/rustc
+    - !TarInstall
+      url: "http://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr --components=cargo"
 
   ubuntu-package:
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
+      url: https://static.rust-lang.org/dist/rust-1.2.0-x86_64-unknown-linux-gnu.tar.gz
       script: |
         ./install.sh --prefix=/usr --components=rustc,cargo
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
@@ -115,13 +124,18 @@ commands:
 
   make: !Command
     description: Build vagga
-    container: ubuntu-package
+    container: rust-musl
     run: [make]
+
+  cargo: !Command
+    description: Run arbitrary cargo command
+    container: rust-musl
+    run: [cargo]
 
   build-ubuntu-package: !Command
     description: Create an ubuntu (.deb) package using checkinstall in
       container
-    container: ubuntu-package
+    container: rust-musl
     write-mode: transient-hard-link-copy
     accepts-arguments: true
     run: |
