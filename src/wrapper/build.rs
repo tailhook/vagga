@@ -51,9 +51,6 @@ impl<'a> Executor for RunVersion<'a> {
         cmd.arg("--settings");
         cmd.arg(json::encode(self.settings).unwrap());
         cmd.set_env("TERM".to_string(), "dumb".to_string());
-        println!("Pipe {} / {}",
-            self.pipe.as_ref().unwrap().reader,
-            self.pipe.as_ref().unwrap().writer);
         cmd.set_stdout_fd(self.pipe.as_ref().unwrap().writer);
         if let Ok(x) = env::var("RUST_LOG") {
             cmd.set_env("RUST_LOG".to_string(), x);
