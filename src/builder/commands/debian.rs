@@ -96,6 +96,7 @@ fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
                 try!(f.write_all(
                     line.replace("http://archive.ubuntu.com/ubuntu/",
                      &ctx.settings.ubuntu_mirror).as_bytes()));
+                try!(f.write_all(b"\n"));
             }
             Ok(())
         })
