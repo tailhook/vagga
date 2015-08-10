@@ -82,12 +82,7 @@ containers:
         git clone git://github.com/sstephenson/bats
         cd bats
         ./install.sh /usr
-    - !Depends vagga_launcher
-    - !Depends vagga_wrapper
-    - !Depends vagga_build
-    - !Depends vagga_version
-    - !Depends vagga_setup_netns
-    - !Depends vagga_network
+    - !Depends vagga
     - !Depends apk
     - !Depends busybox
     - !Depends alpine-keys.apk
