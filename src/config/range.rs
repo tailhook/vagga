@@ -25,7 +25,7 @@ impl Decodable for Range {
             FromStr::from_str(&val[..])
             .map(|num| Range::new(num, num))
             .or_else(|_| {
-                let mut pair = val.splitn(1, '-');
+                let mut pair = val.splitn(2, '-');
                 Ok(Range::new(
                     try!(pair.next().and_then(|x| FromStr::from_str(x).ok())
                         .ok_or(d.error("Error parsing range"))),
