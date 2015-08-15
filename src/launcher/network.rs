@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::{remove_file};
-use std::fs::{File, PathExt};
+use std::fs::{File};
 use std::io::{stdout, stderr, BufRead, BufReader, Read};
 use std::os::unix::io::{RawFd, FromRawFd};
 use std::path::{Path, PathBuf};
@@ -26,7 +26,8 @@ use super::super::container::container::Command as ContainerCommand;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use super::user;
-use super::super::file_util::{create_dir, create_dir_mode};
+use file_util::{create_dir, create_dir_mode};
+use path_util::{PathExt};
 
 static MAX_INTERFACES: u32 = 2048;
 

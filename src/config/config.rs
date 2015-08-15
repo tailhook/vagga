@@ -1,6 +1,5 @@
 use std::default::Default;
 use std::path::{PathBuf, Path};
-use std::fs::PathExt;
 
 use std::collections::BTreeMap;
 use rustc_serialize::{Decoder};
@@ -11,6 +10,7 @@ use super::containers;
 use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
+use path_util::PathExt;
 
 #[derive(RustcDecodable)]
 pub struct Config {

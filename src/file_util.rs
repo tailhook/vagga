@@ -1,8 +1,9 @@
 use std::io::Error;
-use std::fs::PathExt;
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+
+use path_util::PathExt;
 
 
 pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {

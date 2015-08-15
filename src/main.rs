@@ -1,4 +1,3 @@
-#![feature(path_ext)]
 use std::env;
 
 extern crate shaman;

@@ -1,7 +1,7 @@
 use std::ffi::CStr;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
 use std::fs::{symlink_metadata, read_link};
-use std::fs::{FileType, PathExt};
+use std::fs::{FileType};
 use std::os::unix::fs::{symlink, DirEntryExt, MetadataExt};
 use std::ptr::null;
 use std::path::Path;
@@ -10,7 +10,9 @@ use libc::{c_int, uid_t, gid_t, c_char, c_void, timeval};
 use libc::chmod;
 
 use super::root::temporary_change_root;
-use super::super::file_util::create_dir_mode;
+use file_util::create_dir_mode;
+use path_util::PathExt;
+
 
 pub type Time = f64;
 

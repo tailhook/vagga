@@ -1,5 +1,4 @@
 use std::fs::{create_dir_all, read_dir, set_permissions, Permissions};
-use std::fs::PathExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
@@ -11,8 +10,8 @@ use config::builders::TarInstallInfo;
 use super::context::BuildContext;
 use super::download::download_file;
 use super::commands::generic::run_command_at;
-use super::super::file_util::{read_visible_entries, create_dir};
-use super::super::path_util::ToRelative;
+use file_util::{read_visible_entries, create_dir};
+use path_util::{ToRelative, PathExt};
 
 
 pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,

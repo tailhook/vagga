@@ -2,7 +2,7 @@ use std::env;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fs::{remove_dir_all, create_dir_all, rename};
-use std::fs::{remove_file, remove_dir, PathExt};
+use std::fs::{remove_file, remove_dir};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
@@ -22,7 +22,8 @@ use container::pipe::CPipe;
 use config::{Container, Settings};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use super::super::file_util::create_dir;
+use file_util::create_dir;
+use path_util::PathExt;
 use super::Wrapper;
 use super::setup;
 

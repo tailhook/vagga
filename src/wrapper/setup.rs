@@ -6,7 +6,6 @@ use std::ffi::CString;
 use std::fs::{copy, read_link, hard_link, set_permissions, Permissions};
 use std::fs::{remove_dir_all, read_dir, symlink_metadata};
 use std::fs::File;
-use std::fs::PathExt;
 use std::fs::FileType;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -20,8 +19,8 @@ use super::super::container::mount::{bind_mount, unmount, mount_system_dirs, rem
 use super::super::container::mount::{mount_tmpfs, mount_pseudo};
 use super::run::DEFAULT_PATH;
 use super::settings::{MergedSettings};
-use super::super::file_util::create_dir;
-use super::super::path_util::ToRelative;
+use file_util::create_dir;
+use path_util::{ToRelative, PathExt};
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

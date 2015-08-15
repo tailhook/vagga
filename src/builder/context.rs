@@ -1,6 +1,5 @@
 use std::fs::{create_dir_all, copy, set_permissions};
 use std::fs::Permissions;
-use std::fs::PathExt;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -22,8 +21,8 @@ use super::commands::npm;
 use super::capsule;
 use super::packages;
 use super::timer;
-use super::super::path_util::ToRelative;
-use super::super::file_util::create_dir;
+use path_util::{PathExt, ToRelative};
+use file_util::create_dir;
 
 #[derive(Debug)]
 pub enum Distribution {

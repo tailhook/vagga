@@ -7,7 +7,6 @@
 
 use std::collections::HashSet;
 use std::fs::{File};
-use std::fs::PathExt;
 use std::io::{Write};
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
@@ -19,6 +18,7 @@ use container::mount::bind_mount;
 use super::context::BuildContext;
 use super::commands::alpine::LATEST_VERSION;
 use super::super::file_util::create_dir;
+use path_util::PathExt;
 
 pub use self::Feature::*;
 

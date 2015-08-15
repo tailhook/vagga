@@ -1,12 +1,13 @@
 use std::env;
-use std::fs::{PathExt};
 use std::default::Default;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use config::Settings;
 use quire::parse_config;
 use quire::validate as V;
+
+use config::Settings;
+use path_util::PathExt;
 
 
 #[derive(PartialEq, RustcDecodable)]

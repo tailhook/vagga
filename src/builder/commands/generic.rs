@@ -1,7 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::path::{Path, PathBuf};
-use std::fs::PathExt;
 
 use super::super::context::BuildContext;
 use container::monitor::{Monitor, Executor, MonitorStatus};
@@ -9,6 +8,7 @@ use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
 use container::pipe::{CPipe};
 use super::super::super::path_util::ToRelative;
+use path_util::PathExt;
 
 
 fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {

@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::fs::{read_dir, remove_dir_all, read_link};
-use std::fs::PathExt;
 use std::io::{stdout, stderr};
 use std::path::Path;
 use std::str::FromStr;
@@ -10,7 +9,8 @@ use argparse::{ArgumentParser, PushConst, StoreTrue};
 
 use super::setup;
 use super::Wrapper;
-use super::super::file_util::read_visible_entries;
+use file_util::read_visible_entries;
+use path_util::PathExt;
 
 
 #[derive(Clone, Copy)]

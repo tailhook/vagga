@@ -1,6 +1,5 @@
 use std::fs::{remove_file, rename, create_dir_all, set_permissions};
 use std::fs::{Permissions};
-use std::fs::PathExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
@@ -10,6 +9,7 @@ use shaman::sha2::Sha256;
 
 use super::capsule;
 use super::context::BuildContext;
+use path_util::PathExt;
 
 
 pub fn download_file(ctx: &mut BuildContext, url: &str)

@@ -3,7 +3,6 @@ use std::collections::BTreeSet;
 use std::env::current_exe;
 use std::io::{stdout, stderr};
 use std::path::Path;
-use std::fs::PathExt;
 use std::rc::Rc;
 
 use argparse::{ArgumentParser};
@@ -23,7 +22,8 @@ use config::command::ChildCommand::{BridgeCommand};
 use super::network;
 use super::user::{run_wrapper, common_child_command_env};
 use super::build::build_container;
-use super::super::file_util::create_dir;
+use file_util::create_dir;
+use path_util::PathExt;
 
 
 pub struct RunChild<'a> {

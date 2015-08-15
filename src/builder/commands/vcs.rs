@@ -1,6 +1,5 @@
 use std::fs::rename;
 use std::fs::create_dir_all;
-use std::fs::PathExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -13,6 +12,7 @@ use super::super::capsule;
 use super::super::context::BuildContext;
 use super::generic::run_command_at;
 use super::super::super::path_util::ToRelative;
+use path_util::PathExt;
 
 
 fn git_cache(url: &String) -> Result<PathBuf, String> {

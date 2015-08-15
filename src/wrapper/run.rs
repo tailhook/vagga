@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::{read_link, PathExt};
+use std::fs::{read_link};
 use std::io::{stdout, stderr};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -18,6 +18,8 @@ use container::vagga::container_ver;
 use super::build;
 use super::setup;
 use super::Wrapper;
+use path_util::PathExt;
+
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
