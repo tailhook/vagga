@@ -69,7 +69,7 @@ pub fn run() -> i32 {
             env::var(&k).unwrap_or("".to_string()));
     }
     for pair in set_env.into_iter() {
-        let mut pairiter = pair[..].splitn(1, '=');
+        let mut pairiter = pair[..].splitn(2, '=');
         let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
         if let Some(value) = pairiter.next() {
             env::set_var(&key, value.to_string());
