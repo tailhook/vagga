@@ -56,7 +56,7 @@ containers:
         rm /usr/local/musl/lib/lib*-*.so
         du -h /usr/local/musl/bin/rustc
     - !TarInstall
-      url: "http://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+      url: "http://static.rust-lang.org/dist/rust-1.2.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=cargo"
 
   ubuntu-package:
