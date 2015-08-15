@@ -1,4 +1,4 @@
-use std::old_io::{stdout, stderr};
+use std::io::{stdout, stderr, Write};
 
 use argparse::{ArgumentParser, StoreTrue};
 
@@ -29,32 +29,32 @@ pub fn print_list(config: &Config, args: Vec<String>)
     }
     let mut out = stdout();
     for (k, cmd) in config.commands.iter() {
-        out.write_str(k.as_slice()).ok();
+        out.write_all(k.as_bytes()).ok();
         match cmd.description() {
             Some(ref val) => {
                 if k.len() > 19 {
-                    out.write_str("\n                    ").ok();
+                    out.write_all(b"\n                    ").ok();
                 } else {
-                    for _ in range(k.len(), 19) {
-                        out.write_char(' ').ok();
+                    for _ in k.len()..19 {
+                        out.write_all(b" ").ok();
                     }
-                    out.write_char(' ').ok();
+                    out.write_all(b" ").ok();
                 }
-                out.write_str(val.as_slice()).ok();
+                out.write_all(val.as_bytes()).ok();
             }
             None => {}
         }
-        out.write_char('\n').ok();
+        out.write_all(b"\n").ok();
     }
 
     if all || builtin {
-        out.write_str(concat!(
-            "_build              Build a container\n",
-            "_run                Run arbitrary command, ",
-                                "optionally building container\n",
-            "_clean              Clean containers and build artifacts\n",
-            "_list               List of built-in commands\n",
-        )).ok();
+        write!(&mut out, "\
+            _build              Build a container\n\
+            _run                Run arbitrary command, \
+                                optionally building container\n\
+            _clean              Clean containers and build artifacts\n\
+            _list               List of built-in commands\n\
+        ").ok();
     }
     return Ok(0);
 }

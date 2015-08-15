@@ -1,9 +1,9 @@
-use std::os::{getenv};
+use std::env;
+use std::fs::{read_link};
+use std::io::{stdout, stderr};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::old_path::BytesContainer;
-use std::old_io::fs::PathExtensions;
-use std::old_io::fs::readlink;
-use std::old_io::stdio::{stdout, stderr};
+
 use libc::pid_t;
 
 use argparse::{ArgumentParser, Store, List, StoreTrue};
@@ -18,6 +18,8 @@ use container::vagga::container_ver;
 use super::build;
 use super::setup;
 use super::Wrapper;
+use path_util::PathExt;
+
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
@@ -59,9 +61,9 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
             }
         }
     }
-    let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
+    let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
+        .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
@@ -79,10 +81,10 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         true => setup::WriteMode::TransientHardlinkCopy(pid),
     };
     let cont_ver = try!(container_ver(&container));
-    try!(setup::setup_filesystem(cconfig, write_mode, cont_ver.as_slice()));
+    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
 
     let env = try!(setup::get_environment(cconfig));
-    let mut cpath = Path::new(command.as_slice());
+    let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
     if command.contains("/") {
     } else {
@@ -103,16 +105,17 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         }
         if !cpath.is_absolute() {
             return Err(format!("Command {} not found in {:?}",
-                cpath.display(), paths.as_slice()));
+                cpath.display(), &paths));
         }
     }
 
     let mut cmd = Command::new("run".to_string(), &cpath);
-    cmd.args(args.as_slice());
-    cmd.set_workdir(&Path::new(getenv("PWD").unwrap_or("/work".to_string())));
+    cmd.args(&args);
+    cmd.set_workdir(&Path::new(
+        &env::var("PWD").unwrap_or("/work".to_string())));
     uid_map.as_ref().map(|v| cmd.set_uidmap(v.clone()));
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
+                env::var("TERM").unwrap_or("dumb".to_string()));
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());
     }

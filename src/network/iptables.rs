@@ -1,17 +1,18 @@
+use std::io::Write;
+use std::path::Path;
+use std::process::{Command, ExitStatus, Stdio};
+
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
-
-use std::old_io::process::{Command, InheritFd, ExitStatus};
-
-use container::nsutil::set_namespace;
-use container::container::Namespace::NewNet;
+use super::super::container::nsutil::set_namespace;
+use super::super::container::container::Namespace::NewNet;
 
 
-fn _rule<W: Writer, S:Str>(out: &mut W, data: S) -> Result<(), String> {
-    debug!("Rule: {}", data.as_slice());
-    (writeln!(out, "{}", data.as_slice()))
-    .map_err(|e| format!("Error piping firewall rule {}: {}",
-                         data.as_slice(), e))
+fn _rule<W: Write, S:AsRef<str>>(out: &mut W, data: S) -> Result<(), String> {
+    debug!("Rule: {}", data.as_ref());
+    (writeln!(out, "{}", data.as_ref()))
+    .map_err(|e| format!("Error piping firewall rule {:?}: {}",
+        data.as_ref(), e))
 }
 
 pub fn apply_graph(graph: Graph) -> Result<(), String> {
@@ -23,10 +24,10 @@ pub fn apply_graph(graph: Graph) -> Result<(), String> {
 
 fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
     try!(set_namespace(
-        &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
+        &Path::new(&format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| format!("Can't set namespace: {}", e)));
     let mut cmd = Command::new("iptables-restore");
-    cmd.stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     debug!("Running {:?} for {}", cmd, ip);
     let mut prc = try!(cmd.spawn()
         .map_err(|e| format!("Can't run iptables-restore: {}", e)));
@@ -69,7 +70,7 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
         try!(_rule(pipe, "COMMIT"));
     }
     match prc.wait() {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(status) if status.success() => Ok(()),
         e => Err(format!("Error running iptables-restore: {:?}", e)),
     }
 }

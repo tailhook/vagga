@@ -1,22 +1,24 @@
-use std::os::getenv;
-use std::old_io::fs::PathExtensions;
+use std::env;
 use std::default::Default;
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
-use config::Settings;
 use quire::parse_config;
 use quire::validate as V;
 
+use config::Settings;
+use path_util::PathExt;
 
-#[derive(PartialEq, Decodable)]
+
+#[derive(PartialEq, RustcDecodable)]
 struct SecureSettings {
-    allowed_dirs: BTreeMap<String, Path>,
-    storage_dir: Option<Path>,
-    cache_dir: Option<Path>,
+    allowed_dirs: BTreeMap<String, PathBuf>,
+    storage_dir: Option<PathBuf>,
+    cache_dir: Option<PathBuf>,
     version_check: Option<bool>,
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
-    site_settings: BTreeMap<Path, SecureSettings>,
+    site_settings: BTreeMap<PathBuf, SecureSettings>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -58,7 +60,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         members: members, .. Default::default()}) as Box<V::Validator>;
 }
 
-#[derive(PartialEq, Decodable)]
+#[derive(PartialEq, RustcDecodable)]
 struct InsecureSettings {
     version_check: Option<bool>,
     shared_cache: Option<bool>,
@@ -84,10 +86,10 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
 }
 
 pub struct MergedSettings {
-    pub allowed_dirs: BTreeMap<String, Path>,
-    pub allowed_files: BTreeMap<String, Path>,
-    pub storage_dir: Option<Path>,
-    pub cache_dir: Option<Path>,
+    pub allowed_dirs: BTreeMap<String, PathBuf>,
+    pub allowed_files: BTreeMap<String, PathBuf>,
+    pub storage_dir: Option<PathBuf>,
+    pub cache_dir: Option<PathBuf>,
     pub shared_cache: bool,
 }
 
@@ -108,8 +110,8 @@ pub fn read_settings(project_root: &Path)
         alpine_mirror: None,
     };
     let mut secure_files = vec!();
-    if let Some(home) = getenv("VAGGA_USER_HOME") {
-        let home = Path::new(home);
+    if let Ok(home) = env::var("VAGGA_USER_HOME") {
+        let home = Path::new(&home);
         secure_files.push(home.join(".config/vagga/settings.yaml"));
         secure_files.push(home.join(".vagga/settings.yaml"));
         secure_files.push(home.join(".vagga.yaml"));

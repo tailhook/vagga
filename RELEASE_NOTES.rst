@@ -3,6 +3,15 @@ Release Notes
 =============
 
 
+Vagga 0.3.0
+===========
+
+:Release Date: future
+
+* !Tar command without subdir specified ignores invisible files and dirs
+  (ones starting with dot `.`) to determine subdir.
+
+
 Vagga 0.2.6
 ===========
 

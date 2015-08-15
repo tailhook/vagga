@@ -1,6 +1,8 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{mkdir_recursive, mkdir, copy};
-use std::old_io::fs::PathExtensions;
+use std::fs::{create_dir_all, copy, set_permissions};
+use std::fs::Permissions;
+use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -19,8 +21,10 @@ use super::commands::npm;
 use super::capsule;
 use super::packages;
 use super::timer;
+use path_util::{PathExt, ToRelative};
+use file_util::create_dir;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Distribution {
     Unknown,
     Ubuntu(UbuntuInfo),
@@ -31,10 +35,10 @@ pub struct BuildContext<'a> {
     pub config: &'a Config,
     pub container_name: String,
     pub container_config: &'a Container,
-    ensure_dirs: BTreeSet<Path>,
-    empty_dirs: BTreeSet<Path>,
-    remove_dirs: BTreeSet<Path>,
-    cache_dirs: BTreeMap<Path, String>,
+    ensure_dirs: BTreeSet<PathBuf>,
+    empty_dirs: BTreeSet<PathBuf>,
+    remove_dirs: BTreeSet<PathBuf>,
+    cache_dirs: BTreeMap<PathBuf, String>,
     pub environ: BTreeMap<String, String>,
 
     pub settings: Settings,
@@ -57,15 +61,15 @@ impl<'a> BuildContext<'a> {
             container_name: name,
             container_config: container,
             ensure_dirs: vec!(
-                Path::new("proc"),
-                Path::new("sys"),
-                Path::new("dev"),
-                Path::new("work"),
-                Path::new("tmp"),
+                PathBuf::from("proc"),
+                PathBuf::from("sys"),
+                PathBuf::from("dev"),
+                PathBuf::from("work"),
+                PathBuf::from("tmp"),
                 ).into_iter().collect(),
             empty_dirs: vec!(
-                Path::new("tmp"),
-                Path::new("var/tmp"),
+                PathBuf::from("tmp"),
+                PathBuf::from("var/tmp"),
                 ).into_iter().collect(),
             remove_dirs: vec!(
                 ).into_iter().collect(),
@@ -86,55 +90,52 @@ impl<'a> BuildContext<'a> {
             packages: BTreeSet::new(),
             build_deps: BTreeSet::new(),
             featured_packages: BTreeSet::new(),
-            timelog: timer::TimeLog::start("/vagga/container/timings.log")
+            timelog: timer::TimeLog::start(
+                    &Path::new("/vagga/container/timings.log"))
                 .map_err(|e| format!("Can't write timelog: {}", e))
                 .unwrap(),
         };
     }
 
-    pub fn add_cache_dir(&mut self, path: Path, name: String)
+    pub fn add_cache_dir(&mut self, path: &Path, name: String)
         -> Result<(), String>
     {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        if self.cache_dirs.insert(path.clone(), name.clone()).is_none() {
-            let cache_dir = Path::new("/vagga/cache").join(name.as_slice());
+        let path = path.rel();
+        if self.cache_dirs.insert(path.to_path_buf(), name.clone()).is_none() {
+            let cache_dir = Path::new("/vagga/cache").join(&name);
             if !cache_dir.exists() {
-                try!(mkdir(&cache_dir, ALL_PERMISSIONS)
-                     .map_err(|e| format!("Error creating cache dir: {}", e)));
+                try_msg!(create_dir(&cache_dir, false),
+                     "Error creating cache dir: {err}");
             }
             let path = Path::new("/vagga/root").join(path);
-            try!(mkdir_recursive(&path, ALL_PERMISSIONS)
-                 .map_err(|e| format!("Error creating cache dir: {}", e)));
+            try_msg!(create_dir(&path, true),
+                 "Error creating cache dir: {err}");
             try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
         }
         return Ok(());
     }
 
-    pub fn add_remove_dir(&mut self, path: Path) {
+    pub fn add_remove_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        self.remove_dirs.insert(path);
+        self.remove_dirs.insert(path.rel().to_path_buf());
     }
 
-    pub fn add_empty_dir(&mut self, path: Path) {
+    pub fn add_empty_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        self.empty_dirs.insert(path);
+        self.empty_dirs.insert(path.rel().to_path_buf());
     }
 
-    pub fn add_ensure_dir(&mut self, path: Path) {
+    pub fn add_ensure_dir(&mut self, path: &Path) {
         assert!(path.is_absolute());
-        let path = path.path_relative_from(&Path::new("/")).unwrap();
-        self.ensure_dirs.insert(path);
+        self.ensure_dirs.insert(path.rel().to_path_buf());
     }
     pub fn start(&mut self) -> Result<(), String> {
         try!(mount_system_dirs());
-        try!(mkdir(&Path::new("/vagga/root/etc"), ALL_PERMISSIONS)
-             .map_err(|e| format!("Error creating /etc dir: {}", e)));
-        try!(copy(&Path::new("/etc/resolv.conf"),
-                  &Path::new("/vagga/root/etc/resolv.conf"))
+        try_msg!(create_dir(&Path::new("/vagga/root/etc"), false),
+             "Error creating /etc dir: {err}");
+        try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
         try!(self.timelog.mark(format_args!("Prepare"))
             .map_err(|e| format!("Can't write timelog: {}", e)));
@@ -177,8 +178,9 @@ impl<'a> BuildContext<'a> {
         }
 
         for dir in self.ensure_dirs.iter() {
-            try!(mkdir_recursive(&base.join(dir), ALL_PERMISSIONS)
-                .map_err(|e| format!("Error creating dir: {}", e)));
+            let fulldir = base.join(dir);
+            try_msg!(create_dir(&fulldir, true),
+                "Error creating dir: {err}");
         }
 
         try!(self.timelog.mark(format_args!("Finish"))

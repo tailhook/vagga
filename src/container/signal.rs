@@ -1,7 +1,7 @@
-use std::old_io::IoError;
-use std::os::errno;
-use std::old_io::process::Process;
+use std::io::Error as IoError;
 
+use nix::sys::signal::kill;
+use nix::errno::errno;
 pub use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT, EINTR, ECHILD};
 use libc::{c_int, pid_t};
 use self::Signal::*;
@@ -9,7 +9,7 @@ use self::Signal::*;
 
 static WNOHANG: c_int = 1;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Signal {
     Terminate(i32),  // Actual signal for termination: INT, TERM, QUIT...
     Child(pid_t, i32),  //  pid and result code
@@ -59,11 +59,11 @@ pub fn wait_process(pid: pid_t) -> Result<i32, IoError> {
         if errno() == EINTR {
             continue;
         }
-        return Err(IoError::last_error());
+        return Err(IoError::last_os_error());
     }
 }
 
 
 pub fn send_signal(pid: pid_t, sig: i32) {
-    Process::kill(pid, sig as isize).ok();
+    kill(pid, sig).ok();
 }

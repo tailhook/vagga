@@ -1,7 +1,7 @@
 use std::io::Error;
 use std::io::Write;
+use std::path::Path;
 use std::fs::File;
-use std::ffi::AsOsStr;
 use std::fmt::{Debug, Arguments};
 
 use container::util::{get_time, Time};
@@ -16,7 +16,7 @@ pub struct TimeLog {
 
 
 impl TimeLog {
-    pub fn start<P:?Sized + AsOsStr>(path: &P) -> Result<TimeLog, Error> {
+    pub fn start(path: &Path) -> Result<TimeLog, Error> {
         let tm = get_time();
         let mut res =TimeLog {
             file: try!(File::create(path)),

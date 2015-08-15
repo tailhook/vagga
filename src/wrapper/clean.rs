@@ -1,16 +1,19 @@
-use std::str::FromStr;
-use std::old_io::fs::{readdir, rmdir_recursive, readlink};
-use std::old_io::fs::{PathExtensions};
-use std::old_io::stdio::{stdout, stderr};
 use std::collections::HashSet;
-use libc::pid_t;
+use std::fs::{read_dir, remove_dir_all, read_link};
+use std::io::{stdout, stderr};
+use std::path::Path;
+use std::str::FromStr;
 
+use libc::pid_t;
 use argparse::{ArgumentParser, PushConst, StoreTrue};
 
 use super::setup;
 use super::Wrapper;
+use file_util::read_visible_entries;
+use path_util::PathExt;
 
-#[derive(Copy)]
+
+#[derive(Clone, Copy)]
 enum Action {
     Temporary,
     Old,
@@ -94,7 +97,7 @@ fn clean_dir(path: &Path, dry_run: bool) -> Result<(), String> {
         println!("Would remove {:?}", path);
     } else {
         debug!("Removing {:?}", path);
-        try!(rmdir_recursive(path)
+        try!(remove_dir_all(path)
              .map_err(|x| format!("Error removing directory: {}", x)));
     }
     Ok(())
@@ -116,13 +119,14 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
         }
     };
     let roots = base.join(".roots");
-    for path in try!(readdir(&roots)
-            .map_err(|e| format!("Can't read dir {:?}: {}", roots, e)))
-            .iter()
+    for entry in try_msg!(read_dir(&roots),
+        "Can't read dir {r:?}: {err}", r=roots)
     {
-        if path.filename_str().map(|n| n.starts_with(".tmp")).unwrap_or(false)
+        let entry = try_msg!(entry, "Can't read dir {r:?}: {err}", r=roots);
+        if entry.file_name()[..].to_str().map(|n| n.starts_with(".tmp"))
+                                         .unwrap_or(false)
         {
-            try!(clean_dir(path, dry_run));
+            try!(clean_dir(&entry.path(), dry_run));
         }
     }
 
@@ -144,36 +148,32 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
             return Ok(());
         }
     };
-    let useful: HashSet<String> = try!(
-        readdir(&wrapper.project_root.join(".vagga"))
-            .map_err(|e| format!("Can't read vagga directory: {}", e)))
+    let useful: HashSet<String> = try_msg!(
+        read_visible_entries(&wrapper.project_root.join(".vagga")),
+            "Can't read vagga directory: {err}")
         .into_iter()
-        .filter(|path| !path.filename_str()
-                           .map(|f| f.starts_with("."))
-                           .unwrap_or(true))
-        .map(|path| readlink(&path)
-                    .map_err(|e| warn!("Can't readlink {:?}: {}", path, e))
-                    .ok()
-                    .and_then(|f| {
-                        let mut cmp = f.str_components().rev();
-                        cmp.next();
-                        // The container name is next to the last component
-                        cmp.next().and_then(|x| x).map(ToString::to_string)
-                    }))
-        .filter(|x| x.is_some()).map(|x| x.unwrap())
+        .filter_map(|path| read_link(&path)
+             .map_err(|e| warn!("Can't readlink {:?}: {}", path, e))
+             .ok()
+             .and_then(|f| {
+                 // The container name is next to the last component
+                 f.iter().rev().nth(1)
+                 .and_then(|x| x.to_str()).map(ToString::to_string)
+             }))
         .collect();
     debug!("Useful images {:?}", useful);
 
     let roots = base.join(".roots");
-    for path in try!(readdir(&roots)
-            .map_err(|e| format!("Can't read dir {:?}: {}", roots, e)))
-            .iter()
+    for entry in try_msg!(read_dir(&roots),
+                         "Can't read dir {dir:?}: {err}", dir=roots)
     {
-        if path.filename_str()
+        let entry = try_msg!(entry,
+                             "Can't read dir {dir:?}: {err}", dir=roots);
+        if entry.file_name()[..].to_str()
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
-            try!(clean_dir(path, dry_run));
+            try!(clean_dir(&entry.path(), dry_run));
         }
     }
 
@@ -196,17 +196,20 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
         }
     };
     let procfs = Path::new("/proc");
-    for dir in try!(readdir(&base.join(".transient"))
-                    .map_err(|e| format!(
-                             "Can't read .vagga/.transient dir: {}", e)))
-                .into_iter()
-                .filter(|path| path.extension_str()
-                               .and_then(|e| FromStr::from_str(e).ok())
-                               .map(|p: pid_t| !procfs.join(format!("{}", p))
-                                              .exists())
-                               .unwrap_or(true))
+    for entry in try_msg!(read_dir(&base.join(".transient")),
+                        "Can't read .vagga/.transient dir: {err}")
     {
-        try!(clean_dir(&dir, dry_run));
+        let entry = try_msg!(entry, "Error reading .vagga/transient: {err}");
+        if let Some(fname) = entry.file_name()[..].to_str() {
+            if let Some(idx) = fname.find('.') {
+                if u32::from_str(&fname[idx+1..]).is_ok() &&
+                    procfs.join(&fname[idx+1..]).exists()
+                {
+                    continue;
+                }
+            }
+        }
+        try!(clean_dir(&entry.path(), dry_run));
     }
 
     return Ok(());

@@ -1,28 +1,27 @@
-use std::rc::Rc;
-use std::os::{Pipe, pipe};
 use std::cell::RefCell;
-use std::old_io::PipeStream;
-use std::old_io::fs::PathExtensions;
-use libc::funcs::posix88::unistd::close;
+use std::rc::Rc;
+use std::path::{Path, PathBuf};
 
 use super::super::context::BuildContext;
 use container::monitor::{Monitor, Executor, MonitorStatus};
 use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
+use container::pipe::{CPipe};
+use super::super::super::path_util::ToRelative;
+use path_util::PathExt;
 
 
-fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<Path, String> {
-    let rpath = Path::new("/");
+fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
     let chroot = Path::new("/vagga/root");
     if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {
-        for dir in paths.as_slice().split(':') {
+        for dir in paths[..].split(':') {
             let path = Path::new(dir);
             if !path.is_absolute() {
                 warn!("All items in PATH must be absolute, not {}",
                       path.display());
                 continue;
             }
-            if chroot.join(path.path_relative_from(&rpath).unwrap())
+            if chroot.join(path.rel())
                 .join(cmd).exists()
             {
                 return Ok(path.join(cmd));
@@ -37,16 +36,16 @@ pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
     path: &Path, env: &[(&str, &str)])
     -> Result<(), String>
 {
-    let cmdpath = if cmdline[0].as_slice().starts_with("/") {
-        Path::new(cmdline[0].as_slice())
+    let cmdpath = if cmdline[0][..].starts_with("/") {
+        PathBuf::from(&cmdline[0])
     } else {
-        try!(find_cmd(ctx, cmdline[0].as_slice()))
+        try!(find_cmd(ctx, &cmdline[0]))
     };
 
     let mut cmd = Command::new("run".to_string(), &cmdpath);
     cmd.set_workdir(path);
     cmd.chroot(&Path::new("/vagga/root"));
-    cmd.args(cmdline[1..].as_slice());
+    cmd.args(&cmdline[1..]);
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
     }
@@ -86,15 +85,15 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
     env: &[(&str, &str)])
     -> Result<Vec<u8>, String>
 {
-    let cmdpath = if cmdline[0].as_slice().starts_with("/") {
-        Path::new(cmdline[0].as_slice())
+    let cmdpath = if cmdline[0][..].starts_with("/") {
+        PathBuf::from(&cmdline[0])
     } else {
-        try!(find_cmd(ctx, cmdline[0].as_slice()))
+        try!(find_cmd(ctx, &cmdline[0]))
     };
 
     let mut cmd = Command::new("run".to_string(), &cmdpath);
     cmd.chroot(&Path::new("/vagga/root"));
-    cmd.args(cmdline[1..].as_slice());
+    cmd.args(&cmdline[1..]);
     for (k, v) in ctx.environ.iter() {
         cmd.set_env(k.clone(), v.clone());
     }
@@ -103,12 +102,11 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
     }
     debug!("Running {:?}", cmd);
     let (res, data) = unsafe {
-        let pipe = try!(pipe()
-            .map_err(|e| format!("Can't create pipe: {}", e)));
+        let pipe = try!(CPipe::new()
+            .map_err(|e| format!("Can't create pipe: {:?}", e)));
         cmd.set_stdout_fd(pipe.writer);
         let res = Monitor::run_command(cmd);
-        close(pipe.writer);
-        (res, PipeStream::open(pipe.reader).read_to_end().unwrap_or(vec!()))
+        (res, try_msg!(pipe.read(), "Can't read frome pipe: {err}"))
     };
 
     match res {

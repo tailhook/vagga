@@ -1,11 +1,9 @@
-use std::rc::Rc;
-use std::old_io::ALL_PERMISSIONS;
-use std::os::self_exe_path;
 use std::cell::Cell;
-use std::old_io::stdio::{stdout, stderr};
-use std::old_io::fs::{mkdir};
-use std::old_io::fs::PathExtensions;
 use std::collections::BTreeSet;
+use std::env::current_exe;
+use std::io::{stdout, stderr};
+use std::path::Path;
+use std::rc::Rc;
 
 use argparse::{ArgumentParser};
 
@@ -24,6 +22,8 @@ use config::command::ChildCommand::{BridgeCommand};
 use super::network;
 use super::user::{run_wrapper, common_child_command_env};
 use super::build::build_container;
+use file_util::create_dir;
+use path_util::PathExt;
 
 
 pub struct RunChild<'a> {
@@ -58,9 +58,9 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         panic!("Only stop-on-failure mode implemented");
     }
     {
-        args.insert(0, "vagga ".to_string() + cmdname.as_slice());
+        args.insert(0, "vagga ".to_string() + &cmdname);
         let mut ap = ArgumentParser::new();
-        ap.set_description(sup.description.as_ref().map(|x| x.as_slice())
+        ap.set_description(sup.description.as_ref().map(|x| &x[..])
             .unwrap_or("Run multiple processes simultaneously"));
         // TODO(tailhook) implement --only and --exclude
         match ap.parse(args, &mut stdout(), &mut stderr()) {
@@ -108,27 +108,28 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     let mut mon = Monitor::new();
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("wrapper".to_string(),
-            self_exe_path().unwrap().join("vagga_wrapper"));
+            &current_exe().unwrap().parent().unwrap()
+            .join("vagga_wrapper"));
         cmd.keep_sigmask();
-        cmd.arg(cmdname.as_slice());
-        cmd.arg(name.as_slice());
+        cmd.arg(&cmdname);
+        cmd.arg(&name);
         common_child_command_env(&mut cmd, Some(workdir));
         cmd.container();
         cmd.set_max_uidmap();
         let name = Rc::new(name.clone());
-        mon.add(name.clone(), box RunChild {
+        mon.add(name.clone(), Box::new(RunChild {
             name: name,
             command: Some(cmd),
             running: &running,
-        });
+        }));
     }
     let mut port_forward_guard;
     if containers_in_netns.len() > 0 {
         let gwdir = network::namespace_dir();
         let nsdir = gwdir.join("children");
         if !nsdir.exists() {
-            try!(mkdir(&nsdir, ALL_PERMISSIONS)
-                .map_err(|e| format!("Failed to create dir: {}", e)));
+            try_msg!(create_dir(&nsdir, false),
+                     "Failed to create dir: {err}");
         }
         try!(network::join_gateway_namespaces());
         try!(unshare_namespace(NewMount)
@@ -139,16 +140,17 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         let ip = try!(network::setup_bridge(&bridge_ns, &forwards));
 
         port_forward_guard = network::PortForwardGuard::new(
-            gwdir.join("netns"), ip, ports);
+            &gwdir.join("netns"), ip, ports);
         try!(port_forward_guard.start_forwarding());
 
         for name in containers_in_netns.iter() {
             let child = sup.children.get(name).unwrap();
             let mut cmd = Command::new("wrapper".to_string(),
-                self_exe_path().unwrap().join("vagga_wrapper"));
+                &current_exe().unwrap().parent().unwrap()
+                .join("vagga_wrapper"));
             cmd.keep_sigmask();
-            cmd.arg(cmdname.as_slice());
-            cmd.arg(name.as_slice());
+            cmd.arg(&cmdname);
+            cmd.arg(&name);
             common_child_command_env(&mut cmd, Some(workdir));
             cmd.container();
 
@@ -163,12 +165,12 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                 let netw = child.network().unwrap();
                 let net_ns;
                 let uts_ns;
-                net_ns = nsdir.join("net.".to_string() + netw.ip.as_slice());
-                uts_ns = nsdir.join("uts.".to_string() + netw.ip.as_slice());
+                net_ns = nsdir.join("net.".to_string() + &netw.ip);
+                uts_ns = nsdir.join("uts.".to_string() + &netw.ip);
                 // TODO(tailhook) support multiple commands with same IP
                 try!(network::setup_container(&net_ns, &uts_ns,
-                    name.as_slice(), netw.ip.as_slice(),
-                    netw.hostname.as_ref().unwrap_or(name).as_slice()));
+                    &name, &netw.ip,
+                    &netw.hostname.as_ref().unwrap_or(name)));
                 try!(set_namespace(&net_ns, NewNet)
                     .map_err(|e| format!("Error setting netns: {}", e)));
                 try!(set_namespace(&uts_ns, NewUts)
@@ -176,11 +178,11 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             }
 
             let name = Rc::new(name.clone());
-            mon.add(name.clone(), box RunChild {
+            mon.add(name.clone(), Box::new(RunChild {
                 name: name.clone(),
                 command: Some(cmd),
                 running: &running,
-            });
+            }));
             try!(mon.force_start(name));  // ensure run in correct sequence
         }
 

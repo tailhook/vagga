@@ -1,5 +1,5 @@
-use std::os::getenv;
-use std::old_io::{stdout, stderr};
+use std::env;
+use std::io::{stdout, stderr};
 use std::mem::swap;
 use std::collections::{HashSet, HashMap};
 
@@ -25,7 +25,7 @@ pub struct Graph {
 pub fn get_full_mesh(config: &Config)
     -> Result<(HashMap<String, String>, Graph), String>
 {
-    let cmd = try!(getenv("VAGGA_COMMAND")
+    let cmd = try!(env::var("VAGGA_COMMAND").ok()
         .and_then(|cmd| config.commands.get(&cmd))
         .ok_or(format!("This command is supposed to be run inside \
                         container started by vagga !Supervise command")));
@@ -132,7 +132,7 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
     let mut clusters = vec!();
     let mut cluster: Vec<String> = vec!();
     for v in nodes.iter() {
-        if v.as_slice() == "--" {
+        if &v[..] == "--" {
             if cluster.len() > 0 {
                 clusters.push(cluster);
                 cluster = vec!();

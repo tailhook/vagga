@@ -1,5 +1,7 @@
-use std::old_io::{ALL_PERMISSIONS, USER_RWX, GROUP_READ, OTHER_READ};
-use std::old_io::fs::{File, chmod, mkdir_recursive};
+use std::fs::{File, create_dir_all, set_permissions, Permissions};
+use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 
 use config::builders::Builder;
 use config::builders::Builder as B;
@@ -8,6 +10,7 @@ use config::read_config;
 use container::util::{clean_dir, copy_dir};
 use container::vagga::container_ver;
 
+use super::super::path_util::ToRelative;
 use super::context::BuildContext;
 use super::commands::debian;
 use super::commands::alpine;
@@ -133,12 +136,13 @@ impl BuildCommand for Builder {
             &B::Text(ref files) => {
                 if build {
                     for (path, text) in files.iter() {
-                        let realpath = Path::new("/vagga/root").join(
-                            path.path_relative_from(&Path::new("/")).unwrap());
+                        let realpath = Path::new("/vagga/root")
+                            .join(path.rel());
                         try!(File::create(&realpath)
-                            .and_then(|mut f| f.write_str(text))
-                            .map_err(|e| format!("Can't chmod file: {}", e)));
-                        try!(chmod(&realpath, USER_RWX|GROUP_READ|OTHER_READ)
+                            .and_then(|mut f| f.write_all(text.as_bytes()))
+                            .map_err(|e| format!("Can't create file: {}", e)));
+                        try!(set_permissions(&realpath,
+                            Permissions::from_mode(0o755))
                             .map_err(|e| format!("Can't chmod file: {}", e)));
                     }
                 }
@@ -189,7 +193,7 @@ impl BuildCommand for Builder {
             }
             &B::Cmd(ref cmd) => {
                 if build {
-                    try!(generic::run_command(ctx, cmd.as_slice()));
+                    try!(generic::run_command(ctx, &cmd));
                 }
             }
             &B::Env(ref pairs) => {
@@ -199,22 +203,23 @@ impl BuildCommand for Builder {
             }
             &B::Remove(ref path) => {
                 try!(clean_dir(path, true));
-                ctx.add_remove_dir(path.clone());
+                ctx.add_remove_dir(&path);
             }
             &B::EmptyDir(ref path) => {
                 try!(clean_dir(path, false));
-                ctx.add_empty_dir(path.clone());
+                ctx.add_empty_dir(&path);
             }
             &B::EnsureDir(ref path) => {
-                let fpath = path.path_relative_from(&Path::new("/")).unwrap();
-                try!(mkdir_recursive(
-                    &Path::new("/vagga/root").join(fpath), ALL_PERMISSIONS)
+                let fpath = Path::new("/vagga/root").join(path.rel());
+                try!(create_dir_all(&fpath)
                     .map_err(|e| format!("Error creating dir: {}", e)));
-                ctx.add_ensure_dir(path.clone());
+                try!(set_permissions(&fpath, Permissions::from_mode(0o755))
+                    .map_err(|e| format!("Error setting permissions: {}", e)));
+                ctx.add_ensure_dir(path);
             }
             &B::CacheDirs(ref pairs) => {
                 for (k, v) in pairs.iter() {
-                    try!(ctx.add_cache_dir(k.clone(), v.clone()));
+                    try!(ctx.add_cache_dir(k, v.clone()));
                 }
             }
             &B::Depends(_) => {

@@ -3,8 +3,9 @@ use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::time::Duration;
+
 use libc::pid_t;
+use time::Duration;
 
 use super::container::Command;
 use super::signal;

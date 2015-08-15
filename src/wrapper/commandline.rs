@@ -1,9 +1,10 @@
-use std::os::getenv;
+use std::env;
+use std::fs::read_link;
+use std::io::{stdout, stderr};
+use std::path::Path;
 use std::str::FromStr;
-use std::old_io::fs::readlink;
-use std::old_io::stdio::{stdout, stderr};
-use libc::pid_t;
 
+use libc::pid_t;
 use argparse::{ArgumentParser};
 
 use config::command::CommandInfo;
@@ -27,12 +28,12 @@ pub fn commandline_cmd(command: &CommandInfo,
 {
     // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
-            .unwrap_or(command.run[0].as_slice() != "/bin/sh");
+            .unwrap_or(&command.run[0][..] != "/bin/sh");
     let mut args = Vec::new();
     if !has_args {
         let mut ap = ArgumentParser::new();
         ap.set_description(command.description.as_ref()
-            .map(|x| x.as_slice()).unwrap_or(""));
+            .map(|x| &x[..]).unwrap_or(""));
         ap.stop_on_first_argument(true);
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -45,11 +46,12 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
-    let mut cmdline = command.run.clone() + args.as_slice();
+    let mut cmdline = command.run.clone();
+    cmdline.extend(args.into_iter());
 
-    let pid: pid_t = try!(readlink(&Path::new("/proc/self"))
+    let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
-        .and_then(|v| v.as_str().and_then(|x| FromStr::from_str(x).ok())
+        .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("Can't parse pid: {:?}", v))));
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
@@ -66,16 +68,16 @@ pub fn commandline_cmd(command: &CommandInfo,
     };
     let cont_ver = try!(container_ver(&command.container));
     try!(setup::setup_filesystem(cconfig,
-        write_mode, cont_ver.as_slice()));
+        write_mode, &cont_ver));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {
         env.insert(k.clone(), v.clone());
     }
-    let cpath = try!(find_cmd(cmdline.remove(0).as_slice(), &env));
+    let cpath = try!(find_cmd(&cmdline.remove(0), &env));
 
     let mut cmd = Command::new("run".to_string(), &cpath);
-    cmd.args(cmdline.as_slice());
+    cmd.args(&cmdline);
     if let Some(euid) = command.external_user_id {
         cmd.set_uidmap(Ranges(vec!(
             (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
@@ -85,10 +87,10 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmd.set_uidmap(uid_map.clone());
     }
     if let Some(ref wd) = command.work_dir {
-        cmd.set_workdir(&Path::new("/work").join(wd.as_slice()));
+        cmd.set_workdir(&Path::new("/work").join(&wd));
     } else {
         cmd.set_workdir(&Path::new(
-            getenv("PWD").unwrap_or("/work".to_string())));
+            &env::var("PWD").unwrap_or("/work".to_string())));
     }
     for (ref k, ref v) in env.iter() {
         cmd.set_env(k.to_string(), v.to_string());

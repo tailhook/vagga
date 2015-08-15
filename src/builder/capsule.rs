@@ -5,23 +5,26 @@
 /// may need real wget and ca-certificates for https. An other features may
 /// need more things.
 
-use std::rand::{thread_rng, Rng};
-use std::old_io::fs::{File, mkdir, mkdir_recursive};
-use std::old_io::fs::PathExtensions;
-use std::old_io::ALL_PERMISSIONS;
 use std::collections::HashSet;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::fs::{File};
+use std::io::{Write};
+use std::path::Path;
+use std::process::{Command, ExitStatus, Stdio};
+
+use rand::{thread_rng, Rng};
 
 use config::settings::Settings;
 use container::mount::bind_mount;
 use super::context::BuildContext;
 use super::commands::alpine::LATEST_VERSION;
+use super::super::file_util::create_dir;
+use path_util::PathExt;
 
 pub use self::Feature::*;
 
 static MIRRORS: &'static str = include_str!("../../alpine/MIRRORS.txt");
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum Feature {
     Https,
     AlpineInstaller,
@@ -38,7 +41,7 @@ pub struct State {
 // Also used in alpine
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     let mut cmd = Command::new("/vagga/bin/apk");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2))
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit())
         .env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
@@ -47,7 +50,7 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
         .map_err(|e| format!("Can't run apk: {}", e))
         .map(|o| o.status)
     {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(s) if s.success() => Ok(()),
         Ok(val) => Err(format!("Apk exited with status: {}", val)),
         Err(x) => Err(format!("Error running tar: {}", x)),
     }
@@ -59,7 +62,7 @@ fn choose_mirror() -> String {
         .map(|x| x.trim())
         .filter(|x| x.len() > 0 && !x.starts_with("#"))
         .collect::<Vec<&str>>();
-    let mirror = thread_rng().choose(repos.as_slice())
+    let mirror = thread_rng().choose(&repos)
         .expect("At least one mirror should work");
     debug!("Chosen mirror {}", mirror);
     return mirror.to_string();
@@ -80,12 +83,12 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
     if !capsule.capsule_base {
         let cache_dir = Path::new("/vagga/cache/alpine-cache");
         if !cache_dir.exists() {
-            try!(mkdir(&cache_dir, ALL_PERMISSIONS)
-                 .map_err(|e| format!("Error creating cache dir: {}", e)));
+            try_msg!(create_dir(&cache_dir, false),
+                 "Error creating cache dir: {err}");
         }
         let path = Path::new("/etc/apk/cache");
-        try!(mkdir_recursive(&path, ALL_PERMISSIONS)
-             .map_err(|e| format!("Error creating cache dir: {}", e)));
+        try_msg!(create_dir(&path, true),
+             "Error creating cache dir: {err}");
         try!(bind_mount(&cache_dir, &path));
 
         try!(apk_run(&[

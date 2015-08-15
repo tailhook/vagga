@@ -1,6 +1,7 @@
-use std::os::getenv;
-use std::old_io::{stdout, stderr};
-use std::old_io::process::{Command, InheritFd, ExitStatus};
+use std::env;
+use std::io::{stdout, stderr};
+use std::path::Path;
+use std::process::{Command, ExitStatus, Stdio};
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -41,7 +42,7 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let cmd = try!(getenv("VAGGA_COMMAND")
+    let cmd = try!(env::var("VAGGA_COMMAND").ok()
         .and_then(|cmd| config.commands.get(&cmd))
         .ok_or(Err(format!("This command is supposed to be run inside \
                         container started by vagga !Supervise command"))));
@@ -60,14 +61,14 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         return Err(Err(format!("Node {} is missing", subcommand)));
     };
     try!(set_namespace(
-        &Path::new(format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
+        &Path::new(&format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| Err(format!("Can't set namespace: {}", e))));
 
-    let mut cmd = Command::new(command.as_slice());
-    cmd.stdout(InheritFd(1)).stderr(InheritFd(2));
-    cmd.args(cmdargs.as_slice());
+    let mut cmd = Command::new(&command);
+    cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    cmd.args(&cmdargs);
     match cmd.status() {
-        Ok(ExitStatus(0)) => Ok(()),
+        Ok(status) if status.success() => Ok(()),
         e => Err(Err(format!("Error running {}: {:?}", command, e))),
     }
 }

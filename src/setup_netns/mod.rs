@@ -1,30 +1,26 @@
-extern crate argparse;
-extern crate serialize;
-#[macro_use] extern crate log;
+use std::env;
+use std::fs::File;
+use std::io::{stdout, stderr};
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+use std::process::exit;
+use std::process::{Command, Stdio};
+use std::thread::sleep_ms;
 
-use std::os::env;
-use std::old_io::BufferedReader;
-use std::env::set_exit_status;
-use std::os::self_exe_path;
-use std::old_io::fs::File;
-use std::old_io::timer::sleep;
-use std::old_io::stdio::{stdout, stderr};
-use std::time::duration::Duration;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
-use serialize::json;
+use rustc_serialize::json;
 
 use argparse::{ArgumentParser, Store, List};
 
 fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
-        .map(BufferedReader::new)
+        .map(BufReader::new)
         .and_then(|mut f| {
             let mut lineiter = f.lines();
             try!(lineiter.next().unwrap());  // Two header lines
             try!(lineiter.next().unwrap());
             for line in lineiter {
                 let line = try!(line);
-                let mut splits = line.as_slice().splitn(1, ':');
+                let mut splits = line[..].splitn(1, ':');
                 let interface = splits.next().unwrap();
                 if interface.trim() == name {
                     return Ok(true);
@@ -33,6 +29,24 @@ fn has_interface(name: &str) -> Result<bool, String> {
             return Ok(false);
         })
         .map_err(|e| format!("Can't read interfaces: {}", e))
+}
+
+fn busybox_cmd() -> Command {
+    let mut busybox = Command::new(
+        env::current_exe().unwrap()
+        .parent().unwrap()
+        .join("busybox"));
+    busybox.stdin(Stdio::null());
+    busybox.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    busybox
+}
+
+fn ip_cmd() -> Command {
+    let mut ip_cmd = busybox_cmd();
+    ip_cmd.arg("ip");
+    ip_cmd.stdin(Stdio::null());
+    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    ip_cmd
 }
 
 fn setup_gateway_namespace(args: Vec<String>) {
@@ -57,7 +71,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
-                set_exit_status(x);
+                exit(x);
                 return;
             }
         }
@@ -68,54 +82,48 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Ok(false) => {}
             Err(x) => {
                 error!("Error setting interface vagga_guest: {}", x);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         }
-        sleep(Duration::milliseconds(100));
+        sleep_ms(100);
     }
 
-    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-
-    let mut ip_cmd = busybox.clone();
-    ip_cmd.arg("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
 
     let mut commands = vec!();
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", guest_ip.as_slice(), "dev", "vagga_guest"]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["addr", "add", &guest_ip[..], "dev", "vagga_guest"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "vagga_guest", "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-o", "vagga_guest",
                "-j", "MASQUERADE"]);
     commands.push(cmd);
 
-    for cmd in commands.iter() {
+    for mut cmd in commands.into_iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
-            Ok(ExitStatus(0)) => {},
+            Ok(status) if status.success() => {},
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         };
@@ -152,85 +160,79 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
-                set_exit_status(x);
+                exit(x);
                 return;
             }
         }
     }
-    let ports: Vec<(u16, String, u16)> = json::decode(ports_str.as_slice())
+    let ports: Vec<(u16, String, u16)> = json::decode(&ports_str)
         .ok().expect("Port-forwards JSON is invalid");
     loop {
-        match has_interface(interface.as_slice()) {
+        match has_interface(&interface) {
             Ok(true) => break,
             Ok(false) => {}
             Err(x) => {
                 error!("Error setting interface {}: {}", interface, x);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         }
-        sleep(Duration::milliseconds(100));
+        sleep_ms(100);
     }
     let mut commands = vec!();
 
-    let busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-
-    let mut ip_cmd = busybox.clone();
-    ip_cmd.arg("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", format!("{}/30", ip).as_slice(),
-                       "dev", interface.as_slice()]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["addr", "add", &format!("{}/30", ip)[..],
+                       "dev", &interface]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["link", "set", "dev", &interface[..], "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
-    let mut cmd = busybox.clone();
+    let mut cmd = busybox_cmd();
     cmd.args(&["brctl", "addbr", "children"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["addr", "add", "172.18.0.254/24", "dev", "children"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "children", "up"]);
     commands.push(cmd);
 
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
-    cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for &(sport, ref dip, dport) in ports.iter() {
         let mut cmd = Command::new("iptables");
-        cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
+        cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
         cmd.args(&["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
-            "--dport", format!("{}", sport).as_slice(), "-j", "DNAT",
-            "--to-destination", format!("{}:{}", dip, dport).as_slice()]);
+            "--dport", &format!("{}", sport)[..], "-j", "DNAT",
+            "--to-destination", &format!("{}:{}", dip, dport)[..]]);
         commands.push(cmd);
     }
 
-    for cmd in commands.iter() {
+    for mut cmd in commands.into_iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
-            Ok(ExitStatus(0)) => {},
+            Ok(status) if status.success() => {}
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         };
@@ -267,67 +269,60 @@ fn setup_guest_namespace(args: Vec<String>) {
             Ok(()) => {}
             Err(0) => return,
             Err(x) => {
-                set_exit_status(x);
+                exit(x);
                 return;
             }
         }
     }
     loop {
-        match has_interface(interface.as_slice()) {
+        match has_interface(&interface) {
             Ok(true) => break,
             Ok(false) => {}
             Err(x) => {
                 error!("Error setting interface {}: {}", interface, x);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         }
-        sleep(Duration::milliseconds(100));
+        sleep_ms(100);
     }
     let mut commands = vec!();
 
-    let mut busybox = Command::new(self_exe_path().unwrap().join("busybox"));
-    busybox.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-
-    let mut ip_cmd = busybox.clone();
-    ip_cmd.arg("ip");
-    ip_cmd.stdin(Ignored).stdout(InheritFd(1)).stderr(InheritFd(2));
-
-    let mut cmd = ip_cmd.clone();
+    let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["addr", "add", format!("{}/24", ip).as_slice(),
-                       "dev", interface.as_slice()]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["addr", "add", &format!("{}/24", ip)[..],
+                       "dev", &interface[..]]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["link", "set", "dev", interface.as_slice(), "up"]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["link", "set", "dev", &interface[..], "up"]);
     commands.push(cmd);
 
-    let mut cmd = busybox.clone();
-    cmd.args(&["hostname", hostname.as_slice()]);
+    let mut cmd = busybox_cmd();
+    cmd.args(&["hostname", &hostname[..]]);
     commands.push(cmd);
 
-    let mut cmd = ip_cmd.clone();
-    cmd.args(&["route", "add", "default", "via", gateway_ip.as_slice()]);
+    let mut cmd = ip_cmd();
+    cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
-    for cmd in commands.iter() {
+    for mut cmd in commands.into_iter() {
         debug!("Running {:?}", cmd);
         match cmd.status() {
-            Ok(ExitStatus(0)) => {},
+            Ok(status) if status.success() => {}
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
-                set_exit_status(1);
+                exit(1);
                 return;
             }
         };
     }
 }
 
-fn main() {
+pub fn main() {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
     {
@@ -342,22 +337,15 @@ fn main() {
             .add_argument("options", List,
                 "Options specific for this kind");
         ap.stop_on_first_argument(true);
-        match ap.parse_args() {
-            Ok(()) => {}
-            Err(0) => return,
-            Err(x) => {
-                set_exit_status(x);
-                return;
-            }
-        }
+        ap.parse_args_or_exit();
     }
     args.insert(0, format!("vagga_setup_netns {}", kind));
-    match kind.as_slice() {
+    match &kind[..] {
         "gateway" => setup_gateway_namespace(args),
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),
         _ => {
-            set_exit_status(1);
+            exit(1);
             error!("Unknown command {}", kind);
         }
     }

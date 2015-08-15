@@ -1,13 +1,16 @@
 #![allow(dead_code)]
-use std::old_io::{IoError};
-use std::old_io::BufferedReader;
-use std::ptr::null;
 use std::ffi::CString;
-use std::old_io::fs::File;
-use std::old_path::BytesContainer;
+use std::fs::File;
+use std::io::Error as IoError;
+use std::io::{BufRead, BufReader};
+use std::os::unix::ffi::OsStrExt;
+use std::path::{Path, PathBuf};
+use std::ptr::null;
 use std::str::FromStr;
+
 use libc::{c_ulong, c_int};
 
+use super::super::path_util::{ToCString, ToRelative};
 use super::tools::NextValue;
 
 // sys/mount.h
@@ -69,7 +72,7 @@ pub struct MountRecord<'a> {
 
 impl<'a> MountRecord<'a> {
     pub fn from_str<'x>(line: &'x str) -> Result<MountRecord<'x>, ()> {
-        let mut parts = line.words();
+        let mut parts = line.split_whitespace();
         let mount_id = try!(parts.next_value());
         let parent_id = try!(parts.next_value());
         let device = try!(parts.next().ok_or(()));
@@ -129,20 +132,20 @@ impl<'a> MountRecord<'a> {
 }
 
 pub fn get_submounts_of(dir: &Path)
-    -> Result<Vec<Path>, String>
+    -> Result<Vec<PathBuf>, String>
 {
     let f = try!(File::open(&Path::new("/proc/self/mountinfo"))
         .map_err(|e| format!("Can't open mountinfo: {}", e)));
-    let mut buf = BufferedReader::new(f);
+    let mut buf = BufReader::new(f);
     let mut result = vec!();
     for line in buf.lines() {
         let line = try!(line
             .map_err(|e| format!("Can't read mountinfo: {}", e)));
-        match MountRecord::from_str(line.as_slice()) {
+        match MountRecord::from_str(&line) {
             Ok(rec) => {
                 let path = Path::new(rec.mount_point);
-                if dir.is_ancestor_of(&path) {
-                    result.push(path);
+                if dir.is_ancestor(&path) {
+                    result.push(path.to_path_buf());
                 }
             }
             Err(()) => {
@@ -154,24 +157,24 @@ pub fn get_submounts_of(dir: &Path)
 }
 
 pub fn remount_ro(target: &Path) -> Result<(), String> {
-    let none = CString::from_slice("none".as_bytes());
-    debug!("Remount readonly: {}", target.display());
-    let c_target = CString::from_slice(target.container_as_bytes());
+    let none = CString::new("none").unwrap();
+    debug!("Remount readonly: {:?}", target);
+    let c_target = target.to_cstring();
     let rc = unsafe { mount(
        none.as_bytes().as_ptr(),
        c_target.as_bytes().as_ptr(),
        null(), MS_BIND|MS_REMOUNT|MS_RDONLY, null()) };
     if rc != 0 {
-        let err = IoError::last_error();
-        return Err(format!("Remount readonly {}: {}", target.display(), err));
+        let err = IoError::last_os_error();
+        return Err(format!("Remount readonly {:?}: {}", target, err));
     }
     return Ok(());
 }
 
 pub fn mount_private(target: &Path) -> Result<(), String> {
-    let none = CString::from_slice("none".as_bytes());
-    let c_target = CString::from_slice(target.container_as_bytes());
-    debug!("Making private {}", target.display());
+    let none = CString::new("none").unwrap();
+    let c_target = target.to_cstring();
+    debug!("Making private {:?}", target);
     let rc = unsafe { mount(
         none.as_bytes().as_ptr(),
         c_target.as_bytes().as_ptr(),
@@ -179,39 +182,38 @@ pub fn mount_private(target: &Path) -> Result<(), String> {
     if rc == 0 {
         return Ok(());
     } else {
-        let err = IoError::last_error();
-        return Err(format!("Can't make {} a slave: {}",
-            target.display(), err));
+        let err = IoError::last_os_error();
+        return Err(format!("Can't make {:?} a slave: {}", target, err));
     }
 }
 
 pub fn bind_mount(source: &Path, target: &Path) -> Result<(), String> {
-    let c_source = CString::from_slice(source.container_as_bytes());
-    let c_target = CString::from_slice(target.container_as_bytes());
-    debug!("Bind mount {} -> {}", source.display(), target.display());
+    let c_source = source.to_cstring();
+    let c_target = target.to_cstring();
+    debug!("Bind mount {:?} -> {:?}", source, target);
     let rc = unsafe {
         mount(c_source.as_bytes().as_ptr(), c_target.as_bytes().as_ptr(),
         null(), MS_BIND|MS_REC, null()) };
     if rc == 0 {
         return Ok(());
     } else {
-        let err = IoError::last_error();
-        return Err(format!("Can't mount bind {} to {}: {}",
-            source.display(), target.display(), err));
+        let err = IoError::last_os_error();
+        return Err(format!("Can't mount bind {:?} to {:?}: {}",
+            source, target, err));
     }
 }
 
 pub fn mount_pseudo(target: &Path, name: &str, options: &str, readonly: bool)
     -> Result<(), String>
 {
-    let c_name = CString::from_slice(name.container_as_bytes());
-    let c_target = CString::from_slice(target.container_as_bytes());
-    let c_opts = CString::from_slice(options.container_as_bytes());
+    let c_name = name.to_cstring();
+    let c_target = target.to_cstring();
+    let c_opts = options.to_cstring();
     let mut flags = MS_NOSUID | MS_NOEXEC | MS_NODEV | MS_NOATIME;
     if readonly {
         flags |= MS_RDONLY;
     }
-    debug!("Pseusofs mount {} {} {}", target.display(), name, options);
+    debug!("Pseusofs mount {:?} {} {}", target, name, options);
     let rc = unsafe { mount(
         c_name.as_bytes().as_ptr(),
         c_target.as_bytes().as_ptr(),
@@ -221,17 +223,17 @@ pub fn mount_pseudo(target: &Path, name: &str, options: &str, readonly: bool)
     if rc == 0 {
         return Ok(());
     } else {
-        let err = IoError::last_error();
-        return Err(format!("Can't mount pseudofs {} ({}, options: {}): {}",
-            target.display(), options, name, err));
+        let err = IoError::last_os_error();
+        return Err(format!("Can't mount pseudofs {:?} ({}, options: {}): {}",
+            target, options, name, err));
     }
 }
 
 pub fn mount_tmpfs(target: &Path, options: &str) -> Result<(), String> {
-    let c_tmpfs = CString::from_slice("tmpfs".as_bytes());
-    let c_target = CString::from_slice(target.container_as_bytes());
-    let c_opts = CString::from_slice(options.container_as_bytes());
-    debug!("Tmpfs mount {} {}", target.display(), options);
+    let c_tmpfs = CString::new("tmpfs").unwrap();
+    let c_target = target.to_cstring();
+    let c_opts = options.to_cstring();
+    debug!("Tmpfs mount {:?} {}", target, options);
     let rc = unsafe { mount(
         c_tmpfs.as_bytes().as_ptr(),
         c_target.as_bytes().as_ptr(),
@@ -241,19 +243,19 @@ pub fn mount_tmpfs(target: &Path, options: &str) -> Result<(), String> {
     if rc == 0 {
         return Ok(());
     } else {
-        let err = IoError::last_error();
-        return Err(format!("Can't mount tmpfs {} (options: {}): {}",
-            target.display(), options, err));
+        let err = IoError::last_os_error();
+        return Err(format!("Can't mount tmpfs {:?} (options: {}): {}",
+            target, options, err));
     }
 }
 
 pub fn unmount(target: &Path) -> Result<(), String> {
-    let c_target = CString::from_slice(target.container_as_bytes());
+    let c_target = target.to_cstring();
     let rc = unsafe { umount2(c_target.as_bytes().as_ptr(), MNT_DETACH) };
     if rc == 0 {
         return Ok(());
     } else {
-        let err = IoError::last_error();
+        let err = IoError::last_os_error();
         return Err(format!("Can't unmount {} : {}", target.display(), err));
     }
 }

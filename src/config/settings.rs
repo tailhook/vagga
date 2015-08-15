@@ -1,9 +1,10 @@
 use std::str::FromStr;
-use serialize::json;
+
 use libc::{uid_t, gid_t};
+use rustc_serialize::json;
 
 
-#[derive(Decodable, Encodable, Default, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Default, Clone)]
 pub struct Settings {
     pub version_check: bool,
     pub ubuntu_mirror: String,

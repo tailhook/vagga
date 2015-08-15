@@ -1,5 +1,6 @@
-use std::old_io::fs::copy;
-use std::old_io::process::{Command, Ignored, InheritFd, ExitStatus};
+use std::fs::copy;
+use std::path::Path;
+use std::process::{Command, ExitStatus};
 
 use super::context::Distribution as Distr;
 use super::context::BuildContext;

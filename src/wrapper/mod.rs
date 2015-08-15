@@ -1,22 +1,14 @@
-extern crate quire;
-extern crate argparse;
-extern crate serialize;
-extern crate libc;
-#[macro_use] extern crate log;
-
-extern crate config;
-#[macro_use] extern crate container;
-
-use std::old_io::stderr;
-use std::env::{set_exit_status};
-use std::os::{getcwd};
+use std::env::{current_dir};
+use std::io::{stderr, Write};
+use std::path::Path;
+use std::process::exit;
 
 use argparse::{ArgumentParser, Store, List};
 
-use config::{find_config, Config, Settings};
-use config::command::MainCommand::{Command, Supervise};
-use container::signal;
-use settings::{read_settings, MergedSettings};
+use super::config::{find_config, Config, Settings};
+use super::config::command::MainCommand::{Command, Supervise};
+use super::container::signal;
+use self::settings::{read_settings, MergedSettings};
 
 
 mod settings;
@@ -30,7 +22,7 @@ mod util;
 mod clean;
 
 
-struct Wrapper<'a> {
+pub struct Wrapper<'a> {
     config: &'a Config,
     settings: &'a Settings,
     project_root: &'a Path,
@@ -64,12 +56,12 @@ pub fn run() -> i32 {
         }
     }
 
-    let workdir = getcwd().unwrap();
+    let workdir = current_dir().unwrap();
 
     let (config, project_root) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
-            err.write_line(e.as_slice()).ok();
+            writeln!(&mut err, "{}", e).ok();
             return 126;
         }
     };
@@ -77,7 +69,7 @@ pub fn run() -> i32 {
     {
         Ok(tup) => tup,
         Err(e) => {
-            err.write_line(e.as_slice()).ok();
+            writeln!(&mut err, "{}", e).ok();
             return 126;
         }
     };
@@ -91,7 +83,7 @@ pub fn run() -> i32 {
 
     args.insert(0, format!("vagga {}", cmd));
 
-    let result = match cmd.as_slice() {
+    let result = match &cmd[..] {
         "_build_shell" => Ok(debug::run_interactive_build_shell(&wrapper)),
         "_build" => build::build_container_cmd(&wrapper, args),
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
@@ -122,8 +114,8 @@ pub fn run() -> i32 {
     };
 }
 
-fn main() {
+pub fn main() {
     signal::block_all();
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }

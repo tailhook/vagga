@@ -1,5 +1,5 @@
-use std::os::{env, getenv};
-use std::os::self_exe_path;
+use std::env;
+use std::path::Path;
 
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Exit, Killed};
@@ -27,23 +27,23 @@ pub fn run_user_command(config: &Config, workdir: &Path,
 }
 
 pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
-    for (k, v) in env().into_iter() {
+    for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             cmd.set_env(k, v);
         }
     }
     cmd.set_env("TERM".to_string(),
-                getenv("TERM").unwrap_or("dumb".to_string()));
-    if let Some(x) = getenv("PATH") {
+                env::var("TERM").unwrap_or("dumb".to_string()));
+    if let Ok(x) = env::var("PATH") {
         cmd.set_env("HOST_PATH".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_LOG") {
+    if let Ok(x) = env::var("RUST_LOG") {
         cmd.set_env("RUST_LOG".to_string(), x);
     }
-    if let Some(x) = getenv("RUST_BACKTRACE") {
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.set_env("RUST_BACKTRACE".to_string(), x);
     }
-    if let Some(x) = getenv("HOME") {
+    if let Ok(x) = env::var("HOME") {
         cmd.set_env("VAGGA_USER_HOME".to_string(), x);
     }
     if let Some(x) = workdir {
@@ -81,11 +81,10 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     userns: bool)
     -> Result<i32, String>
 {
-    let mut cmd = Command::new("wrapper".to_string(),
-        self_exe_path().unwrap().join("vagga_wrapper"));
+    let mut cmd = Command::vagga("vagga_wrapper", "/proc/self/exe");
     cmd.keep_sigmask();
-    cmd.arg(cmdname.as_slice());
-    cmd.args(args.as_slice());
+    cmd.arg(&cmdname);
+    cmd.args(&args);
     common_child_command_env(&mut cmd, workdir);
     cmd.container();
     if userns {

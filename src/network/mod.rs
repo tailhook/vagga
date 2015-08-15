@@ -1,16 +1,10 @@
-extern crate argparse;
-#[macro_use] extern crate log;
-
-extern crate config;
-extern crate container;
-
-use std::env::set_exit_status;
+use std::process::exit;
+use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
 
-use config::read_config;
-
-use iptables::apply_graph;
+use super::config::read_config;
+use self::iptables::apply_graph;
 
 mod graphs;
 mod iptables;
@@ -64,7 +58,7 @@ fn run() -> Result<(), Result<i32, String>> {
         .expect("Error parsing configuration file");  // TODO
 
     args.insert(0, format!("vagga_network {}", kind));
-    let graph = match kind.as_slice() {
+    let graph = match &kind[..] {
         "fullmesh" => try!(graphs::full_mesh_cmd(&cfg, args)),
         "disjoint" => try!(graphs::disjoint_graph_cmd(&cfg, args)),
         "split" => try!(graphs::split_graph_cmd(&cfg, args)),
@@ -81,16 +75,15 @@ fn run() -> Result<(), Result<i32, String>> {
     Ok(())
 }
 
-fn main() {
+pub fn main() {
     match run() {
         Ok(()) => {}
         Err(Ok(x)) => {
-            set_exit_status(x);
+            exit(x);
         }
         Err(Err(e)) => {
             error!("{}", e);
-            set_exit_status(1);
-            return
+            exit(1);
         }
     }
 }

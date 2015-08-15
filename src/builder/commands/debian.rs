@@ -1,8 +1,8 @@
-use std::old_io::{USER_RWX, GROUP_READ, GROUP_EXECUTE, OTHER_READ, OTHER_EXECUTE};
-use std::old_io::BufferedReader;
-use std::old_io::EndOfFile;
-use std::old_io::fs::File;
-use std::old_io::fs::{copy, chmod, rename};
+use std::fs::{copy, rename, set_permissions, Permissions};
+use std::os::unix::fs::PermissionsExt;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::path::Path;
 use std::string;
 
 use config::builders::UbuntuRepoInfo;
@@ -12,14 +12,15 @@ use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
 use super::super::packages;
 use super::generic::{run_command, capture_command};
-use container::sha256::{Sha256, Digest};
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 
 pub enum BuildType {
     Daily,
     Release,
 }
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct UbuntuInfo {
     pub release: String,
     pub apt_update: bool,
@@ -29,28 +30,24 @@ pub struct UbuntuInfo {
 pub fn read_ubuntu_codename() -> Result<String, String>
 {
     let lsb_release_path = "/vagga/root/etc/lsb-release";
-    let mut lsb_release_file = BufferedReader::new(File::open(&Path::new(lsb_release_path)));
+    let mut lsb_release_file = BufReader::new(
+        try_msg!(File::open(&Path::new(lsb_release_path)),
+            "Error reading /etc/lsb-release: {err}"));
 
-    loop {
-        let line = match lsb_release_file.read_line() {
-            Ok(line) => {
-                if let Some(equalsPos) = line.find('=') {
-                    let key = line[..equalsPos].trim();
+    for line in lsb_release_file.lines() {
+        let line = try_msg!(line, "Error reading lsb file: {err}");
+        if let Some(equalsPos) = line.find('=') {
+            let key = line[..equalsPos].trim();
 
-                    if key == "DISTRIB_CODENAME" {
-                        let value = line[(equalsPos + 1)..].trim();
-                        return Ok(value.to_string());
-                    }
-                }
-            },
-            Err(ref e) if e.kind == EndOfFile => {
-                break;
-            },
-            Err(e) => return Err(e.desc.to_string()),
-        };
+            if key == "DISTRIB_CODENAME" {
+                let value = line[(equalsPos + 1)..].trim();
+                return Ok(value.to_string());
+            }
+        }
     }
 
-    Err(format!("Coudn't read codename from '{lsb_release_path}'", lsb_release_path=lsb_release_path))
+    Err(format!("Coudn't read codename from '{lsb_release_path}'",
+                lsb_release_path=lsb_release_path))
 }
 
 pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String, build_type: BuildType)
@@ -89,21 +86,17 @@ pub fn init_ubuntu_core(ctx: &mut BuildContext) -> Result<(), String> {
 
 fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
-    let mut source = BufferedReader::new(try!(File::open(&sources_list)
+    let mut source = BufReader::new(try!(File::open(&sources_list)
         .map_err(|e| format!("Error reading sources.list file: {}", e))));
     let tmp = sources_list.with_extension("tmp");
     try!(File::create(&tmp)
         .and_then(|mut f| {
-            loop {
-                let line = match source.read_line() {
-                    Ok(line) => line,
-                    Err(ref e) if e.kind == EndOfFile => {
-                        break;
-                    }
-                    Err(e) => return Err(e),
-                };
-                try!(f.write(line.replace("http://archive.ubuntu.com/ubuntu/",
-                     ctx.settings.ubuntu_mirror.as_slice()).as_bytes()));
+            for line in source.lines() {
+                let line = try!(line);
+                try!(f.write_all(
+                    line.replace("http://archive.ubuntu.com/ubuntu/",
+                     &ctx.settings.ubuntu_mirror).as_bytes()));
+                try!(f.write_all(b"\n"));
             }
             Ok(())
         })
@@ -117,22 +110,21 @@ fn init_debian_build(ctx: &mut BuildContext) -> Result<(), String> {
     // Do not attempt to start init scripts
     let policy_file = Path::new("/vagga/root/usr/sbin/policy-rc.d");
     try!(File::create(&policy_file)
-        .and_then(|mut f| f.write(b"#!/bin/sh\nexit 101\n"))
+        .and_then(|mut f| f.write_all(b"#!/bin/sh\nexit 101\n"))
         .map_err(|e| format!("Error writing policy-rc.d file: {}", e)));
-    try!(chmod(&policy_file,
-        USER_RWX|GROUP_READ|GROUP_EXECUTE|OTHER_READ|OTHER_EXECUTE)
+    try!(set_permissions(&policy_file, Permissions::from_mode(0o755))
         .map_err(|e| format!("Can't chmod file: {}", e)));
 
     // Do not need to fsync() after package installation
     try!(File::create(
             &Path::new("/vagga/root/etc/dpkg/dpkg.cfg.d/02apt-speedup"))
-        .and_then(|mut f| f.write(b"force-unsafe-io"))
+        .and_then(|mut f| f.write_all(b"force-unsafe-io"))
         .map_err(|e| format!("Error writing dpkg config: {}", e)));
 
     // Do not install recommends by default
     try!(File::create(
             &Path::new("/vagga/root/etc/apt/apt.conf.d/01norecommend"))
-        .and_then(|mut f| f.write(br#"
+        .and_then(|mut f| f.write_all(br#"
             APT::Install-Recommends "0";
             APT::Install-Suggests "0";
         "#))
@@ -181,7 +173,7 @@ pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
         "-y".to_string(),
         );
     args.extend(pkgs.clone().into_iter());
-    run_command(ctx, args.as_slice())
+    run_command(ctx, &args[..])
 }
 
 pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
@@ -193,7 +185,7 @@ pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
         "-y".to_string(),
         );
     args.extend(pkgs.clone().into_iter());
-    run_command(ctx, args.as_slice())
+    run_command(ctx, &args[..])
 }
 
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
@@ -210,7 +202,7 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     try!(capture_command(ctx, &["dpkg".to_string(), "-l".to_string()], &[])
         .and_then(|out| {
             File::create("/vagga/container/debian-packages.txt")
-            .and_then(|mut f| f.write(&out))
+            .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping package list: {}", e))
         }));
     Ok(())
@@ -220,12 +212,12 @@ pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)
     -> Result<(), String>
 {
     let mut hash = Sha256::new();
-    hash.input_str(repo.url.as_slice());
+    hash.input_str(&repo.url);
     hash.input(&[0]);
-    hash.input_str(repo.suite.as_slice());
+    hash.input_str(&repo.suite);
     hash.input(&[0]);
     for cmp in repo.components.iter() {
-        hash.input_str(cmp.as_slice());
+        hash.input_str(&cmp);
         hash.input(&[0]);
     }
     let name = format!("{}-{}.list",
@@ -240,7 +232,7 @@ pub fn add_debian_repo(ctx: &mut BuildContext, repo: &UbuntuRepoInfo)
     };
 
     File::create(&Path::new("/vagga/root/etc/apt/sources.list.d")
-                 .join(name.as_slice()))
+                 .join(&name))
         .and_then(|mut f| {
             try!(write!(&mut f, "deb {} {}", repo.url, repo.suite));
             for item in repo.components.iter() {

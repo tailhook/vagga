@@ -1,25 +1,18 @@
-#![feature(slicing_syntax)]
-
-extern crate quire;
-extern crate argparse;
-extern crate serialize;
-extern crate libc;
-#[macro_use] extern crate log;
-
-extern crate config;
-#[macro_use] extern crate container;
-
-use std::os::{set_exit_status};
-use std::old_io::fs::File;
 use std::default::Default;
-use std::old_io::pipe::PipeStream;
-use libc::funcs::posix88::unistd::dup2;
+use std::fs::File;
+use std::path::Path;
+use std::process::exit;
+use std::io::{stdout, Read, Write};
+use std::os::unix::io::FromRawFd;
+
+use nix::unistd::dup2;
+use argparse::{ArgumentParser, Store};
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 
 use config::read_config;
 use config::Settings;
 use container::signal;
-use argparse::{ArgumentParser, Store};
-use container::sha256::{Sha256, Digest};
 use self::version::{VersionHash};
 use self::version::HashResult::{Hashed, New, Error};
 
@@ -27,7 +20,7 @@ use self::version::HashResult::{Hashed, New, Error};
 mod version;
 
 
-pub fn run() -> isize {
+pub fn run() -> i32 {
     signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
@@ -56,15 +49,21 @@ pub fn run() -> isize {
     let cont = cfg.containers.get(&container)
         .expect("Container not found");  // TODO
     debug!("Versioning items: {}", cont.setup.len());
+
     let mut hash = Sha256::new();
-    hash.input(File::open(&Path::new("/proc/self/uid_map"))
-               .and_then(|mut f| f.read_to_end())
-               .ok().expect("Can't read uid_map")
-               .as_slice());
-    hash.input(File::open(&Path::new("/proc/self/gid_map"))
-               .and_then(|mut f| f.read_to_end())
-               .ok().expect("Can't read gid_map")
-               .as_slice());
+
+    let mut buf = Vec::with_capacity(1000);
+    File::open(&Path::new("/proc/self/uid_map"))
+               .and_then(|mut f| f.read_to_end(&mut buf))
+               .ok().expect("Can't read uid_map");
+    hash.input(&buf);
+
+    let mut buf = Vec::with_capacity(1000);
+    File::open(&Path::new("/proc/self/gid_map"))
+               .and_then(|mut f| f.read_to_end(&mut buf))
+               .ok().expect("Can't read gid_map");
+    hash.input(&buf);
+
     for b in cont.setup.iter() {
         debug!("Versioning setup: {:?}", b);
         match b.hash(&cfg, &mut hash) {
@@ -76,7 +75,8 @@ pub fn run() -> isize {
             }
         }
     }
-    match PipeStream::open(3).write_str(hash.result_str().as_slice()) {
+    debug!("Got hash {:?}", hash.result_str());
+    match unsafe { File::from_raw_fd(3) }.write_all(hash.result_str().as_bytes()) {
         Ok(()) => {}
         Err(e) => {
             error!("Error writing hash: {}", e);
@@ -86,11 +86,11 @@ pub fn run() -> isize {
     return 0;
 }
 
-fn main() {
+pub fn main() {
     // let's make stdout safer
     unsafe { dup2(1, 3) };
     unsafe { dup2(2, 1) };
 
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }

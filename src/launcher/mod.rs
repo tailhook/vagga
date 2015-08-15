@@ -1,20 +1,12 @@
-#![feature(box_syntax)]
+use std::env;
+use std::io::{stderr, Write};
+use std::path::{Path, PathBuf};
+use std::process::exit;
 
-extern crate quire;
-extern crate argparse;
-extern crate serialize;
-extern crate libc;
-#[macro_use] extern crate log;
-
-extern crate config;
-extern crate container;
-
-use std::old_io::stderr;
-use std::os::{setenv, unsetenv, getenv, getcwd};
-use std::env::{set_exit_status};
 use config::find_config;
 use container::signal;
 use argparse::{ArgumentParser, Store, List, Collect};
+use super::path_util::ToRelative;
 
 mod list;
 mod user;
@@ -60,53 +52,52 @@ pub fn run() -> i32 {
         }
     }
 
-    let workdir = getcwd().unwrap();
+    let workdir = env::current_dir().unwrap();
 
     let (config, cfg_dir) = match find_config(&workdir) {
         Ok(tup) => tup,
         Err(e) => {
-            err.write_line(e.as_slice()).ok();
+            writeln!(&mut err, "{}", e).ok();
             return 126;
         }
     };
-    let int_workdir = workdir.path_relative_from(&cfg_dir)
-                             .unwrap_or(Path::new("."));
+    let int_workdir = workdir.rel_to(&cfg_dir)
+                             .unwrap_or(&Path::new("."));
 
     for k in propagate_env.into_iter() {
-        setenv(("VAGGAENV_".to_string() + &k[..]).as_slice(),
-            getenv(k.as_slice()).unwrap_or("".to_string()));
+        env::set_var(&("VAGGAENV_".to_string() + &k[..]),
+            env::var(&k).unwrap_or("".to_string()));
     }
     for pair in set_env.into_iter() {
-        let mut pairiter = pair.as_slice().splitn(1, '=');
+        let mut pairiter = pair[..].splitn(2, '=');
         let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
         if let Some(value) = pairiter.next() {
-            setenv(key.as_slice(), value.to_string());
+            env::set_var(&key, value.to_string());
         } else {
-            unsetenv(key.as_slice());
+            env::remove_var(&key);
         }
     }
 
-    let result:Result<i32, String> = match cname.as_slice() {
+    let result:Result<i32, String> = match &cname[..] {
         "" => {
-            err.write_line("Available commands:").ok();
+            writeln!(&mut err, "Available commands:").ok();
             for (k, cmd) in config.commands.iter() {
-                err.write_str("    ").ok();
-                err.write_str(k.as_slice()).ok();
+                write!(&mut err, "    {}", k).ok();
                 match cmd.description() {
                     Some(ref val) => {
                         if k.len() > 19 {
-                            err.write_str("\n                        ").ok();
+                            write!(&mut err, "\n                        ").ok();
                         } else {
-                            for _ in range(k.len(), 19) {
-                                err.write_char(' ').ok();
+                            for _ in k.len()..19 {
+                                err.write_all(b" ").ok();
                             }
-                            err.write_char(' ').ok();
+                            err.write_all(b" ").ok();
                         }
-                        err.write_str(val.as_slice()).ok();
+                        err.write_all(val[..].as_bytes()).ok();
                     }
                     None => {}
                 }
-                err.write_char('\n').ok();
+                err.write_all(b"\n").ok();
             }
             return 127;
         }
@@ -141,14 +132,14 @@ pub fn run() -> i32 {
             return rc;
         }
         Err(text) =>  {
-            err.write_line(text.as_slice()).ok();
+            writeln!(&mut err, "{}", text).ok();
             return 121;
         }
     }
 }
 
-fn main() {
+pub fn main() {
     signal::block_all();
     let val = run();
-    set_exit_status(val);
+    exit(val);
 }

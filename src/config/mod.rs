@@ -1,9 +1,8 @@
 #![crate_name="config"]
 #![crate_type="lib"]
-#![feature(box_syntax)]
 
 
-extern crate serialize;
+extern crate rustc_serialize;
 extern crate quire;
 extern crate libc;
 

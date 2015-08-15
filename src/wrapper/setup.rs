@@ -1,25 +1,26 @@
-use std::old_io::ALL_PERMISSIONS;
-use std::os::{getenv, env};
-use std::old_io::BufferedReader;
-use std::os::{self_exe_path};
-use std::old_io::FileType::{Symlink, Directory};
-use std::old_io::{FileType, FileNotFound};
-use std::ffi::CString;
-use std::old_path::BytesContainer;
-use std::old_io::fs::{File, PathExtensions};
-use std::old_io::fs::{mkdir, mkdir_recursive, copy, readlink, symlink, link};
-use std::old_io::fs::{rmdir_recursive, readdir, chmod};
 use std::collections::BTreeMap;
-//use libc::chmod;
+use std::env;
+use std::env::{current_exe};
+use std::io::{BufRead, BufReader, ErrorKind};
+use std::ffi::CString;
+use std::fs::{copy, read_link, hard_link, set_permissions, Permissions};
+use std::fs::{remove_dir_all, read_dir, symlink_metadata};
+use std::fs::File;
+use std::fs::FileType;
+use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
+use std::path::{Path, PathBuf};
+
 use libc::pid_t;
 
-use config::Container;
-use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
-use container::root::{change_root};
-use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
-use container::mount::{mount_tmpfs, mount_pseudo};
+use super::super::config::Container;
+use super::super::config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
+use super::super::container::root::{change_root};
+use super::super::container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
+use super::super::container::mount::{mount_tmpfs, mount_pseudo};
 use super::run::DEFAULT_PATH;
-use settings::{MergedSettings};
+use super::settings::{MergedSettings};
+use file_util::create_dir;
+use path_util::{ToRelative, PathExt};
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,9 +30,9 @@ pub enum WriteMode {
 }
 
 fn create_storage_dir(storage_dir: &Path, project_root: &Path)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
-    let name = match project_root.filename_str() {
+    let name = match project_root.file_name().and_then(|x| x.to_str()) {
         Some(name) => name,
         None => return Err(format!(
             "Project dir `{}` is either root or has bad characters",
@@ -41,7 +42,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
     if !path.exists() {
         return Ok(path);
     }
-    for i in range(1is, 101is) {
+    for i in 1..101 {
         let result = format!("{}-{}", name, i);
         let path = storage_dir.join(result);
         if !path.exists() {
@@ -55,7 +56,7 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
 
 fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
     settings: &MergedSettings)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     match settings.cache_dir {
         Some(ref dir) if settings.shared_cache => {
@@ -75,22 +76,21 @@ fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
 }
 
 fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
-    match dir.lstat() {
-        Ok(stat) if stat.kind == Symlink => {
+    match symlink_metadata(dir) {
+        Ok(ref stat) if stat.file_type().is_symlink() => {
             return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
                                "Please run `unlink {0}`"), dir.display()));
         }
-        Ok(stat) if stat.kind == Directory => {
+        Ok(ref stat) if stat.file_type().is_dir() => {
             // ok
         }
         Ok(_) => {
             return Err(format!(concat!("The `{0}` must be a directory. ",
                                "Please run `unlink {0}`"), dir.display()));
         }
-        Err(ref e) if e.kind == FileNotFound => {
-            try!(mkdir(dir, ALL_PERMISSIONS)
-                .map_err(|e| format!("Can't create `{}`: {}",
-                                     dir.display(), e)));
+        Err(ref e) if e.kind() == ErrorKind::NotFound => {
+            try_msg!(create_dir(dir, false),
+                "Can't create {dir:?}: {err}", dir=dir);
         }
         Err(ref e) => {
             return Err(format!("Can't stat `{}`: {}", dir.display(), e));
@@ -100,15 +100,15 @@ fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
 }
 
 fn _vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Result<Path, (Path, Path)>, String>
+    -> Result<Result<PathBuf, (PathBuf, PathBuf)>, String>
 {
     if let Some(ref dir) = settings.storage_dir {
         let lnkdir = project_root.join(".vagga/.lnk");
-        match readlink(&lnkdir) {
+        match read_link(&lnkdir) {
             Ok(lnk) => {
-                if let Some(name) = lnk.filename() {
+                if let Some(name) = lnk.file_name() {
                     let target = dir.join(name);
-                    if Path::new(lnk.dirname()) != *dir {
+                    if lnk.parent() != Some(&*dir) {
                         return Err(concat!("You have set storage_dir to {}, ",
                             "but .vagga/.lnk points to {}. You probably need ",
                             "to run `ln -sfn {} .vagga/.lnk`").to_string());
@@ -126,7 +126,7 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
                         lnk.display()));
                 }
             }
-            Err(ref e) if e.kind == FileNotFound => {
+            Err(ref e) if e.kind() == ErrorKind::NotFound => {
                 return Ok(Err((lnkdir, dir.clone())));
             }
             Err(ref e) => {
@@ -139,13 +139,13 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
 }
 
 pub fn get_vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Option<Path>, String>
+    -> Result<Option<PathBuf>, String>
 {
     return _vagga_base(project_root, settings).map(|x| x.ok());
 }
 
 fn vagga_base(project_root: &Path, settings: &MergedSettings)
-    -> Result<Path, String>
+    -> Result<PathBuf, String>
 {
     match _vagga_base(project_root, settings) {
         Ok(Err((lnkdir, dir))) => {
@@ -182,33 +182,33 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(mount_tmpfs(&mnt_dir, "size=100m"));
 
     let proc_dir = mnt_dir.join("proc");
-    try!(mkdir(&proc_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /proc: {}", e)));
+    try_msg!(create_dir(&proc_dir, false),
+             "Error creating /proc: {err}");
     try!(mount_pseudo(&proc_dir, "proc", "", false));
 
     let dev_dir = mnt_dir.join("dev");
-    try!(mkdir(&dev_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /dev: {}", e)));
+    try_msg!(create_dir(&dev_dir, false),
+             "Error creating /dev: {err}");
     try!(bind_mount(&Path::new("/dev"), &dev_dir));
 
     let sys_dir = mnt_dir.join("sys");
-    try!(mkdir(&sys_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /sys: {}", e)));
+    try_msg!(create_dir(&sys_dir, false),
+             "Error creating /sys: {err}");
     try!(bind_mount(&Path::new("/sys"), &sys_dir));
 
     let vagga_dir = mnt_dir.join("vagga");
-    try!(mkdir(&vagga_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /vagga: {}", e)));
+    try_msg!(create_dir(&vagga_dir, false),
+             "Error creating /vagga: {err}");
 
     let bin_dir = vagga_dir.join("bin");
-    try!(mkdir(&bin_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /vagga/bin: {}", e)));
-    try!(bind_mount(&self_exe_path().unwrap(), &bin_dir));
+    try_msg!(create_dir(&bin_dir, false),
+             "Error creating /vagga/bin: {err}");
+    try!(bind_mount(&current_exe().unwrap().parent().unwrap(), &bin_dir));
     try!(remount_ro(&bin_dir));
 
     let etc_dir = mnt_dir.join("etc");
-    try!(mkdir(&etc_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /etc: {}", e)));
+    try_msg!(create_dir(&etc_dir, false),
+             "Error creating /etc: {err}");
     try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
         .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
     try!(copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
@@ -217,35 +217,35 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let local_base = vagga_dir.join("base");
     try!(safe_ensure_dir(&local_base));
     let vagga_base = try!(vagga_base(project_root, settings));
+
     try!(bind_mount(&vagga_base, &local_base));
     try!(safe_ensure_dir(&local_base.join(".roots")));
     try!(safe_ensure_dir(&local_base.join(".transient")));
 
     let cache_dir = vagga_dir.join("cache");
-    try!(mkdir(&cache_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /vagga/cache: {}", e)));
+    try_msg!(create_dir(&cache_dir, false),
+        "Error creating /vagga/cache: {err}");
     let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
     try!(bind_mount(&locl_cache, &cache_dir));
 
-    if let Some(nsdir) = getenv("VAGGA_NAMESPACE_DIR") {
+    if let Ok(nsdir) = env::var("VAGGA_NAMESPACE_DIR") {
         let newns_dir = vagga_dir.join("namespaces");
-        try!(mkdir_recursive(&newns_dir, ALL_PERMISSIONS)
-            .map_err(|e| format!("Error creating directory \
-                for namespaces: {}", e)));
-        try!(bind_mount(&Path::new(nsdir), &newns_dir)
+        try_msg!(create_dir(&newns_dir, true),
+            "Error creating directory for namespaces: {err}");
+        try!(bind_mount(&Path::new(&nsdir), &newns_dir)
              .map_err(|e| format!("Error mounting directory \
                 with namespaces: {}", e)));
     }
 
     let work_dir = mnt_dir.join("work");
-    try!(mkdir(&work_dir, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /work: {}", e)));
+    try_msg!(create_dir(&work_dir, false),
+        "Error creating /work: {err}");
     try!(bind_mount(project_root, &work_dir));
 
 
     let old_root = vagga_dir.join("old_root");
-    try!(mkdir(&old_root, ALL_PERMISSIONS)
-        .map_err(|e| format!("Error creating /vagga/old_root: {}", e)));
+    try_msg!(create_dir(&old_root, false),
+             "Error creating /vagga/old_root: {err}");
     try!(change_root(&mnt_dir, &old_root));
     try!(unmount(&Path::new("/vagga/old_root")));
 
@@ -257,16 +257,16 @@ pub fn get_environment(container: &Container)
 {
     let mut result = BTreeMap::new();
     result.insert("TERM".to_string(),
-                  getenv("TERM").unwrap_or("dumb".to_string()));
+                  env::var("TERM").unwrap_or("dumb".to_string()));
     result.insert("PATH".to_string(),
                   DEFAULT_PATH.to_string());
-    for (k, v) in env().into_iter() {
+    for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
-            result.insert(k.slice_from(9).to_string(), v);
+            result.insert(k[9..].to_string(), v);
         }
     }
     if let Some(ref filename) = container.environ_file {
-        let mut f = BufferedReader::new(try!(
+        let mut f = BufReader::new(try!(
                 File::open(filename)
                 .map_err(|e| format!("Error reading environment file {}: {}",
                     filename.display(), e))));
@@ -274,7 +274,7 @@ pub fn get_environment(container: &Container)
             let line = try!(line_read
                 .map_err(|e| format!("Error reading environment file {}: {}",
                     filename.display(), e)));
-            let mut pair = line.as_slice().splitn(2, '=');
+            let mut pair = line[..].splitn(2, '=');
             let key = pair.next().unwrap();
             let mut value = try!(pair.next()
                 .ok_or(format!("Error reading environment file {}: bad format",
@@ -292,39 +292,29 @@ pub fn get_environment(container: &Container)
 }
 
 fn hardlink_dir(old: &Path, new: &Path) -> Result<(), String> {
-    let filelist = try!(readdir(old)
-        .map_err(|e| format!("Error reading directory: {}", e)));
-    for item in filelist.iter() {
-        let stat = try!(item.lstat()
-            .map_err(|e| format!("Error stat for file: {}", e)));
-        let nitem = new.join(item.filename().unwrap());
-        match stat.kind {
-            FileType::RegularFile => {
-                try!(link(item, &nitem)
-                    .map_err(|e| format!("Can't hard-link file: {}", e)));
-            }
-            FileType::Directory => {
-                try!(mkdir(&nitem, ALL_PERMISSIONS)
-                    .map_err(|e| format!("Can't create dir: {}", e)));
-                try!(chmod(&nitem, stat.perm)
-                    .map_err(|e| format!("Can't chmod: {}", e)));
-                try!(hardlink_dir(item, &nitem));
-            }
-            FileType::NamedPipe => {
-                warn!("Skipping named pipe {:?}", item);
-            }
-            FileType::BlockSpecial => {
-                warn!("Can't clone block-special {:?}, skipping", item);
-            }
-            FileType::Symlink => {
-                let lnk = try!(readlink(item)
-                    .map_err(|e| format!("Can't readlink: {}", e)));
-                try!(symlink(&lnk, &nitem)
-                    .map_err(|e| format!("Can't symlink: {}", e)));
-            }
-            FileType::Unknown => {
-                warn!("Unknown file type {:?}", item);
-            }
+    for entry in try_msg!(read_dir(old), "Can't open dir {d:?}: {err}", d=old) {
+        let entry = try_msg!(entry, "Can't read dir entry {d:?}: {err}", d=old);
+        let stat = try_msg!(symlink_metadata(entry.path()),
+            "Can't stat file {path:?}: {err}", path=entry.path());
+        let nitem = new.join(entry.file_name());
+        let typ = try_msg!(entry.file_type(),
+            "Can't stat {f:?}: {err}", f=entry.path());
+        if typ.is_file() {
+            try!(hard_link(&entry.path(), &nitem)
+                .map_err(|e| format!("Can't hard-link file: {}", e)));
+        } else if typ.is_dir() {
+            try_msg!(create_dir(&nitem, false),
+                     "Can't create dir: {err}");
+            try!(set_permissions(&nitem, Permissions::from_mode(stat.mode()))
+                .map_err(|e| format!("Can't chmod: {}", e)));
+            try!(hardlink_dir(&entry.path(), &nitem));
+        } else if typ.is_symlink() {
+            let lnk = try!(read_link(&entry.path())
+                .map_err(|e| format!("Can't readlink: {}", e)));
+            try!(symlink(&lnk, &nitem)
+                .map_err(|e| format!("Can't symlink: {}", e)));
+        } else {
+            warn!("Unknown file type for {:?}", entry.path());
         }
     }
     Ok(())
@@ -334,11 +324,10 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
     container_ver: &str)
     -> Result<(), String>
 {
-    let root_path = Path::new("/");
     let tgtroot = Path::new("/vagga/root");
     if !tgtroot.exists() {
-        try!(mkdir(&tgtroot, ALL_PERMISSIONS)
-             .map_err(|x| format!("Error creating directory: {}", x)));
+        try_msg!(create_dir(&tgtroot, false),
+                 "Can't create rootfs mountpoint: {err}");
     }
     match write_mode {
         WriteMode::ReadOnly => {
@@ -353,11 +342,11 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             let newpath = Path::new("/vagga/base/.transient")
                 .join(format!("{}.{}", container_ver, pid));
             if newpath.exists() {
-                try!(rmdir_recursive(&newpath)
-                    .map_err(|e| format!("Error removing dir: {}", e)));
+                try_msg!(remove_dir_all(&newpath),
+                        "Error removing dir: {err}");
             }
-            try!(mkdir(&newpath, ALL_PERMISSIONS)
-                .map_err(|e| format!("Error creating directory: {}", e)));
+            try_msg!(create_dir(&newpath, false),
+                     "Error creating directory: {err}");
             try!(hardlink_dir(&oldpath, &newpath));
             try!(bind_mount(&newpath, &tgtroot)
                  .map_err(|e| format!("Error bind mount: {}", e)));
@@ -367,40 +356,37 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
 
-    if let None = container.volumes.get(&Path::new("/tmp")) {
+    if let None = container.volumes.get(&PathBuf::from("/tmp")) {
         try!(mount_tmpfs(&tgtroot.join("tmp"), "size=100m,mode=01777"));
     }
 
     for (path, vol) in container.volumes.iter() {
-        let dest = tgtroot.join(path.path_relative_from(&root_path).unwrap());
+        let dest = tgtroot.join(path.rel());
         match vol {
             &Tmpfs(ref params) => {
                 try!(mount_tmpfs(&dest,
-                    format!("size={},mode=0{:o}", params.size, params.mode)
-                    .as_slice()));
+                    &format!("size={},mode=0{:o}", params.size, params.mode)));
             }
             &VaggaBin => {
                 try!(bind_mount(&Path::new("/vagga/bin"), &dest));
             }
             &BindRW(ref bindpath) => {
-                let src = tgtroot.join(
-                    &bindpath.path_relative_from(&root_path).unwrap());
+                let src = tgtroot.join(bindpath.rel());
                 try!(bind_mount(&src, &dest));
             }
         }
     }
-    if let Some(_) = getenv("VAGGA_NAMESPACE_DIR") {
+    if let Ok(_) = env::var("VAGGA_NAMESPACE_DIR") {
         let newns_dir = tgtroot.join("tmp/vagga/namespaces");
-        try!(mkdir_recursive(&newns_dir, ALL_PERMISSIONS)
-            .map_err(|e| format!("Error creating directory \
-                for namespaces: {}", e)));
+        try_msg!(create_dir(&newns_dir, true),
+            "Error creating directory for namespaces: {err}");
         try!(bind_mount(&Path::new("/vagga/namespaces"), &newns_dir)
              .map_err(|e| format!("Error mounting directory \
                 with namespaces: {}", e)));
     }
 
     if let Some(ref path) = container.resolv_conf_path {
-        let path = tgtroot.join(path.path_relative_from(&root_path).unwrap());
+        let path = tgtroot.join(path.rel());
         try!(copy(&Path::new("/etc/resolv.conf"), &path)
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
     }

@@ -1,9 +1,10 @@
-use std::fs::File;
 use std::io::Write;
-use std::old_io::ALL_PERMISSIONS;
-use std::old_io::fs::{mkdir_recursive, copy};
+use std::fs::{copy};
+use std::fs::File;
+use std::path::Path;
 use std::process::{Command, Stdio};
 
+use super::super::super::file_util::create_dir;
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine, Unknown};
 use super::super::capsule;
@@ -13,7 +14,7 @@ use super::super::packages;
 pub static LATEST_VERSION: &'static str = "v3.1";
 
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct AlpineInfo {
     pub version: String,
     pub base_setup: bool,
@@ -31,8 +32,8 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
     };
     if !base {
         try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
-        try!(mkdir_recursive(&Path::new("/vagga/root/etc/apk"), ALL_PERMISSIONS)
-            .map_err(|e| format!("Error creating apk dir: {}", e)));
+        try_msg!(create_dir(&Path::new("/vagga/root/etc/apk"), true),
+            "Error creating apk dir: {err}");
         try!(copy(
             &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
             &Path::new("/vagga/root/etc/apk/repositories"))
@@ -59,7 +60,7 @@ pub fn install(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     capsule::apk_run(&[
         "--root", "/vagga/root",
         "add",
-        ], pkgs.as_slice())
+        ], &pkgs[..])
 }
 
 pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
@@ -68,7 +69,7 @@ pub fn remove(_ctx: &mut BuildContext, pkgs: &Vec<String>)
     capsule::apk_run(&[
         "--root", "/vagga/root",
         "del",
-        ], pkgs.as_slice())
+        ], &pkgs[..])
 }
 
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
@@ -76,7 +77,7 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
     let pkgs = ctx.build_deps.clone().into_iter().collect();
     try!(remove(ctx, &pkgs));
     try!(Command::new("/vagga/bin/apk")
-        .stdin(Stdio::null()).stdout(Stdio::capture()).stderr(Stdio::inherit())
+        .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::inherit())
         .env_clear()
         .arg("--root").arg("/vagga/root")
         .arg("-vv")
@@ -160,7 +161,7 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
         try!(capsule::apk_run(&[
             "--root", "/vagga/root",
             "add",
-            ], to_install.as_slice()));
+            ], &to_install[..]));
     }
     return Ok(unsupp);
 }

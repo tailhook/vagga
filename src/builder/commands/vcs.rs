@@ -1,7 +1,7 @@
-use std::process::{Command, Stdio};
 use std::fs::rename;
-use std::old_io::fs::PathExtensions;
 use std::fs::create_dir_all;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use config::settings::Settings;
 use config::builders::GitInfo;
@@ -11,9 +11,11 @@ use config::builders::GitSource;
 use super::super::capsule;
 use super::super::context::BuildContext;
 use super::generic::run_command_at;
+use super::super::super::path_util::ToRelative;
+use path_util::PathExt;
 
 
-fn git_cache(url: &String) -> Result<Path, String> {
+fn git_cache(url: &String) -> Result<PathBuf, String> {
     let dirname = url.replace("%", "%25").replace("/", "%2F");
     let cache_path = Path::new("/vagga/cache/git").join(&dirname);
     if cache_path.is_dir() {
@@ -33,7 +35,7 @@ fn git_cache(url: &String) -> Result<Path, String> {
             }
         }
     } else {
-        let tmppath = cache_path.with_filename(".tmp.".to_string() + &dirname);
+        let tmppath = cache_path.with_file_name(".tmp.".to_string() + &dirname);
         let mut cmd = Command::new("/usr/bin/git");
         cmd.stdin(Stdio::null());
         cmd.arg("clone").arg("--bare");
@@ -86,8 +88,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 pub fn git_command(ctx: &mut BuildContext, git: &GitInfo) -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::Git]));
-    let dest = Path::new("/vagga/root")
-        .join(&git.path.path_relative_from(&Path::new("/")).unwrap());
+    let dest = PathBuf::from("/vagga/root").join(&git.path.rel());
     let cache_path = try!(git_cache(&git.url));
     try!(create_dir_all(&dest)
          .map_err(|e| format!("Error creating dir: {}", e)));
@@ -101,12 +102,12 @@ pub fn git_install(ctx: &mut BuildContext, git: &GitInstallInfo)
     try!(capsule::ensure_features(ctx, &[capsule::Git]));
     let cache_path = try!(git_cache(&git.url));
     let tmppath = Path::new("/vagga/root/tmp")
-        .join(cache_path.filename().unwrap());
+        .join(cache_path.file_name().unwrap());
     try!(create_dir_all(&tmppath)
          .map_err(|e| format!("Error creating dir: {}", e)));
     try!(git_checkout(&cache_path, &tmppath, &git.revision, &git.branch));
-    let workdir = Path::new("/")
-        .join(tmppath.path_relative_from(&Path::new("/vagga/root")).unwrap())
+    let workdir = PathBuf::from("/")
+        .join(tmppath.rel_to(&Path::new("/vagga/root")).unwrap())
         .join(&git.subdir);
     return run_command_at(ctx, &[
         "/bin/sh".to_string(),
@@ -122,7 +123,7 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
     try!(capsule::ensure(capsule, settings, &[capsule::Git]));
     let cache_path = try!(git_cache(&git.url));
     let dest = Path::new("/vagga/sources")
-        .join(cache_path.filename().unwrap());
+        .join(cache_path.file_name().unwrap());
     try!(create_dir_all(&dest)
          .map_err(|e| format!("Error creating dir: {}", e)));
     try!(git_checkout(&cache_path, &dest, &git.revision, &git.branch));

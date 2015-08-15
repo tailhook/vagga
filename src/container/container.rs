@@ -1,23 +1,25 @@
 #![allow(dead_code)]
 
+use std::env::current_dir;
+use std::collections::BTreeMap;
+use std::collections::HashSet;
+use std::ffi::{CString};
 use std::fmt::{Debug, Formatter};
 use std::fmt::Error as FormatError;
-use std::ffi::{CString};
-use std::old_path::BytesContainer;
+use std::io::Error as IoError;
+use std::os::unix::ffi::OsStrExt;
+use std::path::Path;
 use std::ptr::null;
-use std::old_io::IoError;
-use std::os::getcwd;
-use std::collections::BTreeMap;
-use collections::enum_set::{EnumSet, CLike};
 
 use super::pipe::CPipe;
 use super::uidmap::{Uidmap, get_max_uidmap, apply_uidmap};
 
 use libc::{c_int, c_char, pid_t};
 use self::Namespace::*;
+use super::super::path_util::ToCString;
 
 
-#[derive(Debug)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum Namespace {
     NewMount,
     NewUts,
@@ -27,38 +29,13 @@ pub enum Namespace {
     NewNet,
 }
 
-impl CLike for Namespace {
-    fn to_usize(&self) -> usize {
-        match *self {
-            NewMount => 0,
-            NewUts => 1,
-            NewIpc => 2,
-            NewUser => 3,
-            NewPid => 4,
-            NewNet => 5,
-        }
-    }
-    fn from_usize(val: usize) -> Namespace {
-        match val {
-            0 => NewMount,
-            1 => NewUts,
-            2 => NewIpc,
-            3 => NewUser,
-            4 => NewPid,
-            5 => NewNet,
-            _ => unreachable!(),
-        }
-    }
-}
-
-
 pub struct Command {
     pub name: String,
     chroot: CString,
     executable: CString,
     arguments: Vec<CString>,
     environment: BTreeMap<String, String>,
-    namespaces: EnumSet<Namespace>,
+    namespaces: HashSet<Namespace>,
     restore_sigmask: bool,
     user_id: i32,
     workdir: CString,
@@ -75,14 +52,32 @@ impl Debug for Command {
 }
 
 impl Command {
-    pub fn new<T:BytesContainer>(name: String, cmd: T) -> Command {
+    pub fn new(name: String, cmd: &Path) -> Command {
+        let slc = cmd.as_os_str().as_bytes();
         return Command {
             name: name,
-            chroot: CString::from_slice("/".as_bytes()),
-            workdir: CString::from_slice(getcwd().unwrap().container_as_bytes()),
-            executable: CString::from_slice(cmd.container_as_bytes()),
-            arguments: vec!(CString::from_slice(cmd.container_as_bytes())),
-            namespaces: EnumSet::new(),
+            chroot: "/".to_cstring(),
+            workdir: current_dir().unwrap().to_cstring(),
+            executable: slc.to_cstring(),
+            arguments: vec!(slc.to_cstring()),
+            namespaces: HashSet::new(),
+            environment: BTreeMap::new(),
+            restore_sigmask: true,
+            user_id: 0,
+            uidmap: None,
+            stdin: 0,
+            stdout: 1,
+            stderr: 2,
+        };
+    }
+    pub fn vagga<P:AsRef<Path>>(name: &str, executable: P) -> Command {
+        return Command {
+            name: name.to_string(),
+            chroot: "/".to_cstring(),
+            workdir: current_dir().unwrap().to_cstring(),
+            executable: executable.as_ref().to_cstring(),
+            arguments: vec!(name.to_cstring()),
+            namespaces: HashSet::new(),
             environment: BTreeMap::new(),
             restore_sigmask: true,
             user_id: 0,
@@ -105,20 +100,20 @@ impl Command {
         self.stdin = fd;
     }
     pub fn chroot(&mut self, dir: &Path) {
-        self.chroot = CString::from_slice(dir.container_as_bytes());
+        self.chroot = dir.to_cstring();
     }
     pub fn set_workdir(&mut self, dir: &Path) {
-        self.workdir = CString::from_slice(dir.container_as_bytes());
+        self.workdir = dir.to_cstring();
     }
     pub fn keep_sigmask(&mut self) {
         self.restore_sigmask = false;
     }
-    pub fn arg<T:BytesContainer>(&mut self, arg: T) {
-        self.arguments.push(CString::from_slice(arg.container_as_bytes()));
+    pub fn arg<T:AsRef<[u8]>>(&mut self, arg: T) {
+        self.arguments.push(arg.to_cstring());
     }
-    pub fn args<T:BytesContainer>(&mut self, arg: &[T]) {
+    pub fn args<T:AsRef<[u8]>>(&mut self, arg: &[T]) {
         self.arguments.extend(arg.iter()
-            .map(|v| CString::from_slice(v.container_as_bytes())));
+            .map(|v| v.to_cstring()));
     }
     pub fn set_env(&mut self, key: String, value: String)
     {
@@ -155,28 +150,27 @@ impl Command {
             .map(|a| a.as_bytes().as_ptr()).collect();
         exec_args.push(null());
         let environ_cstr: Vec<CString> = self.environment.iter()
-            .map(|(k, v)| CString::from_slice(
-                (k.clone() + "=" + v.as_slice()).as_bytes()))
+            .map(|(k, v)| (k.clone() + "=" + &v).to_cstring())
             .collect();
         let mut exec_environ: Vec<*const u8> = environ_cstr.iter()
             .map(|p| p.as_bytes().as_ptr()).collect();
         exec_environ.push(null());
 
-        let logprefix = CString::from_slice(format!(
+        let logprefix = format!(
             // Only errors are logged from C code
-            "ERROR:lithos::container.c: [{}]", self.name
-            ).as_bytes());
+            "ERROR:vagga::container.c: [{}]", self.name,
+            ).to_cstring();
 
         let pipe = try!(CPipe::new()
                         .map_err(|e| format!("Error creating pipe: {}", e)));
         let pid = unsafe { execute_command(&CCommand {
-            pipe_reader: pipe.reader_fd(),
+            pipe_reader: pipe.reader,
             logprefix: logprefix.as_bytes().as_ptr(),
             fs_root: self.chroot.as_bytes().as_ptr(),
             exec_path: self.executable.as_bytes().as_ptr(),
-            exec_args: exec_args.as_slice().as_ptr(),
-            exec_environ: exec_environ.as_slice().as_ptr(),
-            namespaces: convert_namespaces(self.namespaces),
+            exec_args: exec_args[..].as_ptr(),
+            exec_environ: exec_environ[..].as_ptr(),
+            namespaces: convert_namespaces(&self.namespaces),
             user_id: self.user_id,
             restore_sigmask: if self.restore_sigmask { 1 } else { 0 },
             workdir: self.workdir.as_ptr(),
@@ -185,7 +179,7 @@ impl Command {
             stderr: self.stderr,
         }) };
         if pid < 0 {
-            return Err(format!("Error executing: {}", IoError::last_error()));
+            return Err(format!("Error executing: {}", IoError::last_os_error()));
         }
         if let Some(uidmap) = self.uidmap.as_ref() {
             try!(apply_uidmap(pid, uidmap)
@@ -210,9 +204,9 @@ pub fn convert_namespace(value: Namespace) -> c_int {
 }
 
 
-fn convert_namespaces(set: EnumSet<Namespace>) -> c_int {
+fn convert_namespaces(set: &HashSet<Namespace>) -> c_int {
     let mut ns = 0;
-    for i in set.iter() {
+    for &i in set.iter() {
         ns |= convert_namespace(i);
     }
     return ns;
@@ -242,7 +236,6 @@ pub struct CCommand {
     workdir: *const c_char,
 }
 
-#[link(name="container", kind="static")]
 extern {
     fn execute_command(cmd: *const CCommand) -> pid_t;
 }

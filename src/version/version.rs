@@ -1,16 +1,17 @@
-use std::old_io::EndOfFile;
-use std::old_io::BufferedReader;
-use std::old_io::fs::File;
-use std::old_path::BytesContainer;
+use std::io::{BufReader, BufRead, Read};
+use std::fs::File;
+use std::os::unix::ffi::OsStrExt;
+use std::path::Path;
 
-use serialize::json;
+use rustc_serialize::json;
 
 use config::Config;
 use config::read_config;
 use config::builders::{Builder};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use container::sha256::Digest;
+use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 use container::vagga::container_ver;
 use self::HashResult::*;
 
@@ -35,18 +36,10 @@ impl VersionHash for Builder {
                 match
                     File::open(&Path::new("/work").join(fname))
                     .and_then(|f| {
-                        let mut f = BufferedReader::new(f);
-                        loop {
-                            let line = match f.read_line() {
-                                Ok(line) => line,
-                                Err(ref e) if e.kind == EndOfFile => {
-                                    break;
-                                }
-                                Err(e) => {
-                                    return Err(e);
-                                }
-                            };
-                            let chunk = line.as_slice().trim();
+                        let mut f = BufReader::new(f);
+                        for line in f.lines() {
+                            let line = try!(line);
+                            let chunk = line[..].trim();
                             // Ignore empty lines and comments
                             if chunk.len() == 0 || chunk.starts_with("#") {
                                 continue;
@@ -67,12 +60,12 @@ impl VersionHash for Builder {
                     .and_then(|mut f| {
                         loop {
                             let mut chunk = [0u8; 128*1024];
-                            let bytes = match f.read(chunk.as_mut_slice()) {
+                            let bytes = match f.read(&mut chunk[..]) {
+                                Ok(0) => break,
                                 Ok(bytes) => bytes,
-                                Err(ref e) if e.kind == EndOfFile => break,
                                 Err(e) => return Err(e),
                             };
-                            hash.input(chunk[..bytes].as_slice());
+                            hash.input(&chunk[..bytes]);
                         }
                         Ok(())
                     })
@@ -146,7 +139,7 @@ impl VersionHash for Builder {
             }
             &B::CacheDirs(ref map) => {
                 for (k, v) in map.iter() {
-                    hash.input(k.container_as_bytes());
+                    hash.input(k.as_os_str().as_bytes());
                     hash.input(b"\0");
                     hash.input(v.as_bytes());
                     hash.input(b"\0");
@@ -155,7 +148,7 @@ impl VersionHash for Builder {
             }
             &B::Text(ref map) => {
                 for (k, v) in map.iter() {
-                    hash.input(k.container_as_bytes());
+                    hash.input(k.as_os_str().as_bytes());
                     hash.input(b"\0");
                     hash.input(v.as_bytes());
                     hash.input(b"\0");
