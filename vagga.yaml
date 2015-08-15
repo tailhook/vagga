@@ -15,11 +15,10 @@ containers:
       LD_LIBRARY_PATH: /usr/local/musl/lib:/usr/local/musl/lib/rustlib/x86_64-unknown-linux-gnu/lib
       PATH: /usr/local/musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
-      LIBC_PATH: /usr/local/musl/lib
     setup:
     - !UbuntuRelease {version: 15.04}
     - !UbuntuUniverse
-    - !Install [build-essential, ca-certificates]
+    - !Install [build-essential, ca-certificates, wget]
     - !BuildDeps [cmake, llvm-dev, libc++-dev, file, curl, python,
         autoconf, automake, autotools-dev, libtool, texlive-extra-utils]
     # Build instructions from
@@ -58,18 +57,6 @@ containers:
     - !TarInstall
       url: "http://static.rust-lang.org/dist/rust-1.2.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=cargo"
-
-  ubuntu-package:
-    setup:
-    - !Ubuntu trusty
-    - !UbuntuUniverse
-    - !TarInstall
-      url: https://static.rust-lang.org/dist/rust-1.2.0-x86_64-unknown-linux-gnu.tar.gz
-      script: |
-        ./install.sh --prefix=/usr --components=rustc,cargo
-    - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
-    environ:
-      HOME: /work/target
 
   test:
     setup:
