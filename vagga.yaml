@@ -16,7 +16,7 @@ containers:
       PATH: /usr/local/musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
     setup:
-    - !UbuntuRelease {version: 15.04}
+    - !Ubuntu trusty
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates, wget]
     - !BuildDeps [cmake, llvm-dev, libc++-dev, file, curl, python,
@@ -46,7 +46,7 @@ containers:
         cp lib/libunwind.a /usr/local/musl/lib/
         du -h /usr/local/musl/lib/libunwind.a
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rustc-nightly-src.tar.gz
+      url: https://static.rust-lang.org/dist/rustc-1.2.0-src.tar.gz
       script: |
         ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl --prefix=/usr/local/musl
         make
