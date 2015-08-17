@@ -18,8 +18,9 @@ containers:
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse
-    - !Install [build-essential, ca-certificates, wget]
-    - !BuildDeps [cmake, llvm-dev, libc++-dev, file, curl, python,
+    - !Install [build-essential, ca-certificates]
+    - !Install [file]  # dependency of checkinstall (bug #46)
+    - !BuildDeps [cmake, llvm-dev, libc++-dev, curl, python,
         autoconf, automake, autotools-dev, libtool, texlive-extra-utils]
     # Build instructions from
     # https://github.com/rust-lang/rust/blob/master/src/doc/trpl/advanced-linking.md
@@ -57,6 +58,9 @@ containers:
     - !TarInstall
       url: "http://static.rust-lang.org/dist/rust-1.2.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=cargo"
+
+    # For packaging
+    - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
 
   test:
     setup:
