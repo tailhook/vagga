@@ -59,7 +59,7 @@ impl VersionHash for Builder {
                     File::open(&Path::new("/work").join(filename))
                     .and_then(|mut f| {
                         loop {
-                            let mut chunk = [0u8; 128*1024];
+                            let mut chunk = [0u8; 8*1024];
                             let bytes = match f.read(&mut chunk[..]) {
                                 Ok(0) => break,
                                 Ok(bytes) => bytes,
