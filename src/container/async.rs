@@ -79,7 +79,9 @@ impl<Name: Clone> Loop<Name> {
         });
     }
     pub fn add_timeout(&mut self, duration: Duration, name: Name) {
-        self.queue.push((-(get_time()*1000.) as i64, Unordered(name)));
+        self.queue.push(
+            (-(get_time()*1000. + duration.num_milliseconds() as f64) as i64,
+            Unordered(name)));
     }
     fn get_timeout(&mut self) -> c_int {
         self.queue.peek()
