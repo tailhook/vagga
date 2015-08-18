@@ -4,6 +4,7 @@
 .vagga
 /tmp
 /docs/_build
+/dist
 
 todo.txt
 

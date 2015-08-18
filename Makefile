@@ -1,16 +1,17 @@
 RUSTC ?= rustc
 CC ?= gcc
 AR ?= ar
+CARGO_FLAGS ?=
 
 
-PREFIX ?= /usr
-DESTDIR ?=
+export PREFIX ?= /usr
+export DESTDIR ?=
 
 
 all: downloads vagga
 
 vagga:
-	cargo build --target=x86_64-unknown-linux-musl
+	cargo build --target=x86_64-unknown-linux-musl $(CARGO_FLAGS)
 	cp --remove-destination target/x86_64-unknown-linux-musl/debug/vagga .
 
 vagga_test: tests/*.rs tests/*/*.rs
@@ -25,13 +26,33 @@ test: all vagga_test
 	./vagga_test
 
 install:
-	install -d $(DESTDIR)$(PREFIX)/bin
-	install -d $(DESTDIR)$(PREFIX)/lib/vagga
-	install -m 755 vagga $(DESTDIR)$(PREFIX)/lib/vagga/vagga
-	install -m 755 apk $(DESTDIR)$(PREFIX)/lib/vagga/apk
-	install -m 755 busybox $(DESTDIR)$(PREFIX)/lib/vagga/busybox
-	install -m 755 alpine-keys.apk $(DESTDIR)$(PREFIX)/lib/vagga/alpine-keys.apk
-	ln -s ../lib/vagga/vagga $(DESTDIR)$(PREFIX)/bin/vagga
+	./install.sh
+
+tarball:
+	[ -d dist ] || mkdir dist
+	tarname=vagga-$$(git describe | cut -c2-).tar.xz \
+	&& tmpdir=$$(mktemp -d) \
+	&& mkdir -p $$tmpdir/vagga \
+	&& cp vagga apk busybox alpine-keys.apk install.sh $$tmpdir/vagga \
+	&& tar -cJf dist/$$tarname -C $$tmpdir/vagga \
+		vagga apk busybox alpine-keys.apk install.sh \
+	&& rm -rf $$tmpdir \
+	echo Done tarball $$tarname
+
+
+ubuntu-package:
+	checkinstall \
+		--default \
+		--maintainer=paul@colomiets.name \
+		--pkglicense=MIT \
+		--pkgname=vagga \
+		--pkgver="$$(git describe | cut -c2-)" \
+		--pakdir="dist" \
+		--requires="uidmap" \
+		--backup=no \
+		--nodoc \
+		$(CHECKINSTALL_FLAGS) \
+		./install.sh
 
 
 .PHONY: all downloads test vagga install

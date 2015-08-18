@@ -118,24 +118,28 @@ commands:
     container: rust-musl
     run: [cargo]
 
-  build-ubuntu-package: !Command
+  build-packages: !Command
     description: Create an ubuntu (.deb) package using checkinstall in
-      container
+      container and tar.gz. Both put into `dist/`
     container: rust-musl
     write-mode: transient-hard-link-copy
-    accepts-arguments: true
+    environ:
+      PATH: /usr/local/musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
     run: |
-      make all "$@" || exit 1
-      checkinstall \
-        --default \
-        --maintainer=paul@colomiets.name \
-        --pkglicense=MIT \
-        --pkgname=vagga \
-        --pkgver="$(git describe | cut -c2-)" \
-        --requires="uidmap" \
-        --backup=no \
-        --nodoc \
-      make install
+      make all CARGO_FLAGS=--release || exit 1
+      make ubuntu-package
+      make tarball
+
+  build-packages-testing: !Command
+    description: Same as build-packages but with debugging info enabled
+    container: rust-musl
+    write-mode: transient-hard-link-copy
+    environ:
+      PATH: /usr/local/musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+    run: |
+      make all
+      make ubuntu-package CHECKINSTALL_FLAGS=--strip=no
+      make tarball
 
   test: !Command
     description: Run self tests
