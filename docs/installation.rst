@@ -63,7 +63,7 @@ Visit http://files.zerogw.com/vagga/latest-testing.html to find out latest
 tarball version. Then run the following::
 
     wget http://files.zerogw.com/vagga/vagga-0.2.5-136-gc996703.tar.xz
-    tar -xzf vagga-0.2.5-136-gc996703.tar.xz
+    tar -xJf vagga-0.2.5-136-gc996703.tar.xz
     cd vagga
     sudo ./install.sh
 
