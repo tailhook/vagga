@@ -50,35 +50,27 @@ The only other optional dependency is ``iptables`` in case you will be doing
 
 See instructions specific for your distribution below.
 
-Building From Source
-====================
 
-.. note:: The recommended way to building vagga is to install the tool from
-   packages (see :ref:`Ubuntu` below and then build vagga using vagga itself,
-   the text below describes old-style build process)
+Binary Installation
+===================
 
+Currently we only have a tarball for testing version. Stable version will be
+published as soon as 0.3 stable is released.
 
-Build-time dependencies:
+.. note:: If you're ubuntu user you should use package. See instructions below.
 
-* Rust_ compiler 1.0.0-alpha (``rustc``)
-* ``make`` (probably gnu variant)
-* ``git`` (when installing from git source)
+Visit http://files.zerogw.com/vagga/latest-testing.html to find out latest
+tarball version. Then run the following::
 
-Run-time dependencies (basically none):
+    wget http://files.zerogw.com/vagga/vagga-0.2.5-136-gc996703.tar.xz
+    tar -xzf vagga-0.2.5-136-gc996703.tar.xz
+    cd vagga
+    sudo ./install.sh
 
-* ``glibc`` (probably you have it)
-* ``newuidmap/newgidmap`` binaries (in ubuntu is separate ``uidmap`` package,
-  but it's a part of ``shadow`` which is installed everywhere)
+Or you may try more obscure way::
 
-Process is as simple as following::
+    curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
 
-    git submodule update --init
-    make
-    sudo make install PREFIX=/usr
-
-
-.. _Rust: http://www.rust-lang.org
-.. _linux: http://kernel.org
 
 .. _ubuntu:
 
@@ -161,36 +153,6 @@ Or alternatively you may edit files by hand.
 Now your vagga is ready to go.
 
 
-Ubuntu: Building From Source
-============================
-
-Until rust is stable and added to ubuntu repository you need to fetch it from
-rust-lang.org::
-
-    wget https://static.rust-lang.org/dist/rust-1.0.0-alpha-x86_64-unknown-linux-gnu.tar.gz
-    tar -xf rust-1.0.0-alpha-x86_64-unknown-linux-gnu.tar.gz
-    cd rust-1.0.0-alpha-x86_64-unknown-linux-gnu
-    ./install.sh --prefix=/usr
-
-Building vagga::
-
-    git clone git://github.com/tailhook/vagga
-    cd vagga
-    git submodule update --init
-    make
-
-Installing::
-
-    sudo make install PREFIX=/usr
-
-For upgrading you may build vagga using vagga, just run the following in source
-directory of vagga::
-
-    vagga build-ubuntu-package
-
-It will put ``*.deb`` file in current directory.
-
-
 .. _archlinux:
 
 Arch Linux
@@ -222,3 +184,34 @@ If output is empty, you have to modify these files. Command should be similar to
 
 .. _linux-user-ns-enabled: https://aur.archlinux.org/packages/linux-user-ns-enabled/
 .. _package: https://aur.archlinux.org/packages/vagga-git
+
+
+Building From Source
+====================
+
+The only supported way to build from source is to build with vagga. It's as
+easy as installing vagga and running ``vagga make`` inside the the clone of a
+vagga repository.
+
+.. note:: First build of vagga is **very slow** because it needs to build
+   rust with musl standard library. When I say slow, I mean it takes about
+   1 (on fast i7) to 4 hours and more on a laptop. Subsequent builds are much
+   faster (less than minute on my laptop).
+
+There is also a ``vagga build-packages`` command which builds ubuntu and binary
+package and puts them into ``dist/``.
+
+To install run::
+
+    make install
+
+or just (in case you don't have ``make`` in host system)::
+
+    ./install.sh
+
+Both support ``PREFIX`` and ``DESTDIR`` environment variables.
+
+.. note:: We stopped supporting out-of-container build because rust with musl
+   is just too hard to build. In case you are brave enough, just look at
+   ``vagga.yaml`` in the repository. It's pretty easy to follow and there is
+   everything needed to build rust-musl with dependencies.
