@@ -34,8 +34,7 @@ tarball:
 	&& tmpdir=$$(mktemp -d) \
 	&& mkdir -p $$tmpdir/vagga \
 	&& cp vagga apk busybox alpine-keys.apk install.sh $$tmpdir/vagga \
-	&& tar -cJf dist/$$tarname -C $$tmpdir/vagga \
-		vagga apk busybox alpine-keys.apk install.sh \
+	&& tar -cJf dist/$$tarname -C $$tmpdir vagga \
 	&& rm -rf $$tmpdir \
 	echo Done tarball $$tarname
 
