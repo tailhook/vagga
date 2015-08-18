@@ -2,7 +2,7 @@ use std::fs::{remove_file, rename, create_dir_all, set_permissions};
 use std::fs::{Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 
 use shaman::digest::Digest;
 use shaman::sha2::Sha256;

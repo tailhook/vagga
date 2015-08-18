@@ -1,8 +1,6 @@
 use super::super::context::{BuildContext};
 use super::generic::{run_command, capture_command};
 use super::super::packages;
-use super::super::context::Distribution as Distr;
-use super::alpine;
 
 use std::path::Path;
 

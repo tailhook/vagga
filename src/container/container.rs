@@ -121,7 +121,7 @@ impl Command {
     }
 
     pub fn update_env<'x, I: Iterator<Item=(String, String)>>(&mut self,
-        mut env: I)
+        env: I)
     {
         for (k, v) in env {
             self.environment.insert(k, v);

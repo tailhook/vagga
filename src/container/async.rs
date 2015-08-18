@@ -9,7 +9,7 @@ use libc::consts::os::posix88::{SIGTERM, SIGINT, SIGQUIT};
 use time::Duration;
 
 use super::signal;
-use super::util::{Time, get_time};
+use super::util::{get_time};
 use self::Event::*;
 
 const SIGCHLD: c_int = 17;

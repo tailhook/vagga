@@ -11,7 +11,7 @@ pub fn build_container(config: &Config, name: &String) -> Result<(), String> {
     build_command(config, vec!(name.clone())).map(|_| ())
 }
 
-pub fn build_command(config: &Config, mut args: Vec<String>)
+pub fn build_command(config: &Config, args: Vec<String>)
     -> Result<i32, String>
 {
     let mut name: String = "".to_string();

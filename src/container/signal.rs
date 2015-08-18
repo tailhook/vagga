@@ -34,9 +34,9 @@ pub fn block_all() {
 
 fn _convert_status(status: i32) -> i32 {
     if status & 0xff == 0 {
-        return ((status & 0xff00) >> 8);
+        return (status & 0xff00) >> 8;
     }
-    return (128 + (status & 0x7f));  // signal
+    return 128 + (status & 0x7f);  // signal
 }
 
 pub fn check_children() -> Option<Signal> {

@@ -2,11 +2,9 @@ use std::collections::BTreeMap;
 use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind};
-use std::ffi::CString;
 use std::fs::{copy, read_link, hard_link, set_permissions, Permissions};
 use std::fs::{remove_dir_all, read_dir, symlink_metadata};
 use std::fs::File;
-use std::fs::FileType;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -266,7 +264,7 @@ pub fn get_environment(container: &Container)
         }
     }
     if let Some(ref filename) = container.environ_file {
-        let mut f = BufReader::new(try!(
+        let f = BufReader::new(try!(
                 File::open(filename)
                 .map_err(|e| format!("Error reading environment file {}: {}",
                     filename.display(), e))));

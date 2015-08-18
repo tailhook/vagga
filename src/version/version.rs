@@ -10,7 +10,6 @@ use config::read_config;
 use config::builders::{Builder};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use container::vagga::container_ver;
 use self::HashResult::*;
@@ -36,7 +35,7 @@ impl VersionHash for Builder {
                 match
                     File::open(&Path::new("/work").join(fname))
                     .and_then(|f| {
-                        let mut f = BufReader::new(f);
+                        let f = BufReader::new(f);
                         for line in f.lines() {
                             let line = try!(line);
                             let chunk = line[..].trim();

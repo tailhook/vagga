@@ -2,7 +2,7 @@ use std::env;
 use std::fs::{remove_file};
 use std::fs::{File};
 use std::io::{stdout, stderr, BufRead, BufReader, Read};
-use std::os::unix::io::{RawFd, FromRawFd};
+use std::os::unix::io::{FromRawFd};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::rc::Rc;
@@ -11,10 +11,9 @@ use std::collections::HashSet;
 
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
-use libc::{pid_t};
 use libc::{geteuid};
 use argparse::{ArgumentParser};
-use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
+use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
 
 use super::super::config::Config;
@@ -25,8 +24,7 @@ use super::super::container::container::Namespace::{NewUser, NewNet};
 use super::super::container::container::Command as ContainerCommand;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
-use super::user;
-use file_util::{create_dir, create_dir_mode};
+use file_util::{create_dir_mode};
 use path_util::{PathExt};
 
 static MAX_INTERFACES: u32 = 2048;
@@ -463,7 +461,7 @@ pub fn join_gateway_namespaces() -> Result<(), String> {
 pub fn get_nameservers() -> Result<Vec<String>, String> {
     File::open(&Path::new("/etc/resolv.conf"))
         .map(BufReader::new)
-        .and_then(|mut f| {
+        .and_then(|f| {
             let mut ns = vec!();
             for line in f.lines() {
                 let line = try!(line);
@@ -479,7 +477,7 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
 fn get_interfaces() -> Result<HashSet<u32>, String> {
     File::open(&Path::new("/proc/net/dev"))
         .map(BufReader::new)
-        .and_then(|mut f| {
+        .and_then(|f| {
             let mut lineiter = f.lines();
             let mut result = HashSet::with_capacity(MAX_INTERFACES as usize);
             try!(lineiter.next().unwrap());  // Two header lines

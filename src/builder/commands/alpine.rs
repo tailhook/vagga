@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 
 use super::super::super::file_util::create_dir;
 use super::super::context::{BuildContext};
-use super::super::context::Distribution::{Alpine, Unknown};
+use super::super::context::Distribution::{Alpine};
 use super::super::capsule;
 use super::super::packages;
 

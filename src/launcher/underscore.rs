@@ -1,14 +1,11 @@
 use std::io::{stdout, stderr};
 use std::path::Path;
 
-use libc::pid_t;
-
 use argparse::{ArgumentParser};
-use argparse::{StoreTrue, StoreFalse, List, StoreOption, Store};
+use argparse::{StoreTrue, List, StoreOption, Store};
 
 use config::Config;
-use config::command::{CommandInfo, Networking};
-use container::container::Namespace::{NewUser, NewNet};
+use container::container::Namespace::{NewNet};
 use container::nsutil::{set_namespace};
 
 use super::user;

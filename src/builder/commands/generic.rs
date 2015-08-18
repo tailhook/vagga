@@ -1,9 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::path::{Path, PathBuf};
 
 use super::super::context::BuildContext;
-use container::monitor::{Monitor, Executor, MonitorStatus};
+use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Exit, Killed};
 use container::container::{Command};
 use container::pipe::{CPipe};
@@ -101,7 +99,7 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
         cmd.set_env(k.to_string(), v.to_string());
     }
     debug!("Running {:?}", cmd);
-    let (res, data) = unsafe {
+    let (res, data) = {
         let pipe = try!(CPipe::new()
             .map_err(|e| format!("Can't create pipe: {:?}", e)));
         cmd.set_stdout_fd(pipe.writer);

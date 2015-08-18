@@ -14,7 +14,7 @@ use argparse::{ArgumentParser, Store, List};
 fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
         .map(BufReader::new)
-        .and_then(|mut f| {
+        .and_then(|f| {
             let mut lineiter = f.lines();
             try!(lineiter.next().unwrap());  // Two header lines
             try!(lineiter.next().unwrap());
@@ -69,10 +69,9 @@ fn setup_gateway_namespace(args: Vec<String>) {
                 "Gateway address");
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
-            Err(0) => return,
+            Err(0) => {}
             Err(x) => {
                 exit(x);
-                return;
             }
         }
     }
@@ -83,7 +82,6 @@ fn setup_gateway_namespace(args: Vec<String>) {
             Err(x) => {
                 error!("Error setting interface vagga_guest: {}", x);
                 exit(1);
-                return;
             }
         }
         sleep_ms(100);
@@ -124,7 +122,6 @@ fn setup_gateway_namespace(args: Vec<String>) {
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
                 exit(1);
-                return;
             }
         };
     }
@@ -158,10 +155,9 @@ fn setup_bridge_namespace(args: Vec<String>) {
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
-            Err(0) => return,
+            Err(0) => {}
             Err(x) => {
                 exit(x);
-                return;
             }
         }
     }
@@ -174,7 +170,6 @@ fn setup_bridge_namespace(args: Vec<String>) {
             Err(x) => {
                 error!("Error setting interface {}: {}", interface, x);
                 exit(1);
-                return;
             }
         }
         sleep_ms(100);
@@ -233,7 +228,6 @@ fn setup_bridge_namespace(args: Vec<String>) {
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
                 exit(1);
-                return;
             }
         };
     }
@@ -267,10 +261,9 @@ fn setup_guest_namespace(args: Vec<String>) {
             .required();
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
-            Err(0) => return,
+            Err(0) => {}
             Err(x) => {
                 exit(x);
-                return;
             }
         }
     }
@@ -281,7 +274,6 @@ fn setup_guest_namespace(args: Vec<String>) {
             Err(x) => {
                 error!("Error setting interface {}: {}", interface, x);
                 exit(1);
-                return;
             }
         }
         sleep_ms(100);
@@ -316,7 +308,6 @@ fn setup_guest_namespace(args: Vec<String>) {
             err => {
                 error!("Error running command {:?}: {:?}", cmd, err);
                 exit(1);
-                return;
             }
         };
     }

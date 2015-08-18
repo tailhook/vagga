@@ -73,7 +73,7 @@ pub fn pip_requirements(ctx: &mut BuildContext, ver: u8, reqtxt: &Path)
 {
     let f = try!(File::open(&Path::new("/work").join(reqtxt))
         .map_err(|e| format!("Can't open requirements file: {}", e)));
-    let mut f = BufReader::new(f);
+    let f = BufReader::new(f);
     let mut names = vec!();
     for line in f.lines() {
         let line = try!(line
