@@ -20,7 +20,7 @@ use config::command::SuperviseMode::{stop_on_failure};
 use config::command::ChildCommand::{BridgeCommand};
 
 use super::network;
-use super::user::{run_wrapper, common_child_command_env};
+use super::user::{common_child_command_env};
 use super::build::build_container;
 use file_util::create_dir;
 use path_util::PathExt;

@@ -8,14 +8,12 @@ use libc::pid_t;
 
 use argparse::{ArgumentParser, Store, List, StoreTrue};
 
-use config::{Container};
-use container::uidmap::{map_users, Uidmap};
+use container::uidmap::{map_users};
 use container::monitor::{Monitor};
 use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use container::vagga::container_ver;
 
-use super::build;
 use super::setup;
 use super::Wrapper;
 use path_util::PathExt;

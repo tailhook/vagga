@@ -4,11 +4,8 @@ use std::fs::File;
 use std::os::unix::io::{RawFd, FromRawFd};
 use nix::unistd::{pipe};
 use nix::Error::{Sys, InvalidPath};
-use nix::errno::Errno::EPIPE;
 
-use libc::{c_int, c_void};
-use libc::funcs::posix88::unistd::{close, write};
-use libc::consts::os::posix88::{EINTR, EAGAIN};
+use libc::funcs::posix88::unistd::{close};
 
 
 pub struct CPipe {
@@ -29,16 +26,14 @@ impl CPipe {
     pub fn read(self) -> Result<Vec<u8>, IoError> {
         let mut buf = Vec::new();
         unsafe {
-          let CPipe {reader, writer} = self;
-          close(writer);
+          close(self.writer);
           try!(File::from_raw_fd(self.reader).read_to_end(&mut buf));
         }
         Ok(buf)
     }
     pub fn wakeup(self) -> Result<(), IoError> {
         unsafe {
-          let CPipe {reader, writer} = self;
-          close(reader);
+          close(self.reader);
           File::from_raw_fd(self.writer).write_all(b"x")
         }
     }

@@ -1,7 +1,7 @@
-use std::fs::{create_dir_all, read_dir, set_permissions, Permissions};
+use std::fs::{create_dir_all, set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;

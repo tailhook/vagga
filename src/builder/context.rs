@@ -1,7 +1,4 @@
-use std::fs::{create_dir_all, copy, set_permissions};
-use std::fs::Permissions;
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
+use std::fs::{copy};
 use std::path::{Path, PathBuf};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};

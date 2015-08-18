@@ -16,7 +16,6 @@ use container::monitor::MonitorResult::{Killed, Exit};
 use container::container::{Command};
 use container::vagga::container_ver;
 
-use super::build;
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;

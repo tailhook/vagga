@@ -1,13 +1,12 @@
 use std::fs::{copy, rename, set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
-use std::string;
 
 use config::builders::UbuntuRepoInfo;
 use super::super::context::{BuildContext};
-use super::super::context::Distribution::{Ubuntu, Unknown};
+use super::super::context::Distribution::{Ubuntu};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
 use super::super::packages;
@@ -30,17 +29,17 @@ pub struct UbuntuInfo {
 pub fn read_ubuntu_codename() -> Result<String, String>
 {
     let lsb_release_path = "/vagga/root/etc/lsb-release";
-    let mut lsb_release_file = BufReader::new(
+    let lsb_release_file = BufReader::new(
         try_msg!(File::open(&Path::new(lsb_release_path)),
             "Error reading /etc/lsb-release: {err}"));
 
     for line in lsb_release_file.lines() {
         let line = try_msg!(line, "Error reading lsb file: {err}");
-        if let Some(equalsPos) = line.find('=') {
-            let key = line[..equalsPos].trim();
+        if let Some(equals_pos) = line.find('=') {
+            let key = line[..equals_pos].trim();
 
             if key == "DISTRIB_CODENAME" {
-                let value = line[(equalsPos + 1)..].trim();
+                let value = line[(equals_pos + 1)..].trim();
                 return Ok(value.to_string());
             }
         }
@@ -86,7 +85,7 @@ pub fn init_ubuntu_core(ctx: &mut BuildContext) -> Result<(), String> {
 
 fn set_mirror(ctx: &mut BuildContext) -> Result<(), String> {
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
-    let mut source = BufReader::new(try!(File::open(&sources_list)
+    let source = BufReader::new(try!(File::open(&sources_list)
         .map_err(|e| format!("Error reading sources.list file: {}", e))));
     let tmp = sources_list.with_extension("tmp");
     try!(File::create(&tmp)

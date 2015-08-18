@@ -1,7 +1,7 @@
 use std::env;
 use std::io::{stdout, stderr};
 use std::path::Path;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 
 use argparse::{ArgumentParser, Store, List};
 

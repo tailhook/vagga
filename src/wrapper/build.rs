@@ -1,15 +1,13 @@
 use std::env;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::fs::{remove_dir_all, create_dir_all, rename};
+use std::fs::{remove_dir_all, rename};
 use std::fs::{remove_file, remove_dir};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
-use nix::unistd::close;
-use nix::unistd::pipe;
 use rustc_serialize::json;
 
 use container::mount::{bind_mount, unmount};

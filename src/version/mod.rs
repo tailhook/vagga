@@ -2,7 +2,7 @@ use std::default::Default;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
-use std::io::{stdout, Read, Write};
+use std::io::{Read, Write};
 use std::os::unix::io::FromRawFd;
 
 use nix::unistd::dup2;
@@ -88,8 +88,8 @@ pub fn run() -> i32 {
 
 pub fn main() {
     // let's make stdout safer
-    unsafe { dup2(1, 3) };
-    unsafe { dup2(2, 1) };
+    dup2(1, 3);
+    dup2(2, 1);
 
     let val = run();
     exit(val);

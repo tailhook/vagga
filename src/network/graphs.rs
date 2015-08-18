@@ -1,6 +1,5 @@
 use std::env;
 use std::io::{stdout, stderr};
-use std::mem::swap;
 use std::collections::{HashSet, HashMap};
 
 use argparse::{ArgumentParser, List};

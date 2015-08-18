@@ -1,5 +1,4 @@
 use std::cmp::min;
-use std::cmp::Ordering;
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufRead, Write};
@@ -29,7 +28,7 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
     let file = try_msg!(File::open(&Path::new("/etc/subuid")),
         "Can't open /etc/subuid: {err}");
     let mut res = Vec::new();
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
         let line = try_msg!(line, "Error reading /etc/subuid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
@@ -51,7 +50,7 @@ fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
     let file = try_msg!(File::open(&Path::new("/etc/subgid")),
         "Can't open /etc/subgid: {err}");
     let mut res = Vec::new();
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
         let line = try_msg!(line, "Error reading /etc/subgid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
@@ -269,12 +268,12 @@ pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
 
 fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>
 {
-    let mut file = BufReader::new(try!(File::open(&Path::new(path))
+    let file = BufReader::new(try!(File::open(&Path::new(path))
         .map_err(|e| format!("Error reading uid/gid map: {}", e))));
     let mut result = vec!();
     for line in file.lines() {
         let line = try!(line
-            .map_err(|e| format!("Error reading uid/gid map")));
+            .map_err(|_| format!("Error reading uid/gid map")));
         let mut words = line[..].split_whitespace();
         let inside: u32 = try!(words.next().and_then(|x| FromStr::from_str(x).ok())
             .ok_or(format!("uid/gid map format error")));

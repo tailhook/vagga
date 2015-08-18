@@ -1,6 +1,6 @@
 use std::ffi::CString;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf, Components};
+use std::path::{Path, PathBuf};
 use std::path::Component::RootDir;
 use std::fs::metadata;
 

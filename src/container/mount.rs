@@ -136,7 +136,7 @@ pub fn get_submounts_of(dir: &Path)
 {
     let f = try!(File::open(&Path::new("/proc/self/mountinfo"))
         .map_err(|e| format!("Can't open mountinfo: {}", e)));
-    let mut buf = BufReader::new(f);
+    let buf = BufReader::new(f);
     let mut result = vec!();
     for line in buf.lines() {
         let line = try!(line

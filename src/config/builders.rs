@@ -1,11 +1,8 @@
-use std::fmt::{Debug, Formatter};
-use std::fmt::Error as FormatError;
 use std::path::PathBuf;
 use std::default::Default;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
-use rustc_serialize::json;
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct DebianRepo {

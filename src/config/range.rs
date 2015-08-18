@@ -1,9 +1,7 @@
-use std::fmt;
 use std::str::FromStr;
 
 use libc::uid_t;
 use rustc_serialize::{Decoder, Decodable};
-use quire::decode::YamlDecoder;
 
 
 #[derive(Clone, Debug, Copy)]
@@ -11,8 +9,6 @@ pub struct Range {
     start: uid_t,
     end: uid_t,
 }
-
-struct RangeError;
 
 trait StringError<T> {
     fn create_error(&self, value: String) -> T;

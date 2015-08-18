@@ -11,7 +11,7 @@ use super::container::Command;
 use super::signal;
 use super::signal::Signal as Sig;
 use super::util::{Time, get_time};
-use super::async::{Loop, Event};
+use super::async::{Loop};
 use super::async::Event::{Signal, Timeout, Input};
 use self::MonitorStatus::*;
 use self::MonitorResult::*;
@@ -45,6 +45,7 @@ impl Executor for RunOnce {
     }
 }
 
+/*
 impl RunOnce {
     pub fn new(cmd: Command) -> RunOnce {
         RunOnce {
@@ -52,6 +53,7 @@ impl RunOnce {
         }
     }
 }
+*/
 
 
 pub struct Process<'a> {

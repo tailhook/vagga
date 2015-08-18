@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::fs::{File};
 use std::io::{Write};
 use std::path::Path;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Command, Stdio};
 
 use rand::{thread_rng, Rng};
 
@@ -34,7 +34,7 @@ pub enum Feature {
 #[derive(Default)]
 pub struct State {
     capsule_base: bool,
-    alpine_ready: bool,
+    //alpine_ready: bool,
     installed_packages: HashSet<String>,
 }
 

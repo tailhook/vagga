@@ -2,7 +2,7 @@ use std::io::Error;
 use std::io::Write;
 use std::path::Path;
 use std::fs::File;
-use std::fmt::{Debug, Arguments};
+use std::fmt::{Arguments};
 
 use container::util::{get_time, Time};
 

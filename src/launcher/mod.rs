@@ -1,6 +1,6 @@
 use std::env;
 use std::io::{stderr, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::process::exit;
 
 use config::find_config;
