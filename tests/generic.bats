@@ -18,3 +18,12 @@ setup() {
     [[ $link = ".roots/cache_dirs.549b79e7/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
+
+@test "generic: The supervise command works" {
+    run vagga two-lines
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+}

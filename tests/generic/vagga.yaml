@@ -11,3 +11,23 @@ containers:
     setup:
     - !Alpine v3.1
     - !CacheDirs /var/cache: var-cache
+
+  busybox:
+    setup:
+    - !Alpine v3.1
+
+commands:
+  two-lines: !Supervise
+    children:
+      second-line: !Command
+        container: busybox
+        run: |
+          sleep 0.05
+          echo world
+          sleep 0.05
+      first-line: !Command
+        container: busybox
+        run: |
+          echo hello
+          sleep 0.1
+

@@ -107,9 +107,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     let running = Cell::new(true);
     let mut mon = Monitor::new();
     for name in containers_host_net.iter() {
-        let mut cmd = Command::new("wrapper".to_string(),
-            &current_exe().unwrap().parent().unwrap()
-            .join("vagga_wrapper"));
+        let mut cmd = Command::vagga("vagga_wrapper", "/proc/self/exe");
         cmd.keep_sigmask();
         cmd.arg(&cmdname);
         cmd.arg(&name);
