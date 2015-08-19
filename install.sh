@@ -1,6 +1,6 @@
 #!/bin/sh
 DESTDIR=${DESTDIR:-}
-PREFIX=${DESTDIR:-/usr}
+PREFIX=${PREFIX:-/usr}
 
 install -d ${DESTDIR}${PREFIX}/bin
 install -d ${DESTDIR}${PREFIX}/lib/vagga
