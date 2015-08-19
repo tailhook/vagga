@@ -168,9 +168,9 @@ To install kernel with this config enabled you can use linux-user-ns-enabled_ AU
 
 It's based on ``core/linux`` package and differs only with this option. After it's compiled, update your bootloader config (for GRUB it's ``grub-mkconfig``).
 
-Building vagga from sources using AUR package_::
+Installing vagga from binary archive using AUR package_ (please note that vagga-bin located in new AUR4 repository so it should be activated in your system)::
 
-    $ yaourt -S vagga-git
+    $ yaourt -S vagga-bin
 
 If your ``shadow`` package is older than ``4.1.5``, or you upgraded it without recreating a user, after installation you may need to fill in ``/etc/subuid`` and ``/etc/subgid``. You can check if you need it with::
 
@@ -183,7 +183,7 @@ If output is empty, you have to modify these files. Command should be similar to
 
 
 .. _linux-user-ns-enabled: https://aur.archlinux.org/packages/linux-user-ns-enabled/
-.. _package: https://aur.archlinux.org/packages/vagga-git
+.. _package: https://aur.archlinux.org/packages/vagga-bin
 
 
 Building From Source
