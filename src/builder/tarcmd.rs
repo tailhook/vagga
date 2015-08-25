@@ -1,12 +1,12 @@
 use std::fs::{create_dir_all, set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+
+use unshare::{Command, Stdio};
 
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;
 use config::builders::TarInstallInfo;
-
 use super::context::BuildContext;
 use super::download::download_file;
 use super::commands::generic::run_command_at;
@@ -20,7 +20,7 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
 {
     info!("Unpacking {} -> {}", src.display(), tgt.display());
     let mut cmd = Command::new("/vagga/bin/busybox");
-    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit())
+    cmd.stdin(Stdio::null())
         .arg("tar")
         .arg("-x")
         .arg("-f").arg(src)
@@ -38,14 +38,11 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
         Some("xz")|Some("txz") => { cmd.arg("-J"); }
         _ => {}
     };
-    debug!("Running: {:?}", cmd);
-    match cmd.output()
-        .map_err(|e| format!("Can't run tar: {}", e))
-        .map(|o| o.status)
-    {
+    info!("Running: {:?}", cmd);
+    match cmd.status() {
         Ok(st) if st.success() => Ok(()),
         Ok(val) => Err(format!("Tar exited with status: {}", val)),
-        Err(x) => Err(format!("Error running tar: {}", x)),
+        Err(e) => Err(format!("Error running tar: {}", e)),
     }
 }
 

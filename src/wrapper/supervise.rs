@@ -120,9 +120,9 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         if let Some(euid) = command.external_user_id {
             cmd.set_uidmap(Ranges(vec!(
                 (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
-            cmd.set_user_id(command.user_id);
+            cmd.set_user_id(command.user_id as i32);
         } else {
-            cmd.set_user_id(command.user_id);
+            cmd.set_user_id(command.user_id as i32);
             cmd.set_uidmap(uid_map.clone());
         }
     }

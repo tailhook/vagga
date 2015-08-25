@@ -6,19 +6,18 @@ use std::str::FromStr;
 
 use libc::pid_t;
 use argparse::{ArgumentParser};
+use unshare::{Command, UidMap};
 
 use config::command::CommandInfo;
 use config::command::WriteMode;
 use container::uidmap::{map_users};
 use container::uidmap::Uidmap::Ranges;
-use container::monitor::{Monitor};
-use container::monitor::MonitorResult::{Killed, Exit};
-use container::container::{Command};
 use container::vagga::container_ver;
 
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
+use process_util::{convert_status, set_uidmap};
 
 
 pub fn commandline_cmd(command: &CommandInfo,
@@ -75,28 +74,31 @@ pub fn commandline_cmd(command: &CommandInfo,
     }
     let cpath = try!(find_cmd(&cmdline.remove(0), &env));
 
-    let mut cmd = Command::new("run".to_string(), &cpath);
+    let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
     if let Some(euid) = command.external_user_id {
-        cmd.set_uidmap(Ranges(vec!(
-            (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
-        cmd.set_user_id(command.user_id);
+        cmd.set_id_maps(vec![
+            UidMap {
+            inside_uid: command.user_id,
+            outside_uid: euid,
+            count: 1 }
+            ], vec![]);
+        cmd.uid(command.user_id);
     } else {
-        cmd.set_user_id(command.user_id);
-        cmd.set_uidmap(uid_map.clone());
+        set_uidmap(&mut cmd, &uid_map);
+        cmd.uid(command.user_id);
     }
     if let Some(ref wd) = command.work_dir {
-        cmd.set_workdir(&Path::new("/work").join(&wd));
+        cmd.current_dir(Path::new("/work").join(&wd));
     } else {
-        cmd.set_workdir(&Path::new(
-            &env::var("PWD").unwrap_or("/work".to_string())));
+        cmd.current_dir(env::var("PWD").unwrap_or("/work".to_string()));
     }
     for (ref k, ref v) in env.iter() {
-        cmd.set_env(k.to_string(), v.to_string());
+        cmd.env(k, v);
     }
 
-    match Monitor::run_command(cmd) {
-        Killed => return Ok(1),
-        Exit(val) => return Ok(val),
-    };
+    match cmd.status() {
+        Ok(s) => Ok(convert_status(s)),
+        Err(e) => Err(format!("Error running {:?}: {}", cmd, e)),
+    }
 }

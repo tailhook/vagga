@@ -4,11 +4,11 @@ use std::fs::{File};
 use std::io::{stdout, stderr, BufRead, BufReader, Read};
 use std::os::unix::io::{FromRawFd};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::rc::Rc;
 use std::str::FromStr;
 use std::collections::HashSet;
 
+use unshare::{Command, Stdio};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
 use libc::{geteuid};
@@ -46,7 +46,6 @@ pub fn sudo_ip_cmd() -> Command {
     // If we are root we may skip sudo
     let mut ip_cmd = Command::new("sudo");
     ip_cmd.stdin(Stdio::null());
-    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     ip_cmd.arg("ip");
     ip_cmd
 }
@@ -55,7 +54,6 @@ pub fn sudo_sysctl() -> Command {
     // If we are root we may skip sudo
     let mut sysctl = Command::new("sudo");
     sysctl.stdin(Stdio::null());
-    sysctl.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     sysctl.arg("sysctl");
     sysctl
 }
@@ -63,7 +61,6 @@ pub fn sudo_sysctl() -> Command {
 pub fn ip_cmd() -> Command {
     let mut ip_cmd = Command::new("ip");
     ip_cmd.stdin(Stdio::null());
-    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     ip_cmd
 }
 
@@ -71,7 +68,6 @@ pub fn sudo_mount() -> Command {
     // If we are root we may skip sudo
     let mut mount_cmd = Command::new("sudo");
     mount_cmd.stdin(Stdio::null());
-    mount_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     mount_cmd.arg("mount");
     mount_cmd
 }
@@ -80,7 +76,6 @@ pub fn sudo_umount() -> Command {
     // If we are root we may skip sudo
     let mut umount_cmd = Command::new("sudo");
     umount_cmd.stdin(Stdio::null());
-    umount_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     umount_cmd.arg("umount");
     umount_cmd
 }
@@ -89,7 +84,6 @@ pub fn sudo_iptables() -> Command {
     // If we are root we may skip sudo
     let mut iptables_cmd = Command::new("sudo");
     iptables_cmd.stdin(Stdio::null());
-    iptables_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     iptables_cmd.arg("iptables");
     iptables_cmd
 }
@@ -98,7 +92,6 @@ pub fn iptables() -> Command {
     // If we are root we may skip sudo
     let mut iptables_cmd = Command::new("iptables");
     iptables_cmd.stdin(Stdio::null());
-    iptables_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     iptables_cmd
 }
 
@@ -107,7 +100,6 @@ pub fn busybox() -> Command {
         &env::current_exe().unwrap().parent().unwrap()
         .join("busybox"));
     busybox.stdin(Stdio::null());
-    busybox.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     busybox
 }
 

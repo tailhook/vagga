@@ -2,13 +2,15 @@ use std::io::Write;
 use std::fs::{copy};
 use std::fs::File;
 use std::path::Path;
-use std::process::{Command, Stdio};
+
+use unshare::{Command, Stdio};
 
 use super::super::super::file_util::create_dir;
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine};
 use super::super::capsule;
 use super::super::packages;
+use process_util::capture_stdout;
 
 
 pub static LATEST_VERSION: &'static str = "v3.1";
@@ -76,17 +78,18 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
 {
     let pkgs = ctx.build_deps.clone().into_iter().collect();
     try!(remove(ctx, &pkgs));
-    try!(Command::new("/vagga/bin/apk")
-        .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::inherit())
+    let mut cmd = Command::new("/vagga/bin/apk");
+    cmd
+        .stdin(Stdio::null())
         .env_clear()
         .arg("--root").arg("/vagga/root")
         .arg("-vv")
-        .arg("info")
-        .output()
+        .arg("info");
+    try!(capture_stdout(cmd)
         .map_err(|e| format!("Error dumping package list: {}", e))
         .and_then(|out| {
             File::create("/vagga/container/alpine-packages.txt")
-            .and_then(|mut f| f.write_all(&out.stdout))
+            .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping package list: {}", e))
         }));
     Ok(())
