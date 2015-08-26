@@ -65,8 +65,12 @@ pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
             try_msg!(create_dir(&fpath, true), "Error making dir: {err}");
         }
         try!(bind_mount(&fpath, &tmpsub));
-        let res = unpack_file(ctx, &filename, &tmppath,
-            &[&tar.subdir.clone()], &[]);
+        let res = if tar.subdir.as_path() == Path::new("") {
+            unpack_file(ctx, &filename, &tmppath, &[], &[])
+        } else {
+            unpack_file(ctx, &filename, &tmppath,
+                &[&tar.subdir.clone()], &[])
+        };
         try!(unmount(&tmpsub));
         try!(res);
     }
