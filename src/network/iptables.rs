@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use unshare::{Command, Stdio};
 
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
@@ -27,7 +27,7 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
         &Path::new(&format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
         .map_err(|e| format!("Can't set namespace: {}", e)));
     let mut cmd = Command::new("iptables-restore");
-    cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    cmd.stdin(Stdio::piped());
     debug!("Running {:?} for {}", cmd, ip);
     let mut prc = try!(cmd.spawn()
         .map_err(|e| format!("Can't run iptables-restore: {}", e)));

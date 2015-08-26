@@ -1,5 +1,3 @@
-use std::os::unix::process::ExitStatusExt;
-
 use unshare::{Command, Stdio};
 
 use process_util::convert_status;
