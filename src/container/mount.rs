@@ -203,6 +203,28 @@ pub fn bind_mount(source: &Path, target: &Path) -> Result<(), String> {
     }
 }
 
+pub fn mount_proc(target: &Path) -> Result<(), String>
+{
+    let c_target = target.to_cstring();
+
+    // I don't know why we need this flag for mounting proc, but it's somehow
+    // works (see https://github.com/tailhook/vagga/issues/12 for the
+    // error it fixes)
+    let flags = 0xC0ED0000; //MS_MGC_VAL
+
+    debug!("Procfs mount {:?}", target);
+    let rc = unsafe { mount(
+        b"proc\x00".as_ptr(), c_target.as_bytes().as_ptr(),
+        b"proc\x00".as_ptr(), flags, null()) };
+    if rc == 0 {
+        return Ok(());
+    } else {
+        let err = IoError::last_os_error();
+        return Err(format!("Can't mount proc at {:?}: {}",
+            target, err));
+    }
+}
+
 pub fn mount_pseudo(target: &Path, name: &str, options: &str, readonly: bool)
     -> Result<(), String>
 {
@@ -263,7 +285,7 @@ pub fn unmount(target: &Path) -> Result<(), String> {
 pub fn mount_system_dirs() -> Result<(), String> {
     try!(bind_mount(&Path::new("/dev"), &Path::new("/vagga/root/dev")));
     try!(bind_mount(&Path::new("/sys"), &Path::new("/vagga/root/sys")));
-    try!(mount_pseudo(&Path::new("/vagga/root/proc"), "proc", "", false));
+    try!(mount_proc(&Path::new("/vagga/root/proc")));
     try!(bind_mount(&Path::new("/work"), &Path::new("/vagga/root/work")));
     return Ok(());
 }

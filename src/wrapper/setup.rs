@@ -13,8 +13,8 @@ use libc::pid_t;
 use super::super::config::Container;
 use super::super::config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use super::super::container::root::{change_root};
-use super::super::container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
-use super::super::container::mount::{mount_tmpfs, mount_pseudo};
+use super::super::container::mount::{bind_mount, unmount, mount_system_dirs,remount_ro};
+use super::super::container::mount::{mount_tmpfs, mount_pseudo, mount_proc};
 use super::run::DEFAULT_PATH;
 use super::settings::{MergedSettings};
 use file_util::create_dir;
@@ -182,7 +182,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let proc_dir = mnt_dir.join("proc");
     try_msg!(create_dir(&proc_dir, false),
              "Error creating /proc: {err}");
-    try!(mount_pseudo(&proc_dir, "proc", "", false));
+    try!(mount_proc(&proc_dir));
 
     let dev_dir = mnt_dir.join("dev");
     try_msg!(create_dir(&dev_dir, false),
