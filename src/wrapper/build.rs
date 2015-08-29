@@ -1,6 +1,7 @@
 use std::env;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::ascii::AsciiExt;
 use std::fs::{remove_dir_all, rename};
 use std::fs::{remove_file, remove_dir};
 use std::io::{stdout, stderr};
@@ -9,11 +10,9 @@ use std::path::{Path, PathBuf};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
+use unshare::{Command, Namespace, ExitStatus};
 
 use container::mount::{bind_mount, unmount};
-use container::monitor::{Monitor, Executor, MonitorStatus};
-use container::monitor::MonitorResult::{Killed, Exit};
-use container::container::{Command};
 use container::uidmap::{Uidmap, map_users};
 use container::vagga::container_ver;
 use container::pipe::CPipe;
@@ -22,73 +21,10 @@ use config::builders::Builder as B;
 use config::builders::Source as S;
 use file_util::create_dir;
 use path_util::PathExt;
+use process_util::{capture_stdout_status, set_uidmap};
 use super::Wrapper;
 use super::setup;
 
-
-struct RunBuilder<'a> {
-    container: String,
-    settings: &'a Settings,
-    uid_map: &'a Uidmap,
-}
-
-struct RunVersion<'a> {
-    container: String,
-    pipe: Option<CPipe>,
-    result: Rc<RefCell<String>>,
-    uid_map: &'a Uidmap,
-    settings: &'a Settings,
-}
-
-
-impl<'a> Executor for RunVersion<'a> {
-    fn command(&mut self) -> Command {
-        let mut cmd = Command::vagga("vagga_version", "/vagga/bin/vagga");
-        cmd.keep_sigmask();
-        cmd.set_uidmap(self.uid_map.clone());
-        cmd.arg(&self.container);
-        cmd.arg("--settings");
-        cmd.arg(json::encode(self.settings).unwrap());
-        cmd.set_env("TERM".to_string(), "dumb".to_string());
-        cmd.set_stdout_fd(self.pipe.as_ref().unwrap().writer);
-        if let Ok(x) = env::var("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Ok(x) = env::var("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
-        }
-        return cmd;
-    }
-    fn finish(&mut self, status: i32) -> MonitorStatus {
-        if status == 0 {
-            *self.result.borrow_mut() = String::from_utf8(
-                // TODO(tailhook) graceful process of few unwraps
-                self.pipe.take().unwrap().read().unwrap()).unwrap();
-        }
-        return MonitorStatus::Shutdown(status)
-    }
-}
-
-impl<'a> Executor for RunBuilder<'a> {
-    fn command(&mut self) -> Command {
-        let mut cmd = Command::vagga("vagga_build", "/vagga/bin/vagga");
-        cmd.keep_sigmask();
-        cmd.set_uidmap(self.uid_map.clone());
-        cmd.container();
-        cmd.arg(&self.container);
-        cmd.arg("--settings");
-        cmd.arg(json::encode(self.settings).unwrap());
-        cmd.set_env("TERM".to_string(),
-                    env::var("TERM").unwrap_or("dumb".to_string()));
-        if let Ok(x) = env::var("RUST_LOG") {
-            cmd.set_env("RUST_LOG".to_string(), x);
-        }
-        if let Ok(x) = env::var("RUST_BACKTRACE") {
-            cmd.set_env("RUST_BACKTRACE".to_string(), x);
-        }
-        return cmd;
-    }
-}
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
@@ -142,29 +78,39 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     return Ok(());
 }
 
-pub fn get_version_hash(container: String, wrapper: &Wrapper)
+pub fn get_version_hash(container: &String, wrapper: &Wrapper)
     -> Result<Option<String>, String>
 {
-    let cconfig = try!(wrapper.config.containers.get(&container)
+    let cconfig = try!(wrapper.config.containers.get(container)
         .ok_or(format!("Container {} not found", container)));
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
-    let mut mon = Monitor::new();
-    let ver = Rc::new(RefCell::new("".to_string()));
-    mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
-        container: container,
-        pipe: Some(CPipe::new().ok().expect("Can't create pipe")),
-        result: ver.clone(),
-        settings: wrapper.settings,
-        uid_map: &uid_map,
-    }));
-    match mon.run() {
-        Killed => return Err(format!("Versioner has died")),
-        Exit(0) => {},
-        Exit(29) => return Ok(None),
-        Exit(val) => return Err(format!("Versioner exited with code {}", val)),
-    };
-    return Ok(Some(ver.borrow().to_string()));
+
+    let mut cmd = Command::new("/vagga/bin/vagga");
+    cmd.arg0("vagga_version");
+    cmd.keep_sigmask();
+    set_uidmap(&mut cmd, &uid_map, false);
+    cmd.arg(&container);
+    cmd.arg("--settings");
+    cmd.arg(json::encode(wrapper.settings).unwrap());
+    cmd.env_clear();
+    cmd.env("TERM", "dumb");
+    if let Ok(x) = env::var("RUST_LOG") {
+        cmd.env("RUST_LOG", x);
+    }
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
+        cmd.env("RUST_BACKTRACE", x);
+    }
+    match capture_stdout_status(cmd) {
+        Ok((ExitStatus::Exited(0), val)) => {
+            String::from_utf8(val)
+                .map_err(|e| format!("Can't decode version: {}", e))
+                .map(Some)
+        },
+        Ok((ExitStatus::Exited(29), _)) => Ok(None),
+        Ok((status, _)) => return Err(format!("Versioner exited {}", status)),
+        Err(e) => return Err(format!("Could not run versioner: {}", e)),
+    }
 }
 
 pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
@@ -211,34 +157,29 @@ pub fn _build_container(cconfig: &Container, container: &String,
 {
     let uid_map = try!(map_users(wrapper.settings,
         &cconfig.uids, &cconfig.gids));
-    let mut mon = Monitor::new();
-    let ver = Rc::new(RefCell::new("".to_string()));
-    mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
-        container: container.clone(),
-        pipe: Some(CPipe::new().ok().expect("Can't create pipe")),
-        result: ver.clone(),
-        settings: wrapper.settings,
-        uid_map: &uid_map,
-    }));
-    match mon.run() {
-        Killed => return Err(format!("Builder has died")),
-        Exit(0) if force => {}
-        Exit(0) => {
-            debug!("Container version: {:?}", ver.borrow());
-            let name = format!("{}.{}", container,
-                &ver.borrow()[..8]);
-            let finalpath = Path::new("/vagga/base/.roots")
-                .join(&name);
-            if finalpath.exists() {
-                debug!("Path {} is already built",
-                       finalpath.display());
-                return Ok(name);
+
+    let ver = match get_version_hash(container, wrapper) {
+        Ok(Some(ver)) => {
+            if ver.len() == 64 && ver[..].is_ascii() {
+                debug!("Container version: {:?}", ver);
+                let name = format!("{}.{}", container, &ver[..8]);
+                let finalpath = Path::new("/vagga/base/.roots")
+                    .join(&name);
+                if finalpath.exists() && !force {
+                    debug!("Path {} is already built",
+                           finalpath.display());
+                    return Ok(name);
+                }
+                Some(ver)
+            } else {
+                error!("Wrong version hash: {:?}", ver);
+                None
             }
-        },
-        Exit(29) => {},
-        Exit(val) => return Err(format!("Builder exited with code {}", val)),
+        }
+        Ok(None) => None,
+        Err(e) => return Err(e),
     };
-    debug!("Container version: {:?}", ver.borrow());
+    debug!("Container version: {:?}", ver);
     let tmppath = PathBuf::from(
         &format!("/vagga/base/.roots/.tmp.{}", container));
     match prepare_tmp_root_dir(&tmppath) {
@@ -247,12 +188,26 @@ pub fn _build_container(cconfig: &Container, container: &String,
             return Err(format!("Error preparing root dir: {}", x));
         }
     }
-    mon.add(Rc::new("build".to_string()), Box::new(RunBuilder {
-        container: container.to_string(),
-        settings: wrapper.settings,
-        uid_map: &uid_map,
-    }));
-    let result = mon.run();
+
+    let mut cmd = Command::new("/vagga/bin/vagga");
+    cmd.arg0("vagga_build");
+    cmd.keep_sigmask();
+    set_uidmap(&mut cmd, &uid_map, false);
+    cmd.unshare(
+        [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+    cmd.arg(&container);
+    cmd.arg("--settings");
+    cmd.arg(json::encode(wrapper.settings).unwrap());
+    cmd.env_clear();
+    cmd.env("TERM", env::var("TERM").unwrap_or("dumb".to_string()));
+    if let Ok(x) = env::var("RUST_LOG") {
+        cmd.env("RUST_LOG", x);
+    }
+    if let Ok(x) = env::var("RUST_BACKTRACE") {
+        cmd.env("RUST_BACKTRACE", x);
+    }
+
+    let result = cmd.status();
     try!(unmount(&Path::new("/vagga/root")));
     try!(remove_dir(&Path::new("/vagga/root"))
         .map_err(|e| format!("Can't unlink root: {}", e)));
@@ -260,31 +215,31 @@ pub fn _build_container(cconfig: &Container, container: &String,
     try!(remove_dir(&Path::new("/vagga/container"))
         .map_err(|e| format!("Can't unlink root: {}", e)));
     match result {
-        Killed => return Err(format!("Builder has died")),
-        Exit(0) => {},
-        Exit(val) => return Err(format!("Builder exited with code {}", val)),
+        Ok(s) if s.success() => {}
+        Ok(s) => return Err(format!("Builder {}", s)),
+        Err(e) => return Err(format!("Error running builder: {}", e)),
     };
-    if ver.borrow().len() != 64 {
-        mon.add(Rc::new("version".to_string()), Box::new(RunVersion {
-            container: container.to_string(),
-            pipe: Some(CPipe::new().ok().expect("Can't create pipe")),
-            result: ver.clone(),
-            settings: wrapper.settings,
-            uid_map: &uid_map,
-        }));
-        match mon.run() {
-            Killed => return Err(format!("Builder has died")),
-            Exit(0) => {},
-            Exit(29) => {
-                return Err(format!("Internal Error: \
-                        Can't version even after build"));
-            },
-            Exit(val) => return Err(format!("Builder exited with code {}",
-                                    val)),
+
+    let ver = if let Some(ver) = ver { ver }
+        else {
+            match get_version_hash(container, wrapper) {
+                Ok(Some(ver)) => {
+                    if ver.len() == 64 && ver[..].is_ascii() {
+                        ver
+                    } else {
+                        return Err(format!("Internal Error: \
+                                Wrong version returned: {:?}", ver));
+                    }
+                }
+                Ok(None) => {
+                    return Err(format!("Internal Error: \
+                            Can't version even after build"));
+                },
+                Err(e) => return Err(e),
+            }
         };
-    }
     let name = format!("{}.{}", container,
-        &ver.borrow()[..8]);
+        &ver[..8]);
     let finalpath = Path::new("/vagga/base/.roots").join(&name);
     debug!("Committing {} -> {}", tmppath.display(),
                                   finalpath.display());
@@ -390,7 +345,7 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
-    return get_version_hash(name, wrapper)
+    return get_version_hash(&name, wrapper)
         .map(|ver| ver
             .map(|x| if short {
                 println!("{}", &x[..8])

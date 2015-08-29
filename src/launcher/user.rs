@@ -1,15 +1,16 @@
 use std::env;
 use std::path::Path;
 
-use container::monitor::{Monitor};
-use container::monitor::MonitorResult::{Exit, Killed};
-use container::container::{Command};
+use unshare::{Command, Namespace};
+
 use config::Config;
 use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
 
 use super::supervisor;
 use super::build::build_container;
+use process_util::{convert_status, set_uidmap};
+use container::uidmap::get_max_uidmap;
 
 
 pub fn run_user_command(config: &Config, workdir: &Path,
@@ -29,26 +30,25 @@ pub fn run_user_command(config: &Config, workdir: &Path,
 pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
     for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
-            cmd.set_env(k, v);
+            cmd.env(k, v);
         }
     }
-    cmd.set_env("TERM".to_string(),
+    cmd.env("TERM".to_string(),
                 env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("HOST_PATH".to_string(), x);
+        cmd.env("HOST_PATH", x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG", x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE", x);
     }
     if let Ok(x) = env::var("HOME") {
-        cmd.set_env("VAGGA_USER_HOME".to_string(), x);
+        cmd.env("VAGGA_USER_HOME", x);
     }
     if let Some(x) = workdir {
-        cmd.set_env("PWD".to_string(),
-            Path::new("/work").join(x).display().to_string());
+        cmd.env("PWD", Path::new("/work").join(x));
     }
 }
 
@@ -81,18 +81,21 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     userns: bool)
     -> Result<i32, String>
 {
-    let mut cmd = Command::vagga("vagga_wrapper", "/proc/self/exe");
+    let mut cmd = Command::new("/proc/self/exe");
+    cmd.arg0("vagga_wrapper");
     cmd.keep_sigmask();
     cmd.arg(&cmdname);
     cmd.args(&args);
+    cmd.env_clear();
     common_child_command_env(&mut cmd, workdir);
-    cmd.container();
+    cmd.unshare(
+        [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
     if userns {
-        cmd.set_max_uidmap();
+        set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
     }
-    match Monitor::run_command(cmd) {
-        Killed => Ok(143),
-        Exit(val) => Ok(val),
+    match cmd.status() {
+        Ok(x) => Ok(convert_status(x)),
+        Err(e) => Err(format!("Error running {:?}: {}", cmd, e)),
     }
 }
 

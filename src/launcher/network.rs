@@ -4,28 +4,28 @@ use std::fs::{File};
 use std::io::{stdout, stderr, BufRead, BufReader, Read};
 use std::os::unix::io::{FromRawFd};
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::str::FromStr;
 use std::collections::HashSet;
 
-use unshare::{Command, Stdio};
+use unshare::{Command, Stdio, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
-use libc::{geteuid};
+use libc::{geteuid, pid_t};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
 
+use container::uidmap::get_max_uidmap;
+use container::container::Namespace::{NewUser, NewNet};
 use super::super::config::Config;
 use super::super::container::mount::{bind_mount};
 use super::super::container::nsutil::{set_namespace};
 use super::super::container::signal::wait_process;
-use super::super::container::container::Namespace::{NewUser, NewNet};
-use super::super::container::container::Command as ContainerCommand;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use file_util::{create_dir_mode};
 use path_util::{PathExt};
+use process_util::{set_uidmap};
 
 static MAX_INTERFACES: u32 = 2048;
 
@@ -150,21 +150,21 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         return Err("Namespaces already created".to_string());
     }
 
-    let mut cmd = ContainerCommand::new("setup_netns".to_string(),
-        &env::current_exe().unwrap().parent().unwrap()
-        .join("vagga_setup_netns"));
-    cmd.set_max_uidmap();
-    cmd.network_ns();
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
+    cmd.unshare([Namespace::Net].iter().cloned());
+    set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
+    cmd.env_clear();
+    cmd.env("TERM".to_string(),
+            env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("PATH".to_string(), x);
+        cmd.env("PATH".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE".to_string(), x);
     }
     cmd.arg("gateway");
     cmd.arg("--guest-ip");
@@ -173,7 +173,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg(&host_ip);
     cmd.arg("--network");
     cmd.arg(&network);
-    let child_pid = if dry_run { 123456 } else { try!(cmd.spawn()) };
+    let child_pid = if dry_run { 123456 } else {
+        try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+        ).id() as pid_t
+    };
 
     println!("We will run network setup commands with sudo.");
     println!("You may need to enter your password.");
@@ -544,29 +548,30 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
     try!(_run_command(cmd));
 
-    let cmdname = Rc::new("setup_netns".to_string());
-    let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        &env::current_exe().unwrap().parent().unwrap()
-        .join("vagga_setup_netns"));
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
     cmd.args(&["bridge",
         "--interface", &iif[..],
         "--ip", &iip[..],
         "--gateway-ip", &eip[..],
         "--port-forwards", &json::encode(port_forwards).unwrap()[..],
         ]);
-    cmd.network_ns();
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.env_clear();
+    cmd.env("TERM".to_string(),
+            env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("PATH".to_string(), x);
+        cmd.env("PATH".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let pid = try!(cmd.spawn());
+    let pid = try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+        ).id() as pid_t;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
@@ -620,27 +625,27 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     cmd.args(&["brctl", "addif", "children", &eif[..]]);
     try!(_run_command(cmd));
 
-    let cmdname = Rc::new("setup_netns".to_string());
-    let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        &env::current_exe().unwrap().parent().unwrap()
-        .join("vagga_setup_netns"));
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
     cmd.args(&["guest", "--interface", &iif[..],
                         "--ip", &ip[..],
                         "--hostname", hostname,
                         "--gateway-ip", "172.18.0.254"]);
-    cmd.network_ns();
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.env("TERM".to_string(),
+            env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("PATH".to_string(), x);
+        cmd.env("PATH".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let pid = try!(cmd.spawn());
+    let pid = try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+        ).id() as pid_t;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],

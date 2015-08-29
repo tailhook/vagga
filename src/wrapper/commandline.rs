@@ -85,7 +85,7 @@ pub fn commandline_cmd(command: &CommandInfo,
             ], vec![]);
         cmd.uid(command.user_id);
     } else {
-        set_uidmap(&mut cmd, &uid_map);
+        set_uidmap(&mut cmd, &uid_map, false);
         cmd.uid(command.user_id);
     }
     if let Some(ref wd) = command.work_dir {

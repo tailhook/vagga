@@ -5,12 +5,13 @@ dependencies = [
  "argparse 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "quire 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "shaman 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "signal 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "unshare 0.0.1 (git+git://github.com/tailhook/unshare)",
  "url 0.2.37 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -53,7 +54,7 @@ name = "env_logger"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "log 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -73,7 +74,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "log"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -104,7 +105,7 @@ dependencies = [
 [[package]]
 name = "nix"
 version = "0.4.0"
-source = "git+git://github.com/tailhook/nix-rust?rev=fix_clone#1020c6417a47e5abcc2ddce8f0c0c014f52ad60d"
+source = "git+git://github.com/carllerche/nix-rust#4f69bc358d7ab644ae766fde8bb5bdfd631f789b"
 dependencies = [
  "bitflags 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -159,6 +160,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nix 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "time"
 version = "0.1.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -171,10 +181,10 @@ dependencies = [
 [[package]]
 name = "unshare"
 version = "0.0.1"
-source = "git+git://github.com/tailhook/unshare#0a5786e8421142f9724e50bb283f89fff5ee7f0b"
+source = "git+git://github.com/tailhook/unshare#2be10f5d13c529be70573b2273b8c1ac8c85a7ce"
 dependencies = [
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "nix 0.4.0 (git+git://github.com/tailhook/nix-rust?rev=fix_clone)",
+ "nix 0.4.0 (git+git://github.com/carllerche/nix-rust)",
 ]
 
 [[package]]

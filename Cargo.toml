@@ -18,6 +18,7 @@ time = "*"
 env_logger = "*"
 url = "*"
 unshare = { git = "git://github.com/tailhook/unshare" }
+signal = "*"
 
 [[bin]]
 name = "vagga"

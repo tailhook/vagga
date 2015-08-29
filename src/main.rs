@@ -11,6 +11,7 @@ extern crate argparse;
 extern crate quire;
 extern crate time;
 extern crate unshare;
+extern crate signal;
 
 #[macro_use] mod macros;
 mod config;

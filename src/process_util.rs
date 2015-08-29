@@ -2,9 +2,10 @@ use std::env;
 use std::io::{Read};
 use std::path::{Path, PathBuf};
 
-use container::uidmap::{Uidmap};
+use libc::getuid;
 use unshare::{Command, Stdio, ExitStatus, UidMap, GidMap};
 
+use container::uidmap::{Uidmap};
 use path_util::PathExt;
 
 
@@ -20,7 +21,23 @@ pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     let mut buf = Vec::with_capacity(1024);
     try!(child.stdout.take().unwrap().read_to_end(&mut buf)
         .map_err(|e| format!("Error reading from pipe: {}", e)));
+    try!(child.wait().map_err(|e| format!("Error waiting for child: {}", e)));
     Ok(buf)
+}
+
+pub fn capture_stdout_status(mut cmd: Command)
+    -> Result<(ExitStatus, Vec<u8>), String>
+{
+    cmd.stdout(Stdio::piped());
+    info!("Running {:?}", cmd);
+    let mut child = try!(cmd.spawn()
+        .map_err(|e| format!("{}", e)));
+    let mut buf = Vec::with_capacity(1024);
+    try!(child.stdout.take().unwrap().read_to_end(&mut buf)
+        .map_err(|e| format!("Error reading from pipe: {}", e)));
+    let status = try!(child.wait()
+        .map_err(|e| format!("Error waiting for child: {}", e)));
+    Ok((status, buf))
 }
 
 pub fn convert_status(st: ExitStatus) -> i32 {
@@ -32,12 +49,14 @@ pub fn convert_status(st: ExitStatus) -> i32 {
 
 pub fn path_find<P: AsRef<Path>>(cmd: P, path: &str) -> Option<PathBuf> {
     let cmd = cmd.as_ref();
+    trace!("Path search {:?} in {:?}", cmd, path);
     if cmd.is_absolute() {
         return Some(cmd.to_path_buf())
     }
     for prefix in path.split(":") {
         let tmppath = PathBuf::from(prefix).join(cmd);
         if tmppath.exists() {
+            trace!("Path resolved {:?} is {:?}", cmd, tmppath);
             return Some(tmppath);
         }
     }
@@ -49,7 +68,7 @@ pub fn env_path_find<P: AsRef<Path>>(cmd: P) -> Option<PathBuf> {
         .unwrap_or_else(|_| path_find(&cmd, DEFAULT_PATH))
 }
 
-pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap) {
+pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap, use_bin: bool) {
     match uid_map {
         &Uidmap::Singleton(uid, gid) => {
             cmd.set_id_maps(
@@ -65,6 +84,13 @@ pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap) {
                     inside_gid: ing, outside_gid: outg, count: cntg })
                     .collect(),
             );
+            if use_bin && unsafe { getuid() } != 0 {
+                let newuidmap = env_path_find("newuidmap")
+                    .unwrap_or(PathBuf::from("/usr/bin/newuidmap"));
+                let newgidmap = env_path_find("newgidmap")
+                    .unwrap_or(PathBuf::from("/usr/bin/newgidmap"));
+                cmd.set_id_map_commands(newuidmap, newgidmap);
+            }
         }
     }
 }

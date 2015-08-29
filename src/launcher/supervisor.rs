@@ -1,19 +1,20 @@
 use std::cell::Cell;
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::env::current_exe;
 use std::io::{stdout, stderr};
 use std::path::Path;
 use std::rc::Rc;
 
 use argparse::{ArgumentParser};
+use signal::trap::Trap;
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD};
+use unshare::{Command, Namespace, reap_zombies};
 
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
-use container::monitor::{Monitor, Executor};
-use container::monitor::MonitorResult::{Exit, Killed};
-use container::monitor::MonitorStatus;
-use container::container::{Command};
 use container::container::Namespace::{NewNet, NewUts, NewMount};
+use container::uidmap::get_max_uidmap;
 use config::Config;
 use config::command::{SuperviseInfo, Networking};
 use config::command::SuperviseMode::{stop_on_failure};
@@ -24,30 +25,7 @@ use super::user::{common_child_command_env};
 use super::build::build_container;
 use file_util::create_dir;
 use path_util::PathExt;
-
-
-pub struct RunChild<'a> {
-    name: Rc<String>,
-    command: Option<Command>,
-    running: &'a Cell<bool>
-}
-
-impl<'a> Executor for RunChild<'a> {
-    fn command(&mut self) -> Command {
-        return self.command.take().expect("Command can't be run twice");
-    }
-    fn finish(&mut self, status: i32) -> MonitorStatus {
-        if self.running.get() {
-            println!(
-                "---------- \
-                Process {} exited with code {}. Shutting down \
-                -----------",
-                self.name, status);
-            self.running.set(false);
-        }
-        MonitorStatus::Shutdown(status)
-    }
-}
+use process_util::{set_uidmap, convert_status};
 
 
 pub fn run_supervise_command(config: &Config, workdir: &Path,
@@ -71,6 +49,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             }
         }
     }
+
     let mut containers = BTreeSet::new();
     let mut containers_in_netns = vec!();
     let mut bridges = vec!();
@@ -89,7 +68,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             if let Some(ref netw) = child.network() {
                 containers_in_netns.push(name.to_string());
                 for (ext_port, int_port) in netw.ports.iter() {
-                    forwards.push((*ext_port, netw.ip.clone(), *int_port));
+                     forwards.push((*ext_port, netw.ip.clone(), *int_port));
                     ports.push(*ext_port);
                 }
             } else {
@@ -104,22 +83,33 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     }
     debug!("Containers {} with host neworking, {} in netns",
         containers_host_net.len(), containers_in_netns.len());
-    let running = Cell::new(true);
-    let mut mon = Monitor::new();
+
+    let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD]);
+    let mut children = HashMap::new();
+    let mut error = false;
     for name in containers_host_net.iter() {
-        let mut cmd = Command::vagga("vagga_wrapper", "/proc/self/exe");
+        let mut cmd = Command::new("/proc/self/exe");
+        cmd.arg0("vagga_wrapper");
         cmd.keep_sigmask();
         cmd.arg(&cmdname);
         cmd.arg(&name);
         common_child_command_env(&mut cmd, Some(workdir));
-        cmd.container();
-        cmd.set_max_uidmap();
-        let name = Rc::new(name.clone());
-        mon.add(name.clone(), Box::new(RunChild {
-            name: name,
-            command: Some(cmd),
-            running: &running,
-        }));
+        cmd.unshare(
+            [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+        set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
+        match cmd.spawn() {
+            Ok(child) => { children.insert(child.pid(), (name, child)); }
+            Err(e) => {
+                if !error {
+                    println!(
+                        "---------- \
+                        Process {} could not be run: {}. Shutting down \
+                        -----------",
+                        name, e);
+                    error = true;
+                }
+            }
+        }
     }
     let mut port_forward_guard;
     if containers_in_netns.len() > 0 {
@@ -143,22 +133,22 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
 
         for name in containers_in_netns.iter() {
             let child = sup.children.get(name).unwrap();
-            let mut cmd = Command::new("wrapper".to_string(),
-                &current_exe().unwrap().parent().unwrap()
-                .join("vagga_wrapper"));
+            let mut cmd = Command::new("/proc/self/exe");
+            cmd.arg0("vagga_wrapper");
             cmd.keep_sigmask();
             cmd.arg(&cmdname);
             cmd.arg(&name);
             common_child_command_env(&mut cmd, Some(workdir));
-            cmd.container();
+            cmd.unshare(
+                [Namespace::Mount, Namespace::Ipc, Namespace::Pid]
+                .iter().cloned());
 
             try!(set_namespace(&bridge_ns, NewNet)
                 .map_err(|e| format!("Error setting netns: {}", e)));
             if let &BridgeCommand(_) = child {
                 // Already setup by set_namespace
                 // But also need to mount namespace_dir into container
-                cmd.set_env("VAGGA_NAMESPACE_DIR".to_string(),
-                            nsdir.display().to_string());
+                cmd.env("VAGGA_NAMESPACE_DIR", &nsdir);
             } else {
                 let netw = child.network().unwrap();
                 let net_ns;
@@ -175,13 +165,19 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                     .map_err(|e| format!("Error setting netns: {}", e)));
             }
 
-            let name = Rc::new(name.clone());
-            mon.add(name.clone(), Box::new(RunChild {
-                name: name.clone(),
-                command: Some(cmd),
-                running: &running,
-            }));
-            try!(mon.force_start(name));  // ensure run in correct sequence
+            match cmd.spawn() {
+                Ok(child) => { children.insert(child.pid(), (name, child)); }
+                Err(e) => {
+                    if !error {
+                        println!(
+                            "---------- \
+                            Process {} could not be run: {}. Shutting down \
+                            -----------",
+                            name, e);
+                        error = true;
+                    }
+                }
+            }
         }
 
         // Need to set network namespace back to bridge, to keep namespace
@@ -190,8 +186,82 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         try!(set_namespace(&bridge_ns, NewNet)
             .map_err(|e| format!("Error setting netns: {}", e)));
     }
-    match mon.run() {
-        Killed => Ok(143),
-        Exit(val) => Ok(val),
+
+    let mut errcode = 0;
+    if error {
+        let mut errcode = 127;
+        for &(_, ref child) in children.values() {
+            child.signal(SIGTERM).ok();
+        }
+    } else {
+        // Normal loop
+        assert!(children.len() > 0);
+        'signal_loop: for signal in trap.by_ref() {
+            match signal {
+                SIGINT => {
+                    // SIGINT is usually a Ctrl+C so it's sent to whole process
+                    // group, so we don't need to do anything special
+                    println!("Received SIGINT signal. \
+                        Waiting processes to stop..");
+                    errcode = 128+SIGINT;
+                    break;
+                }
+                SIGTERM => {
+                    // SIGTERM is usually sent to a specific process so we
+                    // forward it to children
+                    println!("Received SIGTERM signal, propagating");
+                    for &(_, ref child) in children.values() {
+                        child.signal(SIGTERM).ok();
+                    }
+                    errcode = 128+SIGINT;
+                    break;
+                }
+                SIGCHLD => {
+                    for (pid, status) in reap_zombies() {
+                        if let Some((name, _)) = children.remove(&pid) {
+                            errcode = convert_status(status);
+                            println!(
+                                "---------- \
+                                Process {}:{} {}. Shutting down \
+                                -----------",
+                                name, pid, status);
+                            for (pid, status) in reap_zombies() {
+                                children.remove(&pid);
+                            }
+                            break 'signal_loop;
+                        }
+                    }
+                    if children.len() == 0 {
+                        break;
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
     }
+
+    // Stopping loop
+    if children.len() > 0 {
+        for signal in trap.by_ref() {
+            match signal {
+                SIGINT => {}
+                SIGTERM => {
+                    for &(_, ref child) in children.values() {
+                        child.signal(SIGTERM).ok();
+                    }
+                }
+                SIGCHLD => {
+                    for (pid, status) in reap_zombies() {
+                        children.remove(&pid);
+                    }
+                    if children.len() == 0 {
+                        break;
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    Ok(errcode)
 }
