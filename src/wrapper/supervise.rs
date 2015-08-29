@@ -12,8 +12,6 @@ use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use super::super::config::command::ChildCommand as CC;
 use super::super::container::uidmap::{map_users};
 use super::super::container::uidmap::Uidmap::Ranges;
-use super::super::container::monitor::{Monitor};
-use super::super::container::monitor::MonitorResult::{Killed, Exit};
 use super::super::container::vagga::container_ver;
 use super::Wrapper;
 use super::util::find_cmd;

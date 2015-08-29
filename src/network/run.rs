@@ -1,15 +1,14 @@
 use std::env;
 use std::io::{stdout, stderr};
 use std::path::Path;
-use unshare::{Command, Stdio};
 
+use unshare::{Command, Stdio, Namespace};
 use argparse::{ArgumentParser, Store, List};
 
 use config::Config;
 use config::command::{Networking};
 use config::command::{MainCommand};
 use container::nsutil::set_namespace;
-use container::container::Namespace::NewNet;
 
 
 pub fn run_command_cmd(config: &Config, args: Vec<String>)
@@ -61,7 +60,7 @@ pub fn run_command_cmd(config: &Config, args: Vec<String>)
         return Err(Err(format!("Node {} is missing", subcommand)));
     };
     try!(set_namespace(
-        &Path::new(&format!("/tmp/vagga/namespaces/net.{}", ip)), NewNet)
+        format!("/tmp/vagga/namespaces/net.{}", ip), Namespace::Net)
         .map_err(|e| Err(format!("Can't set namespace: {}", e))));
 
     let mut cmd = Command::new(&command);

@@ -13,7 +13,6 @@ use unshare::{Command, Namespace, reap_zombies};
 
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
-use container::container::Namespace::{NewNet, NewUts, NewMount};
 use container::uidmap::get_max_uidmap;
 use config::Config;
 use config::command::{SuperviseInfo, Networking};
@@ -120,7 +119,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                      "Failed to create dir: {err}");
         }
         try!(network::join_gateway_namespaces());
-        try!(unshare_namespace(NewMount)
+        try!(unshare_namespace(Namespace::Mount)
             .map_err(|e| format!("Failed to create mount namespace: {}", e)));
         try!(mount_tmpfs(&nsdir, "size=10m"));
 
@@ -143,7 +142,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                 [Namespace::Mount, Namespace::Ipc, Namespace::Pid]
                 .iter().cloned());
 
-            try!(set_namespace(&bridge_ns, NewNet)
+            try!(set_namespace(&bridge_ns, Namespace::Net)
                 .map_err(|e| format!("Error setting netns: {}", e)));
             if let &BridgeCommand(_) = child {
                 // Already setup by set_namespace
@@ -159,9 +158,9 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                 try!(network::setup_container(&net_ns, &uts_ns,
                     &name, &netw.ip,
                     &netw.hostname.as_ref().unwrap_or(name)));
-                try!(set_namespace(&net_ns, NewNet)
+                try!(set_namespace(&net_ns, Namespace::Net)
                     .map_err(|e| format!("Error setting netns: {}", e)));
-                try!(set_namespace(&uts_ns, NewUts)
+                try!(set_namespace(&uts_ns, Namespace::Uts)
                     .map_err(|e| format!("Error setting netns: {}", e)));
             }
 
@@ -183,7 +182,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         // Need to set network namespace back to bridge, to keep namespace
         // alive. Otherwise bridge is dropped, and no connectivity between
         // containers.
-        try!(set_namespace(&bridge_ns, NewNet)
+        try!(set_namespace(&bridge_ns, Namespace::Net)
             .map_err(|e| format!("Error setting netns: {}", e)));
     }
 

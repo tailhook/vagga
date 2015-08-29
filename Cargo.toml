@@ -2,8 +2,6 @@
 name = "vagga"
 version = "0.3.0"
 authors = ["Paul Colomiets"]
-links = "container"
-build = "build.rs"
 
 [dependencies]
 libc = "*"

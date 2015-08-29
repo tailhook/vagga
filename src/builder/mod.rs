@@ -6,7 +6,6 @@ use config::read_config;
 use config::Settings;
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use container::signal;
 use argparse::{ArgumentParser, Store, StoreTrue};
 use self::context::{BuildContext};
 use self::bld::{BuildCommand};
@@ -29,7 +28,6 @@ mod timer;
 
 
 pub fn run() -> i32 {
-    signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
     let mut sources_only: bool = false;

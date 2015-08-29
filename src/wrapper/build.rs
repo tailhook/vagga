@@ -15,7 +15,6 @@ use unshare::{Command, Namespace, ExitStatus};
 use container::mount::{bind_mount, unmount};
 use container::uidmap::{Uidmap, map_users};
 use container::vagga::container_ver;
-use container::pipe::CPipe;
 use config::{Container, Settings};
 use config::builders::Builder as B;
 use config::builders::Source as S;

@@ -181,7 +181,7 @@ dependencies = [
 [[package]]
 name = "unshare"
 version = "0.0.1"
-source = "git+git://github.com/tailhook/unshare#2be10f5d13c529be70573b2273b8c1ac8c85a7ce"
+source = "git+git://github.com/tailhook/unshare#c95c59afba906f144c998ecf5a1710f05d162f10"
 dependencies = [
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.4.0 (git+git://github.com/carllerche/nix-rust)",

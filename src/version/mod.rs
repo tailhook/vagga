@@ -12,7 +12,6 @@ use shaman::digest::Digest;
 
 use config::read_config;
 use config::Settings;
-use container::signal;
 use self::version::{VersionHash};
 use self::version::HashResult::{Hashed, New, Error};
 
@@ -21,7 +20,6 @@ mod version;
 
 
 pub fn run() -> i32 {
-    signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
     {

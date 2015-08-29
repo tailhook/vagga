@@ -16,11 +16,9 @@ use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
 
 use container::uidmap::get_max_uidmap;
-use container::container::Namespace::{NewUser, NewNet};
 use super::super::config::Config;
 use super::super::container::mount::{bind_mount};
 use super::super::container::nsutil::{set_namespace};
-use super::super::container::signal::wait_process;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use file_util::{create_dir_mode};
@@ -173,11 +171,12 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg(&host_ip);
     cmd.arg("--network");
     cmd.arg(&network);
-    let child_pid = if dry_run { 123456 } else {
-        try!(cmd.spawn()
+    let child = if dry_run { None } else {
+        Some(try!(cmd.spawn()
             .map_err(|e| format!("Error running {:?}: {}", cmd, e))
-        ).id() as pid_t
+        ))
     };
+    let child_pid = child.as_ref().map(|x| x.pid()).unwrap_or(123456);
 
     println!("We will run network setup commands with sudo.");
     println!("You may need to enter your password.");
@@ -292,10 +291,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             }
         }
 
-        match wait_process(child_pid) {
-            Ok(0) => {}
-            code => return Err(
-                format!("vagga_setup_netns exited with code: {:?}", code)),
+        match child.unwrap().wait() {
+            Ok(status) if status.success() => {}
+            Ok(status) => return Err(
+                format!("vagga_setup_netns {:?}", status)),
+            Err(e) => return Err(format!("child wait error: {}", e)),
         }
         if iptables {
             for rule in iprules.iter() {
@@ -447,9 +447,9 @@ pub fn is_netns_set_up() -> bool {
 
 pub fn join_gateway_namespaces() -> Result<(), String> {
     let nsdir = namespace_dir();
-    try!(set_namespace(&nsdir.join("userns"), NewUser)
+    try!(set_namespace(nsdir.join("userns"), Namespace::User)
         .map_err(|e| format!("Error setting userns: {}", e)));
-    try!(set_namespace(&nsdir.join("netns"), NewNet)
+    try!(set_namespace(nsdir.join("netns"), Namespace::Net)
         .map_err(|e| format!("Error setting networkns: {}", e)));
     Ok(())
 }
@@ -569,19 +569,19 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let pid = try!(cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
-        ).id() as pid_t;
+    let mut child = try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
-               "netns", &format!("{}", pid)[..]]);
-    let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_to)
+               "netns", &format!("{}", child.pid())[..]]);
+    let res = bind_mount(
+        &Path::new(&format!("/proc/{}/ns/net", child.pid())), link_to)
         .and(_run_command(cmd));
-    match wait_process(pid) {
-        Ok(0) => {}
-        code => return Err(
-            format!("vagga_setup_netns exited with code: {:?}", code)),
+    match child.wait() {
+        Ok(status) if status.success() => {}
+        Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
+        Err(e) => return Err(format!("wait child error: {}", e)),
     }
     match res {
         Ok(()) => Ok(iip),
@@ -643,9 +643,9 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let pid = try!(cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
-        ).id() as pid_t;
+    let mut child = try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let pid = child.pid();
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
@@ -653,10 +653,11 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_net)
         .and(bind_mount(&Path::new(&format!("/proc/{}/ns/uts", pid)), link_uts))
         .and(_run_command(cmd));
-    match wait_process(pid) {
-        Ok(0) => {}
-        code => return Err(
-            format!("vagga_setup_netns exited with code: {:?}", code)),
+
+    match child.wait() {
+        Ok(status) if status.success() => {}
+        Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
+        Err(e) => return Err(format!("wait child error: {}", e)),
     }
 
     match res {
@@ -679,7 +680,7 @@ impl PortForwardGuard {
         };
     }
     pub fn start_forwarding(&self) -> Result<(), String> {
-        try!(set_namespace(&self.nspath, NewNet)
+        try!(set_namespace(&self.nspath, Namespace::Net)
             .map_err(|e| format!("Error joining namespace: {}", e)));
 
         for port in self.ports.iter() {
@@ -698,7 +699,7 @@ impl PortForwardGuard {
 
 impl Drop for PortForwardGuard {
     fn drop(&mut self) {
-        if let Err(e) = set_namespace(&self.nspath, NewNet) {
+        if let Err(e) = set_namespace(&self.nspath, Namespace::Net) {
             error!("Can't set namespace {}: {}. \
                     Unable to clean firewall rules", self.nspath.display(), e);
             return;
