@@ -3,6 +3,18 @@ Upgrading
 =========
 
 
+Upgrading 0.2.x -> 0.3.x
+========================
+
+This upgrade should be seamless. The release is focused on migrating code
+from pre-1.0 Rust to... well... rust 1.2.0.
+
+Other aspect of code migration is that it uses ``musl`` libc. So building vagga
+from sources is more complex now. (However it's as easy as previous version if
+you build with vagga itself, except you need to wait until rust builds for the
+first time).
+
+
 Upgrading 0.1.x -> 0.2.x
 ========================
 

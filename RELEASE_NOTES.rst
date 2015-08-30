@@ -6,18 +6,17 @@ Release Notes
 Vagga 0.3.0
 ===========
 
-:Release Date: future
+:Release Date: 30.08.2015
 
 * !Tar command without subdir specified ignores invisible files and dirs
   (ones starting with dot `.`) to determine subdir.
-
-
-Vagga 0.2.6
-===========
-
-:Release Date: future
-
-* Implement ``!SubConfig`` build step
+* Vagga now list of packages and log of duration of each step at a container
+  folder (e.g. ``.vagga/container_name/../timings.log``)
+* Add ``!UbuntuRelease`` builder to build non-lts ubuntu
+* Add ``!Git`` and ``!GitInstall`` commands to install from git repository
+  (similar to ``!Tar`` and ``!TarInstall``)
+* Add ``user-id`` and ``external-user-id`` settings
+* Implement ``!SubConfig`` build step (very experimental)
 * Add ``trusted-hosts`` to ``!PipConfig``
 * Add ``timings.log`` and various package lists to the container metadata for
   easier troubleshooting
