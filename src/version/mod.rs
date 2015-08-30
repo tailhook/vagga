@@ -12,7 +12,6 @@ use shaman::digest::Digest;
 
 use config::read_config;
 use config::Settings;
-use container::signal;
 use self::version::{VersionHash};
 use self::version::HashResult::{Hashed, New, Error};
 
@@ -21,7 +20,6 @@ mod version;
 
 
 pub fn run() -> i32 {
-    signal::block_all();
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
     {
@@ -88,8 +86,9 @@ pub fn run() -> i32 {
 
 pub fn main() {
     // let's make stdout safer
-    dup2(1, 3);
-    dup2(2, 1);
+    // TODO(tailhook) just pass output descriptor as #3 or something
+    dup2(1, 3).unwrap();
+    dup2(2, 1).unwrap();
 
     let val = run();
     exit(val);

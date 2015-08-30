@@ -13,10 +13,10 @@ use libc::pid_t;
 use super::super::config::Container;
 use super::super::config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use super::super::container::root::{change_root};
-use super::super::container::mount::{bind_mount, unmount, mount_system_dirs,remount_ro};
+use super::super::container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use super::super::container::mount::{mount_tmpfs, mount_pseudo, mount_proc};
-use super::run::DEFAULT_PATH;
 use super::settings::{MergedSettings};
+use process_util::DEFAULT_PATH;
 use file_util::create_dir;
 use path_util::{ToRelative, PathExt};
 

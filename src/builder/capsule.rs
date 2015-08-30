@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use std::fs::{File};
 use std::io::{Write};
 use std::path::Path;
-use std::process::{Command, Stdio};
 
+use unshare::{Command, Stdio};
 use rand::{thread_rng, Rng};
 
 use config::settings::Settings;
@@ -41,18 +41,16 @@ pub struct State {
 // Also used in alpine
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     let mut cmd = Command::new("/vagga/bin/apk");
-    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit())
+    cmd.stdin(Stdio::null())
         .env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
     debug!("Running APK {:?}", cmd);
-    return match cmd.output()
-        .map_err(|e| format!("Can't run apk: {}", e))
-        .map(|o| o.status)
+    return match cmd.status().map_err(|e| format!("Can't run apk: {}", e))
     {
         Ok(s) if s.success() => Ok(()),
         Ok(val) => Err(format!("Apk exited with status: {}", val)),
-        Err(x) => Err(format!("Error running tar: {}", x)),
+        Err(x) => Err(format!("Error running apk: {}", x)),
     }
 }
 

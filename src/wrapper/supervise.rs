@@ -6,19 +6,18 @@ use std::str::FromStr;
 
 use libc::pid_t;
 use argparse::{ArgumentParser, Store};
+use unshare::Command;
 
 use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use super::super::config::command::ChildCommand as CC;
 use super::super::container::uidmap::{map_users};
 use super::super::container::uidmap::Uidmap::Ranges;
-use super::super::container::monitor::{Monitor};
-use super::super::container::monitor::MonitorResult::{Killed, Exit};
-use super::super::container::container::{Command};
 use super::super::container::vagga::container_ver;
 use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
 use super::super::file_util::create_dir;
+use process_util::{set_uidmap, convert_status};
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
@@ -112,32 +111,31 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     let mut cmdline = command.run.clone();
     let cpath = try!(find_cmd(&cmdline.remove(0), &env));
 
-    let mut cmd = Command::new(name.to_string(), &cpath);
+    let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
-    cmd.set_env("VAGGA_COMMAND".to_string(), cmdname.to_string());
-    cmd.set_env("VAGGA_SUBCOMMAND".to_string(), name.to_string());
+    cmd.env_clear();
+    cmd.env("VAGGA_COMMAND", cmdname);
+    cmd.env("VAGGA_SUBCOMMAND", name);
     if !bridge {
-        if let Some(euid) = command.external_user_id {
-            cmd.set_uidmap(Ranges(vec!(
-                (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1))));
-            cmd.set_user_id(command.user_id);
+        let curmap = if let Some(euid) = command.external_user_id {
+            Ranges(vec!(
+                (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1)))
         } else {
-            cmd.set_user_id(command.user_id);
-            cmd.set_uidmap(uid_map.clone());
-        }
+            uid_map
+        };
+        set_uidmap(&mut cmd, &curmap, false);
+        cmd.uid(command.user_id);
     }
     if let Some(ref wd) = command.work_dir {
-        cmd.set_workdir(&Path::new("/work").join(&wd));
+        cmd.current_dir(Path::new("/work").join(&wd));
     } else {
-        cmd.set_workdir(&Path::new(
-            &env::var("PWD").unwrap_or("/work".to_string())));
+        cmd.current_dir(env::var("PWD").unwrap_or("/work".to_string()));
     }
     for (ref k, ref v) in env.iter() {
-        cmd.set_env(k.to_string(), v.to_string());
+        cmd.env(k, v);
     }
 
-    match Monitor::run_command(cmd) {
-        Killed => return Ok(1),
-        Exit(val) => return Ok(val),
-    };
+    cmd.status()
+        .map(convert_status)
+        .map_err(|e| format!("Error running {:?}: {}", cmd, e))
 }

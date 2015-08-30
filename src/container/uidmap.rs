@@ -1,21 +1,19 @@
 use std::cmp::min;
 use std::env;
-use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufRead, Write};
-use std::io::Error as IoError;
-use std::io::ErrorKind::{Interrupted, Other};
-use std::os::unix::process::ExitStatusExt;
+use std::fs::{File};
+use std::io::{BufReader, BufRead};
 use std::str::FromStr;
 use std::str::from_utf8;
-use std::path::Path;
-use std::process::{Command, Stdio};
+use std::path::{Path, PathBuf};
+use unshare::{Command, Stdio};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
-use libc::{pid_t, uid_t, gid_t};
+use libc::{uid_t, gid_t};
 
 use config::Range;
 use config::Settings;
 use self::Uidmap::*;
+use process_util::{env_path_find, capture_stdout};
 
 #[derive(Clone)]
 pub enum Uidmap {
@@ -107,16 +105,15 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
 
 pub fn get_max_uidmap() -> Result<Uidmap, String>
 {
-    let mut cmd = Command::new("id");
+    let mut cmd = Command::new(env_path_find("id")
+                               .unwrap_or(PathBuf::from("/usr/bin/id")));
     cmd.arg("--user").arg("--name");
     if let Ok(path) = env::var("HOST_PATH") {
         cmd.env("PATH", path);
     }
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
-    let username = try!(cmd.output()
+    let username = try!(capture_stdout(cmd)
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
-        .and_then(|out| if out.status.success() { Ok(out.stdout) } else
-            { Err(format!("Error running `id --user --name`")) })
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
     let uid_map = read_uid_map(&username).ok();
@@ -164,106 +161,6 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
             " Presumably your system is too old. Some features may not work"));
         return Ok(Singleton(uid, gid));
     }
-}
-
-pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
-    match map {
-        &Singleton(uid, gid) => {
-            let uid_map = format!("0 {} 1", uid);
-            debug!("Writing uid_map: {}", uid_map);
-            let uid_map_file = Path::new("/proc")
-                              .join(pid.to_string())
-                              .join("uid_map");
-            try!(OpenOptions::new().write(true).open(&uid_map_file)
-                .and_then(|mut f| f.write_all(uid_map.as_bytes())));
-            let gid_map = format!("0 {} 1", gid);
-            debug!("Writing gid_map: {}", gid_map);
-            let gid_map_file = Path::new("/proc")
-                              .join(pid.to_string())
-                              .join("gid_map");
-            try!(OpenOptions::new().write(true).open(&gid_map_file)
-                .and_then(|mut f| f.write_all(uid_map.as_bytes())));
-        }
-        &Ranges(ref uids, ref gids) => {
-            let myuid = unsafe { geteuid() };
-            if myuid > 0 {
-                let mut cmd = Command::new("newuidmap");
-                cmd.stdin(Stdio::null());
-                cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-                cmd.arg(pid.to_string());
-                for &(req, allowed, count) in uids.iter() {
-                    cmd
-                        .arg(req.to_string())
-                        .arg(allowed.to_string())
-                        .arg(count.to_string());
-                }
-                info!("Uid map command: {:?}", cmd);
-                match cmd.status() {
-                    Ok(s) if s.success() => {},
-                    Ok(s) if s.signal().is_some() => {
-                        return Err(IoError::new(Interrupted,
-                            format!("Error writing uid mapping: \
-                                newuidmap was killed on signal {}",
-                                s.signal().unwrap())));
-                    }
-                    Ok(s) => {
-                        return Err(IoError::new(Other,
-                            format!("Error writing uid mapping: \
-                                newuidmap was exit with status {}", s)));
-                    }
-                    Err(e) => return Err(e),
-                }
-
-                let mut cmd = Command::new("newgidmap");
-                cmd.stdin(Stdio::null());
-                cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-                cmd.arg(pid.to_string());
-                for &(req, allowed, count) in gids.iter() {
-                    cmd
-                        .arg(req.to_string())
-                        .arg(allowed.to_string())
-                        .arg(count.to_string());
-                }
-                info!("Gid map command: {:?}", cmd);
-                match cmd.status() {
-                    Ok(s) if s.success() => {},
-                    Ok(s) if s.signal().is_some() => {
-                        return Err(IoError::new(Interrupted,
-                            format!("Error writing gid mapping: \
-                                newuidmap was killed on signal {}",
-                                s.signal().unwrap())));
-                    }
-                    Ok(s) => {
-                        return Err(IoError::new(Other,
-                            format!("Error writing gid mapping: \
-                                newuidmap was exit with status {}", s)));
-                    }
-                    Err(e) => return Err(e),
-                }
-            } else {
-                let mut membuf = Vec::with_capacity(100);
-                for &(ins, outs, cnt) in uids.iter() {
-                    try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
-                }
-                let mut file = try!(File::create(
-                    &format!("/proc/{}/uid_map", pid)));
-                debug!("Writing uid map ```{}```",
-                    String::from_utf8_lossy(&membuf[..]));
-                try!(file.write(&membuf));
-
-                let mut membuf = Vec::with_capacity(100);
-                for &(ins, outs, cnt) in gids.iter() {
-                    try!(writeln!(&mut membuf, "{} {} {}", ins, outs, cnt));
-                }
-                let mut file = try!(File::create(
-                    &format!("/proc/{}/gid_map", pid)));
-                debug!("Writing gid map ```{}```",
-                    String::from_utf8_lossy(&membuf[..]));
-                try!(file.write(&membuf));
-            }
-        }
-    }
-    return Ok(());
 }
 
 fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>

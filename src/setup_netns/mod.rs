@@ -4,10 +4,10 @@ use std::io::{stdout, stderr};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::exit;
-use std::process::{Command, Stdio};
 use std::thread::sleep_ms;
 
 use rustc_serialize::json;
+use unshare::{Command, Stdio};
 
 use argparse::{ArgumentParser, Store, List};
 
@@ -37,7 +37,6 @@ fn busybox_cmd() -> Command {
         .parent().unwrap()
         .join("busybox"));
     busybox.stdin(Stdio::null());
-    busybox.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     busybox
 }
 
@@ -45,7 +44,6 @@ fn ip_cmd() -> Command {
     let mut ip_cmd = busybox_cmd();
     ip_cmd.arg("ip");
     ip_cmd.stdin(Stdio::null());
-    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     ip_cmd
 }
 
@@ -109,7 +107,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
 
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
-    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    cmd.stdin(Stdio::null());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-o", "vagga_guest",
                "-j", "MASQUERADE"]);
@@ -207,14 +205,14 @@ fn setup_bridge_namespace(args: Vec<String>) {
 
     // Unfortunately there is no iptables in busybox so use iptables from host
     let mut cmd = Command::new("iptables");
-    cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    cmd.stdin(Stdio::null());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for &(sport, ref dip, dport) in ports.iter() {
         let mut cmd = Command::new("iptables");
-        cmd.stdin(Stdio::null()).stdout(Stdio::inherit()).stderr(Stdio::inherit());
+        cmd.stdin(Stdio::null());
         cmd.args(&["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
             "--dport", &format!("{}", sport)[..], "-j", "DNAT",
             "--to-destination", &format!("{}:{}", dip, dport)[..]]);
@@ -336,8 +334,8 @@ pub fn main() {
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),
         _ => {
-            exit(1);
             error!("Unknown command {}", kind);
+            exit(1);
         }
     }
 }

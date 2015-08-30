@@ -5,22 +5,15 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use libc::pid_t;
-
 use argparse::{ArgumentParser, Store, List, StoreTrue};
+use unshare::{Command};
 
 use container::uidmap::{map_users};
-use container::monitor::{Monitor};
-use container::monitor::MonitorResult::{Killed, Exit};
-use container::container::{Command};
 use container::vagga::container_ver;
-
 use super::setup;
 use super::Wrapper;
 use path_util::PathExt;
-
-
-pub static DEFAULT_PATH: &'static str =
-    "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+use process_util::{convert_status, set_uidmap};
 
 
 pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
@@ -107,19 +100,19 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         }
     }
 
-    let mut cmd = Command::new("run".to_string(), &cpath);
+    let mut cmd = Command::new(cpath);
     cmd.args(&args);
-    cmd.set_workdir(&Path::new(
-        &env::var("PWD").unwrap_or("/work".to_string())));
-    uid_map.as_ref().map(|v| cmd.set_uidmap(v.clone()));
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    cmd.current_dir(&env::var("PWD").unwrap_or("/work".to_string()));
+    uid_map.map(|x| set_uidmap(&mut cmd, &x, false));
+    cmd.env_clear();
+    cmd.env("TERM".to_string(),
+        env::var("TERM").unwrap_or("dumb".to_string()));
     for (ref k, ref v) in env.iter() {
-        cmd.set_env(k.to_string(), v.to_string());
+        cmd.env(k.to_string(), v.to_string());
     }
 
-    match Monitor::run_command(cmd) {
-        Killed => return Ok(1),
-        Exit(val) => return Ok(val),
-    };
+    match cmd.status() {
+        Ok(s) => Ok(convert_status(s)),
+        Err(e) => Err(format!("Error running {:?}: {}", cmd, e)),
+    }
 }

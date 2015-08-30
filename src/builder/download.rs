@@ -2,10 +2,10 @@ use std::fs::{remove_file, rename, create_dir_all, set_permissions};
 use std::fs::{Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use shaman::digest::Digest;
 use shaman::sha2::Sha256;
+use unshare::{Command, Stdio};
 
 use super::capsule;
 use super::context::BuildContext;
@@ -42,21 +42,16 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
     let tmpfilename = filename.with_file_name(name + ".part");
     let mut cmd = Command::new(
         if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
-    cmd.stdin(Stdio::null())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+    cmd.stdin(Stdio::null());
     if !https {
         cmd.arg("wget");
     }
     cmd.arg("-O");
     cmd.arg(&tmpfilename);
     cmd.arg(url);
+
     debug!("Running: {:?}", cmd);
-    match cmd
-        .output()
-        .map_err(|e| format!("Can't run wget: {}", e))
-        .map(|o| o.status)
-    {
+    match cmd.status() {
         Ok(st) if st.success() => {
             try!(rename(&tmpfilename, &filename)
                 .map_err(|e| format!("Error moving file: {}", e)));
@@ -70,7 +65,7 @@ pub fn download_file(ctx: &mut BuildContext, url: &str)
         Err(x) => {
             remove_file(&tmpfilename)
                 .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
-            Err(x)
+            Err(format!("Error starting wget: {}", x))
         }
     }
 }

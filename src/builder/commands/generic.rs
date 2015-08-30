@@ -1,12 +1,11 @@
 use std::path::{Path, PathBuf};
 
+use unshare::{Command};
+
 use super::super::context::BuildContext;
-use container::monitor::{Monitor};
-use container::monitor::MonitorResult::{Exit, Killed};
-use container::container::{Command};
-use container::pipe::{CPipe};
 use super::super::super::path_util::ToRelative;
 use path_util::PathExt;
+use process_util::capture_stdout;
 
 
 fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
@@ -40,29 +39,29 @@ pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
         try!(find_cmd(ctx, &cmdline[0]))
     };
 
-    let mut cmd = Command::new("run".to_string(), &cmdpath);
-    cmd.set_workdir(path);
-    cmd.chroot(&Path::new("/vagga/root"));
+    let mut cmd = Command::new(&cmdpath);
+    cmd.current_dir(path);
+    cmd.chroot_dir("/vagga/root");
     cmd.args(&cmdline[1..]);
+    cmd.env_clear();
     for (k, v) in ctx.environ.iter() {
-        cmd.set_env(k.clone(), v.clone());
+        cmd.env(k, v);
     }
     for &(k, v) in env.iter() {
-        cmd.set_env(k.to_string(), v.to_string());
+        cmd.env(k, v);
     }
 
     debug!("Running {:?}", cmd);
 
-    match Monitor::run_command(cmd) {
-        Killed => {
-            return Err(format!("Command {:?} is dead", cmdline));
+    match cmd.status() {
+        Ok(ref s) if s.success() => {
+            return Ok(());
         }
-        Exit(0) => {
-            return Ok(())
+        Ok(s) => {
+            return Err(format!("Command {:?} {}", cmd, s));
         }
-        Exit(val) => {
-            return Err(format!("Command {:?} exited with status {}",
-                               cmdline, val));
+        Err(e) => {
+            return Err(format!("Couldn't run {:?}: {}", cmd, e));
         }
     }
 }
@@ -89,34 +88,15 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
         try!(find_cmd(ctx, &cmdline[0]))
     };
 
-    let mut cmd = Command::new("run".to_string(), &cmdpath);
-    cmd.chroot(&Path::new("/vagga/root"));
+    let mut cmd = Command::new(&cmdpath);
+    cmd.chroot_dir("/vagga/root");
     cmd.args(&cmdline[1..]);
+    cmd.env_clear();
     for (k, v) in ctx.environ.iter() {
-        cmd.set_env(k.clone(), v.clone());
+        cmd.env(k, v);
     }
     for &(k, v) in env.iter() {
-        cmd.set_env(k.to_string(), v.to_string());
+        cmd.env(k, v);
     }
-    debug!("Running {:?}", cmd);
-    let (res, data) = {
-        let pipe = try!(CPipe::new()
-            .map_err(|e| format!("Can't create pipe: {:?}", e)));
-        cmd.set_stdout_fd(pipe.writer);
-        let res = Monitor::run_command(cmd);
-        (res, try_msg!(pipe.read(), "Can't read frome pipe: {err}"))
-    };
-
-    match res {
-        Killed => {
-            return Err(format!("Command {:?} is dead", cmdline));
-        }
-        Exit(0) => {
-            return Ok(data);
-        }
-        Exit(val) => {
-            return Err(format!("Command {:?} exited with status {}",
-                               cmdline, val));
-        }
-    }
+    capture_stdout(cmd)
 }

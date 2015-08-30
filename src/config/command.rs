@@ -58,8 +58,8 @@ pub struct CommandInfo {
     pub inherit_environ: Vec<String>,
     pub write_mode: WriteMode,
     pub run: Vec<String>,
-    pub user_id: i32,
-    pub external_user_id: Option<i32>,
+    pub user_id: u32,
+    pub external_user_id: Option<u32>,
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]

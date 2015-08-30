@@ -4,11 +4,10 @@ use std::fs::{File};
 use std::io::{stdout, stderr, BufRead, BufReader, Read};
 use std::os::unix::io::{FromRawFd};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::rc::Rc;
 use std::str::FromStr;
 use std::collections::HashSet;
 
+use unshare::{Command, Stdio, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
 use libc::{geteuid};
@@ -16,16 +15,15 @@ use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
 
+use container::uidmap::get_max_uidmap;
 use super::super::config::Config;
 use super::super::container::mount::{bind_mount};
 use super::super::container::nsutil::{set_namespace};
-use super::super::container::signal::wait_process;
-use super::super::container::container::Namespace::{NewUser, NewNet};
-use super::super::container::container::Command as ContainerCommand;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use file_util::{create_dir_mode};
 use path_util::{PathExt};
+use process_util::{set_uidmap};
 
 static MAX_INTERFACES: u32 = 2048;
 
@@ -46,7 +44,6 @@ pub fn sudo_ip_cmd() -> Command {
     // If we are root we may skip sudo
     let mut ip_cmd = Command::new("sudo");
     ip_cmd.stdin(Stdio::null());
-    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     ip_cmd.arg("ip");
     ip_cmd
 }
@@ -55,7 +52,6 @@ pub fn sudo_sysctl() -> Command {
     // If we are root we may skip sudo
     let mut sysctl = Command::new("sudo");
     sysctl.stdin(Stdio::null());
-    sysctl.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     sysctl.arg("sysctl");
     sysctl
 }
@@ -63,7 +59,6 @@ pub fn sudo_sysctl() -> Command {
 pub fn ip_cmd() -> Command {
     let mut ip_cmd = Command::new("ip");
     ip_cmd.stdin(Stdio::null());
-    ip_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     ip_cmd
 }
 
@@ -71,7 +66,6 @@ pub fn sudo_mount() -> Command {
     // If we are root we may skip sudo
     let mut mount_cmd = Command::new("sudo");
     mount_cmd.stdin(Stdio::null());
-    mount_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     mount_cmd.arg("mount");
     mount_cmd
 }
@@ -80,7 +74,6 @@ pub fn sudo_umount() -> Command {
     // If we are root we may skip sudo
     let mut umount_cmd = Command::new("sudo");
     umount_cmd.stdin(Stdio::null());
-    umount_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     umount_cmd.arg("umount");
     umount_cmd
 }
@@ -89,7 +82,6 @@ pub fn sudo_iptables() -> Command {
     // If we are root we may skip sudo
     let mut iptables_cmd = Command::new("sudo");
     iptables_cmd.stdin(Stdio::null());
-    iptables_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     iptables_cmd.arg("iptables");
     iptables_cmd
 }
@@ -98,7 +90,6 @@ pub fn iptables() -> Command {
     // If we are root we may skip sudo
     let mut iptables_cmd = Command::new("iptables");
     iptables_cmd.stdin(Stdio::null());
-    iptables_cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     iptables_cmd
 }
 
@@ -107,7 +98,6 @@ pub fn busybox() -> Command {
         &env::current_exe().unwrap().parent().unwrap()
         .join("busybox"));
     busybox.stdin(Stdio::null());
-    busybox.stdout(Stdio::inherit()).stderr(Stdio::inherit());
     busybox
 }
 
@@ -158,21 +148,21 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         return Err("Namespaces already created".to_string());
     }
 
-    let mut cmd = ContainerCommand::new("setup_netns".to_string(),
-        &env::current_exe().unwrap().parent().unwrap()
-        .join("vagga_setup_netns"));
-    cmd.set_max_uidmap();
-    cmd.network_ns();
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
+    cmd.unshare([Namespace::Net].iter().cloned());
+    set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
+    cmd.env_clear();
+    cmd.env("TERM".to_string(),
+            env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("PATH".to_string(), x);
+        cmd.env("PATH".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE".to_string(), x);
     }
     cmd.arg("gateway");
     cmd.arg("--guest-ip");
@@ -181,7 +171,12 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg(&host_ip);
     cmd.arg("--network");
     cmd.arg(&network);
-    let child_pid = if dry_run { 123456 } else { try!(cmd.spawn()) };
+    let child = if dry_run { None } else {
+        Some(try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+        ))
+    };
+    let child_pid = child.as_ref().map(|x| x.pid()).unwrap_or(123456);
 
     println!("We will run network setup commands with sudo.");
     println!("You may need to enter your password.");
@@ -296,10 +291,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             }
         }
 
-        match wait_process(child_pid) {
-            Ok(0) => {}
-            code => return Err(
-                format!("vagga_setup_netns exited with code: {:?}", code)),
+        match child.unwrap().wait() {
+            Ok(status) if status.success() => {}
+            Ok(status) => return Err(
+                format!("vagga_setup_netns {:?}", status)),
+            Err(e) => return Err(format!("child wait error: {}", e)),
         }
         if iptables {
             for rule in iprules.iter() {
@@ -451,9 +447,9 @@ pub fn is_netns_set_up() -> bool {
 
 pub fn join_gateway_namespaces() -> Result<(), String> {
     let nsdir = namespace_dir();
-    try!(set_namespace(&nsdir.join("userns"), NewUser)
+    try!(set_namespace(nsdir.join("userns"), Namespace::User)
         .map_err(|e| format!("Error setting userns: {}", e)));
-    try!(set_namespace(&nsdir.join("netns"), NewNet)
+    try!(set_namespace(nsdir.join("netns"), Namespace::Net)
         .map_err(|e| format!("Error setting networkns: {}", e)));
     Ok(())
 }
@@ -552,39 +548,40 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
     try!(_run_command(cmd));
 
-    let cmdname = Rc::new("setup_netns".to_string());
-    let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        &env::current_exe().unwrap().parent().unwrap()
-        .join("vagga_setup_netns"));
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
     cmd.args(&["bridge",
         "--interface", &iif[..],
         "--ip", &iip[..],
         "--gateway-ip", &eip[..],
         "--port-forwards", &json::encode(port_forwards).unwrap()[..],
         ]);
-    cmd.network_ns();
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.env_clear();
+    cmd.env("TERM".to_string(),
+            env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("PATH".to_string(), x);
+        cmd.env("PATH".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let pid = try!(cmd.spawn());
+    let mut child = try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
-               "netns", &format!("{}", pid)[..]]);
-    let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_to)
+               "netns", &format!("{}", child.pid())[..]]);
+    let res = bind_mount(
+        &Path::new(&format!("/proc/{}/ns/net", child.pid())), link_to)
         .and(_run_command(cmd));
-    match wait_process(pid) {
-        Ok(0) => {}
-        code => return Err(
-            format!("vagga_setup_netns exited with code: {:?}", code)),
+    match child.wait() {
+        Ok(status) if status.success() => {}
+        Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
+        Err(e) => return Err(format!("wait child error: {}", e)),
     }
     match res {
         Ok(()) => Ok(iip),
@@ -628,27 +625,27 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     cmd.args(&["brctl", "addif", "children", &eif[..]]);
     try!(_run_command(cmd));
 
-    let cmdname = Rc::new("setup_netns".to_string());
-    let mut cmd = ContainerCommand::new(cmdname.to_string(),
-        &env::current_exe().unwrap().parent().unwrap()
-        .join("vagga_setup_netns"));
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
     cmd.args(&["guest", "--interface", &iif[..],
                         "--ip", &ip[..],
                         "--hostname", hostname,
                         "--gateway-ip", "172.18.0.254"]);
-    cmd.network_ns();
-    cmd.set_env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.env("TERM".to_string(),
+            env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
-        cmd.set_env("PATH".to_string(), x);
+        cmd.env("PATH".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_LOG") {
-        cmd.set_env("RUST_LOG".to_string(), x);
+        cmd.env("RUST_LOG".to_string(), x);
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.set_env("RUST_BACKTRACE".to_string(), x);
+        cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let pid = try!(cmd.spawn());
+    let mut child = try!(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let pid = child.pid();
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
@@ -656,10 +653,11 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_net)
         .and(bind_mount(&Path::new(&format!("/proc/{}/ns/uts", pid)), link_uts))
         .and(_run_command(cmd));
-    match wait_process(pid) {
-        Ok(0) => {}
-        code => return Err(
-            format!("vagga_setup_netns exited with code: {:?}", code)),
+
+    match child.wait() {
+        Ok(status) if status.success() => {}
+        Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
+        Err(e) => return Err(format!("wait child error: {}", e)),
     }
 
     match res {
@@ -682,7 +680,7 @@ impl PortForwardGuard {
         };
     }
     pub fn start_forwarding(&self) -> Result<(), String> {
-        try!(set_namespace(&self.nspath, NewNet)
+        try!(set_namespace(&self.nspath, Namespace::Net)
             .map_err(|e| format!("Error joining namespace: {}", e)));
 
         for port in self.ports.iter() {
@@ -701,7 +699,7 @@ impl PortForwardGuard {
 
 impl Drop for PortForwardGuard {
     fn drop(&mut self) {
-        if let Err(e) = set_namespace(&self.nspath, NewNet) {
+        if let Err(e) = set_namespace(&self.nspath, Namespace::Net) {
             error!("Can't set namespace {}: {}. \
                     Unable to clean firewall rules", self.nspath.display(), e);
             return;

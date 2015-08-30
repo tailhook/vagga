@@ -7,7 +7,6 @@ use argparse::{ArgumentParser, Store, List};
 
 use super::config::{find_config, Config, Settings};
 use super::config::command::MainCommand::{Command, Supervise};
-use super::container::signal;
 use self::settings::{read_settings, MergedSettings};
 
 
@@ -115,7 +114,6 @@ pub fn run() -> i32 {
 }
 
 pub fn main() {
-    signal::block_all();
     let val = run();
     exit(val);
 }

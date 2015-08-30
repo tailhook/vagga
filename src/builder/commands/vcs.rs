@@ -1,13 +1,13 @@
 use std::fs::rename;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+
+use unshare::{Command, Stdio};
 
 use config::settings::Settings;
 use config::builders::GitInfo;
 use config::builders::GitInstallInfo;
 use config::builders::GitSource;
-
 use super::super::capsule;
 use super::super::context::BuildContext;
 use super::generic::run_command_at;

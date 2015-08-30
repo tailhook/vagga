@@ -2,8 +2,6 @@
 name = "vagga"
 version = "0.3.0"
 authors = ["Paul Colomiets"]
-links = "container"
-build = "build.rs"
 
 [dependencies]
 libc = "*"
@@ -17,6 +15,8 @@ log = "*"
 time = "*"
 env_logger = "*"
 url = "*"
+unshare = { git = "git://github.com/tailhook/unshare" }
+signal = "*"
 
 [[bin]]
 name = "vagga"

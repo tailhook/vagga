@@ -2,13 +2,15 @@ use std::io::Write;
 use std::fs::{copy};
 use std::fs::File;
 use std::path::Path;
-use std::process::{Command, Stdio};
+
+use unshare::{Command, Stdio};
 
 use super::super::super::file_util::create_dir;
 use super::super::context::{BuildContext};
 use super::super::context::Distribution::{Alpine};
 use super::super::capsule;
 use super::super::packages;
+use process_util::capture_stdout;
 
 
 pub static LATEST_VERSION: &'static str = "v3.1";
@@ -34,6 +36,7 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
         try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
         try_msg!(create_dir(&Path::new("/vagga/root/etc/apk"), true),
             "Error creating apk dir: {err}");
+        // TODO(tailhook) use specified version instead of one in capsule
         try!(copy(
             &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
             &Path::new("/vagga/root/etc/apk/repositories"))
@@ -76,17 +79,18 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
 {
     let pkgs = ctx.build_deps.clone().into_iter().collect();
     try!(remove(ctx, &pkgs));
-    try!(Command::new("/vagga/bin/apk")
-        .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::inherit())
+    let mut cmd = Command::new("/vagga/bin/apk");
+    cmd
+        .stdin(Stdio::null())
         .env_clear()
         .arg("--root").arg("/vagga/root")
         .arg("-vv")
-        .arg("info")
-        .output()
+        .arg("info");
+    try!(capture_stdout(cmd)
         .map_err(|e| format!("Error dumping package list: {}", e))
         .and_then(|out| {
             File::create("/vagga/container/alpine-packages.txt")
-            .and_then(|mut f| f.write_all(&out.stdout))
+            .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping package list: {}", e))
         }));
     Ok(())

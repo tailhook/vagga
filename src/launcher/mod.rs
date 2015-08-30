@@ -4,7 +4,6 @@ use std::path::{Path};
 use std::process::exit;
 
 use config::find_config;
-use container::signal;
 use argparse::{ArgumentParser, Store, List, Collect};
 use super::path_util::ToRelative;
 
@@ -139,7 +138,6 @@ pub fn run() -> i32 {
 }
 
 pub fn main() {
-    signal::block_all();
     let val = run();
     exit(val);
 }

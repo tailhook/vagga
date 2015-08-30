@@ -104,7 +104,7 @@ impl VersionHash for Builder {
                             .join(version).join("root")
                             .join(&sconfig.path)
                     }
-                    S::Git(ref git) => {
+                    S::Git(ref _git) => {
                         unimplemented!();
                     }
                     S::Directory => {

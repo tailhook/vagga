@@ -1,7 +1,3 @@
-#![crate_name="config"]
-#![crate_type="lib"]
-
-
 extern crate rustc_serialize;
 extern crate quire;
 extern crate libc;
