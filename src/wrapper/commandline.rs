@@ -11,7 +11,6 @@ use unshare::{Command, UidMap};
 use config::command::CommandInfo;
 use config::command::WriteMode;
 use container::uidmap::{map_users};
-use container::uidmap::Uidmap::Ranges;
 use container::vagga::container_ver;
 
 use super::setup;

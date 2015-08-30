@@ -1,6 +1,4 @@
 use std::env;
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::ascii::AsciiExt;
 use std::fs::{remove_dir_all, rename};
 use std::fs::{remove_file, remove_dir};
@@ -13,9 +11,9 @@ use rustc_serialize::json;
 use unshare::{Command, Namespace, ExitStatus};
 
 use container::mount::{bind_mount, unmount};
-use container::uidmap::{Uidmap, map_users};
+use container::uidmap::{map_users};
 use container::vagga::container_ver;
-use config::{Container, Settings};
+use config::{Container};
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use file_util::create_dir;
@@ -137,11 +135,11 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
                 let dir = base.join(&oldname);
                 let tmpdir = base.join(".tmp".to_string() + &oldname);
                 rename(&dir, &tmpdir)
-                    .map_err(|e| error!("Error renaming old dir: {}", e));
+                    .map_err(|e| error!("Error renaming old dir: {}", e)).ok();
                 remove_dir_all(&tmpdir)
-                    .map_err(|e| error!("Error removing old dir: {}", e));
+                    .map_err(|e| error!("Error removing old dir: {}", e)).ok();
             }
-        });
+        }).ok();
     }
     try!(symlink(&linkval, &tmplink)
          .map_err(|e| format!("Error symlinking container: {}", e)));
@@ -301,7 +299,7 @@ pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
                             .map(|x| debug!("Built container with name {}", x))
                             .map(|()| 0));
                     }
-                    S::Git(ref git) => {
+                    S::Git(ref _git) => {
                         unimplemented!();
                     }
                 }

@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use unshare::{Command, Stdio, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
-use libc::{geteuid, pid_t};
+use libc::{geteuid};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;

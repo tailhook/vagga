@@ -1,4 +1,4 @@
-use unshare::{Command, Stdio};
+use unshare::{Command};
 
 use process_util::convert_status;
 use super::Wrapper;

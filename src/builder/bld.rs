@@ -119,7 +119,7 @@ impl BuildCommand for Builder {
                             .join(version).join("root")
                             .join(&sconfig.path)
                     }
-                    S::Git(ref git) => {
+                    S::Git(ref _git) => {
                         unimplemented!();
                     }
                     S::Directory => {
@@ -294,8 +294,8 @@ impl BuildCommand for Builder {
             }
             &B::NpmInstall(ref pkgs) => {
                 if let Distr::Unknown = ctx.distribution {
-                    B::Alpine(alpine::LATEST_VERSION.to_string())
-                        .build(ctx, build);
+                    try!(B::Alpine(alpine::LATEST_VERSION.to_string())
+                        .build(ctx, build));
                 }
                 if build {
                     try!(npm::npm_install(ctx, pkgs));

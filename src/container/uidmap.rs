@@ -1,17 +1,14 @@
 use std::cmp::min;
 use std::env;
-use std::fs::{File, OpenOptions};
-use std::io::{BufReader, BufRead, Write};
-use std::io::Error as IoError;
-use std::io::ErrorKind::{Interrupted, Other};
-use std::os::unix::process::ExitStatusExt;
+use std::fs::{File};
+use std::io::{BufReader, BufRead};
 use std::str::FromStr;
 use std::str::from_utf8;
 use std::path::{Path, PathBuf};
 use unshare::{Command, Stdio};
 
 use libc::funcs::posix88::unistd::{geteuid, getegid};
-use libc::{pid_t, uid_t, gid_t};
+use libc::{uid_t, gid_t};
 
 use config::Range;
 use config::Settings;
@@ -164,10 +161,6 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
             " Presumably your system is too old. Some features may not work"));
         return Ok(Singleton(uid, gid));
     }
-}
-
-pub fn apply_uidmap(pid: pid_t, map: &Uidmap) -> Result<(), IoError> {
-    unimplemented!();
 }
 
 fn read_uid_ranges(path: &str, read_inside: bool) -> Result<Vec<Range>, String>

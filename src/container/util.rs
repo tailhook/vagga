@@ -1,11 +1,10 @@
-use std::ffi::CStr;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
 use std::fs::{symlink_metadata, read_link};
 use std::os::unix::fs::{symlink, MetadataExt};
 use std::ptr::null;
 use std::path::Path;
 
-use libc::{c_int, uid_t, gid_t, c_char, c_void, timeval};
+use libc::{c_int, c_void, timeval};
 
 use super::root::temporary_change_root;
 use file_util::create_dir_mode;
@@ -14,35 +13,9 @@ use path_util::PathExt;
 
 pub type Time = f64;
 
-// pwd.h
-#[repr(C)]
-struct passwd {
-    pw_name: *mut c_char,       /* username */
-    pw_passwd: *mut u8,     /* user password */
-    pw_uid: uid_t,      /* user ID */
-    pw_gid: gid_t,      /* group ID */
-    pw_gecos: *mut u8,      /* user information */
-    pw_dir: *mut u8,        /* home directory */
-    pw_shell: *mut u8,      /* shell program */
-}
-
 extern "C" {
-    // pwd.h
-    fn getpwuid(uid: uid_t) -> *const passwd;
     // <sys/time.h>
     fn gettimeofday(time: *mut timeval, tz: *const c_void) -> c_int;
-}
-
-pub fn get_user_name(uid: uid_t) -> Result<String, String> {
-    unsafe {
-        let val = getpwuid(uid);
-        if val != null() {
-            return String::from_utf8(
-                CStr::from_ptr((*val).pw_name).to_bytes().to_vec())
-                .map_err(|e| format!("Can't decode user name: {}", e));
-        }
-    }
-    return Err(format!("User {} not found", uid));
 }
 
 pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {

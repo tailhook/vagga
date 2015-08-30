@@ -36,6 +36,7 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
         try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
         try_msg!(create_dir(&Path::new("/vagga/root/etc/apk"), true),
             "Error creating apk dir: {err}");
+        // TODO(tailhook) use specified version instead of one in capsule
         try!(copy(
             &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
             &Path::new("/vagga/root/etc/apk/repositories"))

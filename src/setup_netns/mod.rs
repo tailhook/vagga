@@ -334,8 +334,8 @@ pub fn main() {
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),
         _ => {
-            exit(1);
             error!("Unknown command {}", kind);
+            exit(1);
         }
     }
 }

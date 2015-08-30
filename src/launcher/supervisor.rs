@@ -1,10 +1,7 @@
-use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::env::current_exe;
 use std::io::{stdout, stderr};
 use std::path::Path;
-use std::rc::Rc;
 
 use argparse::{ArgumentParser};
 use signal::trap::Trap;
@@ -188,7 +185,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
 
     let mut errcode = 0;
     if error {
-        let mut errcode = 127;
+        errcode = 127;
         for &(_, ref child) in children.values() {
             child.signal(SIGTERM).ok();
         }
@@ -224,7 +221,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                                 Process {}:{} {}. Shutting down \
                                 -----------",
                                 name, pid, status);
-                            for (pid, status) in reap_zombies() {
+                            for (pid, _) in reap_zombies() {
                                 children.remove(&pid);
                             }
                             break 'signal_loop;
@@ -250,7 +247,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                     }
                 }
                 SIGCHLD => {
-                    for (pid, status) in reap_zombies() {
+                    for (pid, _) in reap_zombies() {
                         children.remove(&pid);
                     }
                     if children.len() == 0 {

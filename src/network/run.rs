@@ -1,8 +1,7 @@
 use std::env;
 use std::io::{stdout, stderr};
-use std::path::Path;
 
-use unshare::{Command, Stdio, Namespace};
+use unshare::{Command, Namespace};
 use argparse::{ArgumentParser, Store, List};
 
 use config::Config;
