@@ -3,6 +3,25 @@ Release Notes
 =============
 
 
+Vagga 0.4.0
+===========
+
+:Release Date: future
+
+* Vagga now uses "unshare" and "signal" crates for working with containers
+* Signal handling is changed:
+  * User visible changes: Ctrl+C doesn't sent twice to children (was
+    rarely noticeable), Ctrl+/ reliably kills vagga and children
+  * The only signal that is propagated by vagga to children is now SIGTERM
+  * SIGINT is never propagate to children by vagga itself (because it's usually
+    sent to process group anyway by Ctrl+C)
+  * Other signals like SIGQUIT (SIGHUP, SIGUSR1, ...), are not captured by
+    vagga, so they terminate vagga, resulting child processes are killed by OS
+    by the KILL signal).
+  * So if you want to send one of the signals except SIGTERM, send it to the
+    specific process not to vagga
+
+
 Vagga 0.3.0
 ===========
 
