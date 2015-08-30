@@ -54,22 +54,25 @@ See instructions specific for your distribution below.
 Binary Installation
 ===================
 
-Currently we only have a tarball for testing version. Stable version will be
-published as soon as 0.3 stable is released.
-
 .. note:: If you're ubuntu user you should use package. See instructions below.
 
-Visit http://files.zerogw.com/vagga/latest-testing.html to find out latest
+Visit http://files.zerogw.com/vagga/latest.html to find out latest
 tarball version. Then run the following::
 
-    wget http://files.zerogw.com/vagga/vagga-0.2.5-136-gc996703.tar.xz
-    tar -xJf vagga-0.2.5-136-gc996703.tar.xz
+    wget http://files.zerogw.com/vagga/vagga-0.3.0.tar.xz
+    tar -xJf vagga-0.3.0.tar.xz
     cd vagga
     sudo ./install.sh
 
 Or you may try more obscure way::
 
-    curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
+    curl http://files.zerogw.com/vagga/vagga-install.sh | sh
+
+
+.. note:: Similarly we have a `-testing` variant of both ways:
+
+    * http://files.zerogw.com/vagga/latest-testing.html
+    * ``curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh``
 
 
 .. _ubuntu:
