@@ -13,7 +13,7 @@ dependencies = [
  "shaman 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "unshare 0.0.1 (git+git://github.com/tailhook/unshare)",
+ "unshare 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 0.2.37 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -105,7 +105,7 @@ dependencies = [
 [[package]]
 name = "nix"
 version = "0.4.0"
-source = "git+git://github.com/carllerche/nix-rust#4f69bc358d7ab644ae766fde8bb5bdfd631f789b"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -180,11 +180,11 @@ dependencies = [
 
 [[package]]
 name = "unshare"
-version = "0.0.1"
-source = "git+git://github.com/tailhook/unshare#c95c59afba906f144c998ecf5a1710f05d162f10"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "nix 0.4.0 (git+git://github.com/carllerche/nix-rust)",
+ "nix 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
