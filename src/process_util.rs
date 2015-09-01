@@ -63,6 +63,17 @@ pub fn path_find<P: AsRef<Path>>(cmd: P, path: &str) -> Option<PathBuf> {
     None
 }
 
+pub fn env_command<P: AsRef<Path>>(cmd: P) -> Command {
+    if let Some(path) = env_path_find(cmd.as_ref()) {
+        return Command::new(path);
+    } else {
+        // Even if we didn't find a command, we should fill default path and
+        // let user inspect the failure when it happens, as more full command
+        // description will be at that time
+        return Command::new(cmd.as_ref());
+    }
+}
+
 pub fn env_path_find<P: AsRef<Path>>(cmd: P) -> Option<PathBuf> {
     env::var("PATH").map(|v| path_find(&cmd, &v[..]))
         .unwrap_or_else(|_| path_find(&cmd, DEFAULT_PATH))

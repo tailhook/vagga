@@ -8,8 +8,9 @@ use std::thread::sleep_ms;
 
 use rustc_serialize::json;
 use unshare::{Command, Stdio};
-
 use argparse::{ArgumentParser, Store, List};
+
+use process_util::env_command;
 
 fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
@@ -106,7 +107,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     // Unfortunately there is no iptables in busybox so use iptables from host
-    let mut cmd = Command::new("iptables");
+    let mut cmd = env_command("iptables");
     cmd.stdin(Stdio::null());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-o", "vagga_guest",
@@ -117,8 +118,12 @@ fn setup_gateway_namespace(args: Vec<String>) {
         debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(status) if status.success() => {},
-            err => {
-                error!("Error running command {:?}: {:?}", cmd, err);
+            Ok(status) => {
+                error!("Error running command {:?}: {}", cmd, status);
+                exit(1);
+            }
+            Err(err) => {
+                error!("Error running command {:?}: {}", cmd, err);
                 exit(1);
             }
         };
@@ -204,14 +209,14 @@ fn setup_bridge_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     // Unfortunately there is no iptables in busybox so use iptables from host
-    let mut cmd = Command::new("iptables");
+    let mut cmd = env_command("iptables");
     cmd.stdin(Stdio::null());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
                "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for &(sport, ref dip, dport) in ports.iter() {
-        let mut cmd = Command::new("iptables");
+        let mut cmd = env_command("iptables");
         cmd.stdin(Stdio::null());
         cmd.args(&["-t", "nat", "-A", "PREROUTING", "-p", "tcp", "-m", "tcp",
             "--dport", &format!("{}", sport)[..], "-j", "DNAT",
@@ -223,8 +228,12 @@ fn setup_bridge_namespace(args: Vec<String>) {
         debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(status) if status.success() => {}
-            err => {
-                error!("Error running command {:?}: {:?}", cmd, err);
+            Ok(status) => {
+                error!("Error running command {:?}: {}", cmd, status);
+                exit(1);
+            }
+            Err(err) => {
+                error!("Error running command {:?}: {}", cmd, err);
                 exit(1);
             }
         };
@@ -303,8 +312,12 @@ fn setup_guest_namespace(args: Vec<String>) {
         debug!("Running {:?}", cmd);
         match cmd.status() {
             Ok(status) if status.success() => {}
-            err => {
-                error!("Error running command {:?}: {:?}", cmd, err);
+            Ok(status) => {
+                error!("Error running command {:?}: {}", cmd, status);
+                exit(1);
+            }
+            Err(err) => {
+                error!("Error running command {:?}: {}", cmd, err);
                 exit(1);
             }
         };

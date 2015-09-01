@@ -23,7 +23,7 @@ use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use file_util::{create_dir_mode};
 use path_util::{PathExt};
-use process_util::{set_uidmap};
+use process_util::{set_uidmap, env_command};
 
 static MAX_INTERFACES: u32 = 2048;
 
@@ -42,7 +42,7 @@ pub fn namespace_dir() -> PathBuf {
 
 pub fn sudo_ip_cmd() -> Command {
     // If we are root we may skip sudo
-    let mut ip_cmd = Command::new("sudo");
+    let mut ip_cmd = env_command("sudo");
     ip_cmd.stdin(Stdio::null());
     ip_cmd.arg("ip");
     ip_cmd
@@ -50,21 +50,21 @@ pub fn sudo_ip_cmd() -> Command {
 
 pub fn sudo_sysctl() -> Command {
     // If we are root we may skip sudo
-    let mut sysctl = Command::new("sudo");
+    let mut sysctl = env_command("sudo");
     sysctl.stdin(Stdio::null());
     sysctl.arg("sysctl");
     sysctl
 }
 
 pub fn ip_cmd() -> Command {
-    let mut ip_cmd = Command::new("ip");
+    let mut ip_cmd = env_command("ip");
     ip_cmd.stdin(Stdio::null());
     ip_cmd
 }
 
 pub fn sudo_mount() -> Command {
     // If we are root we may skip sudo
-    let mut mount_cmd = Command::new("sudo");
+    let mut mount_cmd = env_command("sudo");
     mount_cmd.stdin(Stdio::null());
     mount_cmd.arg("mount");
     mount_cmd
@@ -72,7 +72,7 @@ pub fn sudo_mount() -> Command {
 
 pub fn sudo_umount() -> Command {
     // If we are root we may skip sudo
-    let mut umount_cmd = Command::new("sudo");
+    let mut umount_cmd = env_command("sudo");
     umount_cmd.stdin(Stdio::null());
     umount_cmd.arg("umount");
     umount_cmd
@@ -80,7 +80,7 @@ pub fn sudo_umount() -> Command {
 
 pub fn sudo_iptables() -> Command {
     // If we are root we may skip sudo
-    let mut iptables_cmd = Command::new("sudo");
+    let mut iptables_cmd = env_command("sudo");
     iptables_cmd.stdin(Stdio::null());
     iptables_cmd.arg("iptables");
     iptables_cmd
@@ -88,7 +88,7 @@ pub fn sudo_iptables() -> Command {
 
 pub fn iptables() -> Command {
     // If we are root we may skip sudo
-    let mut iptables_cmd = Command::new("iptables");
+    let mut iptables_cmd = env_command("iptables");
     iptables_cmd.stdin(Stdio::null());
     iptables_cmd
 }
@@ -286,15 +286,17 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         for mut cmd in commands.into_iter() {
             match cmd.status() {
                 Ok(status) if status.success() => {},
-                val => return Err(
-                    format!("Error running command {:?}: {:?}", cmd, val)),
+                Ok(status) => return Err(
+                    format!("Error running command {:?}: {}", cmd, status)),
+                Err(err) => return Err(
+                    format!("Error running command {:?}: {}", cmd, err)),
             }
         }
 
         match child.unwrap().wait() {
             Ok(status) if status.success() => {}
             Ok(status) => return Err(
-                format!("vagga_setup_netns {:?}", status)),
+                format!("vagga_setup_netns {}", status)),
             Err(e) => return Err(format!("child wait error: {}", e)),
         }
         if iptables {
@@ -314,8 +316,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 let exists = match cmd.status() {
                     Ok(status) if status.success() => true,
                     Ok(status) if status.code() == Some(1) => false,
-                    val => return Err(
-                        format!("Error running command {:?}: {:?}", cmd, val)),
+                    Ok(status) => return Err(
+                        format!("Error running command {:?}: {}", cmd, status)),
+                    Err(err) => return Err(
+                        format!("Error running command {:?}: {}", cmd, err)),
                 };
                 debug!("Checked {:?} -> {}", check_rule, exists);
 
@@ -423,8 +427,11 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
         for mut cmd in commands.into_iter() {
             match cmd.status() {
                 Ok(status) if status.success() => {}
-                val => {
-                    error!("Error running command {:?}: {:?}", cmd, val);
+                Ok(status) => {
+                    error!("Error running command {:?}: {}", cmd, status);
+                }
+                Err(err) => {
+                    error!("Error running command {:?}: {}", cmd, err);
                 }
             }
         }
@@ -516,7 +523,8 @@ fn _run_command(mut cmd: Command) -> Result<(), String> {
     debug!("Running {:?}", cmd);
     match cmd.status() {
         Ok(status) if status.success() => Ok(()),
-        code => Err(format!("Error running {:?}: {:?}",  cmd, code)),
+        Ok(status) => Err(format!("Error running {:?}: {:?}",  cmd, status)),
+        Err(err) => Err(format!("Error running {:?}: {:?}",  cmd, err)),
     }
 }
 
