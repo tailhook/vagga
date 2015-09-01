@@ -639,7 +639,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
                         "--ip", &ip[..],
                         "--hostname", hostname,
                         "--gateway-ip", "172.18.0.254"]);
-    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.unshare([Namespace::Net, Namespace::Uts].iter().cloned());
     cmd.env("TERM".to_string(),
             env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
