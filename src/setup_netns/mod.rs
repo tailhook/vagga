@@ -20,7 +20,7 @@ fn has_interface(name: &str) -> Result<bool, String> {
             try!(lineiter.next().unwrap());
             for line in lineiter {
                 let line = try!(line);
-                let mut splits = line[..].splitn(1, ':');
+                let mut splits = line[..].splitn(2, ':');
                 let interface = splits.next().unwrap();
                 if interface.trim() == name {
                     return Ok(true);

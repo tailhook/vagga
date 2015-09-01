@@ -86,7 +86,7 @@ impl<'a> MountRecord<'a> {
 
         for name in &mut parts {
             if name == "-" { break; }
-            let mut pair = name.splitn(1, ':');
+            let mut pair = name.splitn(2, ':');
             let key = pair.next();
             match key {
                 Some("shared") => {
