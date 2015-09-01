@@ -33,8 +33,7 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
             cmd.env(k, v);
         }
     }
-    cmd.env("TERM".to_string(),
-                env::var("TERM").unwrap_or("dumb".to_string()));
+    cmd.env("TERM", env::var("TERM").unwrap_or("dumb".to_string()));
     if let Ok(x) = env::var("PATH") {
         cmd.env("HOST_PATH", x);
     }
@@ -83,7 +82,6 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
 {
     let mut cmd = Command::new("/proc/self/exe");
     cmd.arg0("vagga_wrapper");
-    cmd.keep_sigmask();
     cmd.arg(&cmdname);
     cmd.args(&args);
     cmd.env_clear();

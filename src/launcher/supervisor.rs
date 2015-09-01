@@ -86,9 +86,9 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("/proc/self/exe");
         cmd.arg0("vagga_wrapper");
-        cmd.keep_sigmask();
         cmd.arg(&cmdname);
         cmd.arg(&name);
+        cmd.env_clear();
         common_child_command_env(&mut cmd, Some(workdir));
         cmd.unshare(
             [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
@@ -131,9 +131,9 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             let child = sup.children.get(name).unwrap();
             let mut cmd = Command::new("/proc/self/exe");
             cmd.arg0("vagga_wrapper");
-            cmd.keep_sigmask();
             cmd.arg(&cmdname);
             cmd.arg(&name);
+            cmd.env_clear();
             common_child_command_env(&mut cmd, Some(workdir));
             cmd.unshare(
                 [Namespace::Mount, Namespace::Ipc, Namespace::Pid]
