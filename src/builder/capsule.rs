@@ -11,18 +11,16 @@ use std::io::{Write};
 use std::path::Path;
 
 use unshare::{Command, Stdio};
-use rand::{thread_rng, Rng};
 
 use config::settings::Settings;
 use container::mount::bind_mount;
 use super::context::BuildContext;
-use super::commands::alpine::LATEST_VERSION;
+use super::commands::alpine::{LATEST_VERSION, choose_mirror};
 use super::super::file_util::create_dir;
 use path_util::PathExt;
 
 pub use self::Feature::*;
 
-static MIRRORS: &'static str = include_str!("../../alpine/MIRRORS.txt");
 
 #[derive(Clone, Copy)]
 pub enum Feature {
@@ -54,17 +52,6 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     }
 }
 
-fn choose_mirror() -> String {
-    let repos = MIRRORS
-        .split('\n')
-        .map(|x| x.trim())
-        .filter(|x| x.len() > 0 && !x.starts_with("#"))
-        .collect::<Vec<&str>>();
-    let mirror = thread_rng().choose(&repos)
-        .expect("At least one mirror should work");
-    debug!("Chosen mirror {}", mirror);
-    return mirror.to_string();
-}
 
 pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
     -> Result<(), String>

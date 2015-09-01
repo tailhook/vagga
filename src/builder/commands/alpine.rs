@@ -1,9 +1,9 @@
 use std::io::Write;
-use std::fs::{copy};
 use std::fs::File;
 use std::path::Path;
 
 use unshare::{Command, Stdio};
+use rand::{thread_rng, Rng};
 
 use super::super::super::file_util::create_dir;
 use super::super::context::{BuildContext};
@@ -14,6 +14,7 @@ use process_util::capture_stdout;
 
 
 pub static LATEST_VERSION: &'static str = "v3.1";
+static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 
 #[derive(Debug)]
@@ -22,6 +23,17 @@ pub struct AlpineInfo {
     pub base_setup: bool,
 }
 
+pub fn choose_mirror() -> String {
+    let repos = MIRRORS
+        .split('\n')
+        .map(|x| x.trim())
+        .filter(|x| x.len() > 0 && !x.starts_with("#"))
+        .collect::<Vec<&str>>();
+    let mirror = thread_rng().choose(&repos)
+        .expect("At least one mirror should work");
+    debug!("Chosen mirror {}", mirror);
+    return mirror.to_string();
+}
 
 pub fn setup_base(ctx: &mut BuildContext, version: &String)
     -> Result<(), String>
@@ -36,11 +48,12 @@ pub fn setup_base(ctx: &mut BuildContext, version: &String)
         try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
         try_msg!(create_dir(&Path::new("/vagga/root/etc/apk"), true),
             "Error creating apk dir: {err}");
-        // TODO(tailhook) use specified version instead of one in capsule
-        try!(copy(
-            &Path::new("/etc/apk/repositories"),  // Same mirror as in capsule
-            &Path::new("/vagga/root/etc/apk/repositories"))
-            .map_err(|e| format!("Error creating apk repo: {}", e)));
+        let mirror = ctx.settings.alpine_mirror.clone()
+            .unwrap_or(choose_mirror());
+        try!(File::create(&Path::new("/vagga/root/etc/apk/repositories"))
+            .and_then(|mut f| write!(&mut f, "{}{}/main\n",
+                mirror, version))
+            .map_err(|e| format!("Can't write repositories file: {}", e)));
         try!(capsule::apk_run(&[
             "--update-cache",
             "--keys-dir=/etc/apk/keys",  // Use keys from capsule

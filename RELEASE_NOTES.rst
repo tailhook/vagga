@@ -20,6 +20,8 @@ Vagga 0.4.0
     by the KILL signal).
   * So if you want to send one of the signals except SIGTERM, send it to the
     specific process not to vagga
+* Fix broken ``!Alpine``, which always installed latests known version of the
+  distribution instead specified
 
 
 Vagga 0.3.0
