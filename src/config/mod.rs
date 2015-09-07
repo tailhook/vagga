@@ -14,5 +14,6 @@ pub mod range;
 pub mod builders;
 pub mod config;
 pub mod command;
+pub mod validate;
 
 

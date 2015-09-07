@@ -11,6 +11,7 @@ use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
 use path_util::PathExt;
+use super::validate::validate_config;
 
 #[derive(RustcDecodable)]
 pub struct Config {
@@ -57,7 +58,9 @@ pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
             "Config not found in path {}", work_dir.display())),
     };
     assert!(cfg_dir.is_absolute());
-    return Ok((try!(read_config(&filename)), cfg_dir));
+    let cfg = try!(read_config(&filename));
+    try!(validate_config(&cfg));
+    return Ok((cfg, cfg_dir));
 }
 
 pub fn read_config(filename: &Path) -> Result<Config, String> {

@@ -1,0 +1,12 @@
+containers:
+
+  crash:
+    setup:
+    - !Container crash
+    - !Sh "echo hello"
+
+commands:
+
+  crash-me-not: !Command
+    container: crash
+    run: "echo hello"
