@@ -1,4 +1,4 @@
-from domaintools import custom_domain
+from sphinxcontrib.domaintools import custom_domain
 
 def setup(app):
     app.add_domain(custom_domain('VaggaOptions',
