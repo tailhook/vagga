@@ -22,6 +22,9 @@ Vagga 0.4.0
     specific process not to vagga
 * Fix broken ``!Alpine``, which always installed latests known version of the
   distribution instead specified
+* Add kill-unresponsive-after_ setting
+
+.. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 
 
 Vagga 0.3.0

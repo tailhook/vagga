@@ -3,9 +3,10 @@ use std::collections::HashMap;
 use std::io::{stdout, stderr};
 use std::path::Path;
 
+use time::{SteadyTime, Duration};
 use argparse::{ArgumentParser};
 use signal::trap::Trap;
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD};
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
 
 use container::mount::{mount_tmpfs};
@@ -238,15 +239,17 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
 
     // Stopping loop
     if children.len() > 0 {
-        for signal in trap.by_ref() {
-            match signal {
-                SIGINT => {}
-                SIGTERM => {
+        let timeo = sup.kill_unresponsive_after.unwrap_or(2);
+        let mut deadline = SteadyTime::now() + Duration::seconds(timeo as i64);
+        loop {
+            match trap.wait(deadline) {
+                Some(SIGINT) => {}
+                Some(SIGTERM) => {
                     for &(_, ref child) in children.values() {
                         child.signal(SIGTERM).ok();
                     }
                 }
-                SIGCHLD => {
+                Some(SIGCHLD) => {
                     for (pid, _) in reap_zombies() {
                         children.remove(&pid);
                     }
@@ -254,7 +257,32 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
                         break;
                     }
                 }
-                _ => unreachable!(),
+                Some(_) => unreachable!(),
+                None => {
+                    if sup.kill_unresponsive_after.is_some() {
+                        println!(
+                            "---------- \
+                            Processes {:?} are still alive. Killing ... \
+                            -----------",
+                            children.values().map(|&(name, _)| name)
+                                .collect::<Vec<_>>());
+                        for &(_, ref child) in children.values() {
+                            child.signal(SIGKILL).ok();
+                        }
+                        // Basically this deadline should never happen
+                        deadline = SteadyTime::now() + Duration::seconds(3600);
+                    } else {
+                        println!(
+                            "---------- \
+                            Failing state. Processes {:?} are still alive. \
+                            -----------\n\
+                            You may want to set kill-unresponsive-after \
+                            setting to kill them automatically",
+                            children.values().map(|&(name, _)| name)
+                                .collect::<Vec<_>>());
+                        deadline = SteadyTime::now() + Duration::seconds(5);
+                    }
+                }
             }
         }
     }

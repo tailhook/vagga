@@ -1,3 +1,5 @@
+.. default-domain:: vagga
+
 .. _commands:
 
 ========
@@ -130,3 +132,10 @@ Parameters of `!Supervise`
 ``children``
     A mapping of name to child definition of children to run. All children are
     started simultaneously.
+
+.. opt:: kill-unresponsive-after
+
+   If some process have exited (in ``stop-on-failure`` mode) vagga will send
+   TERM signal once and then will wait indefinitely until program exits or
+   use press Ctrl+C or Ctrl+/. If this setting is set, vagga will kill
+   remaining processes after specified number of seconds.
