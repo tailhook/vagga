@@ -2,13 +2,11 @@ containers:
 
   docs:
     setup:
-    - !Ubuntu trusty
-    - !Install [python-sphinx, make]
-
-  alpine-docs:
-    setup:
     - !Alpine v3.1
     - !Install [alpine-base, py-sphinx, make]
+    - !Py2Install [sphinxcontrib-domaintools, setuptools]
+    environ:
+      PYTHONPATH: /usr/lib/python2.7/site-packages/sphinxcontrib
 
   rust-musl:
     environ:
