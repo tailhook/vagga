@@ -1,5 +1,5 @@
 use std::fs::{copy, rename, set_permissions, Permissions};
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{PermissionsExt, symlink};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
@@ -49,7 +49,8 @@ pub fn read_ubuntu_codename() -> Result<String, String>
                 lsb_release_path=lsb_release_path))
 }
 
-pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String, build_type: BuildType)
+pub fn fetch_ubuntu_core(ctx: &mut BuildContext, release: &String,
+    build_type: BuildType)
     -> Result<(), String>
 {
     let url_base = "http://cdimage.ubuntu.com/ubuntu";
@@ -345,4 +346,13 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[packages::Package])
         try!(apt_install(ctx, &to_install));
     }
     return Ok(unsupp);
+}
+
+pub fn clobber_chfn() -> Result<(), String> {
+    try_msg!(symlink("/bin/true", "/vagga/root/usr/bin/.tmp.chfn"),
+        "Can't clobber chfn (symlink error): {err}");
+    try_msg!(rename("/vagga/root/usr/bin/.tmp.chfn",
+                    "/vagga/root/usr/bin/chfn"),
+        "Can't clobber chfn (rename error): {err}");
+    Ok(())
 }

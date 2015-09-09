@@ -65,6 +65,7 @@ pub struct FileInfo {
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct UbuntuReleaseInfo {
     pub version: String,
+    pub keep_chfn_command: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -230,6 +231,9 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
         ("UbuntuRelease".to_string(), Box::new(V::Structure {
             members: vec!(
                 ("version".to_string(), Box::new(V::Scalar {
+                    .. Default::default() }) as Box<V::Validator>),
+                ("keep_chfn_command".to_string(), Box::new(V::Scalar {
+                    default: Some("false".to_string()),
                     .. Default::default() }) as Box<V::Validator>),
             ),
         .. Default::default() }) as Box<V::Validator>),

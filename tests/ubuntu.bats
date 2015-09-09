@@ -83,3 +83,9 @@ setup() {
     [[ $status -eq 0 ]]
     [[ $output = 2value2 ]]
 }
+
+@test "The chfn just works (i.e. a no-op)" {
+    run vagga rename-me
+    [[ $status -eq 0 ]]
+    [[ $output = "" ]]
+}

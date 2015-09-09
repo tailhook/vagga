@@ -23,6 +23,8 @@ Vagga 0.4.0
 * Fix broken ``!Alpine``, which always installed latests known version of the
   distribution instead specified
 * Add kill-unresponsive-after_ setting
+* In ubuntu guests by default `/usr/bin/chfn` is symlinked to `/bin/true`, this
+  prevents errors on some host systems (#52)
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

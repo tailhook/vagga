@@ -37,3 +37,7 @@ commands:
     container: precise-calc
     accepts-arguments: true
     run: echo "$*" | bc
+
+  rename-me: !Command
+    container: trusty
+    run: 'chfn -f "Hello World"'

@@ -151,13 +151,16 @@ impl BuildCommand for Builder {
                 try!(configure_ubuntu(ctx, name));
 
                 if build {
-                    try!(debian::fetch_ubuntu_core(ctx, name, debian::BuildType::Daily));
+                    try!(debian::fetch_ubuntu_core(ctx,
+                        name, debian::BuildType::Daily));
                     try!(debian::init_ubuntu_core(ctx));
+                    try!(debian::clobber_chfn());
                 }
             }
             &B::UbuntuRelease(ref release_info) => {
                 if build {
-                    try!(debian::fetch_ubuntu_core(ctx, &release_info.version, debian::BuildType::Release));
+                    try!(debian::fetch_ubuntu_core(ctx,
+                        &release_info.version, debian::BuildType::Release));
                 }
 
                 let codename = try!(debian::read_ubuntu_codename());
@@ -165,6 +168,9 @@ impl BuildCommand for Builder {
 
                 if build {
                     try!(debian::init_ubuntu_core(ctx));
+                    if !release_info.keep_chfn_command {
+                        try!(debian::clobber_chfn());
+                    }
                 }
             }
             &B::UbuntuRepo(ref repo) => {
