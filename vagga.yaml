@@ -58,17 +58,22 @@ containers:
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
 
-  test:
+  testbase:
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse
-    - !BuildDeps [wget, git, make]
+    - !BuildDeps [wget, git]
+    - !Install [make]
     - !Sh |
         set -ex
         cd /tmp
         git clone git://github.com/sstephenson/bats
         cd bats
         ./install.sh /usr
+
+  test:
+    setup:
+    - !Container testbase
     - !Depends vagga
     - !Depends apk
     - !Depends busybox
