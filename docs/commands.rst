@@ -36,21 +36,21 @@ Common Parameters
 These parameters work for both kinds of commands:
 
 
-``description``
+.. opt:: description
     Description that is printed in when vagga is runned without arguments
 
-``banner``
+.. opt:: banner
     The message that is printed before running process(es). Useful for
     documenting command behavior.
 
-``banner-delay``
+.. opt:: banner-delay
     The seconds to sleep before printing banner. For example if commands run
     a web service, banner may provide a URL for accessing the service. The
     delay is used so that banner is printed after service startup messages not
     before.  Note that currently vagga sleeps this amount of seconds even
     if service is failed immediately.
 
-``epilog``
+.. opt:: epilog
     The message printed after command is run. It's printed only if command
     returned zero exit status. Useful to print further instructions, e.g. to
     display names of build artifacts produced by command.
@@ -59,33 +59,33 @@ These parameters work for both kinds of commands:
 Parameters of `!Command`
 ========================
 
-``container``
+.. opt:: container
     The container to run command in
 
-``run``
+.. opt:: run
     The command to run. It's either a string (which is passed to
     ``/bin/sh -c``) or a list of command and arguments.
 
-``work-dir``
+.. opt:: work-dir
     The working directory to run in. Path relative to project root. By
     default command is run in the same directory where vagga started (sans
     the it's mounted as ``/work`` so the output of ``pwd`` would seem to be
     different)
 
-``accepts-arguments``
+.. opt:: accepts-arguments
     Denotes whether command accepts additional arguments. Defaults to ``false``
     for shell commands, and ``true`` for regular commands.
 
-``environ``
+.. opt:: environ
     The mapping of environment to pass to command. This overrides environment
     specified in container on value by value basis.
 
-``pid1mode``
+.. opt:: pid1mode
     This denotes what is run as pid 1 in container. It may be ``wait``,
     ``wait-all-children`` or ``exec``. The default ``wait`` is ok for most
     regular processes. See :ref:`pid1mode` for more info.
 
-``write-mode``
+.. opt:: write-mode
     The parameter specifies how container's base file system is used. By
     default container is immutable (corresponds to the ``read-only`` value of
     the parameter), which means you can only write to the ``/tmp`` or
@@ -99,12 +99,12 @@ Parameters of `!Command`
     ``vagga _build --force container_name`` to fix base container if that was
     modified.
 
-``user-id``
+.. opt:: user-id
     The user id to run command as. If the ``external-user-id`` is omitted this
     has same effect like using ``sudo -u`` inside container (except it's user
     id instead of user name)
 
-``external-user-id``
+.. opt:: external-user-id
     (experimental) This option allows to map the ``user-id`` as seen by
     command itself to some other user id inside container namespace (the
     namespace which is used to build container). To make things a little less
@@ -125,11 +125,11 @@ Parameters of `!Command`
 Parameters of `!Supervise`
 ==========================
 
-``mode``
+.. opt:: mode
     The set of processes to supervise and mode. See :ref:`supervision` for more
     info
 
-``children``
+.. opt:: children
     A mapping of name to child definition of children to run. All children are
     started simultaneously.
 
