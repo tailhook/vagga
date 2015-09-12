@@ -1,10 +1,10 @@
 use std::collections::BTreeSet;
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use std::io::{stdout, stderr};
 use std::path::Path;
 
 use time::{SteadyTime, Duration};
-use argparse::{ArgumentParser};
+use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
@@ -29,6 +29,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>)
     -> Result<i32, String>
 {
+    let mut only: Vec<String> = Vec::new();
+    let mut exclude: Vec<String> = Vec::new();
     if sup.mode != stop_on_failure {
         panic!("Only stop-on-failure mode implemented");
     }
@@ -37,6 +39,12 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         let mut ap = ArgumentParser::new();
         ap.set_description(sup.description.as_ref().map(|x| &x[..])
             .unwrap_or("Run multiple processes simultaneously"));
+        ap.refer(&mut only).metavar("PROCESS_NAME")
+            .add_option(&["--only"], List, "
+                Only run specified processes");
+        ap.refer(&mut exclude).metavar("PROCESS_NAME")
+            .add_option(&["--exclude"], List, "
+                Don't run specified processes");
         // TODO(tailhook) implement --only and --exclude
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -53,7 +61,15 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     let mut containers_host_net = vec!();
     let mut forwards = vec!();
     let mut ports = vec!();
-    for (name, child) in sup.children.iter() {
+    let filtered_children = sup.children
+        .iter().filter(|&(ref name, _)| {
+            if only.len() > 0 {
+                only.iter().find(|x| name == x).is_some()
+            } else {
+                exclude.iter().find(|x| name == x).is_none()
+            }
+        });
+    for (name, child) in filtered_children {
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());

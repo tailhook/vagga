@@ -27,3 +27,31 @@ setup() {
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
+
+@test "generic: The supervise --only" {
+    run vagga two-lines --only first-line
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "hello" ]]
+
+    run vagga two-lines --only second-line
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+}
+
+@test "generic: The supervise --exclude" {
+    run vagga two-lines --exclude second-line
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "hello" ]]
+
+    run vagga two-lines --exclude first-line
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+}
