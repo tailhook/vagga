@@ -15,7 +15,7 @@ log = "*"
 time = "*"
 env_logger = "*"
 url = "*"
-unshare = "0.1"
+unshare = "0.1.1"
 signal = "0.1.2"
 
 [[bin]]

@@ -5,7 +5,6 @@ use std::process::exit;
 use std::io::{Read, Write};
 use std::os::unix::io::FromRawFd;
 
-use nix::unistd::dup2;
 use argparse::{ArgumentParser, Store};
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
@@ -85,11 +84,6 @@ pub fn run() -> i32 {
 }
 
 pub fn main() {
-    // let's make stdout safer
-    // TODO(tailhook) just pass output descriptor as #3 or something
-    dup2(1, 3).unwrap();
-    dup2(2, 1).unwrap();
-
     let val = run();
     exit(val);
 }

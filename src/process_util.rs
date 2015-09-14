@@ -3,7 +3,7 @@ use std::io::{Read};
 use std::path::{Path, PathBuf};
 
 use libc::getuid;
-use unshare::{Command, Stdio, ExitStatus, UidMap, GidMap};
+use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap};
 
 use container::uidmap::{Uidmap};
 use path_util::PathExt;
@@ -25,15 +25,15 @@ pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     Ok(buf)
 }
 
-pub fn capture_stdout_status(mut cmd: Command)
+pub fn capture_fd3_status(mut cmd: Command)
     -> Result<(ExitStatus, Vec<u8>), String>
 {
-    cmd.stdout(Stdio::piped());
+    cmd.file_descriptor(3, Fd::piped_write());
     info!("Running {:?}", cmd);
     let mut child = try!(cmd.spawn()
         .map_err(|e| format!("{}", e)));
     let mut buf = Vec::with_capacity(1024);
-    try!(child.stdout.take().unwrap().read_to_end(&mut buf)
+    try!(child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
         .map_err(|e| format!("Error reading from pipe: {}", e)));
     let status = try!(child.wait()
         .map_err(|e| format!("Error waiting for child: {}", e)));

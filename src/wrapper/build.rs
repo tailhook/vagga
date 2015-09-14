@@ -18,7 +18,7 @@ use config::builders::Builder as B;
 use config::builders::Source as S;
 use file_util::create_dir;
 use path_util::PathExt;
-use process_util::{capture_stdout_status, set_uidmap};
+use process_util::{capture_fd3_status, set_uidmap};
 use super::Wrapper;
 use super::setup;
 
@@ -97,7 +97,7 @@ pub fn get_version_hash(container: &String, wrapper: &Wrapper)
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE", x);
     }
-    match capture_stdout_status(cmd) {
+    match capture_fd3_status(cmd) {
         Ok((ExitStatus::Exited(0), val)) => {
             String::from_utf8(val)
                 .map_err(|e| format!("Can't decode version: {}", e))
