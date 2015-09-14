@@ -8,6 +8,6 @@ def setup(app):
         elements = dict(
             opt = dict(
                 objname      = "Yaml Option",
-                indextemplate = "option: %s",
+                indextemplate = "single: %s",
             ),
         )))

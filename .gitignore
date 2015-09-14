@@ -1,6 +1,7 @@
 /*.rlib
 /*.a
 /*.o
+*.pyc
 .vagga
 /tmp
 /docs/_build

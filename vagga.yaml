@@ -2,7 +2,7 @@ containers:
 
   docs:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.2
     - !Install [alpine-base, py-sphinx, make]
     - !Py2Requirements docs/requirements.txt
 
@@ -87,26 +87,10 @@ commands:
     container: docs
     run: [env]
 
-  docs-bash: !Command
-    container: docs
-    run: [bash]
-
-  build-docs: !Command
+  docs: !Command
     description: Build vagga documentation
     container: docs
-    run: [make]
-    work-dir: docs
-
-  build-docs-apline: !Command
-    description: Build vagga documentation (by alpine linux)
-    container: alpine-docs
-    run: [make]
-    work-dir: docs
-
-  html-docs: !Command
-    description: Build vagga documentation (html version)
-    container: docs
-    run: make html
+    run: [make, html]
     work-dir: docs
 
   make: !Command
