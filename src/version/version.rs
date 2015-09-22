@@ -1,8 +1,10 @@
+use std::io;
 use std::io::{BufReader, BufRead, Read};
 use std::fs::File;
 use std::os::unix::ffi::OsStrExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use shaman::sha2::Sha256;
 use rustc_serialize::json;
 
 use config::Config;
@@ -12,29 +14,52 @@ use config::builders::Builder as B;
 use config::builders::Source as S;
 use shaman::digest::Digest;
 use container::vagga::container_ver;
-use self::HashResult::*;
+use self::Error::{New, ContainerNotFound};
 
 
-pub enum HashResult {
-    Hashed,
-    New,
-    Error(String)
+quick_error! {
+    /// Versioning error
+    #[derive(Debug)]
+    pub enum Error {
+        /// Hash sum can't be calculated because some files need to be
+        /// generated during build
+        New {
+            description("dependencies are not ready")
+        }
+        /// Some error occured. Unfortunately all legacy errors are strings
+        String(s: String) {
+            from()
+            description("error versioning dependencies")
+            display("version error: {}", s)
+        }
+        /// I/O error
+        Io(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("io error")
+            display("Error reading {:?}: {}", path, err)
+        }
+        /// Container needed for build is not found
+        ContainerNotFound(name: String) {
+            description("container not found")
+            display("container {:?} not found", name)
+        }
+    }
 }
 
-
 pub trait VersionHash {
-    fn hash(&self, cfg: &Config, hash: &mut Digest) -> HashResult;
+    fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error>;
 }
 
 
 impl VersionHash for Builder {
-    fn hash(&self, cfg: &Config, hash: &mut Digest) -> HashResult {
+    fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
         match self {
             &B::Py2Requirements(ref fname) | &B::Py3Requirements(ref fname)
             => {
-                match
-                    File::open(&Path::new("/work").join(fname))
-                    .and_then(|f| {
+                let path = Path::new("/work").join(fname);
+                let err = |e| Error::Io(e, path.clone());
+                File::open(&path)
+                .and_then(|f| {
                         let f = BufReader::new(f);
                         for line in f.lines() {
                             let line = try!(line);
@@ -47,58 +72,41 @@ impl VersionHash for Builder {
                             hash.input(chunk.as_bytes());
                         }
                         Ok(())
-                    })
-                {
-                    Err(e) => return Error(format!("Can't read file: {}", e)),
-                    Ok(()) => return Hashed,
-                }
+                }).map_err(err)
             }
             &B::Depends(ref filename) => {
-                match
-                    File::open(&Path::new("/work").join(filename))
-                    .and_then(|mut f| {
-                        loop {
-                            let mut chunk = [0u8; 8*1024];
-                            let bytes = match f.read(&mut chunk[..]) {
-                                Ok(0) => break,
-                                Ok(bytes) => bytes,
-                                Err(e) => return Err(e),
-                            };
-                            hash.input(&chunk[..bytes]);
-                        }
-                        Ok(())
-                    })
-                {
-                    Err(e) => return Error(format!("Can't read file: {}", e)),
-                    Ok(()) => return Hashed,
-                }
+                let path = Path::new("/work").join(filename);
+                let err = |e| Error::Io(e, path.clone());
+                File::open(&path)
+                .and_then(|mut f| {
+                    loop {
+                        let mut chunk = [0u8; 8*1024];
+                        let bytes = match f.read(&mut chunk[..]) {
+                            Ok(0) => break,
+                            Ok(bytes) => bytes,
+                            Err(e) => return Err(e),
+                        };
+                        hash.input(&chunk[..bytes]);
+                    }
+                    Ok(())
+                }).map_err(err)
             }
             &B::Container(ref name) => {
-                let cont = match cfg.containers.get(name) {
-                    Some(cont) => cont,
-                    None => {
-                        return Error(format!("Container {:?} not found",
-                                             name));
-                    }
-                };
+                let cont = try!(cfg.containers.get(name)
+                    .ok_or(ContainerNotFound(name.to_string())));
                 for b in cont.setup.iter() {
                     debug!("Versioning setup: {:?}", b);
-                    match b.hash(cfg, hash) {
-                        Hashed => continue,
-                        New => return New,  // Always rebuild
-                        Error(e) => {
-                            return Error(format!("{:?}: {}", name, e));
-                        }
-                    }
+                    try!(b.hash(cfg, hash));
                 }
-                Hashed
+                Ok(())
             }
             &B::SubConfig(ref sconfig) => {
                 let path = match sconfig.source {
                     S::Container(ref container) => {
                         let version = match container_ver(container) {
                             Ok(ver) => ver,
-                            Err(_) => return New,  // TODO(tailhook) better check
+                            // TODO(tailhook) better check
+                            Err(_) => return Err(New),
                         };
                         Path::new("/vagga/base/.roots")
                             .join(version).join("root")
@@ -111,30 +119,14 @@ impl VersionHash for Builder {
                         Path::new("/work").join(&sconfig.path)
                     }
                 };
-                let subcfg = match read_config(&path) {
-                    Ok(cfg) => cfg,
-                    Err(e) => return Error(e),
-                };
-                let cont = match subcfg.containers.get(&sconfig.container) {
-                    Some(cont) => cont,
-                    None => {
-                        return Error(format!(
-                            "Container {:?} not found in {:?}",
-                            sconfig.container, sconfig.path));
-                    }
-                };
+                let subcfg = try!(read_config(&path));
+                let cont = try!(subcfg.containers.get(&sconfig.container)
+                    .ok_or(ContainerNotFound(sconfig.container.to_string())));
                 for b in cont.setup.iter() {
                     debug!("Versioning setup: {:?}", b);
-                    match b.hash(cfg, hash) {
-                        Hashed => continue,
-                        New => return New,  // Always rebuild
-                        Error(e) => {
-                            return Error(format!("{:?}: {}",
-                                sconfig.container, e));
-                        }
-                    }
+                    try!(b.hash(cfg, hash));
                 }
-                Hashed
+                Ok(())
             }
             &B::CacheDirs(ref map) => {
                 for (k, v) in map.iter() {
@@ -143,7 +135,7 @@ impl VersionHash for Builder {
                     hash.input(v.as_bytes());
                     hash.input(b"\0");
                 }
-                Hashed
+                Ok(())
             }
             &B::Text(ref map) => {
                 for (k, v) in map.iter() {
@@ -152,12 +144,39 @@ impl VersionHash for Builder {
                     hash.input(v.as_bytes());
                     hash.input(b"\0");
                 }
-                Hashed
+                Ok(())
             }
             _ => {
                 hash.input(json::encode(self).unwrap().as_bytes());
-                Hashed
+                Ok(())
             }
         }
     }
+}
+
+pub fn all(setup: &[Builder], cfg: &Config)
+    -> Result<Sha256, (String, Error)>
+{
+    debug!("Versioning items: {}", setup.len());
+
+    let mut hash = Sha256::new();
+
+    let mut buf = Vec::with_capacity(1000);
+    File::open(&Path::new("/proc/self/uid_map"))
+               .and_then(|mut f| f.read_to_end(&mut buf))
+               .ok().expect("Can't read uid_map");
+    hash.input(&buf);
+
+    let mut buf = Vec::with_capacity(1000);
+    File::open(&Path::new("/proc/self/gid_map"))
+               .and_then(|mut f| f.read_to_end(&mut buf))
+               .ok().expect("Can't read gid_map");
+    hash.input(&buf);
+
+    for b in setup.iter() {
+        debug!("Versioning setup: {:?}", b);
+        try!(b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e)));
+    }
+
+    Ok(hash)
 }

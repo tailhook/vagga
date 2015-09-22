@@ -5,13 +5,14 @@ extern crate libc;
 extern crate nix;
 extern crate rand;
 extern crate rustc_serialize;
-#[macro_use] extern crate log;
 extern crate env_logger;
 extern crate argparse;
 extern crate quire;
 extern crate time;
 extern crate unshare;
 extern crate signal;
+#[macro_use] extern crate log;
+#[macro_use] extern crate quick_error;
 
 #[macro_use] mod macros;
 mod config;
