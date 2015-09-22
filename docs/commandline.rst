@@ -1,3 +1,5 @@
+.. highlight:: bash
+
 ==================
 Vagga Command Line
 ==================
@@ -9,7 +11,7 @@ project root directory.
 When running ``vagga`` without arguments it displays a short summary of which
 commands are defined by ``vagga.yaml``, like this::
 
-    > vagga
+    $ vagga
     Available commands:
         run                 Run mysample project
         build-docs          Build documentation using sphinx

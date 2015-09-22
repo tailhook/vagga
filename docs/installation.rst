@@ -1,3 +1,5 @@
+.. highlight:: bash
+
 .. _installation:
 
 ============
@@ -59,20 +61,23 @@ Binary Installation
 Visit http://files.zerogw.com/vagga/latest.html to find out latest
 tarball version. Then run the following::
 
-    wget http://files.zerogw.com/vagga/vagga-0.3.0.tar.xz
-    tar -xJf vagga-0.3.0.tar.xz
-    cd vagga
-    sudo ./install.sh
+    $ wget http://files.zerogw.com/vagga/vagga-0.3.0.tar.xz
+    $ tar -xJf vagga-0.3.0.tar.xz
+    $ cd vagga
+    $ sudo ./install.sh
 
 Or you may try more obscure way::
 
-    curl http://files.zerogw.com/vagga/vagga-install.sh | sh
+    $ curl http://files.zerogw.com/vagga/vagga-install.sh | sh
 
 
 .. note:: Similarly we have a `-testing` variant of both ways:
 
     * http://files.zerogw.com/vagga/latest-testing.html
-    * ``curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh``
+
+    .. code-block:: bash
+
+       $ curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
 
 
 .. _ubuntu:
@@ -133,8 +138,8 @@ For old ubuntu you need `uidmap`. It has no dependencies. So if your
 ubuntu release doesn't have `uidmap` package (as 12.04 does), just fetch it
 from newer ubuntu release::
 
-    wget http://gr.archive.ubuntu.com/ubuntu/pool/main/s/shadow/uidmap_4.1.5.1-1ubuntu9_amd64.deb
-    sudo dpkg -i uidmap_4.1.5.1-1ubuntu9_amd64.deb
+    $ wget http://gr.archive.ubuntu.com/ubuntu/pool/main/s/shadow/uidmap_4.1.5.1-1ubuntu9_amd64.deb
+    $ sudo dpkg -i uidmap_4.1.5.1-1ubuntu9_amd64.deb
 
 Then run same sequence of commands, you run for more recent releases:
 
@@ -148,8 +153,8 @@ If your ubuntu is older, or you upgraded it without recreating a user, you
 need to fill in ``/etc/subuid`` and ``/etc/subgid``. Command should be similar
 to the following::
 
-    echo "$(id -un):100000:65536" | sudo tee /etc/subuid
-    echo "$(id -un):100000:65536" | sudo tee /etc/subgid
+    $ echo "$(id -un):100000:65536" | sudo tee /etc/subuid
+    $ echo "$(id -un):100000:65536" | sudo tee /etc/subgid
 
 Or alternatively you may edit files by hand.
 
@@ -206,11 +211,11 @@ package and puts them into ``dist/``.
 
 To install run::
 
-    make install
+    $ make install
 
 or just (in case you don't have ``make`` in host system)::
 
-    ./install.sh
+    $ ./install.sh
 
 Both support ``PREFIX`` and ``DESTDIR`` environment variables.
 

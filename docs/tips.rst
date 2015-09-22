@@ -1,3 +1,5 @@
+.. highlight:: bash
+
 ===============
 Tips And Tricks
 ===============
@@ -10,6 +12,8 @@ There are :ref:`settings` which allow to set common directory for cache for
 all projects that use vagga. I.e. you might add the following to
 ``$HOME/.config/vagga/settings.yaml``:
 
+.. code-block:: yaml
+
     cache-dir: ~/.cache/vagga/cache
 
 Currently you must create directory by hand.
@@ -19,13 +23,13 @@ Multiple Build Attempts
 =======================
 
 Despite of all caching vagga does it's usually to slow to rebuild big container
-for trying to install single package. You might try something like this:
+for trying to install single package. You might try something like this::
 
-    vagga _run --writeable container_name pip install pyzmq
+    $ vagga _run --writeable container_name pip install pyzmq
 
 Note the flag ``--writeable`` or shorter ``-W`` doesn't write into container
 itself, but creates a (hard-linked) copy, which is destructed on exit. So to
-run multiple commands you might use bash:
+run multiple commands you might use bash::
 
     host-shell$ vagga _run -W container bash
     root@localhost:/work# apt-get update
@@ -55,7 +59,7 @@ If when starting vagga you're getting::
 
 Then you're probably don't have apropriate kernel option enabled. You may try::
 
-    sysctl -w kernel.unprivileged_userns_clone=1
+    $ sysctl -w kernel.unprivileged_userns_clone=1
 
 If that works, you should add it to your system startup. If it doesn't
 unfortunately it may mean you need to recompile the kernel. It's not that
@@ -92,7 +96,7 @@ column is a time of this specific step.
 You should also run build at least twice to see the impact of package caching.
 To rebuild container run::
 
-    vagga _build --force <container_name>
+    $ vagga _build --force <container_name>
 
 
 How to Find Out Versions of Installed Packages?
@@ -116,11 +120,10 @@ differ.
 The files are at parent directory of the container's filesystem, so can be
 looked like this::
 
-    cat .vagga/<container_name>/../pip3-freeze.txt
+    $ cat .vagga/<container_name>/../pip3-freeze.txt
 
 Or specific version can be looked::
 
-    cat .vagga/.roots/<container_name>.<hash>/pip3-freeze.txt
+    $ cat .vagga/.roots/<container_name>.<hash>/pip3-freeze.txt
 
 The latter form is useful to compare with old version of the same container.
-

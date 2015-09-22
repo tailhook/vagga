@@ -368,6 +368,19 @@ The following ``pip`` package specification formats are supported:
 * The ``git+`` and ``hg+`` links (the git and mercurial are installed as build
   dependency automatically)
 
+  .. note::
+     In Ubuntu you may also need to install ``ca-certificates`` package
+     to be able to install ``git+/hg+`` python packages:
+
+     .. code-block:: yaml
+
+        setup:
+        - !Ubuntu trusty
+        - !Install
+          - ca-certificates
+        - !Py2Install
+          - "git+https://github.com/KeepSafe/aiohttp#egg=aiohttp"
+
 All other forms may work but not supported. Specifying command-line arguments
 instead of package names is not supported. To configure pip use ``!PipConfig``
 directive. In the example there are full list of parameters:

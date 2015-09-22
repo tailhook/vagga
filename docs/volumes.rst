@@ -1,3 +1,5 @@
+.. highlight:: yaml
+
 .. _volumes:
 
 =======
@@ -10,20 +12,22 @@ default configuration is similar to the following:
 .. code-block:: yaml
 
     volumes:
-        /tmp: !Tmpfs
-            size: 100Mi
-            mode: 0o1777
+      /tmp: !Tmpfs
+        size: 100Mi
+        mode: 0o1777
 
-.. note:: Volumes are **not** mounted during container build, only when
+.. warning:: Volumes are **not** mounted during container build, only when
    some command is run.
 
 Available volume types:
 
 ``!Tmpfs``
     Mounts ``tmpfs`` filesystem. There are two parameters for this kind of
-    volume: ``size`` -- limit for filesystem size in bytes. You may use
-    suffixes ``k, M, G, ki, Mi, Gi`` for bigger units. The ones with ``i``
-    are for power of two units, the other ones are for power of ten.
+    volume:
+      * ``size`` -- limit for filesystem size in bytes. You may use
+        suffixes ``k, M, G, ki, Mi, Gi`` for bigger units. The ones with ``i``
+        are for power of two units, the other ones are for power of ten;
+      * ``mode`` -- filesystem mode.
 
 ``!VaggaBin``
     Mounts vagga binary directory inside the container (usually it's contained

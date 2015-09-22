@@ -44,13 +44,13 @@ Let me show an example:
 .. code-block:: yaml
 
   commands:
-    run_full_app:
-      supervise-mode: stop-on-failure
-      supervise:
-        web:
+    run_full_app: !Supervise
+      mode: stop-on-failure
+      children:
+        web: !Command
           container: python
           run: "python manage.py runserver"
-        celery:
+        celery: !Command
           container: python
           run: "python manage.py celery worker"
 
@@ -84,7 +84,7 @@ This mode is intended for running some batch processing of multiple commands
 in multiple containers. All processes are run in parallel, like with other
 modes.
 
-.. note:: depending on pid1mode of each proccess in each container vagga will
+.. note:: Depending on ``pid1mode`` of each proccess in each container vagga will
    wait either only for process spawned by vagga (``pid1mode: wait`` or
    ``pidmode: exec``), or for all (including daemonized) processes spawned by
    that command (``pid1mode: wait-all-children``). See :ref:`pid1mode` for
@@ -100,7 +100,7 @@ processes is dead, it will be restarted without messing with other processes.
 It's not recommended mode for workstations but may be useful for staging
 server (Currenly, we do not recommend running vagga in production at all).
 
-.. note:: the whole container is restarted on process failure, so ``/tmp`` is
+.. note:: The whole container is restarted on process failure, so ``/tmp`` is
    clean, all daemonized processes are killed, etc. See also :ref:`pid1mode`.
 
 
@@ -114,11 +114,13 @@ Restarting a Subset Of Processes
 
 Sometimes you may work only on one component, and don't want to restart the
 whole bunch of processes to test just one thing. You may run two supervisors,
-in different tabs of a terminal. E.g::
+in different tabs of a terminal. E.g:
+
+.. code-block:: bash
 
     # run everything, except the web process we are debugging
-    > vagga run_full_app --exclude web
+    $ vagga run_full_app --exclude web
     # then in another tab
-    > vagga run_full_app --only web
+    $ vagga run_full_app --only web
 
 Then you can restart ``web`` many times, without restarting everything.
