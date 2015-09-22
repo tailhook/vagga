@@ -24,7 +24,8 @@ Vagga 0.4.0
   distribution instead specified
 * Add kill-unresponsive-after_ setting
 * In ubuntu guests by default `/usr/bin/chfn` is symlinked to `/bin/true`, this
-  prevents errors on some host systems (#52)
+  prevents errors on some host systems (#52), this changes hash of the
+  ``!UbuntuRelease`` step
 * Fix ``--only`` and ``--exclude`` for supervision commands (was broken since
   0.2.0)
 
