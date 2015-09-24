@@ -1,0 +1,63 @@
+#
+# Sample Vagga config for installing and running Redis Server v3.0
+# in Ubuntu 15.04 box.
+#
+
+containers:
+  ubuntu:
+    setup:
+    - !UbuntuRelease {version: 15.04}
+    - !UbuntuUniverse
+    - !Sh apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C7917B12
+    - !UbuntuRepo
+      url: http://ppa.launchpad.net/chris-lea/redis-server/ubuntu
+      suite: vivid
+      components: [main]
+    - !Install
+      - redis-server
+    environ:
+      REDIS_PORT1: 6380
+      REDIS_PORT2: 6381
+
+commands:
+
+  redis-server: !Command
+    description: Run instance of Redis server
+    container: ubuntu
+    run: |
+      redis-server --daemonize no --port $REDIS_PORT1 --logfile "" --loglevel debug
+
+  cluster: !Supervise
+    description: Run 2 instances of redis in cluster mode and provide redis-cli
+    mode: stop-on-failure
+    kill-unresponsive-after: 1
+    children:
+      redis1: !Command
+        container: ubuntu
+        run: |
+          redis-server --daemonize no \
+            --port $REDIS_PORT1 \
+            --cluster-enabled yes \
+            --cluster-config-file /tmp/cluster.conf \
+            --logfile /work/redis-node-1.log \
+            --dir /tmp \
+            --appendonly no
+
+      redis2: !Command
+        container: ubuntu
+        run: |
+          redis-server --daemonize no \
+            --port $REDIS_PORT2 \
+            --cluster-enabled yes \
+            --cluster-config-file /tmp/cluster.conf \
+            --logfile /work/redis-node-2.log \
+            --dir /tmp \
+            --appendonly no
+
+      meet-nodes: !Command
+        container: ubuntu
+        run: |
+          until [ "$(redis-cli -p $REDIS_PORT1 ping 2>/dev/null)" ]; do sleep 1; done;
+          until [ "$(redis-cli -p $REDIS_PORT2 ping 2>/dev/null)" ]; do sleep 1; done;
+          redis-cli -p $REDIS_PORT1 CLUSTER MEET 127.0.0.1 $REDIS_PORT2;
+          redis-cli -p $REDIS_PORT1;

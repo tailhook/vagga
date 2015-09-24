@@ -1,0 +1,34 @@
+#
+# Sample Vagga configuration for running PostgreSQL server
+#
+
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !Install
+      - postgresql-9.3
+    - !EnsureDir /data
+    environ:
+      PG_PORT: 5433   # Port of host to use
+      PG_DB: vagga-test
+      PG_USER: vagga
+      PG_PASSWORD: vagga
+      PGDATA: /data
+      PG_BIN: /usr/lib/postgresql/9.3/bin
+    volumes:
+      /data: !Tmpfs
+        size: 100M
+        mode: 0o700
+
+commands:
+  psql: !Command
+    description: Run postgres shell
+    container: ubuntu
+    run: |
+      chown postgres:postgres $PGDATA;
+      su postgres -c "$PG_BIN/pg_ctl initdb";
+      su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+      su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
+      su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
+      psql postgres://$PG_USER:$PG_PASSWORD@127.0.0.1/$PG_DB
