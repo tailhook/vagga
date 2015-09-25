@@ -4,7 +4,7 @@ use std::path::{Path};
 use std::process::exit;
 
 use config::find_config;
-use argparse::{ArgumentParser, Store, List, Collect};
+use argparse::{ArgumentParser, Store, List, Collect, StoreFalse};
 use super::path_util::ToRelative;
 
 mod list;
@@ -21,6 +21,7 @@ pub fn run() -> i32 {
     let mut args = vec!();
     let mut set_env = Vec::<String>::new();
     let mut propagate_env = Vec::<String>::new();
+    let mut allow_build = true;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -37,6 +38,10 @@ pub fn run() -> i32 {
           .add_option(&["-e", "--use-env"], Collect,
                 "Propagate variable VAR into command environment")
           .metavar("VAR");
+        ap.refer(&mut allow_build)
+            .add_option(&["--no-build"], StoreFalse, "
+                Do not build container even if it is out of date. Return error
+                code 29 if it's out of date.");
         ap.refer(&mut cname)
           .add_argument("command", Store,
                 "A vagga command to run");
@@ -110,19 +115,22 @@ pub fn run() -> i32 {
             list::print_list(&config, args)
         }
         "_build_shell" | "_clean" | "_version_hash" => {
-            user::run_wrapper(Some(&int_workdir), cname, args, true)
+            user::run_wrapper(Some(&int_workdir), cname, args, true, None)
         }
         "_build" => {
             build::build_command(&config, args)
         }
         "_run" => {
-            underscore::run_command(&config, &int_workdir, cname, args)
+            underscore::run_command(&config, &int_workdir, cname, args,
+                allow_build)
         }
         "_run_in_netns" => {
-            underscore::run_in_netns(&config, &int_workdir, cname, args)
+            underscore::run_in_netns(&config, &int_workdir, cname, args,
+                allow_build)
         }
         _ => {
-            user::run_user_command(&config, &int_workdir, cname, args)
+            user::run_user_command(&config, &int_workdir, cname, args,
+                allow_build)
         }
     };
 

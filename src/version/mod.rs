@@ -6,13 +6,14 @@ use std::io::{Write};
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store};
-use shaman::digest::Digest;
 
 use config::read_config;
 use config::Settings;
 
 
 mod version;
+
+pub use self::version::{short_version, Error};
 
 
 pub fn run() -> i32 {
@@ -43,7 +44,7 @@ pub fn run() -> i32 {
     let cont = cfg.containers.get(&container)
         .expect("Container not found");  // TODO
 
-    let mut hash = match version::all(&cont.setup[..], &cfg) {
+    let hash = match version::long_version(&cont, &cfg) {
         Ok(hash) => hash,
         Err((cmd, e)) => {
             error!("Error versioning command {}: {}", cmd, e);
@@ -51,8 +52,8 @@ pub fn run() -> i32 {
         }
     };
 
-    debug!("Got hash {:?}", hash.result_str());
-    match unsafe { File::from_raw_fd(3) }.write_all(hash.result_str().as_bytes()) {
+    debug!("Got hash {:?}", hash);
+    match unsafe { File::from_raw_fd(3) }.write_all(hash.as_bytes()) {
         Ok(()) => {}
         Err(e) => {
             error!("Error writing hash: {}", e);

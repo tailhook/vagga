@@ -11,7 +11,6 @@ use unshare::{Command, UidMap};
 use config::command::CommandInfo;
 use config::command::WriteMode;
 use container::uidmap::{map_users};
-use container::vagga::container_ver;
 
 use super::setup;
 use super::Wrapper;
@@ -63,9 +62,8 @@ pub fn commandline_cmd(command: &CommandInfo,
         WriteMode::transient_hard_link_copy
         => setup::WriteMode::TransientHardlinkCopy(pid),
     };
-    let cont_ver = try!(container_ver(&command.container));
-    try!(setup::setup_filesystem(cconfig,
-        write_mode, &cont_ver));
+    let cont_ver = wrapper.root.as_ref().unwrap();
+    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
 
     let mut env = try!(setup::get_environment(cconfig));
     for (k, v) in command.environ.iter() {

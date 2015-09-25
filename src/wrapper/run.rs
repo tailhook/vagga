@@ -9,7 +9,6 @@ use argparse::{ArgumentParser, Store, List, StoreTrue};
 use unshare::{Command};
 
 use container::uidmap::{map_users};
-use container::vagga::container_ver;
 use super::setup;
 use super::Wrapper;
 use path_util::PathExt;
@@ -71,8 +70,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         false => setup::WriteMode::ReadOnly,
         true => setup::WriteMode::TransientHardlinkCopy(pid),
     };
-    let cont_ver = try!(container_ver(&container));
-    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
+    let container_ver = wrapper.root.as_ref().unwrap();
+    try!(setup::setup_filesystem(cconfig, write_mode, container_ver));
 
     let env = try!(setup::get_environment(cconfig));
     let mut cpath = PathBuf::from(&command);

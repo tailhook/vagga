@@ -3,7 +3,7 @@ use std::io::{stderr, Write};
 use std::path::Path;
 use std::process::exit;
 
-use argparse::{ArgumentParser, Store, List};
+use argparse::{ArgumentParser, Store, StoreOption, List};
 
 use super::config::{find_config, Config, Settings};
 use super::config::command::MainCommand::{Command, Supervise};
@@ -26,6 +26,7 @@ pub struct Wrapper<'a> {
     settings: &'a Settings,
     project_root: &'a Path,
     ext_settings: &'a MergedSettings,
+    root: Option<String>,
 }
 
 
@@ -33,11 +34,16 @@ pub fn run() -> i32 {
     let mut err = stderr();
     let mut cmd: String = "".to_string();
     let mut args: Vec<String> = Vec::new();
+    let mut root = None;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Internal vagga tool to setup basic system sandbox
             ");
+        ap.refer(&mut root)
+          .add_option(&["--root"], StoreOption, "
+            Root to choose for running container (for command that run in a
+            container)");
         ap.refer(&mut cmd)
           .add_argument("command", Store,
                 "A vagga command to run")
@@ -74,6 +80,7 @@ pub fn run() -> i32 {
     };
 
     let wrapper = Wrapper {
+        root: root,
         config: &config,
         settings: &int_settings,
         project_root: &project_root,

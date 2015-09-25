@@ -25,6 +25,23 @@ pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     Ok(buf)
 }
 
+pub fn capture_fd3(mut cmd: Command) -> Result<Vec<u8>, String>
+{
+    cmd.file_descriptor(3, Fd::piped_write());
+    info!("Running {:?}", cmd);
+    let mut child = try!(cmd.spawn()
+        .map_err(|e| format!("{}", e)));
+    let mut buf = Vec::with_capacity(1024);
+    try!(child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
+        .map_err(|e| format!("Error reading from pipe: {}", e)));
+    let status = try!(child.wait()
+        .map_err(|e| format!("Error waiting for child: {}", e)));
+    if !status.success() {
+        return Err(format!("Command {:?} {}", cmd, status));
+    }
+    Ok(buf)
+}
+
 pub fn capture_fd3_status(mut cmd: Command)
     -> Result<(ExitStatus, Vec<u8>), String>
 {

@@ -28,6 +28,7 @@ Vagga 0.4.0
   ``!UbuntuRelease`` step
 * Fix ``--only`` and ``--exclude`` for supervision commands (was broken since
   0.2.0)
+* Add ``--no-build`` option
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

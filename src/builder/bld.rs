@@ -8,7 +8,6 @@ use config::builders::Builder as B;
 use config::builders::Source as S;
 use config::read_config;
 use container::util::{clean_dir, copy_dir};
-use container::vagga::container_ver;
 
 use super::super::path_util::ToRelative;
 use super::context::BuildContext;
@@ -20,6 +19,7 @@ use super::commands::npm;
 use super::commands::vcs;
 use super::tarcmd;
 use super::context::Distribution as Distr;
+use version::short_version;
 
 
 pub trait BuildCommand {
@@ -105,19 +105,23 @@ impl BuildCommand for Builder {
                     try!(b.build(ctx, false));
                 }
                 if build {
-                    let version = try!(container_ver(name));
+                    let version = try!(short_version(&cont, &ctx.config)
+                        .map_err(|(s, e)| format!("step {}: {}", s, e)));
                     let path = Path::new("/vagga/base/.roots")
-                        .join(version).join("root");
+                        .join(format!("{}.{}", name, version)).join("root");
                     try!(copy_dir(&path, &Path::new("/vagga/root")));
                 }
             }
             &B::SubConfig(ref sconfig) => {
                 let path = match sconfig.source {
                     S::Container(ref container) => {
-                        let version = try!(container_ver(container));
+                        let cont = ctx.config.containers.get(container)
+                            .expect("Subcontainer not found");  // TODO
+                        let version = try!(short_version(&cont, &ctx.config)
+                            .map_err(|(s, e)| format!("step {}: {}", s, e)));
                         Path::new("/vagga/base/.roots")
-                            .join(version).join("root")
-                            .join(&sconfig.path)
+                            .join(format!("{}.{}", container, version))
+                            .join("root").join(&sconfig.path)
                     }
                     S::Git(ref _git) => {
                         unimplemented!();

@@ -10,7 +10,7 @@ use config::Settings;
 use path_util::PathExt;
 
 
-#[derive(PartialEq, RustcDecodable)]
+#[derive(PartialEq, RustcDecodable, Debug)]
 struct SecureSettings {
     allowed_dirs: BTreeMap<String, PathBuf>,
     storage_dir: Option<PathBuf>,
@@ -85,6 +85,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
     ), .. Default::default()}) as Box<V::Validator>;
 }
 
+#[derive(Debug)]
 pub struct MergedSettings {
     pub allowed_dirs: BTreeMap<String, PathBuf>,
     pub allowed_files: BTreeMap<String, PathBuf>,

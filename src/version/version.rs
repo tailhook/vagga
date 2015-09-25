@@ -5,16 +5,16 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 use shaman::sha2::Sha256;
+use shaman::digest::Digest;
 use rustc_serialize::json;
 
-use config::Config;
+use config::{Config, Container};
 use config::read_config;
 use config::builders::{Builder};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use shaman::digest::Digest;
-use container::vagga::container_ver;
 use self::Error::{New, ContainerNotFound};
+use path_util::PathExt;
 
 
 quick_error! {
@@ -42,6 +42,10 @@ quick_error! {
         ContainerNotFound(name: String) {
             description("container not found")
             display("container {:?} not found", name)
+        }
+        /// Some step of subcontainer failed
+        SubStepError(step: String, err: Box<Error>) {
+            from(tuple: (String, Error)) -> (tuple.0, Box::new(tuple.1))
         }
     }
 }
@@ -103,14 +107,12 @@ impl VersionHash for Builder {
             &B::SubConfig(ref sconfig) => {
                 let path = match sconfig.source {
                     S::Container(ref container) => {
-                        let version = match container_ver(container) {
-                            Ok(ver) => ver,
-                            // TODO(tailhook) better check
-                            Err(_) => return Err(New),
-                        };
+                        let cinfo = try!(cfg.containers.get(container)
+                            .ok_or(ContainerNotFound(container.clone())));
+                        let version = try!(short_version(&cinfo, cfg));
                         Path::new("/vagga/base/.roots")
-                            .join(version).join("root")
-                            .join(&sconfig.path)
+                            .join(format!("{}.{}", container, version))
+                            .join("root").join(&sconfig.path)
                     }
                     S::Git(ref _git) => {
                         unimplemented!();
@@ -119,6 +121,9 @@ impl VersionHash for Builder {
                         Path::new("/work").join(&sconfig.path)
                     }
                 };
+                if !path.exists() {
+                    return Err(New);
+                }
                 let subcfg = try!(read_config(&path));
                 let cont = try!(subcfg.containers.get(&sconfig.container)
                     .ok_or(ContainerNotFound(sconfig.container.to_string())));
@@ -154,7 +159,7 @@ impl VersionHash for Builder {
     }
 }
 
-pub fn all(setup: &[Builder], cfg: &Config)
+fn all(setup: &[Builder], cfg: &Config)
     -> Result<Sha256, (String, Error)>
 {
     debug!("Versioning items: {}", setup.len());
@@ -179,4 +184,18 @@ pub fn all(setup: &[Builder], cfg: &Config)
     }
 
     Ok(hash)
+}
+
+pub fn short_version(container: &Container, cfg: &Config)
+    -> Result<String, (String, Error)>
+{
+    let mut hash = try!(all(&container.setup, cfg));
+    Ok(hash.result_str()[..8].to_string())
+}
+
+pub fn long_version(container: &Container, cfg: &Config)
+    -> Result<String, (String, Error)>
+{
+    let mut hash = try!(all(&container.setup, cfg));
+    Ok(hash.result_str())
 }

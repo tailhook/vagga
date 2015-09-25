@@ -1,10 +1,15 @@
 use std::env;
+use std::fs::{File, read_link};
+use std::io::Write;
+use std::ffi::OsString;
+use std::io::ErrorKind::NotFound;
 use std::ascii::AsciiExt;
 use std::fs::{remove_dir_all, rename};
 use std::fs::{remove_file, remove_dir};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
+use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
@@ -12,7 +17,6 @@ use unshare::{Command, Namespace, ExitStatus};
 
 use container::mount::{bind_mount, unmount};
 use container::uidmap::{map_users};
-use container::vagga::container_ver;
 use config::{Container};
 use config::builders::Builder as B;
 use config::builders::Source as S;
@@ -128,17 +132,30 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
     };
     let linkval = roots.join(&name).join("root");
     if cconfig.auto_clean {
-        container_ver(container).map(|oldname| {
-            if oldname != name {
+        match read_link(&destlink) {
+            Ok(ref oldval) if oldval != &linkval => {
+                let oldname = try!(oldval.iter().rev().nth(1)
+                    .ok_or(format!("Bad link {:?} -> {:?}",
+                        destlink, oldval)));
                 let base = Path::new("/vagga/base/.roots");
                 let dir = base.join(&oldname);
-                let tmpdir = base.join(".tmp".to_string() + &oldname);
+                let tmpdir = base.join({
+                    let mut tmpname = OsString::from(".tmp");
+                    tmpname.push(oldname);
+                    tmpname
+                });
                 rename(&dir, &tmpdir)
                     .map_err(|e| error!("Error renaming old dir: {}", e)).ok();
                 remove_dir_all(&tmpdir)
                     .map_err(|e| error!("Error removing old dir: {}", e)).ok();
             }
-        }).ok();
+            Ok(_) => {}
+            Err(ref e) if e.kind() == NotFound => {}
+            Err(e) => {
+                return Err(format!("Error reading symlin {:?}: {}",
+                    destlink, e));
+            }
+        };
     }
     try!(symlink(&linkval, &tmplink)
          .map_err(|e| format!("Error symlinking container: {}", e)));
@@ -157,10 +174,11 @@ pub fn _build_container(cconfig: &Container, container: &String,
     let ver = match get_version_hash(container, wrapper) {
         Ok(Some(ver)) => {
             if ver.len() == 64 && ver[..].is_ascii() {
-                debug!("Container version: {:?}", ver);
                 let name = format!("{}.{}", container, &ver[..8]);
                 let finalpath = Path::new("/vagga/base/.roots")
                     .join(&name);
+                debug!("Container path: {:?} (force: {}) {}", finalpath, force,
+                    finalpath.exists());
                 if finalpath.exists() && !force {
                     debug!("Path {} is already built",
                            finalpath.display());
@@ -275,10 +293,12 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         wrapper.project_root, wrapper.ext_settings));
 
     build_wrapper(&name, force, wrapper)
+    .map(|x| unsafe { File::from_raw_fd(3) }.write_all(x.as_bytes()).unwrap())
+    .map(|_| 0)
 }
 
 pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
-    -> Result<i32, String>
+    -> Result<String, String>
 {
     let container = try!(wrapper.config.containers.get(name)
         .ok_or(format!("Container {:?} not found", name)));
@@ -307,8 +327,6 @@ pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
     }
 
     return build_container(name, force, wrapper)
-        .map(|x| debug!("Built container with name {}", x))
-        .map(|()| 0);
 }
 
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
@@ -316,6 +334,7 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 {
     let mut name: String = "".to_string();
     let mut short = false;
+    let mut fd3 = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -330,6 +349,9 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             .add_option(&["-s", "--short"], StoreTrue,
                 "Print short container version, like used in directory names \
                  (8 chars)");
+        ap.refer(&mut fd3)
+            .add_option(&["--fd3"], StoreTrue,
+                "Print into file descriptor #3 instead of stdout");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -340,13 +362,17 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     }
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
-    return get_version_hash(&name, wrapper)
-        .map(|ver| ver
-            .map(|x| if short {
-                println!("{}", &x[..8])
-            } else {
-                println!("{}", x)
-            }).map(|()| 0)
-            .unwrap_or(29));
+    if let Some(hash) = try!(get_version_hash(&name, wrapper)) {
+        let res = if short { &hash[..8] } else { &hash[..] };
+        if fd3 {
+            try!(unsafe { File::from_raw_fd(3) }.write_all(res.as_bytes())
+                .map_err(|e| format!("Error writing to fd 3: {}", e)));
+        } else {
+            println!("{}", res);
+        }
+        Ok(0)
+    } else {
+        Ok(29)
+    }
 }
 

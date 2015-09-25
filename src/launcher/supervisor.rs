@@ -4,7 +4,7 @@ use std::io::{stdout, stderr};
 use std::path::Path;
 
 use time::{SteadyTime, Duration};
-use argparse::{ArgumentParser, List};
+use argparse::{ArgumentParser, List, StoreFalse};
 use signal::trap::Trap;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
@@ -19,14 +19,15 @@ use config::command::ChildCommand::{BridgeCommand};
 
 use super::network;
 use super::user::{common_child_command_env};
-use super::build::build_container;
+use super::build::{build_container, get_version};
 use file_util::create_dir;
 use path_util::PathExt;
 use process_util::{set_uidmap, convert_status};
 
 
 pub fn run_supervise_command(config: &Config, workdir: &Path,
-    sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>)
+    sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>,
+    mut allow_build: bool)
     -> Result<i32, String>
 {
     let mut only: Vec<String> = Vec::new();
@@ -45,6 +46,10 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         ap.refer(&mut exclude).metavar("PROCESS_NAME")
             .add_option(&["--exclude"], List, "
                 Don't run specified processes");
+        ap.refer(&mut allow_build)
+            .add_option(&["--no-build"], StoreFalse, "
+                Do not build container even if it is out of date. Return error
+                code 29 if it's out of date.");
         // TODO(tailhook) implement --only and --exclude
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -61,6 +66,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     let mut containers_host_net = vec!();
     let mut forwards = vec!();
     let mut ports = vec!();
+    let mut versions = HashMap::new();
     let filtered_children = sup.children
         .iter().filter(|&(ref name, _)| {
             if only.len() > 0 {
@@ -73,7 +79,12 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            try!(build_container(config, cont));
+            let ver = if allow_build {
+                try!(build_container(config, cont))
+            } else {
+                format!("{}.{}", cont, try!(get_version(cont)))
+            };
+            versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {
             bridges.push(name.to_string());
@@ -103,6 +114,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
     for name in containers_host_net.iter() {
         let mut cmd = Command::new("/proc/self/exe");
         cmd.arg0("vagga_wrapper");
+        cmd.arg("--root");
+        cmd.arg(&versions[sup.children[name].get_container()]);
         cmd.arg(&cmdname);
         cmd.arg(&name);
         cmd.env_clear();
@@ -148,6 +161,8 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
             let child = sup.children.get(name).unwrap();
             let mut cmd = Command::new("/proc/self/exe");
             cmd.arg0("vagga_wrapper");
+            cmd.arg("--root");
+            cmd.arg(&versions[sup.children[name].get_container()]);
             cmd.arg(&cmdname);
             cmd.arg(&name);
             cmd.env_clear();
