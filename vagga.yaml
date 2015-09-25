@@ -98,6 +98,11 @@ commands:
     container: rust-musl
     run: [make]
 
+  make-release: !Command
+    description: Build vagga with optimizations
+    container: rust-musl
+    run: [make, release]
+
   cargo: !Command
     description: Run arbitrary cargo command
     container: rust-musl

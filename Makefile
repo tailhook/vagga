@@ -10,20 +10,20 @@ export DESTDIR ?=
 
 all: downloads vagga
 
+release: downloads vagga-release
+
 vagga:
-	cargo build --target=x86_64-unknown-linux-musl $(CARGO_FLAGS)
+	cargo build --target=x86_64-unknown-linux-musl
 	cp --remove-destination target/x86_64-unknown-linux-musl/debug/vagga .
 
-vagga_test: tests/*.rs tests/*/*.rs
-	$(RUSTC) tests/lib.rs -g --test -o $@ -L . -L rust-quire/target/release
+vagga-release:
+	cargo build --target=x86_64-unknown-linux-musl --release
+	cp --remove-destination target/x86_64-unknown-linux-musl/release/vagga .
 
 downloads: apk busybox alpine-keys.apk
 
 alpine/MIRRORS.txt apk busybox alpine-keys: ./fetch_binaries.sh
 	./fetch_binaries.sh
-
-test: all vagga_test
-	./vagga_test
 
 install:
 	./install.sh
@@ -53,5 +53,4 @@ ubuntu-package:
 		$(CHECKINSTALL_FLAGS) \
 		./install.sh
 
-
-.PHONY: all downloads test vagga install
+.PHONY: all downloads vagga install release vagga-release
