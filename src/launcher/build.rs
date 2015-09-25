@@ -1,18 +1,33 @@
 use std::env;
 use std::io::{stdout, stderr};
+use std::fs::read_link;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use unshare::{Command, Namespace};
 
+use options::BuildMode;
 use config::Config;
 use process_util::{capture_fd3, set_uidmap};
 use container::uidmap::get_max_uidmap;
 
 
-pub fn build_container(_config: &Config, name: &String)
+pub fn build_container(name: &String, mode: BuildMode)
     -> Result<String, String>
 {
-    build_internal(name, &[])
+    use options::BuildMode::*;
+    let ver = match mode {
+        Normal => try!(build_internal(name, &[])),
+        NoBuild => format!("{}.{}", &name, try!(get_version(&name))),
+        NoVersion => {
+            let lnk = format!(".vagga/{}", name);
+            let path = try!(read_link(&lnk)
+                .map_err(|e| format!("Can't read link {:?}: {}", lnk, e)));
+            try!(path.iter().rev().nth(1).and_then(|x| x.to_str())
+                .ok_or(format!("Bad symlink {:?}: {:?}", lnk, path)))
+                .to_string()
+        }
+    };
+    Ok(ver)
 }
 
 /// Similar to build_container but never actually builds

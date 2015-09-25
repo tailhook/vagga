@@ -4,11 +4,12 @@ use std::io::{stdout, stderr};
 use std::path::Path;
 
 use time::{SteadyTime, Duration};
-use argparse::{ArgumentParser, List, StoreFalse};
+use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
 
+use options;
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
 use container::uidmap::get_max_uidmap;
@@ -19,15 +20,15 @@ use config::command::ChildCommand::{BridgeCommand};
 
 use super::network;
 use super::user::{common_child_command_env};
-use super::build::{build_container, get_version};
+use super::build::{build_container};
 use file_util::create_dir;
 use path_util::PathExt;
 use process_util::{set_uidmap, convert_status};
 
 
-pub fn run_supervise_command(config: &Config, workdir: &Path,
+pub fn run_supervise_command(_config: &Config, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>,
-    mut allow_build: bool)
+    mut build_mode: options::BuildMode)
     -> Result<i32, String>
 {
     let mut only: Vec<String> = Vec::new();
@@ -46,11 +47,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         ap.refer(&mut exclude).metavar("PROCESS_NAME")
             .add_option(&["--exclude"], List, "
                 Don't run specified processes");
-        ap.refer(&mut allow_build)
-            .add_option(&["--no-build"], StoreFalse, "
-                Do not build container even if it is out of date. Return error
-                code 29 if it's out of date.");
-        // TODO(tailhook) implement --only and --exclude
+        options::build_mode(&mut ap, &mut build_mode);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -79,11 +76,7 @@ pub fn run_supervise_command(config: &Config, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            let ver = if allow_build {
-                try!(build_container(config, cont))
-            } else {
-                format!("{}.{}", cont, try!(get_version(cont)))
-            };
+            let ver = try!(build_container(cont, build_mode));
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {

@@ -3,8 +3,9 @@ use std::io::{stderr, Write};
 use std::path::{Path};
 use std::process::exit;
 
+use options;
 use config::find_config;
-use argparse::{ArgumentParser, Store, List, Collect, StoreFalse};
+use argparse::{ArgumentParser, Store, List, Collect};
 use super::path_util::ToRelative;
 
 mod list;
@@ -21,7 +22,7 @@ pub fn run() -> i32 {
     let mut args = vec!();
     let mut set_env = Vec::<String>::new();
     let mut propagate_env = Vec::<String>::new();
-    let mut allow_build = true;
+    let mut build_mode = Default::default();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -38,10 +39,7 @@ pub fn run() -> i32 {
           .add_option(&["-e", "--use-env"], Collect,
                 "Propagate variable VAR into command environment")
           .metavar("VAR");
-        ap.refer(&mut allow_build)
-            .add_option(&["--no-build"], StoreFalse, "
-                Do not build container even if it is out of date. Return error
-                code 29 if it's out of date.");
+        options::build_mode(&mut ap, &mut build_mode);
         ap.refer(&mut cname)
           .add_argument("command", Store,
                 "A vagga command to run");
@@ -122,15 +120,15 @@ pub fn run() -> i32 {
         }
         "_run" => {
             underscore::run_command(&config, &int_workdir, cname, args,
-                allow_build)
+                build_mode)
         }
         "_run_in_netns" => {
             underscore::run_in_netns(&config, &int_workdir, cname, args,
-                allow_build)
+                build_mode)
         }
         _ => {
             user::run_user_command(&config, &int_workdir, cname, args,
-                allow_build)
+                build_mode)
         }
     };
 

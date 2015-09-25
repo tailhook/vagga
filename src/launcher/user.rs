@@ -3,28 +3,29 @@ use std::path::Path;
 
 use unshare::{Command, Namespace};
 
+use options;
 use config::Config;
 use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
 
 use super::supervisor;
-use super::build::{build_container, get_version};
+use super::build::{build_container};
 use process_util::{convert_status, set_uidmap};
 use container::uidmap::get_max_uidmap;
 
 
 pub fn run_user_command(config: &Config, workdir: &Path,
-    cmd: String, args: Vec<String>, allow_build: bool)
+    cmd: String, args: Vec<String>, build_mode: options::BuildMode)
     -> Result<i32, String>
 {
     match config.commands.get(&cmd) {
         None => Err(format!("Command {} not found. \
                     Run vagga without arguments to see the list.", cmd)),
         Some(&MainCommand::Command(ref info))
-        => run_simple_command(config, info, workdir, cmd, args, allow_build),
+        => run_simple_command(config, info, workdir, cmd, args, build_mode),
         Some(&MainCommand::Supervise(ref sup))
         => supervisor::run_supervise_command(config, workdir, sup,
-            cmd, args, allow_build),
+            cmd, args, build_mode),
     }
 }
 
@@ -52,19 +53,16 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
     }
 }
 
-pub fn run_simple_command(config: &Config, cfg: &CommandInfo,
-    workdir: &Path, cmdname: String, args: Vec<String>, allow_build: bool)
+pub fn run_simple_command(_config: &Config, cfg: &CommandInfo,
+    workdir: &Path, cmdname: String, args: Vec<String>,
+    build_mode: options::BuildMode)
     -> Result<i32, String>
 {
     if let Some(_) = cfg.network {
         return Err(format!(
             "Network is not supported for !Command use !Supervise"))
     }
-    let ver = if allow_build {
-        try!(build_container(config, &cfg.container))
-    } else {
-        format!("{}.{}", &cfg.container, try!(get_version(&cfg.container)))
-    };
+    let ver = try!(build_container(&cfg.container, build_mode));
     let res = run_wrapper(Some(workdir), cmdname, args,
         cfg.network.is_none(), Some(&ver));
 

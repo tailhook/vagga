@@ -2,19 +2,20 @@ use std::io::{stdout, stderr};
 use std::path::Path;
 
 use argparse::{ArgumentParser};
-use argparse::{StoreTrue, List, StoreOption, Store, StoreFalse};
+use argparse::{StoreTrue, List, StoreOption, Store};
 use unshare::Namespace;
 
+use options;
 use config::Config;
 use container::nsutil::{set_namespace};
 
 use super::user;
 use super::network;
-use super::build::{build_container, get_version};
+use super::build::{build_container};
 
 
-pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
-    mut args: Vec<String>, mut allow_build: bool)
+pub fn run_command(_config: &Config, workdir: &Path, cmdname: String,
+    mut args: Vec<String>, mut build_mode: options::BuildMode)
     -> Result<i32, String>
 {
     let mut cmdargs = Vec::<String>::new();
@@ -32,10 +33,7 @@ pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
                  Currently we use hard-linked copy of the container, so it's
                  dangerous for some operations. Still it's ok for installing
                  packages or similar tasks");
-        ap.refer(&mut allow_build)
-            .add_option(&["--no-build"], StoreFalse, "
-                Do not build container even if it is out of date. Return error
-                code 29 if it's out of date.");
+        options::build_mode(&mut ap, &mut build_mode);
         ap.refer(&mut container)
             .add_argument("container", Store,
                 "Container to run command in")
@@ -55,11 +53,7 @@ pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
         }
     }
     args.remove(0);
-    let ver = if allow_build {
-        try!(build_container(config, &container))
-    } else {
-        format!("{}.{}", &container, try!(get_version(&container)))
-    };
+    let ver = try!(build_container(&container, build_mode));
     let res = user::run_wrapper(Some(workdir), cmdname, args,
         true, Some(&ver));
 
@@ -76,8 +70,8 @@ pub fn run_command(config: &Config, workdir: &Path, cmdname: String,
     return res;
 }
 
-pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
-    mut args: Vec<String>, mut allow_build: bool)
+pub fn run_in_netns(_config: &Config, workdir: &Path, cname: String,
+    mut args: Vec<String>, mut build_mode: options::BuildMode)
     -> Result<i32, String>
 {
     let mut cmdargs = vec!();
@@ -93,10 +87,7 @@ pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
                 Run in the namespace of the process with PID.
                 By default you get shell in the \"gateway\" namespace.
                 ");
-        ap.refer(&mut allow_build)
-            .add_option(&["--no-build"], StoreFalse, "
-                Do not build container even if it is out of date. Return error
-                code 29 if it's out of date.");
+        options::build_mode(&mut ap, &mut build_mode);
         ap.refer(&mut container)
             .add_argument("container", Store,
                 "Container to run command in")
@@ -116,11 +107,7 @@ pub fn run_in_netns(config: &Config, workdir: &Path, cname: String,
         }
     }
     cmdargs.insert(0, container.clone());
-    let ver = if allow_build {
-        try!(build_container(config, &container))
-    } else {
-        format!("{}.{}", &container, try!(get_version(&container)))
-    };
+    let ver = try!(build_container(&container, build_mode));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
         try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)

@@ -20,6 +20,7 @@ mod container;
 mod file_util;
 mod path_util;
 mod process_util;
+mod options;
 
 // Commands
 mod launcher;
