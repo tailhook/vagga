@@ -1,5 +1,3 @@
-.. highlight:: yaml
-
 Examples
 ========
 
@@ -15,3 +13,11 @@ Databases
    examples/db/postgres
    examples/db/redis
 
+
+Miscellaneous
+-------------
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/misc/travis
