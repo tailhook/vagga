@@ -1,0 +1,19 @@
+containers:
+
+  docs:
+    setup:
+    - !Alpine v3.2
+    - !Install [alpine-base, py-sphinx, make]
+    # If you require additional packages to build docs uncomment this
+    # - !Py2Requirements docs/requirements.txt
+
+commands:
+
+  doc: !Command
+    description: Build documentation
+    container: docs
+    run: [make, html]
+    work-dir: docs
+    epilog: |
+      --------------------------------------------------------
+      Documentation is built under docs/_build/html/index.html

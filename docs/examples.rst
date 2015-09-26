@@ -21,3 +21,12 @@ Miscellaneous
    :maxdepth: 1
 
    examples/misc/travis
+
+
+Documentation
+-------------
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/doc/sphinx
