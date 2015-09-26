@@ -75,10 +75,11 @@ Command Naming
         --------------------------------------------------------
         Documentation is built under docs/_build/html/index.html
 
-    Two important points about the command:
+    The important points about the command:
 
     1. Build HTML documentation
-    2. Use :cmd:`epilog` to show where the documentation is after build
+    2. Use :opt:`epilog` to show where the documentation is after build
+    3. Use :opt:`work-dir` if your documentation build runs in a subdirectory
 
     If you don't have HTML documentation at all, just ignore rule #1 and put
     whatever documentation format that makes sense for your project.
