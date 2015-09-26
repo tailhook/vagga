@@ -130,7 +130,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
             }
         }
     }
-    let mut port_forward_guard;
+    let port_forward_guard;
     if containers_in_netns.len() > 0 {
         let gwdir = network::namespace_dir();
         let nsdir = gwdir.join("children");
