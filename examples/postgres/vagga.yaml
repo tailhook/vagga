@@ -25,6 +25,8 @@ commands:
   psql: !Command
     description: Run postgres shell
     container: ubuntu
+    # This long script initialized new empty postgres database each time
+    # container is run
     run: |
       chown postgres:postgres $PGDATA;
       su postgres -c "$PG_BIN/pg_ctl initdb";
