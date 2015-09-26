@@ -7,22 +7,11 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   what_is_vagga
-   vagga_features
+   info
    installation
-   upgrading
    config
-   commands
-   build_commands
-   volumes
-   environment
+   running
    network
-   supervision
-   pid1mode
-   commandline
-   settings
-   compare_to_docker
-   compare_to_vagrant
    tips
    examples
 
