@@ -311,5 +311,11 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
         }
     }
 
+    if errcode == 0 {
+        if let Some(ref epilog) = sup.epilog {
+            print!("{}", epilog);
+        }
+    }
+
     Ok(errcode)
 }

@@ -29,6 +29,7 @@ Vagga 0.4.0
 * Fix ``--only`` and ``--exclude`` for supervision commands (was broken since
   0.2.0)
 * Add ``--no-build`` and ``--no-version-check`` options
+* Fixed ``epilog`` option
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

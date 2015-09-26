@@ -76,6 +76,11 @@ pub fn run_simple_command(_config: &Config, cfg: &CommandInfo,
         }
 
     }
+    if res == Ok(0) {
+        if let Some(ref epilog) = cfg.epilog {
+            print!("{}", epilog);
+        }
+    }
     return res;
 }
 
