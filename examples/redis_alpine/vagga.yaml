@@ -1,0 +1,5 @@
+containers:
+  ubuntu:
+    setup:
+    - !Alpine v3.2
+    - !Install [redis]
