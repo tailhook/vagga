@@ -79,14 +79,15 @@ Let's declare that with vagga. Just define two containers:
    containers:
 
      build:
-       builder: ubuntu
-       parameters:
-         packages: make nodejs uglifyjs
+       setup:
+       - !Ubuntu trusty
+       - !Install [make, nodejs, uglifyjs]
 
      serve:
-       builder: ubuntu
-       parameters:
-         packages: python-django
+       setup:
+       - !Ubuntu trusty
+       - !UbuntuUniverse
+       - !Install [python-django]
 
 One for each command:
 
@@ -94,11 +95,11 @@ One for each command:
 
    commands:
 
-     build-js:
+     build-js: !Command
        container: build
        run: "make build-js"
 
-     serve:
+     serve: !Command
        container: serve
        run: "python manage.py runserver"
 
@@ -109,15 +110,16 @@ Similarly might be defined test container and command:
    containers:
 
      testing:
-       builder: ubuntu
-       parameters:
-         packages: make nodejs uglifyjs python-django nosetests
+       setup:
+       - !Ubuntu trusty
+       - !UbuntuUniverse
+       - !Install [make, nodejs, uglifyjs, python-django, nosetests]
 
    commands:
 
      test:
        container: testing
-       command: nosetests
+       run: [nosetests]
 
 And your user never care how many containers are there. User only runs whatever
 comands he needs.
@@ -292,16 +294,15 @@ Vagga's way:
 .. code-block:: yaml
 
   commands:
-    run_full_app:
-      supervise-mode: stop-on-failure
-      supervise:
-        web:
+    run_full_app: !Supervise
+      children:
+        web: !Command
           container: python
           run: "python manage.py runserver"
-        redis:
+        redis: !Command
           container: redis
           run: "redis-server ./config/redis.conf"
-        celery:
+        celery: !Command
           container: python
           run: "python manage.py celery worker"
 
