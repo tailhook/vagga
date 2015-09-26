@@ -87,11 +87,14 @@ commands:
     container: docs
     run: [env]
 
-  docs: !Command
+  doc: !Command
     description: Build vagga documentation
     container: docs
     run: [make, html]
     work-dir: docs
+    epilog: |
+      --------------------------------------------------------
+      Documentation is built under docs/_build/html/index.html
 
   make: !Command
     description: Build vagga
