@@ -40,7 +40,7 @@ Command Naming
 
         $ vagga test
 
-    This should include:
+    The rules for the command:
 
     1. Run all the test suites that may be run locally
     2. Should not include tests that require external resources
@@ -58,7 +58,7 @@ Command Naming
     two purposes:
 
     1. Test suite requires some external dependencies, say a huge database
-       with real-life products from a e-commerce site.
+       with real-life products for an e-commerce site.
     2. There are multiple test suites with different runners, for example you
        have a `nosetests` runner and `cunit` runner that require different
        command-line to choose individual test to run
@@ -77,8 +77,11 @@ Command Naming
 
     Two important points about the command:
 
-    1. Build HTML documentation unless you don't have HTML docs at all
-    2. Use :cmd:`epilog` to show where documentation is after build
+    1. Build HTML documentation
+    2. Use :cmd:`epilog` to show where the documentation is after build
+
+    If you don't have HTML documentation at all, just ignore rule #1 and put
+    whatever documentation format that makes sense for your project.
 
     Additional documentation builders (different formats) may be provided by
     other commands. But main ``vagga doc`` command should be enough to validate
@@ -86,6 +89,6 @@ Command Naming
 
     The documentation may be built by the same container that application runs
     or different one, or even just inherit from application's one (useful
-    when some of the documentation is extracted from code).
+    when some of the documentation is extracted from the code).
 
 
