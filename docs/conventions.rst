@@ -66,3 +66,26 @@ Command Naming
     Otherwise it's similar to :cmd:`run` and may contain part of that
     test suite
 
+.. cmd:: doc
+
+    Builds documentation::
+
+        $ vagga doc
+        [.. snip ..]
+        --------------------------------------------------------
+        Documentation is built under docs/_build/html/index.html
+
+    Two important points about the command:
+
+    1. Build HTML documentation unless you don't have HTML docs at all
+    2. Use :cmd:`epilog` to show where documentation is after build
+
+    Additional documentation builders (different formats) may be provided by
+    other commands. But main ``vagga doc`` command should be enough to validate
+    all the docs written before the commit.
+
+    The documentation may be built by the same container that application runs
+    or different one, or even just inherit from application's one (useful
+    when some of the documentation is extracted from code).
+
+
