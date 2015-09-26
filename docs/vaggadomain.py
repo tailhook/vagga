@@ -10,4 +10,8 @@ def setup(app):
                 objname      = "Yaml Option",
                 indextemplate = "single: %s",
             ),
+            cmd = dict(
+                objname      = "Vagga Command",
+                indextemplate = "single: %s",
+            ),
         )))

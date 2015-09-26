@@ -13,6 +13,7 @@ Contents:
    running
    network
    tips
+   conventions
    examples
 
 
