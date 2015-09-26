@@ -1,5 +1,15 @@
 containers:
-  ubuntu:
+  redis:
     setup:
     - !Alpine v3.2
     - !Install [redis]
+
+commands:
+
+  server: !Command
+    container: redis
+    run: "redis-server --daemonize no"
+
+  cli: !Command
+    container: redis
+    run: [redis-cli]
