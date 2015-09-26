@@ -6,12 +6,12 @@ Examples
 Bellow is a list of sample configs from `vagga/examples
 <https://github.com/tailhook/vagga/tree/master/examples>`_
 
-Postgres example
-----------------
+Databases
+---------
 
-.. literalinclude:: ../examples/postgres/vagga.yaml
+.. toctree::
+   :maxdepth: 1
 
-Redis example
--------------
+   examples/db/postgres
+   examples/db/redis
 
-.. literalinclude:: ../examples/redis/vagga.yaml
