@@ -81,3 +81,11 @@ setup() {
     link=$(readlink .vagga/py3req-https-ubuntu)
     [[ $link = ".roots/py3req-https-ubuntu.ce4dc161/root" ]]
 }
+
+@test "py3: alpine req-https.txt" {
+    run vagga _build py3req-https-alpine
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/py3req-https-alpine)
+    [[ $link = ".roots/py3req-https-alpine.356eb50e/root" ]]
+}

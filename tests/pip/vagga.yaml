@@ -44,3 +44,8 @@ containers:
     setup:
     - !Ubuntu trusty
     - !Py3Requirements req-https.txt
+
+  py3req-https-alpine:
+    setup:
+    - !Alpine v3.2
+    - !Py3Requirements req-https.txt
