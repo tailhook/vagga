@@ -112,6 +112,7 @@ pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
 fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
     match pkg {
         packages::BuildEssential => Some(vec!("build-base")),
+        packages::Https => Some(vec!("ca-certificates")),
         packages::Python2 => Some(vec!()),
         packages::Python2Dev => Some(vec!("python-dev")),
         packages::Python3 => None,
@@ -129,6 +130,7 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
 fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
     match pkg {
         packages::BuildEssential => Some(vec!()),
+        packages::Https => Some(vec!()),
         packages::Python2 => Some(vec!("python")),
         packages::Python2Dev => Some(vec!()),
         packages::Python3 => None,

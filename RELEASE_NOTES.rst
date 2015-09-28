@@ -30,6 +30,8 @@ Vagga 0.4.0
   0.2.0)
 * Add ``--no-build`` and ``--no-version-check`` options
 * Fixed ``epilog`` option
+* Impement support of ``git+https`` and ``hg+https`` urls in python
+  requirements (#58)
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

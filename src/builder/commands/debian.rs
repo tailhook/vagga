@@ -271,6 +271,7 @@ pub fn ubuntu_add_universe(ctx: &mut BuildContext)
 fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
     match pkg {
         packages::BuildEssential => Some(vec!("build-essential")),
+        packages::Https => Some(vec!("ca-certificates")),
         packages::Python2 => Some(vec!()),
         packages::Python2Dev => Some(vec!("python-dev")),
         packages::Python3 => Some(vec!()),
@@ -288,6 +289,7 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
 fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
     match pkg {
         packages::BuildEssential => Some(vec!()),
+        packages::Https => Some(vec!()),
         packages::Python2 => Some(vec!("python")),
         packages::Python2Dev => Some(vec!()),
         packages::Python3 => Some(vec!("python3")),

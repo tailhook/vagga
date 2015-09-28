@@ -20,8 +20,14 @@ pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
         res.push(packages::PipPy3);
     }
     for name in pkgs.iter() {
-        if name[..].starts_with("git+") {
+        if name[..].starts_with("git+https") {
             res.push(packages::Git);
+            res.push(packages::Https);
+        } else if name[..].starts_with("git+") {
+            res.push(packages::Git);
+        } else if name[..].starts_with("hg+https") {
+            res.push(packages::Mercurial);
+            res.push(packages::Https);
         } else if name[..].starts_with("hg+") {
             res.push(packages::Mercurial);
         }

@@ -15,6 +15,7 @@ pub use self::Package::*;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Package {
     BuildEssential,
+    Https,
 
     Python2,    // not build dep
     Python2Dev,
@@ -29,6 +30,7 @@ pub enum Package {
 
     Git,
     Mercurial,
+
 }
 
 
