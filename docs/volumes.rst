@@ -15,6 +15,9 @@ default configuration is similar to the following:
       /tmp: !Tmpfs
         size: 100Mi
         mode: 0o1777
+      /dev/shm: !Tmpfs
+        size: 100Mi
+        mode: 0o1777
 
 .. warning:: Volumes are **not** mounted during container build, only when
    some command is run.

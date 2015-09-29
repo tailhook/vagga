@@ -357,6 +357,32 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
     if let None = container.volumes.get(&PathBuf::from("/tmp")) {
         try!(mount_tmpfs(&tgtroot.join("tmp"), "size=100m,mode=01777"));
     }
+    if let None = container.volumes.get(&PathBuf::from("/dev/shm")) {
+        let mut shm_dir = tgtroot.join("dev/shm");
+        match symlink_metadata(&shm_dir) {
+            Ok(ref stat) if stat.file_type().is_symlink() => {
+                let suffix = try_msg!(read_link(&shm_dir),
+                    "Error reading symlink /dev/shm: {err}");
+                if suffix.is_absolute() {
+                    shm_dir = tgtroot.join(suffix.rel());
+                } else {
+                    shm_dir = shm_dir.join(suffix);
+                }
+                try_msg!(mount_tmpfs(&shm_dir, "size=100m,mode=01777"),
+                    "Can't mount /dev/shm: {err}");
+            }
+            Ok(ref stat) if stat.file_type().is_dir() => {
+                try_msg!(mount_tmpfs(&shm_dir, "size=100m,mode=01777"),
+                    "Can't mount /dev/shm: {err}");
+            }
+            Ok(_) => {
+                warn!("The /dev/shm is strange kind of thing");
+            }
+            Err(e) => {
+                debug!("Error stat of /dev/shm: {}", e);
+            }
+        }
+    }
 
     for (path, vol) in container.volumes.iter() {
         let dest = tgtroot.join(path.rel());
