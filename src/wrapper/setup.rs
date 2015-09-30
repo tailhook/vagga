@@ -10,13 +10,13 @@ use std::path::{Path, PathBuf};
 
 use libc::pid_t;
 
-use config::Container;
+use config::{Container, Settings};
 use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc};
-use wrapper::settings::{MergedSettings};
-use process_util::DEFAULT_PATH;
+use config::read_settings::{MergedSettings};
+use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::create_dir;
 use path_util::{ToRelative, PathExt};
 
@@ -250,14 +250,19 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     Ok(())
 }
 
-pub fn get_environment(container: &Container)
+pub fn get_environment(container: &Container, settings: &Settings)
     -> Result<BTreeMap<String, String>, String>
 {
     let mut result = BTreeMap::new();
-    result.insert("TERM".to_string(),
-                  env::var("TERM").unwrap_or("dumb".to_string()));
     result.insert("PATH".to_string(),
                   DEFAULT_PATH.to_string());
+    if settings.proxy_env_vars {
+        for k in &PROXY_ENV_VARS {
+            if let Ok(v) = env::var(k) {
+                result.insert(k.to_string(), v);
+            }
+        }
+    }
     for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             result.insert(k[9..].to_string(), v);

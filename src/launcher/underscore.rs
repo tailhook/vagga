@@ -6,7 +6,7 @@ use argparse::{StoreTrue, List, StoreOption, Store};
 use unshare::Namespace;
 
 use options;
-use config::Config;
+use config::{Settings};
 use container::nsutil::{set_namespace};
 
 use super::user;
@@ -14,7 +14,7 @@ use super::network;
 use super::build::{build_container};
 
 
-pub fn run_command(_config: &Config, workdir: &Path, cmdname: String,
+pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
     mut args: Vec<String>, mut build_mode: options::BuildMode)
     -> Result<i32, String>
 {
@@ -53,12 +53,12 @@ pub fn run_command(_config: &Config, workdir: &Path, cmdname: String,
         }
     }
     args.remove(0);
-    let ver = try!(build_container(&container, build_mode));
-    let res = user::run_wrapper(Some(workdir), cmdname, args,
+    let ver = try!(build_container(settings, &container, build_mode));
+    let res = user::run_wrapper(settings, Some(workdir), cmdname, args,
         true, Some(&ver));
 
     if copy {
-        match user::run_wrapper(Some(workdir), "_clean".to_string(),
+        match user::run_wrapper(settings, Some(workdir), "_clean".to_string(),
             vec!("--transient".to_string()), true, None)
         {
             Ok(0) => {}
@@ -70,7 +70,7 @@ pub fn run_command(_config: &Config, workdir: &Path, cmdname: String,
     return res;
 }
 
-pub fn run_in_netns(_config: &Config, workdir: &Path, cname: String,
+pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
     mut args: Vec<String>, mut build_mode: options::BuildMode)
     -> Result<i32, String>
 {
@@ -107,11 +107,12 @@ pub fn run_in_netns(_config: &Config, workdir: &Path, cname: String,
         }
     }
     cmdargs.insert(0, container.clone());
-    let ver = try!(build_container(&container, build_mode));
+    let ver = try!(build_container(settings, &container, build_mode));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
         try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
             .map_err(|e| format!("Error setting networkns: {}", e)));
     }
-    user::run_wrapper(Some(workdir), cname, cmdargs, false, Some(&ver))
+    user::run_wrapper(settings, Some(workdir),
+        cname, cmdargs, false, Some(&ver))
 }

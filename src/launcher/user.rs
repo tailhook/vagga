@@ -4,17 +4,17 @@ use std::path::Path;
 use unshare::{Command, Namespace};
 
 use options;
-use config::Config;
+use config::{Config, Settings};
 use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
 
 use super::supervisor;
 use super::build::{build_container};
-use process_util::{convert_status, set_uidmap};
+use process_util::{convert_status, set_uidmap, copy_env_vars};
 use container::uidmap::get_max_uidmap;
 
 
-pub fn run_user_command(config: &Config, workdir: &Path,
+pub fn run_user_command(config: &Config, settings: &Settings, workdir: &Path,
     cmd: String, args: Vec<String>, build_mode: options::BuildMode)
     -> Result<i32, String>
 {
@@ -22,20 +22,22 @@ pub fn run_user_command(config: &Config, workdir: &Path,
         None => Err(format!("Command {} not found. \
                     Run vagga without arguments to see the list.", cmd)),
         Some(&MainCommand::Command(ref info))
-        => run_simple_command(config, info, workdir, cmd, args, build_mode),
+        => run_simple_command(settings, info, workdir, cmd, args, build_mode),
         Some(&MainCommand::Supervise(ref sup))
-        => supervisor::run_supervise_command(config, workdir, sup,
+        => supervisor::run_supervise_command(settings, workdir, sup,
             cmd, args, build_mode),
     }
 }
 
-pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
+pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>,
+    settings: &Settings)
+{
     for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             cmd.env(k, v);
         }
     }
-    cmd.env("TERM", env::var("TERM").unwrap_or("dumb".to_string()));
+    copy_env_vars(cmd, &settings);
     if let Ok(x) = env::var("PATH") {
         cmd.env("HOST_PATH", x);
     }
@@ -53,7 +55,7 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>) {
     }
 }
 
-pub fn run_simple_command(_config: &Config, cfg: &CommandInfo,
+pub fn run_simple_command(settings: &Settings, cfg: &CommandInfo,
     workdir: &Path, cmdname: String, args: Vec<String>,
     build_mode: options::BuildMode)
     -> Result<i32, String>
@@ -62,12 +64,12 @@ pub fn run_simple_command(_config: &Config, cfg: &CommandInfo,
         return Err(format!(
             "Network is not supported for !Command use !Supervise"))
     }
-    let ver = try!(build_container(&cfg.container, build_mode));
-    let res = run_wrapper(Some(workdir), cmdname, args,
+    let ver = try!(build_container(settings, &cfg.container, build_mode));
+    let res = run_wrapper(settings, Some(workdir), cmdname, args,
         cfg.network.is_none(), Some(&ver));
 
     if cfg.write_mode != WriteMode::read_only {
-        match run_wrapper(Some(workdir), "_clean".to_string(),
+        match run_wrapper(settings, Some(workdir), "_clean".to_string(),
             vec!("--transient".to_string()), true, None)
         {
             Ok(0) => {}
@@ -85,7 +87,8 @@ pub fn run_simple_command(_config: &Config, cfg: &CommandInfo,
 }
 
 // TODO(tailhook) run not only for simple commands
-pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
+pub fn run_wrapper(settings: &Settings, workdir: Option<&Path>,
+    cmdname: String, args: Vec<String>,
     userns: bool, root: Option<&str>)
     -> Result<i32, String>
 {
@@ -98,7 +101,7 @@ pub fn run_wrapper(workdir: Option<&Path>, cmdname: String, args: Vec<String>,
     cmd.arg(&cmdname);
     cmd.args(&args);
     cmd.env_clear();
-    common_child_command_env(&mut cmd, workdir);
+    common_child_command_env(&mut cmd, workdir, settings);
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
     if userns {

@@ -5,12 +5,17 @@ use std::path::{Path, PathBuf};
 use libc::getuid;
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap};
 
+use config::Settings;
 use container::uidmap::{Uidmap};
 use path_util::PathExt;
 
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+
+pub static PROXY_ENV_VARS: [&'static str; 5] =
+    [ "http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy" ];
+
 
 
 pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
@@ -118,6 +123,18 @@ pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap, use_bin: bool) {
                 let newgidmap = env_path_find("newgidmap")
                     .unwrap_or(PathBuf::from("/usr/bin/newgidmap"));
                 cmd.set_id_map_commands(newuidmap, newgidmap);
+            }
+        }
+    }
+}
+
+pub fn copy_env_vars(cmd: &mut Command, settings: &Settings) {
+    cmd.env("TERM".to_string(),
+            env::var_os("TERM").unwrap_or(From::from("dumb")));
+    if settings.proxy_env_vars {
+        for k in &PROXY_ENV_VARS {
+            if let Some(v) = env::var_os(k) {
+                cmd.env(k, v);
             }
         }
     }

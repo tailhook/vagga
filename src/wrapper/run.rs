@@ -12,7 +12,7 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use path_util::PathExt;
-use process_util::{convert_status, set_uidmap};
+use process_util::{convert_status, set_uidmap, copy_env_vars};
 
 
 pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
@@ -73,7 +73,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     let container_ver = wrapper.root.as_ref().unwrap();
     try!(setup::setup_filesystem(cconfig, write_mode, container_ver));
 
-    let env = try!(setup::get_environment(cconfig));
+    let env = try!(setup::get_environment(cconfig, &wrapper.settings));
     let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
     if command.contains("/") {
@@ -104,8 +104,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     cmd.current_dir(&env::var("PWD").unwrap_or("/work".to_string()));
     uid_map.map(|x| set_uidmap(&mut cmd, &x, false));
     cmd.env_clear();
-    cmd.env("TERM".to_string(),
-        env::var("TERM").unwrap_or("dumb".to_string()));
+    copy_env_vars(&mut cmd, &wrapper.settings);
     for (ref k, ref v) in env.iter() {
         cmd.env(k.to_string(), v.to_string());
     }

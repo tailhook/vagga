@@ -13,7 +13,7 @@ use options;
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
 use container::uidmap::get_max_uidmap;
-use config::Config;
+use config::{Settings};
 use config::command::{SuperviseInfo, Networking};
 use config::command::SuperviseMode::{stop_on_failure};
 use config::command::ChildCommand::{BridgeCommand};
@@ -26,7 +26,7 @@ use path_util::PathExt;
 use process_util::{set_uidmap, convert_status};
 
 
-pub fn run_supervise_command(_config: &Config, workdir: &Path,
+pub fn run_supervise_command(settings: &Settings, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>,
     mut build_mode: options::BuildMode)
     -> Result<i32, String>
@@ -76,7 +76,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            let ver = try!(build_container(cont, build_mode));
+            let ver = try!(build_container(settings, cont, build_mode));
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {
@@ -112,7 +112,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
         cmd.arg(&cmdname);
         cmd.arg(&name);
         cmd.env_clear();
-        common_child_command_env(&mut cmd, Some(workdir));
+        common_child_command_env(&mut cmd, Some(workdir), settings);
         cmd.unshare(
             [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
         set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
@@ -159,7 +159,7 @@ pub fn run_supervise_command(_config: &Config, workdir: &Path,
             cmd.arg(&cmdname);
             cmd.arg(&name);
             cmd.env_clear();
-            common_child_command_env(&mut cmd, Some(workdir));
+            common_child_command_env(&mut cmd, Some(workdir), settings);
             cmd.unshare(
                 [Namespace::Mount, Namespace::Ipc, Namespace::Pid]
                 .iter().cloned());

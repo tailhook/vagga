@@ -16,6 +16,7 @@ struct SecureSettings {
     storage_dir: Option<PathBuf>,
     cache_dir: Option<PathBuf>,
     version_check: Option<bool>,
+    proxy_env_vars: Option<bool>,
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
     site_settings: BTreeMap<PathBuf, SecureSettings>,
@@ -38,6 +39,9 @@ pub fn secure_settings_validator<'a>(has_children: bool)
             optional: true,
             .. Default::default()}) as Box<V::Validator>),
         ("version_check".to_string(), Box::new(V::Scalar {
+            optional: true,
+            .. Default::default()}) as Box<V::Validator>),
+        ("proxy_env_vars".to_string(), Box::new(V::Scalar {
             optional: true,
             .. Default::default()}) as Box<V::Validator>),
         ("ubuntu_mirror".to_string(), Box::new(V::Scalar {
@@ -105,6 +109,7 @@ pub fn read_settings(project_root: &Path)
         shared_cache: false,
     };
     let mut int_settings = Settings {
+        proxy_env_vars: true,
         version_check: true,
         uid_map: None,
         ubuntu_mirror: "mirror://mirrors.ubuntu.com/mirrors.txt".to_string(),
@@ -135,6 +140,9 @@ pub fn read_settings(project_root: &Path)
         }
         if let Some(val) = cfg.version_check {
             int_settings.version_check = val;
+        }
+        if let Some(val) = cfg.proxy_env_vars {
+            int_settings.proxy_env_vars = val;
         }
         if let Some(ref val) = cfg.ubuntu_mirror {
             int_settings.ubuntu_mirror = val.clone();

@@ -22,7 +22,7 @@ use config::builders::Builder as B;
 use config::builders::Source as S;
 use file_util::create_dir;
 use path_util::PathExt;
-use process_util::{capture_fd3_status, set_uidmap};
+use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
 use super::Wrapper;
 use super::setup;
 
@@ -94,7 +94,7 @@ pub fn get_version_hash(container: &String, wrapper: &Wrapper)
     cmd.arg("--settings");
     cmd.arg(json::encode(wrapper.settings).unwrap());
     cmd.env_clear();
-    cmd.env("TERM", "dumb");
+    copy_env_vars(&mut cmd, &wrapper.settings);
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -212,7 +212,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
     cmd.arg("--settings");
     cmd.arg(json::encode(wrapper.settings).unwrap());
     cmd.env_clear();
-    cmd.env("TERM", env::var("TERM").unwrap_or("dumb".to_string()));
+    copy_env_vars(&mut cmd, &wrapper.settings);
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }

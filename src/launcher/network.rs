@@ -153,8 +153,9 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.unshare([Namespace::Net].iter().cloned());
     set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
     cmd.env_clear();
+    // we never need proxy env vars here
     cmd.env("TERM".to_string(),
-            env::var("TERM").unwrap_or("dumb".to_string()));
+            env::var_os("TERM").unwrap_or(From::from("dumb")));
     if let Ok(x) = env::var("PATH") {
         cmd.env("PATH".to_string(), x);
     }
@@ -566,8 +567,9 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         ]);
     cmd.unshare([Namespace::Net].iter().cloned());
     cmd.env_clear();
+    // we never need proxy env vars here
     cmd.env("TERM".to_string(),
-            env::var("TERM").unwrap_or("dumb".to_string()));
+            env::var_os("TERM").unwrap_or(From::from("dumb")));
     if let Ok(x) = env::var("PATH") {
         cmd.env("PATH".to_string(), x);
     }
@@ -640,8 +642,9 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
                         "--hostname", hostname,
                         "--gateway-ip", "172.18.0.254"]);
     cmd.unshare([Namespace::Net, Namespace::Uts].iter().cloned());
+    // we never need proxy env vars here
     cmd.env("TERM".to_string(),
-            env::var("TERM").unwrap_or("dumb".to_string()));
+            env::var_os("TERM").unwrap_or(From::from("dumb")));
     if let Ok(x) = env::var("PATH") {
         cmd.env("PATH".to_string(), x);
     }

@@ -19,20 +19,28 @@ Settings are searched for in one of the following files:
 Supported settings:
 
 
-``storage-dir``
+.. opt:: storage-dir
+
     Directory where to put images build by vagga. Usually they are stored in
     ``.vagga`` subdirectory of the project dir. It's mostly useful when the
     ``storage-dir`` points to a directory on a separate partition.
 
-``cache-dir``
+.. opt:: cache-dir
+
     Directory where to put cache files during the build. This is used to speed
     up the build process. By default cache is put into ``.vagga/.cache`` in
     project directory but this setting allows to have cache directory shared
     between multiple projects.
 
-``site-settings``
+.. opt:: site-settings
     (experimental) The mapping of project paths to settings for this specific
     project.
+
+.. opt:: proxy-env-vars
+    Enable forwarding for proxy environment variables. Default ``true``.
+    Environment variables currently that this setting influence currently:
+    ``http_proxy``, ``https_proxy``, ``ftp_proxy``, ``all_proxy``,
+    ``no_proxy``.
 
 All project-local settings are also allowed here.
 

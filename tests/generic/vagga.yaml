@@ -16,6 +16,11 @@ containers:
     setup:
     - !Alpine v3.1
 
+  printenv:
+    setup:
+    - !Alpine v3.1
+    - !Sh env
+
 commands:
   two-lines: !Supervise
     children:

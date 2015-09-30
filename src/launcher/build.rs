@@ -6,18 +6,18 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 use unshare::{Command, Namespace};
 
 use options::BuildMode;
-use config::Config;
-use process_util::{capture_fd3, set_uidmap};
+use config::Settings;
+use process_util::{capture_fd3, set_uidmap, copy_env_vars};
 use container::uidmap::get_max_uidmap;
 
 
-pub fn build_container(name: &String, mode: BuildMode)
+pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
     -> Result<String, String>
 {
     use options::BuildMode::*;
     let ver = match mode {
-        Normal => try!(build_internal(name, &[])),
-        NoBuild => format!("{}.{}", &name, try!(get_version(&name))),
+        Normal => try!(build_internal(settings, name, &[])),
+        NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
         NoVersion => {
             let lnk = format!(".vagga/{}", name);
             let path = try!(read_link(&lnk)
@@ -31,7 +31,7 @@ pub fn build_container(name: &String, mode: BuildMode)
 }
 
 /// Similar to build_container but never actually builds
-pub fn get_version(name: &str) -> Result<String, String> {
+pub fn get_version(settings: &Settings, name: &str) -> Result<String, String> {
     let mut cmd = Command::new("/proc/self/exe");
     cmd.arg0("vagga_wrapper");
     cmd.arg("_version_hash");
@@ -39,6 +39,7 @@ pub fn get_version(name: &str) -> Result<String, String> {
     cmd.arg("--fd3");
     cmd.arg(name);
     cmd.env_clear();
+    copy_env_vars(&mut cmd, settings);
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -57,13 +58,16 @@ pub fn get_version(name: &str) -> Result<String, String> {
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-fn build_internal(name: &str, args: &[String]) -> Result<String, String> {
+fn build_internal(settings: &Settings, name: &str, args: &[String])
+    -> Result<String, String>
+{
     let mut cmd = Command::new("/proc/self/exe");
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
     cmd.args(&args);
     cmd.env_clear();
+    copy_env_vars(&mut cmd, settings);
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -82,7 +86,7 @@ fn build_internal(name: &str, args: &[String]) -> Result<String, String> {
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-pub fn build_command(_config: &Config, mut args: Vec<String>)
+pub fn build_command(settings: &Settings, mut args: Vec<String>)
     -> Result<i32, String>
 {
     let mut name: String = "".to_string();
@@ -110,7 +114,7 @@ pub fn build_command(_config: &Config, mut args: Vec<String>)
     }
     assert!(args.remove(0) == name);
 
-    build_internal(&name, &args)
+    build_internal(settings, &name, &args)
     .map(|v| debug!("Container {:?} build with version {:?}", name, v))
     .map(|()| 0)
 }

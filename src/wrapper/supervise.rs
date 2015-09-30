@@ -103,7 +103,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
 
     try!(_write_hosts(supervise));
 
-    let mut env = try!(setup::get_environment(cconfig));
+    let mut env = try!(setup::get_environment(cconfig, &wrapper.settings));
     for (k, v) in command.environ.iter() {
         env.insert(k.clone(), v.clone());
     }

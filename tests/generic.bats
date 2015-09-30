@@ -55,3 +55,17 @@ setup() {
     [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
+
+@test "generic: proxy forwards into build" {
+    ftp_proxy=ftp://test.server run vagga _build printenv
+    printf "%s\n" "${lines[@]}"
+    [[ $(printf "%s\n" "${lines[@]}" | grep '^ftp_proxy') = \
+        "ftp_proxy=ftp://test.server" ]]
+}
+
+@test "generic: proxy forwards into the run" {
+    ftp_proxy=ftp://test.server run vagga --no-build _run printenv env
+    printf "%s\n" "${lines[@]}"
+    [[ $(printf "%s\n" "${lines[@]}" | grep '^ftp_proxy') = \
+        "ftp_proxy=ftp://test.server" ]]
+}

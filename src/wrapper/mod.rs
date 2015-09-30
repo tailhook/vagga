@@ -7,10 +7,9 @@ use argparse::{ArgumentParser, Store, StoreOption, List};
 
 use super::config::{find_config, Config, Settings};
 use super::config::command::MainCommand::{Command, Supervise};
-use self::settings::{read_settings, MergedSettings};
+use config::read_settings::{read_settings, MergedSettings};
 
 
-mod settings;
 mod debug;
 mod build;
 mod run;

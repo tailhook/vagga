@@ -1,4 +1,5 @@
 use std::fs::{copy};
+use std::env;
 use std::path::{Path, PathBuf};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
@@ -20,6 +21,7 @@ use super::packages;
 use super::timer;
 use path_util::{PathExt, ToRelative};
 use file_util::create_dir;
+use process_util::PROXY_ENV_VARS;
 
 #[derive(Debug)]
 pub enum Distribution {
@@ -53,6 +55,20 @@ impl<'a> BuildContext<'a> {
         container: &'x Container, settings: Settings)
         -> BuildContext<'x>
     {
+        let mut env: BTreeMap<String, String> = vec!(
+            ("TERM".to_string(), "dumb".to_string()),
+            ("HOME".to_string(), "/tmp".to_string()),
+            ("PATH".to_string(),
+             "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+             .to_string()),
+            ).into_iter().collect();
+        if settings.proxy_env_vars {
+            for k in &PROXY_ENV_VARS {
+                if let Ok(v) = env::var(k) {
+                    env.insert(k.to_string(), v);
+                }
+            }
+        }
         return BuildContext {
             config: cfg,
             container_name: name,
@@ -72,14 +88,7 @@ impl<'a> BuildContext<'a> {
                 ).into_iter().collect(),
             cache_dirs: vec!(
                 ).into_iter().collect(),
-            environ: vec!(
-                ("TERM".to_string(), "dumb".to_string()),
-                ("HOME".to_string(), "/tmp".to_string()),
-                ("PATH".to_string(),
-                 "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-                 .to_string()),
-                ).into_iter().collect(),
-
+            environ: env,
             settings: settings,
             distribution: Distribution::Unknown,
             pip_settings: Default::default(),

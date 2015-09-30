@@ -5,6 +5,7 @@ use std::process::exit;
 
 use options;
 use config::find_config;
+use config::read_settings::read_settings;
 use argparse::{ArgumentParser, Store, List, Collect};
 use super::path_util::ToRelative;
 
@@ -63,6 +64,14 @@ pub fn run() -> i32 {
             return 126;
         }
     };
+    let (_ext_settings, int_settings) = match read_settings(&cfg_dir)
+    {
+        Ok(tup) => tup,
+        Err(e) => {
+            writeln!(&mut err, "{}", e).ok();
+            return 126;
+        }
+    };
     let int_workdir = workdir.rel_to(&cfg_dir)
                              .unwrap_or(&Path::new("."));
 
@@ -113,22 +122,23 @@ pub fn run() -> i32 {
             list::print_list(&config, args)
         }
         "_build_shell" | "_clean" | "_version_hash" => {
-            user::run_wrapper(Some(&int_workdir), cname, args, true, None)
+            user::run_wrapper(&int_settings,
+                Some(&int_workdir), cname, args, true, None)
         }
         "_build" => {
-            build::build_command(&config, args)
+            build::build_command(&int_settings, args)
         }
         "_run" => {
-            underscore::run_command(&config, &int_workdir, cname, args,
+            underscore::run_command(&int_settings, &int_workdir, cname, args,
                 build_mode)
         }
         "_run_in_netns" => {
-            underscore::run_in_netns(&config, &int_workdir, cname, args,
+            underscore::run_in_netns(&int_settings, &int_workdir, cname, args,
                 build_mode)
         }
         _ => {
-            user::run_user_command(&config, &int_workdir, cname, args,
-                build_mode)
+            user::run_user_command(&config, &int_settings,
+                &int_workdir, cname, args, build_mode)
         }
     };
 
