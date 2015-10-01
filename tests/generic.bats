@@ -57,7 +57,7 @@ setup() {
 }
 
 @test "generic: proxy forwards into build" {
-    ftp_proxy=ftp://test.server run vagga _build printenv
+    ftp_proxy=ftp://test.server run vagga _build --force printenv
     printf "%s\n" "${lines[@]}"
     [[ $(printf "%s\n" "${lines[@]}" | grep '^ftp_proxy') = \
         "ftp_proxy=ftp://test.server" ]]

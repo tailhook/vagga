@@ -86,7 +86,7 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-pub fn build_command(settings: &Settings, mut args: Vec<String>)
+pub fn build_command(settings: &Settings, args: Vec<String>)
     -> Result<i32, String>
 {
     let mut name: String = "".to_string();
@@ -112,7 +112,10 @@ pub fn build_command(settings: &Settings, mut args: Vec<String>)
             }
         }
     }
-    assert!(args.remove(0) == name);
+    let mut args = Vec::new();
+    if force {
+        args.push("--force".to_string());
+    }
 
     build_internal(settings, &name, &args)
     .map(|v| debug!("Container {:?} build with version {:?}", name, v))
