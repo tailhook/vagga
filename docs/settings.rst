@@ -1,3 +1,5 @@
+.. default-domain:: vagga
+
 .. _settings:
 
 ========
