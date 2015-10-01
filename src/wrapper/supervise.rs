@@ -16,7 +16,7 @@ use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
 use super::super::file_util::create_dir;
-use process_util::{set_uidmap, convert_status};
+use process_util::{set_uidmap, run_and_wait};
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
@@ -134,7 +134,6 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         cmd.env(k, v);
     }
 
-    cmd.status()
-        .map(convert_status)
-        .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+    run_and_wait(&mut cmd)
+    .map_err(|e| format!("Error running {:?}: {}", cmd, e))
 }

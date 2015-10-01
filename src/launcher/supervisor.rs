@@ -249,6 +249,9 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
                             for (pid, _) in reap_zombies() {
                                 children.remove(&pid);
                             }
+                            for &(_, ref child) in children.values() {
+                                child.signal(SIGTERM).ok();
+                            }
                             break 'signal_loop;
                         }
                     }

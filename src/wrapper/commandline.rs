@@ -15,7 +15,7 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
-use process_util::{convert_status, set_uidmap};
+use process_util::{run_and_wait, set_uidmap};
 
 
 pub fn commandline_cmd(command: &CommandInfo,
@@ -94,8 +94,6 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmd.env(k, v);
     }
 
-    match cmd.status() {
-        Ok(s) => Ok(convert_status(s)),
-        Err(e) => Err(format!("Error running {:?}: {}", cmd, e)),
-    }
+    run_and_wait(&mut cmd)
+    .map_err(|e| format!("Error running {:?}: {}", cmd, e))
 }

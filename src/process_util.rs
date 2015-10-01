@@ -3,7 +3,9 @@ use std::io::{Read};
 use std::path::{Path, PathBuf};
 
 use libc::getuid;
-use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap};
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD};
+use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, reap_zombies};
+use signal::trap::Trap;
 
 use config::Settings;
 use container::uidmap::{Uidmap};
@@ -60,6 +62,39 @@ pub fn capture_fd3_status(mut cmd: Command)
     let status = try!(child.wait()
         .map_err(|e| format!("Error waiting for child: {}", e)));
     Ok((status, buf))
+}
+
+pub fn run_and_wait(cmd: &mut Command)
+    -> Result<i32, String>
+{
+    let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD]);
+    info!("Running {:?}", cmd);
+    let child = try!(cmd.spawn().map_err(|e| format!("{}", e)));
+
+    for signal in trap.by_ref() {
+        match signal {
+            SIGINT => {
+                // SIGINT is usually a Ctrl+C so it's sent to whole process
+                // group, so we don't need to do anything special
+                debug!("Received SIGINT signal. Waiting process to stop..");
+            }
+            SIGTERM => {
+                // SIGTERM is usually sent to a specific process so we
+                // forward it to children
+                debug!("Received SIGTERM signal, propagating");
+                child.signal(SIGTERM).ok();
+            }
+            SIGCHLD => {
+                for (pid, status) in reap_zombies() {
+                    if pid == child.pid() {
+                        return Ok(convert_status(status));
+                    }
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+    unreachable!();
 }
 
 pub fn convert_status(st: ExitStatus) -> i32 {
