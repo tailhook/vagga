@@ -20,3 +20,4 @@ To find out commands you may run bare ``vagga``::
    commandline
    environment
    settings
+   errors

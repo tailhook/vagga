@@ -30,10 +30,18 @@ fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
     for (num, line) in reader.lines().enumerate() {
         let line = try_msg!(line, "Error reading /etc/subuid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
+        if parts.len() == 0 || parts[0].trim().starts_with('#') {
+            continue;
+        }
+        if parts.len() != 3 {
+            return Err(format!("/etc/subuid:{}: Bad syntax: {:?}",
+                num+1, line));
+        }
         let start = FromStr::from_str(parts[1]);
         let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
-            return Err(format!("/etc/subuid:{}: Bad syntax", num+1));
+            return Err(format!("/etc/subuid:{}: Bad syntax: {:?}",
+                num+1, line));
         }
         if parts[0].eq(username) {
             let start: uid_t = start.unwrap();
@@ -52,6 +60,13 @@ fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
     for (num, line) in reader.lines().enumerate() {
         let line = try_msg!(line, "Error reading /etc/subgid: {err}");
         let parts: Vec<&str> = line[..].split(':').collect();
+        if parts.len() == 0 || parts[0].trim().starts_with('#') {
+            continue;
+        }
+        if parts.len() != 3 {
+            return Err(format!("/etc/subgid:{}: Bad syntax: {:?}",
+                num+1, line));
+        }
         let start = FromStr::from_str(parts[1]);
         let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
@@ -116,12 +131,14 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
         .map_err(|e| format!("Error running `id --user --name`: {}", e))
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
-    let uid_map = read_uid_map(&username).ok();
-    let gid_map = read_gid_map(&username).ok();
+    let uid_map = read_uid_map(&username)
+        .map_err(|e| error!("Error reading uidmap: {}", e));
+    let gid_map = read_gid_map(&username)
+        .map_err(|e| error!("Error reading gidmap: {}", e));
 
     let uid = unsafe { geteuid() };
     let gid = unsafe { getegid() };
-    if let (Some(uid_map), Some(gid_map)) = (uid_map, gid_map) {
+    if let (Ok(uid_map), Ok(gid_map)) = (uid_map, gid_map) {
         if uid_map.len() == 0 && gid_map.len() == 0 && uid == 0 {
             let uid_rng = try!(read_uid_ranges("/proc/self/uid_map", true));
             let gid_rng = try!(read_uid_ranges("/proc/self/gid_map", true));
@@ -157,8 +174,8 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
 
         return Ok(Ranges(uids, gids));
     } else {
-        warn!(concat!("Your system doesn't have /etc/subuid and /etc/subgid.",
-            " Presumably your system is too old. Some features may not work"));
+        warn!("Could not read /etc/subuid or /etc/subgid \
+            (see http://bit.ly/err_subuid)");
         return Ok(Singleton(uid, gid));
     }
 }
