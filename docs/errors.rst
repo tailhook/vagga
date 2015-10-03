@@ -34,6 +34,7 @@ This means somebody has edited ``/etc/subuid`` and made an error. Just open
 the file (note it's owned by root) and fix the issue (in the example the last
 character should be zero, but it's a letter "O").
 
+.. _uidmap:
 
 Can't find newuidmap or newgidmap
 ---------------------------------
