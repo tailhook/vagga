@@ -79,3 +79,9 @@ setup() {
     [[ $(printf "%s\n" "${lines[@]}" | grep '^ftp_proxy') = \
         "ftp_proxy=ftp://test.server" ]]
 }
+
+@test "generic: check for environment variable name validity" {
+    run vagga -e key=value printenv
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = 'Environment variable name (for option `-e`/`--use-env`) can'"'"'t contain equals `=` character. To set key-value pair use `-E`/`--environ` option' ]]
+}

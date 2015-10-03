@@ -76,8 +76,16 @@ pub fn run() -> i32 {
                              .unwrap_or(&Path::new("."));
 
     for k in propagate_env.into_iter() {
-        env::set_var(&("VAGGAENV_".to_string() + &k[..]),
-            env::var(&k).unwrap_or("".to_string()));
+        if k.chars().find(|&c| c == '=').is_some() {
+            writeln!(&mut err, "Environment variable name \
+                (for option `-e`/`--use-env`) \
+                can't contain equals `=` character. \
+                To set key-value pair use `-E`/`--environ` option").ok();
+            return 126;
+        } else {
+            env::set_var(&("VAGGAENV_".to_string() + &k[..]),
+                env::var_os(&k).unwrap_or(From::from("")));
+        }
     }
     for pair in set_env.into_iter() {
         let mut pairiter = pair[..].splitn(2, '=');
