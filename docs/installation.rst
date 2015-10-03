@@ -41,7 +41,7 @@ enabled manually.
 
 * ``/etc/subuid`` and ``/etc/subgid`` should be set up. Usually you need at
   least 65536 subusers. This will be setup automatically by ``useradd`` in new
-  distributions.  See ``man /etc/subuid`` if not. To check::
+  distributions.  See ``man subuid`` if not. To check::
 
     $ grep -w $(whoami) /etc/sub[ug]id
     /etc/subgid:<you>:689824:65536
