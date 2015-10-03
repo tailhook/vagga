@@ -31,6 +31,9 @@ mod wrapper;
 mod builder;
 
 fn main() {
+    if let Err(_) = env::var("RUST_LOG") {
+        env::set_var("RUST_LOG", "warn");
+    }
     env_logger::init().unwrap();
     match env::args().next().as_ref().map(|x| &x[..]) {
         Some("vagga") => launcher::main(),
