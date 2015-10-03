@@ -35,8 +35,30 @@ the file (note it's owned by root) and fix the issue (in the example the last
 character should be zero, but it's a letter "O").
 
 
+Can't find newuidmap or newgidmap
+---------------------------------
 
+Full error usually looks like::
 
+    WARN:vagga::process_util: Can't find `newuidmap` or `newuidmap` (see http://bit.ly/err_idmap)
+    error setting uid/gid mappings: No such file or directory (os error 2)
 
+There might be two reasons for this:
 
+1. The binaries are not installed (see below)
+2. The commands are not in ``PATH``
 
+In the latter case you should fix your ``PATH``.
+
+The packages for Ubuntu >= 14.04::
+
+    $ sudo apt-get install uidmap
+
+The Ubuntu 12.04 does not have the package. But you may use the package from
+newer release (the following version works fine on 12.04)::
+
+    $ wget http://gr.archive.ubuntu.com/ubuntu/pool/main/s/shadow/uidmap_4.1.5.1-1ubuntu9_amd64.deb
+    $ sudo dpkg -i uidmap_4.1.5.1-1ubuntu9_amd64.deb
+
+Most distributions (known: Nix, Archlinux, Fedora), does have binaries as
+part of "shadow" package, so have them installed on every system.

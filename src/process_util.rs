@@ -153,11 +153,15 @@ pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap, use_bin: bool) {
                     .collect(),
             );
             if use_bin && unsafe { getuid() } != 0 {
-                let newuidmap = env_path_find("newuidmap")
-                    .unwrap_or(PathBuf::from("/usr/bin/newuidmap"));
-                let newgidmap = env_path_find("newgidmap")
-                    .unwrap_or(PathBuf::from("/usr/bin/newgidmap"));
-                cmd.set_id_map_commands(newuidmap, newgidmap);
+                let newuidmap = env_path_find("newuidmap");
+                let newgidmap = env_path_find("newgidmap");
+                if newuidmap.is_none() || newgidmap.is_none() {
+                    warn!("Can't find `newuidmap` or `newgidmap` \
+                        (see http://bit.ly/err_idmap)");
+                }
+                cmd.set_id_map_commands(
+                    newuidmap.unwrap_or(PathBuf::from("/usr/bin/newuidmap")),
+                    newgidmap.unwrap_or(PathBuf::from("/usr/bin/newgidmap")));
             }
         }
     }
