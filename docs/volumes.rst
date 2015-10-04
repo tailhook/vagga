@@ -27,6 +27,7 @@ Available volume types:
 ``!Tmpfs``
     Mounts ``tmpfs`` filesystem. There are two parameters for this kind of
     volume:
+
       * ``size`` -- limit for filesystem size in bytes. You may use
         suffixes ``k, M, G, ki, Mi, Gi`` for bigger units. The ones with ``i``
         are for power of two units, the other ones are for power of ten;

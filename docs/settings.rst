@@ -35,10 +35,12 @@ Supported settings:
     between multiple projects.
 
 .. opt:: site-settings
+
     (experimental) The mapping of project paths to settings for this specific
     project.
 
 .. opt:: proxy-env-vars
+
     Enable forwarding for proxy environment variables. Default ``true``.
     Environment variables currently that this setting influence currently:
     ``http_proxy``, ``https_proxy``, ``ftp_proxy``, ``all_proxy``,
@@ -60,14 +62,16 @@ All project-local settings are also allowed in global config.
 While settings can potentially be checked-in to version control it's advised
 not to do so.
 
-``version-check``
+.. opt:: version-check
+
     If set to ``true`` (default) vagga will check if the container that is
     already built is up to date with config. If set to ``false`` vagga will
     use any container with same name already built. It's only useful for
     scripts for performance reasons or if you don't have internet and
     containers are not too outdated.
 
-``ubuntu-mirror``
+.. opt:: ubuntu-mirror
+
     Set to your preferred ubuntu mirror. By default it's
     ``mirror://mirrors.ubuntu.com/mirrors.txt`` which means mirror will be
     determined automatically. Note that it's different from default in ubuntu
