@@ -197,7 +197,7 @@ impl BuildCommand for Builder {
                 if build {
                     try!(generic::run_command(ctx,
                         &["/bin/sh".to_string(),
-                          "-c".to_string(),
+                          "-exc".to_string(),
                           text.to_string()]));
                 }
             }

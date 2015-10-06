@@ -35,6 +35,7 @@ Vagga 0.4.0
 * Add support of `Py3Requirements`/`Py3Install` for alpine (v3.2 has python3)
 * Mount `/dev/shm` by default (needed for ubuntu host, fixes #32)
 * Implement forwarding proxy variables by default (#38)
+* Run ``!Sh`` scripts with ``-ex`` options (#72)
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

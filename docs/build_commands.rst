@@ -40,14 +40,15 @@ If you have more than one-liner you may use YAMLy *literal* syntax for it:
    setup:
    - !Ubuntu trusty
    - !Sh |
-      set -ex
       wget somepackage.tar.gz
       tar -xzf somepackage.tar.gz
       cd somepackage
       make && make install
 
-The ``set -ex`` in example above enables error handling and tracing of commands
-in shell. It's good idea to add the line to all scripts.
+.. warning:: The ``!Sh`` command is run by ``/bin/sh -exc``. With the flags meaning
+   ``-e`` -- exit if any command fails, ``-x`` -- print command before executing,
+   ``-c`` -- execute command. You may undo ``-ex`` by inserting ``set +ex``
+   at the start of the script. But it's not recommended.
 
 To run ``!Sh`` you need ``/bin/sh``. If you don't have shell in container you
 may use ``!Cmd`` that runs command directly:
