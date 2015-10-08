@@ -37,6 +37,7 @@ Vagga 0.4.0
 * Implement forwarding proxy variables by default (#38)
 * Run ``!Sh`` scripts with ``-ex`` options (#72)
 * Implement ``subdirs`` key for ``!Tmpfs`` volume
+* Support tilde-expansion in ``storage-dir`` and ``cache-dir`` settings
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

@@ -25,14 +25,16 @@ Supported settings:
 
     Directory where to put images build by vagga. Usually they are stored in
     ``.vagga`` subdirectory of the project dir. It's mostly useful when the
-    ``storage-dir`` points to a directory on a separate partition.
+    ``storage-dir`` points to a directory on a separate partition. Path may
+    start with ``~/`` which means path is inside the user's home directory.
 
 .. opt:: cache-dir
 
     Directory where to put cache files during the build. This is used to speed
     up the build process. By default cache is put into ``.vagga/.cache`` in
     project directory but this setting allows to have cache directory shared
-    between multiple projects.
+    between multiple projects. Path may start with ``~/`` which means path is
+    inside the user's home directory.
 
 .. opt:: site-settings
 

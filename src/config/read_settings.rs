@@ -7,7 +7,7 @@ use quire::parse_config;
 use quire::validate as V;
 
 use config::Settings;
-use path_util::PathExt;
+use path_util::{PathExt, Expand};
 
 
 #[derive(PartialEq, RustcDecodable, Debug)]
@@ -132,10 +132,14 @@ pub fn read_settings(project_root: &Path)
             ext_settings.allowed_dirs.insert(k.clone(), v.clone());
         }
         if let Some(dir) = cfg.storage_dir {
-            ext_settings.storage_dir = Some(dir);
+            ext_settings.storage_dir = Some(try!(dir.expand_home()
+                .map_err(|()| format!("Can't expand tilde `~` in storage dir \
+                    no HOME found"))));
         }
         if let Some(dir) = cfg.cache_dir {
-            ext_settings.cache_dir = Some(dir);
+            ext_settings.cache_dir = Some(try!(dir.expand_home()
+                .map_err(|()| format!("Can't expand tilde `~` in cache dir \
+                    no HOME found"))));
             ext_settings.shared_cache = true;
         }
         if let Some(val) = cfg.version_check {
