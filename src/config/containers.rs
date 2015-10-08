@@ -39,22 +39,14 @@ impl PartialEq for Container {
 }
 
 pub fn volume_validator<'a>() -> Box<V::Validator + 'a> {
-    return Box::new(V::Enum { options: vec!(
-        ("Tmpfs".to_string(),  Box::new(V::Structure { members: vec!(
-            ("size".to_string(),  Box::new(V::Numeric {
-                min: Some(0),
-                default: Some(100*1024*1024),
-                .. Default::default()}) as Box<V::Validator>),
-            ("mode".to_string(),  Box::new(V::Numeric {
-                min: Some(0),
-                max: Some(0o1777),
-                default: Some(0o766),
-                .. Default::default()}) as Box<V::Validator>),
-            ),.. Default::default()}) as Box<V::Validator>),
-        ("VaggaBin".to_string(),  Box::new(V::Nothing)),
-        ("BindRW".to_string(),  Box::new(V::Scalar {
-             .. Default::default()})),
-        ), .. Default::default()}) as Box<V::Validator>;
+    return Box::new(V::Enum::new()
+        .option("Tmpfs",  V::Structure::new()
+            .member("size",  V::Numeric::new()
+                .min(0).default(100*1024*1024))
+            .member("mode",  V::Numeric::new()
+                .min(0).max(0o1777).default(0o766)))
+        .option("VaggaBin",  V::Nothing)
+        .option("BindRW",  V::Scalar::new()));
 }
 
 pub fn container_validator<'a>() -> Box<V::Validator + 'a> {
