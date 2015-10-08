@@ -7,3 +7,11 @@ package from Alpine linux:
 
 .. literalinclude:: ../../../examples/sphinx_doc/vagga.yaml
    :language: yaml
+
+To start documentation from scratch (if you had no sphinx docs before), run
+the following once (and answer the questions)::
+
+    vagga _run docs sphinx-quickstart target_doc_directory
+
+
+
