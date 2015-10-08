@@ -17,7 +17,7 @@ use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
-use file_util::create_dir;
+use file_util::{create_dir, create_dir_mode};
 use path_util::{ToRelative, PathExt};
 
 
@@ -395,6 +395,11 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             &Tmpfs(ref params) => {
                 try!(mount_tmpfs(&dest,
                     &format!("size={},mode=0{:o}", params.size, params.mode)));
+                for (subpath, info) in &params.subdirs {
+                    try_msg!(create_dir_mode(&dest.join(&subpath), info.mode),
+                        "Error creating subdir {sub:?} of {vol:?}: {err}",
+                        sub=subpath, vol=path);
+                }
             }
             &VaggaBin => {
                 try!(bind_mount(&Path::new("/vagga/bin"), &dest));

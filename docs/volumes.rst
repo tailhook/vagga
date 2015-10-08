@@ -1,4 +1,5 @@
 .. highlight:: yaml
+.. default-domain:: vagga
 
 .. _volumes:
 
@@ -24,7 +25,8 @@ default configuration is similar to the following:
 
 Available volume types:
 
-``!Tmpfs``
+.. volume:: Tmpfs
+
     Mounts ``tmpfs`` filesystem. There are two parameters for this kind of
     volume:
 
@@ -32,15 +34,29 @@ Available volume types:
         suffixes ``k, M, G, ki, Mi, Gi`` for bigger units. The ones with ``i``
         are for power of two units, the other ones are for power of ten;
       * ``mode`` -- filesystem mode.
+      * ``subdirs`` -- a mapping for subdirectories to create inside tmpfs,
+        for example::
 
-``!VaggaBin``
+         volumes:
+            /var: !Tmpfs
+                mode: 0o766
+                subdirs:
+                    lib: # default mode is 0o766
+                    lib/tmp: { mode: 0o1777 }
+                    lib/postgres: { mode: 0o700 }
+
+        The only property currently supported on a directory is ``mode``.
+
+.. volume:: VaggaBin
+
     Mounts vagga binary directory inside the container (usually it's contained
     in ``/usr/lib/vagga`` in host system). This may be needed for
     :ref:`network_testing` or may be for vagga in vagga (i.e. container in
     container) use cases.
 
 
-``!BindRW``
+.. volume:: BindRW
+
    Binds some folder inside a countainer to another folder. Essentially it's
    bind mount (the ``RW`` part means read-writeable). The path must be
    absolute (inside the container). This directive can't be used to expose

@@ -14,4 +14,8 @@ def setup(app):
                 objname      = "Vagga Command",
                 indextemplate = "single: %s",
             ),
+            volume = dict(
+                objname      = "Volume Type",
+                indextemplate = "pair: %s; Volume Type",
+            ),
         )))

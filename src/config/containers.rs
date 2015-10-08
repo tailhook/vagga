@@ -15,9 +15,15 @@ pub enum Volume {
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
+pub struct Dir {
+    pub mode: u32,
+}
+
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct TmpfsInfo {
     pub size: usize,
     pub mode: u32,
+    pub subdirs: BTreeMap<PathBuf, Dir>,
 }
 
 #[derive(RustcDecodable, Clone)]
@@ -44,7 +50,14 @@ pub fn volume_validator<'a>() -> Box<V::Validator + 'a> {
             .member("size",  V::Numeric::new()
                 .min(0).default(100*1024*1024))
             .member("mode",  V::Numeric::new()
-                .min(0).max(0o1777).default(0o766)))
+                .min(0).max(0o1777).default(0o766))
+            .member("subdirs",
+                V::Mapping::new(
+                    V::Directory::new().is_absolute(false),
+                    V::Structure::new()
+                        .member("mode", V::Numeric::new()
+                            .min(0).max(0o1777).default(0o766))
+                )))
         .option("VaggaBin",  V::Nothing)
         .option("BindRW",  V::Scalar::new()));
 }
