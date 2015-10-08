@@ -193,6 +193,11 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try_msg!(create_dir(&sys_dir, false),
              "Error creating /sys: {err}");
     try!(bind_mount(&Path::new("/sys"), &sys_dir));
+    let selinux = sys_dir.join("fs/selinux");
+    if selinux.is_dir() {
+        // Need this go get some selinux-aware commands to work (see #65)
+        try!(remount_ro(&sys_dir.join("fs/selinux")));
+    }
 
     let vagga_dir = mnt_dir.join("vagga");
     try_msg!(create_dir(&vagga_dir, false),
