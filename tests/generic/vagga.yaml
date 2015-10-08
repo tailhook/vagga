@@ -42,11 +42,11 @@ commands:
         container: busybox
         run: |
           echo hello
-          sleep 0.05
+          sleep 0.1
           echo world
       hanging: !Command
         container: busybox
         run: |
           echo hello
-          sleep 0.1
+          sleep 1
           echo world
