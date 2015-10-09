@@ -14,6 +14,13 @@ containers:
     - !Ubuntu precise
     - !Install [bc]
 
+  dependency-conflict:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !BuildDeps [file]  # a dependency of checkinstall
+    - !Install [checkinstall]
+
 commands:
   echo-cmd: !Command
     container: trusty
@@ -41,3 +48,8 @@ commands:
   rename-me: !Command
     container: trusty
     run: 'chfn -f "Hello World"'
+
+  checkinstall: !Command
+    container: dependency-conflict
+    accepts-arguments: true
+    run: [checkinstall]

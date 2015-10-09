@@ -176,24 +176,19 @@ pub fn apt_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
     run_command(ctx, &args[..])
 }
 
-pub fn apt_remove(ctx: &mut BuildContext, pkgs: &Vec<String>)
-    -> Result<(), String>
-{
-    let mut args = vec!(
-        "/usr/bin/apt-get".to_string(),
-        "remove".to_string(),
-        "-y".to_string(),
-        );
-    args.extend(pkgs.clone().into_iter());
-    run_command(ctx, &args[..])
-}
-
 pub fn finish(ctx: &mut BuildContext) -> Result<(), String>
 {
     use std::fs::File; // TODO(tailhook) migrate all
     use std::io::Write; // TODO(tailhook) migrate all
-    let pkgs = ctx.build_deps.clone().into_iter().collect();
-    try!(apt_remove(ctx, &pkgs));
+    let pkgs: Vec<_> = ctx.build_deps.clone().into_iter().collect();
+    if pkgs.len() > 0 {
+        let mut args = vec!(
+            "/usr/bin/apt-mark".to_string(),
+            "auto".to_string(),
+            );
+        args.extend(pkgs.into_iter());
+        try!(run_command(ctx, &args[..]));
+    }
     try!(run_command(ctx, &[
         "/usr/bin/apt-get".to_string(),
         "autoremove".to_string(),

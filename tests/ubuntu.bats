@@ -89,3 +89,11 @@ setup() {
     [[ $status -eq 0 ]]
     [[ $output = "" ]]
 }
+
+@test "ubuntu: builddeps needed for other packages" {
+    run vagga checkinstall -v
+    [[ $status -eq 0 ]]
+    [[ $output != "" ]]
+    link=$(readlink .vagga/dependency-conflict)
+    [[ $link = ".roots/dependency-conflict.2b4ae764/root" ]]
+}
