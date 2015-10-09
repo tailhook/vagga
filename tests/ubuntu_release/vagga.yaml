@@ -1,12 +1,12 @@
 containers:
 
-  utopic:
+  vivid:
     setup:
-    - !UbuntuRelease { version: 14.10 }
+    - !UbuntuRelease { version: 15.04 }
 
-  utopic-calc:
+  vivid-calc:
     setup:
-    - !UbuntuRelease { version: 14.10 }
+    - !UbuntuRelease { version: 15.04 }
     - !Install [bc]
 
   trusty-calc:
@@ -16,20 +16,20 @@ containers:
 
 commands:
   echo-cmd: !Command
-    container: utopic
+    container: vivid
     run: [echo]
 
   echo-shell: !Command
-    container: utopic
+    container: vivid
     run: echo
 
   echo-shell-arg: !Command
-    container: utopic
+    container: vivid
     accepts-arguments: true
     run: echo "$@"
 
-  utopic-calc: !Command
-    container: utopic-calc
+  vivid-calc: !Command
+    container: vivid-calc
     accepts-arguments: true
     run: echo "$*" | bc
 

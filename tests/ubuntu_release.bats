@@ -3,9 +3,9 @@ setup() {
 }
 
 @test "UbuntuRelease builds" {
-    vagga _build utopic
-    link=$(readlink .vagga/utopic)
-    [[ $link = ".roots/utopic.a40d50e2/root" ]]
+    vagga _build vivid
+    link=$(readlink .vagga/vivid)
+    [[ $link = ".roots/vivid.2725d28d/root" ]]
 }
 
 @test "Run echo command in ubuntu release" {
@@ -48,13 +48,13 @@ setup() {
     [[ $output =~ "Command test not found." ]]
 }
 
-@test "Run utopic bc in ubuntu release" {
-    run vagga utopic-calc 100*24
+@test "Run vivid bc in ubuntu release" {
+    run vagga vivid-calc 100*24
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
-    link=$(readlink .vagga/utopic-calc)
-    [[ $link = ".roots/utopic-calc.84c98d52/root" ]]
+    link=$(readlink .vagga/vivid-calc)
+    [[ $link = ".roots/vivid-calc.1b5a9608/root" ]]
 }
 
 @test "Run trusty bc in ubuntu release" {
@@ -67,19 +67,19 @@ setup() {
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {
-    VAGGAENV_TESTVAR=testvalue run vagga _run utopic printenv TESTVAR
+    VAGGAENV_TESTVAR=testvalue run vagga _run vivid printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = testvalue ]]
 }
 
 @test "Test set env in ubuntu release" {
-    run vagga --environ TESTVAR=1value1 _run utopic printenv TESTVAR
+    run vagga --environ TESTVAR=1value1 _run vivid printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = 1value1 ]]
 }
 
 @test "Test propagate env in ubuntu release" {
-    TESTVAR=2value2 run vagga --use-env TESTVAR _run utopic printenv TESTVAR
+    TESTVAR=2value2 run vagga --use-env TESTVAR _run vivid printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = 2value2 ]]
 }
