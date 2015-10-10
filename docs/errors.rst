@@ -63,3 +63,45 @@ newer release (the following version works fine on 12.04)::
 
 Most distributions (known: Nix, Archlinux, Fedora), does have binaries as
 part of "shadow" package, so have them installed on every system.
+
+.. _root:
+
+You should not run vagga as root
+--------------------------------
+
+Well, sometimes users get some permission denied errors and try to run vagga
+with sudo. Running as root is **never** an answer.
+
+Here is a quick check list on permission checks:
+
+* Check owner (and permission bits) of ``.vagga`` subdirectory if it exists,
+  otherwise the directory where ``vagga.yaml`` is (project dir). In case you
+  have already run vagga as root just do ``sudo rm -rf .vagga``
+* :ref:`subuid`
+* :ref:`uidmap`
+* Check ``uname -r`` to have version of ``3.9`` or greater
+* Check ``sysctl kernel.unprivileged_userns_clone`` the setting must either
+  *not exist* at all or have value of ``1``
+* Check ``zgrep CONFIG_USER_NS /proc/config.gz`` or
+  ``grep CONFIG_USER_NS "/boot/config-`uname -r`"`` (ubuntu)
+  the setting should equal to ``y``
+
+The error message might look like::
+
+    You should not run vagga as root (see http://bit.ly/err_root)
+
+Or it might look like a warning::
+
+    WARN:vagga::launcher: You are running vagga as a user different from the owner of project directory. You may not have needed permissions (see http://bit.ly/err_root)
+
+Both show that you don't run vagga by user that owns project. The ligitimate
+reasons to run vagga as root are:
+
+* If you run vagga in container (i.e. in vagga itself) and the root is not a
+  real root
+* If your project dir is owned by root (for whatever crazy reason)
+
+Both cases should inhibit the warning automatically, but as a last resort
+you may try ``vagga --no-owner-check``. If you have good case where this
+works, please file an issue and we might make the check better.
+

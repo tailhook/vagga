@@ -2,11 +2,14 @@ use std::env;
 use std::io::{stderr, Write};
 use std::path::{Path};
 use std::process::exit;
+use std::fs::metadata;
+use std::os::unix::fs::MetadataExt;
 
+use libc::getuid;
 use options;
 use config::find_config;
 use config::read_settings::read_settings;
-use argparse::{ArgumentParser, Store, List, Collect, Print};
+use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
 use super::path_util::ToRelative;
 
 mod list;
@@ -24,6 +27,7 @@ pub fn run() -> i32 {
     let mut set_env = Vec::<String>::new();
     let mut propagate_env = Vec::<String>::new();
     let mut build_mode = Default::default();
+    let mut owner_check = true;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -43,6 +47,9 @@ pub fn run() -> i32 {
           .add_option(&["-e", "--use-env"], Collect,
                 "Propagate variable VAR into command environment")
           .metavar("VAR");
+        ap.refer(&mut owner_check)
+          .add_option(&["--ignore-owner-check"], StoreFalse,
+                "Ignore checking owner of the project directory");
         options::build_mode(&mut ap, &mut build_mode);
         ap.refer(&mut cname)
           .add_argument("command", Store,
@@ -67,6 +74,30 @@ pub fn run() -> i32 {
             return 126;
         }
     };
+
+    if owner_check {
+        let uid = unsafe { getuid() };
+        match metadata(&cfg_dir) {
+            Ok(ref stat) if stat.uid() == uid  => {}
+            Ok(_) => {
+                if uid == 0 {
+                    writeln!(&mut err, "You should not run vagga as root \
+                        (see http://bit.ly/err_root)").ok();
+                    return 122;
+                } else {
+                    warn!("You are running vagga as a user \
+                        different from the owner of project directory. \
+                        You may not have needed permissions \
+                        (see http://bit.ly/err_root)");
+                }
+            }
+            Err(e) => {
+                writeln!(&mut err, "Can't stat {:?}: {}", cfg_dir, e).ok();
+                return 126;
+            }
+        }
+    }
+
     let (_ext_settings, int_settings) = match read_settings(&cfg_dir)
     {
         Ok(tup) => tup,
