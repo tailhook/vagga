@@ -172,8 +172,8 @@ pub enum Builder {
     Py3Requirements(PathBuf),
 }
 
-pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
-    return Box::new(V::Enum { options: vec![
+pub fn builder_validator<'x>() -> V::Enum<'x> {
+    return V::Enum { options: vec![
         ("Install".to_string(), Box::new(V::Sequence {
             element: Box::new(V::Scalar {
             .. Default::default() }) as Box<V::Validator>,
@@ -399,5 +399,5 @@ pub fn builder_validator<'x>() -> Box<V::Validator + 'x> {
             .. Default::default() }) as Box<V::Validator>,
         .. Default::default() }) as Box<V::Validator>),
 
-    ], .. Default::default() }) as Box<V::Validator>;
+    ], .. Default::default() }
 }
