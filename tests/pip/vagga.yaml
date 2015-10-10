@@ -42,7 +42,7 @@ containers:
 
   py3req-https-ubuntu:
     setup:
-    - !Ubuntu trusty
+    - !UbuntuRelease { version: 15.04 }
     - !Py3Requirements req-https.txt
 
   py3req-https-alpine:
