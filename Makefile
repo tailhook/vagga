@@ -1,11 +1,11 @@
 RUSTC ?= rustc
 CC ?= gcc
 AR ?= ar
-CARGO_FLAGS ?=
 
 
 export PREFIX ?= /usr
 export DESTDIR ?=
+export VAGGA_VERSION = $(shell git describe)
 
 
 all: downloads vagga

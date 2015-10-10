@@ -6,7 +6,7 @@ use std::process::exit;
 use options;
 use config::find_config;
 use config::read_settings::read_settings;
-use argparse::{ArgumentParser, Store, List, Collect};
+use argparse::{ArgumentParser, Store, List, Collect, Print};
 use super::path_util::ToRelative;
 
 mod list;
@@ -32,6 +32,9 @@ pub fn run() -> i32 {
 
             Run `vagga` without arguments to see the list of commands.
             ");
+        ap.add_option(&["-V", "--version"],
+            Print(env!("VAGGA_VERSION").to_string()),
+            "Show vagga version and exit");
         ap.refer(&mut set_env)
           .add_option(&["-E", "--env", "--environ"], Collect,
                 "Set environment variable for running command")
