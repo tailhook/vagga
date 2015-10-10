@@ -38,6 +38,7 @@ Vagga 0.4.0
 * Run ``!Sh`` scripts with ``-ex`` options (#72)
 * Implement ``subdirs`` key for ``!Tmpfs`` volume
 * Support tilde-expansion in ``storage-dir`` and ``cache-dir`` settings
+* The ``/etc/hosts`` file now copied inside the container at start (#39)
 
 .. _kill-unresponsive-after: http://vagga.readthedocs.org/en/latest/commands.html#opt-kill-unresponsive-after
 

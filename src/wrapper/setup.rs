@@ -409,9 +409,14 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
         try!(copy(&Path::new("/etc/resolv.conf"), &path)
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
     }
+    if let Some(ref path) = container.hosts_file_path {
+        let path = tgtroot.join(path.rel());
+        try!(copy(&Path::new("/etc/hosts"), &path)
+            .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
+    }
 
-    //  Currently we need the root to be writeable for putting resolv.conf
-    //  It's a bit ugly but bearable for development environments.
+    //  Currently we need the root to be writeable for putting resolv.conf and
+    //  hosts.  It's a bit ugly but bearable for development environments.
     //  Eventually we'll find a better way
     if write_mode == WriteMode::ReadOnly {
         try!(remount_ro(&tgtroot));

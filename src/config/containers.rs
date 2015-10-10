@@ -37,6 +37,7 @@ pub struct Container {
     pub environ_file: Option<PathBuf>,
     pub environ: BTreeMap<String, String>,
     pub resolv_conf_path: Option<PathBuf>,
+    pub hosts_file_path: Option<PathBuf>,
     pub volumes: BTreeMap<PathBuf, Volume>,
 }
 
@@ -69,9 +70,13 @@ pub fn container_validator<'a>() -> Box<V::Validator + 'a> {
         .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
         .member("environ_file", V::Scalar::new().optional())
         .member("resolv_conf_path",
-            V::Directory::new()
+            V::Directory::new()  // Well, should be file
             .is_absolute(true).optional()
             .default("/etc/resolv.conf"))
+        .member("hosts_file_path",
+            V::Directory::new()  // Well, should be file
+            .is_absolute(true).optional()
+            .default("/etc/hosts"))
         .member("uids", V::Sequence::new(V::Scalar::new()))
         .member("gids", V::Sequence::new(V::Scalar::new()))
         .member("volumes", V::Mapping::new(

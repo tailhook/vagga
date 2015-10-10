@@ -72,6 +72,13 @@ Container Parameters
        environments, it's bearable. We are seeking for a better way without too
        much hassle for the user. But you can use the symlink if it bothers you.
 
+.. opt:: hosts-file-path
+
+    The path in container where to copy ``/ets/hosts`` from host. If the value
+    is ``null``, no file is copied. Default is ``/etc/hosts``. The setting
+    intention is very similar to :opt:`resolv-conf-path`, so same
+    condiderations applied.
+
 .. opt:: auto-clean
 
     (experimental) Do not leave multiple versions of container lying around.
