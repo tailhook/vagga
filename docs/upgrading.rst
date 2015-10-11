@@ -2,6 +2,24 @@
 Upgrading
 =========
 
+Upgrading 0.3.x -> 0.4.x
+========================
+
+The release is focused on migrating from small amount of C code to "unshare"
+crate and many usability fixes, including ones which have small changes in
+semantics of configuration. The most important changes:
+
+* The ``!Sh`` command now runs shell with ``-ex`` this allows better error
+  reporting (but may change semantics of script for some obscure cases)
+* There is now :opt:`kill-unresponsive-after` setting for ``!Supervise``
+  commands with default value of ``2``. This means that processes will shut
+  down unconditionally two seconds after ``Ctrl+C``.
+
+See `Release Notes`_ and `Github`_ for all changes.
+
+.. _`Release Notes`: https://github.com/tailhook/vagga/blob/master/RELEASE_NOTES.rst
+.. _`Github`: https://github.com/tailhook/vagga/compare/v0.3.0...v0.4.0
+
 
 Upgrading 0.2.x -> 0.3.x
 ========================
