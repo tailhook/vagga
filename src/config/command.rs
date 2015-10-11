@@ -72,7 +72,7 @@ pub struct SuperviseInfo {
 
     // Supervise
     pub mode: SuperviseMode,
-    pub kill_unresponsive_after: Option<u32>,
+    pub kill_unresponsive_after: u32,
     pub children: BTreeMap<String, ChildCommand>,
 }
 
@@ -236,9 +236,10 @@ pub fn command_validator<'a>() -> Box<V::Validator + 'a> {
                 ..Default::default()}) as Box<V::Validator>,
             value_element: subcommand_validator(),
             .. Default::default()}) as Box<V::Validator>),
-        ("kill_unresponsive_after".to_string(), Box::new(V::Scalar {
-            default: None,
-            optional: true,
+        ("kill_unresponsive_after".to_string(), Box::new(V::Numeric {
+            default: Some(2),
+            min: Some(1),
+            max: Some(86400),
             .. Default::default()}) as Box<V::Validator>),
         );
     supervise_members.extend(command_fields().into_iter());

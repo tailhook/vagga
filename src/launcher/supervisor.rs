@@ -266,7 +266,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
 
     // Stopping loop
     if children.len() > 0 {
-        let timeo = sup.kill_unresponsive_after.unwrap_or(2);
+        let timeo = sup.kill_unresponsive_after;
         let mut deadline = SteadyTime::now() + Duration::seconds(timeo as i64);
         loop {
             match trap.wait(deadline) {
@@ -286,29 +286,19 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
                 }
                 Some(_) => unreachable!(),
                 None => {
-                    if sup.kill_unresponsive_after.is_some() {
-                        println!(
-                            "---------- \
-                            Processes {:?} are still alive. Killing ... \
-                            -----------",
-                            children.values().map(|&(name, _)| name)
-                                .collect::<Vec<_>>());
-                        for &(_, ref child) in children.values() {
-                            child.signal(SIGKILL).ok();
-                        }
-                        // Basically this deadline should never happen
-                        deadline = SteadyTime::now() + Duration::seconds(3600);
-                    } else {
-                        println!(
-                            "---------- \
-                            Failing state. Processes {:?} are still alive. \
-                            -----------\n\
-                            You may want to set kill-unresponsive-after \
-                            setting to kill them automatically",
-                            children.values().map(|&(name, _)| name)
-                                .collect::<Vec<_>>());
-                        deadline = SteadyTime::now() + Duration::seconds(5);
+                    println!(
+                        "---------- \
+                        Processes {:?} are still alive. Killing ... \
+                        -----------\n\
+                        To prevent killing of the processes set \
+                        ``kill-unresponsive-after`` to some larger value",
+                        children.values().map(|&(name, _)| name)
+                            .collect::<Vec<_>>());
+                    for &(_, ref child) in children.values() {
+                        child.signal(SIGKILL).ok();
                     }
+                    // Basically this deadline should never happen
+                    deadline = SteadyTime::now() + Duration::seconds(3600);
                 }
             }
         }

@@ -150,7 +150,9 @@ Parameters of `!Supervise`
 
 .. opt:: kill-unresponsive-after
 
-   If some process have exited (in ``stop-on-failure`` mode) vagga will send
-   TERM signal once and then will wait indefinitely until program exits or
-   use press Ctrl+C or Ctrl+/. If this setting is set, vagga will kill
-   remaining processes after specified number of seconds.
+   (default `2` seconds) If some process have exited (in ``stop-on-failure``
+   mode) vagga will send TERM signal to all other processes. If they don't
+   finish in the specified number of seconds, vagga will kill them with KILL
+   signal (so they finish without being able to intercept singal
+   unconditionally). If you don't like this behavior set the parameter to
+   some large value.
