@@ -1,6 +1,6 @@
 [package]
 name = "vagga"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Paul Colomiets"]
 
 [dependencies]
