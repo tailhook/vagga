@@ -10,6 +10,7 @@ Vagga 0.4.0
 
 * Vagga now uses "unshare" and "signal" crates for working with containers
 * Signal handling is changed:
+
   * User visible changes: Ctrl+C doesn't sent twice to children (was
     rarely noticeable), Ctrl+/ reliably kills vagga and children
   * The only signal that is propagated by vagga to children is now SIGTERM
@@ -20,6 +21,7 @@ Vagga 0.4.0
     by the KILL signal).
   * So if you want to send one of the signals except SIGTERM, send it to the
     specific process not to vagga
+
 * Fix broken ``!Alpine``, which always installed latests known version of the
   distribution instead specified
 * Add kill-unresponsive-after_ setting
