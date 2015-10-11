@@ -6,7 +6,7 @@ Release Notes
 Vagga 0.4.0
 ===========
 
-:Release Date: future
+:Release Date: 11.10.2015
 
 * Vagga now uses "unshare" and "signal" crates for working with containers
 * Signal handling is changed:
