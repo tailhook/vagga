@@ -18,6 +18,7 @@ Databases
 
    examples/db/postgres
    examples/db/redis
+   examples/db/consul
 
 
 Miscellaneous
