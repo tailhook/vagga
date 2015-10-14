@@ -81,7 +81,7 @@ a pull request to add your example here.
 * `xRandom`__ a web project described as "Site that allows you see adult movie
   free without advertisements". Vagga config features:
 
-    * Installaction of elasticsearch_ (which is also an example to setup DB)
+    * Installation of elasticsearch_ (which is also an example to setup DB)
     * The full web server stack run with single command (nginx + nodejs)
     * The `hard way`_ of setting up the same thing for comparison
 
