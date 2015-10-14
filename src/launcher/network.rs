@@ -2,11 +2,11 @@ use std::env;
 use std::fs::{remove_file};
 use std::fs::{File};
 use std::io::{stdout, stderr, BufRead, BufReader, Read};
-use std::os::unix::io::{FromRawFd};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::collections::HashSet;
 
+use log::LogLevel::Debug;
 use unshare::{Command, Stdio, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
@@ -305,7 +305,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 let mut cmd = sudo_iptables();
 
                 // Message not an error actually
-                cmd.stderr(unsafe { FromRawFd::from_raw_fd(1) });
+                // Let's print it only on debug log level
+                if !log_enabled!(Debug) {
+                    cmd.stderr(Stdio::null());
+                }
 
                 let mut check_rule = rule.clone();
                 for item in check_rule.iter_mut() {
