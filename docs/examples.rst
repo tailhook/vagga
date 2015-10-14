@@ -77,3 +77,14 @@ a pull request to add your example here.
     .. _impress.js: https://github.com/impress/impress.js
     .. _hovercraft: http://hovercraft.readthedocs.org/en/latest/presentations.html
     .. _wkhtmltopdf: http://wkhtmltopdf.org/
+
+* `xRandom`__ a web project described as "Site that allows you see adult movie
+  free without advertisements". Vagga config features:
+
+    * Installaction of elasticsearch_ (which is also an example to setup DB)
+    * The full web server stack run with single command (nginx + nodejs)
+    * The `hard way`_ of setting up the same thing for comparison
+
+    __ https://github.com/sashasimkin/xrandom/blob/master/vagga.yaml
+    .. _elasticsearch: https://www.elastic.co/products/elasticsearch
+    .. _hard way: https://github.com/sashasimkin/xrandom/blob/541584058dea6211a60c80327eccc70373914d8a/README.md#the-hard-way
