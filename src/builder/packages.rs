@@ -1,12 +1,11 @@
 use std::fs::copy;
 use std::path::Path;
 
-use super::context::Distribution as Distr;
-use super::context::BuildContext;
-use super::commands::debian;
-use super::commands::alpine;
+use super::context::Context;
 use super::commands::generic::run_command_at_env;
 use super::download;
+use builder::error::StepError;
+use builder::distrib::Distribution;
 
 pub use self::Package::*;
 
@@ -34,7 +33,7 @@ pub enum Package {
 }
 
 
-fn generic_packages(ctx: &mut BuildContext, features: Vec<Package>)
+fn generic_packages(ctx: &mut Context, features: Vec<Package>)
     -> Result<Vec<Package>, String>
 {
     let mut left = vec!();
@@ -62,24 +61,15 @@ fn generic_packages(ctx: &mut BuildContext, features: Vec<Package>)
 }
 
 
-pub fn ensure_packages(ctx: &mut BuildContext, features: &[Package])
-    -> Result<(), String>
+pub fn ensure_packages(distro: &mut Box<Distribution>, ctx: &mut Context,
+    features: &[Package])
+    -> Result<(), StepError>
 {
     let mut features = features.iter().cloned()
         .filter(|x| !ctx.featured_packages.contains(x))
         .collect::<Vec<Package>>();
     if features.len() > 0 {
-        let leftover = match ctx.distribution {
-            Distr::Unknown => {
-                return Err(format!("Unsupported distribution"));
-            }
-            Distr::Ubuntu(_) => {
-                try!(debian::ensure_packages(ctx, &features))
-            }
-            Distr::Alpine(_) => {
-                try!(alpine::ensure_packages(ctx, &features))
-            }
-        };
+        let leftover = try!(distro.ensure_packages(ctx, &features));
         ctx.featured_packages.extend(
             features.into_iter().filter(|x| !leftover.contains(x)));
         features = leftover;
@@ -88,8 +78,7 @@ pub fn ensure_packages(ctx: &mut BuildContext, features: &[Package])
         features = try!(generic_packages(ctx, features));
     }
     if features.len() > 0 {
-        Err(format!("Features {:?} are not supported by distribution",
-                    features))
+        return Err(StepError::UnsupportedFeatures(features));
     } else {
         Ok(())
     }

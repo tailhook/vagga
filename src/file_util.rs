@@ -19,7 +19,9 @@ pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     Ok(res)
 }
 
-pub fn create_dir(path: &Path, recursive: bool) -> Result<(), Error> {
+pub fn create_dir<P:AsRef<Path>>(path: P, recursive: bool) -> Result<(), Error>
+{
+    let path = path.as_ref();
     if path.is_dir() {
         return Ok(())
     }

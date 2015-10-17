@@ -57,6 +57,15 @@ setup() {
     [[ $link = ".roots/vivid-calc.1b5a9608/root" ]]
 }
 
+@test "ubuntu_release: Run vivid bc in ubuntu derived from release" {
+    run vagga vivid-derived-calc 100*24
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "2400" ]]
+    link=$(readlink .vagga/vivid-derive)
+    [[ $link = ".roots/vivid-derive.1b5a9608/root" ]]
+}
+
 @test "Run trusty bc in ubuntu release" {
     run vagga trusty-calc 23*7+3
     printf "%s\n" "${lines[@]}"

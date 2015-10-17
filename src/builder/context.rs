@@ -1,21 +1,14 @@
-use std::fs::{copy};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
 
-use container::mount::{bind_mount, unmount, mount_system_dirs};
+use container::mount::{bind_mount};
 use container::util::clean_dir;
 use config::Config;
 use config::Container;
 use config::Settings;
 use config::builders::PipSettings;
-use super::commands::debian::UbuntuInfo;
-use super::commands::alpine::AlpineInfo;
-use super::commands::debian;
-use super::commands::alpine;
-use super::commands::pip;
-use super::commands::npm;
 use super::capsule;
 use super::packages;
 use super::timer;
@@ -23,25 +16,18 @@ use path_util::{PathExt, ToRelative};
 use file_util::create_dir;
 use process_util::PROXY_ENV_VARS;
 
-#[derive(Debug)]
-pub enum Distribution {
-    Unknown,
-    Ubuntu(UbuntuInfo),
-    Alpine(AlpineInfo),
-}
 
-pub struct BuildContext<'a> {
+pub struct Context<'a> {
     pub config: &'a Config,
     pub container_name: String,
     pub container_config: &'a Container,
-    ensure_dirs: BTreeSet<PathBuf>,
-    empty_dirs: BTreeSet<PathBuf>,
-    remove_dirs: BTreeSet<PathBuf>,
-    cache_dirs: BTreeMap<PathBuf, String>,
+    pub ensure_dirs: BTreeSet<PathBuf>,
+    pub empty_dirs: BTreeSet<PathBuf>,
+    pub remove_dirs: BTreeSet<PathBuf>,
+    pub cache_dirs: BTreeMap<PathBuf, String>,
     pub environ: BTreeMap<String, String>,
 
     pub settings: Settings,
-    pub distribution: Distribution,
     pub pip_settings: PipSettings,
     pub capsule: capsule::State,
     pub packages: BTreeSet<String>,
@@ -50,10 +36,10 @@ pub struct BuildContext<'a> {
     pub timelog: timer::TimeLog,
 }
 
-impl<'a> BuildContext<'a> {
+impl<'a> Context<'a> {
     pub fn new<'x>(cfg: &'x Config, name: String,
         container: &'x Container, settings: Settings)
-        -> BuildContext<'x>
+        -> Context<'x>
     {
         let mut env: BTreeMap<String, String> = vec!(
             ("TERM".to_string(), "dumb".to_string()),
@@ -69,7 +55,7 @@ impl<'a> BuildContext<'a> {
                 }
             }
         }
-        return BuildContext {
+        return Context {
             config: cfg,
             container_name: name,
             container_config: container,
@@ -90,7 +76,6 @@ impl<'a> BuildContext<'a> {
                 ).into_iter().collect(),
             environ: env,
             settings: settings,
-            distribution: Distribution::Unknown,
             pip_settings: Default::default(),
             capsule: Default::default(),
             packages: BTreeSet::new(),
@@ -137,61 +122,5 @@ impl<'a> BuildContext<'a> {
         assert!(path.is_absolute());
         self.ensure_dirs.insert(path.rel().to_path_buf());
     }
-    pub fn start(&mut self) -> Result<(), String> {
-        try!(mount_system_dirs());
-        try_msg!(create_dir(&Path::new("/vagga/root/etc"), false),
-             "Error creating /etc dir: {err}");
-        try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
-            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
-        try!(self.timelog.mark(format_args!("Prepare"))
-            .map_err(|e| format!("Can't write timelog: {}", e)));
-        Ok(())
-    }
 
-    pub fn finish(&mut self) -> Result<(), String> {
-        if self.featured_packages.contains(&packages::PipPy2) ||
-           self.featured_packages.contains(&packages::PipPy3)
-        {
-            try!(pip::freeze(self));
-        }
-        if self.featured_packages.contains(&packages::Npm) {
-            try!(npm::list(self));
-        }
-
-        match self.distribution {
-            Distribution::Unknown => {}
-            Distribution::Ubuntu(_) => {
-                try!(debian::finish(self));
-            }
-            Distribution::Alpine(_) => {
-                try!(alpine::finish(self));
-            }
-        }
-
-        let base = Path::new("/vagga/root");
-
-        for (dir, _) in self.cache_dirs.iter().rev() {
-            try!(unmount(&base.join(dir)));
-        }
-
-        for dir in self.remove_dirs.iter() {
-            try!(clean_dir(&base.join(dir), false)
-                .map_err(|e| format!("Error removing dir: {}", e)));
-        }
-
-        for dir in self.empty_dirs.iter() {
-            try!(clean_dir(&base.join(dir), false));
-        }
-
-        for dir in self.ensure_dirs.iter() {
-            let fulldir = base.join(dir);
-            try_msg!(create_dir(&fulldir, true),
-                "Error creating dir: {err}");
-        }
-
-        try!(self.timelog.mark(format_args!("Finish"))
-            .map_err(|e| format!("Can't write timelog: {}", e)));
-
-        return Ok(());
-    }
 }

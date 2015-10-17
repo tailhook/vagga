@@ -14,7 +14,7 @@ use unshare::{Command, Stdio};
 
 use config::settings::Settings;
 use container::mount::bind_mount;
-use super::context::BuildContext;
+use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
 use super::super::file_util::create_dir;
 use path_util::PathExt;
@@ -53,7 +53,7 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
 }
 
 
-pub fn ensure_features(ctx: &mut BuildContext, features: &[Feature])
+pub fn ensure_features(ctx: &mut Context, features: &[Feature])
     -> Result<(), String>
 {
     return ensure(&mut ctx.capsule, &ctx.settings, features);

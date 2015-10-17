@@ -10,102 +10,58 @@ use config::read_config;
 use container::util::{clean_dir, copy_dir};
 
 use super::super::path_util::ToRelative;
-use super::context::BuildContext;
-use super::commands::debian;
+use super::commands::ubuntu;
 use super::commands::alpine;
 use super::commands::generic;
 use super::commands::pip;
 use super::commands::npm;
 use super::commands::vcs;
 use super::tarcmd;
-use super::context::Distribution as Distr;
 use version::short_version;
+use builder::distrib::{DistroBox};
+use builder::guard::Guard;
+use builder::error::StepError;
 
 
 pub trait BuildCommand {
-    fn build(&self, ctx: &mut BuildContext, build: bool) -> Result<(), String>;
+    fn build(&self, ctx: &mut Guard, build: bool) -> Result<(), StepError>;
 }
 
-fn configure_ubuntu(ctx: &mut BuildContext, name: &String)
-    -> Result<(), String>
-{
-    if let Distr::Unknown = ctx.distribution {
-        ctx.distribution = Distr::Ubuntu(debian::UbuntuInfo {
-            release: name.to_string(),
-            apt_update: true,
-            has_universe: false,
-        });
-    } else {
-        return Err(format!("Conflicting distribution"));
-    };
-    try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
-                           "apt-cache".to_string()));
-    try!(ctx.add_cache_dir(Path::new("/var/lib/apt/lists"),
-                          "apt-lists".to_string()));
-    ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
-                       "noninteractive".to_string());
-    ctx.environ.insert("LANG".to_string(),
-                       "en_US.UTF-8".to_string());
-    ctx.environ.insert("PATH".to_string(),
-                       "/usr/local/sbin:/usr/local/bin:\
-                        /usr/sbin:/usr/bin:/sbin:/bin:\
-                        /usr/games:/usr/local/games\
-                        ".to_string());
-    Ok(())
-}
 
 impl BuildCommand for Builder {
-    fn build(&self, ctx: &mut BuildContext, build: bool)
-        -> Result<(), String>
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
     {
+        use builder::error::StepError::*;
         match self {
             &B::Install(ref pkgs) => {
-                ctx.packages.extend(pkgs.clone().into_iter());
+                guard.ctx.packages.extend(pkgs.clone().into_iter());
                 for i in pkgs.iter() {
-                    ctx.build_deps.remove(i);
+                    guard.ctx.build_deps.remove(i);
                 }
                 if build {
-                    match ctx.distribution {
-                        Distr::Unknown => {
-                            return Err(format!("Unknown distribution"));
-                        }
-                        Distr::Ubuntu(_) => {
-                            try!(debian::apt_install(ctx, pkgs));
-                        }
-                        Distr::Alpine(_) => {
-                            try!(alpine::install(ctx, pkgs));
-                        }
-                    }
+                    try!(guard.distro.install(&mut guard.ctx, pkgs));
                 }
             }
             &B::BuildDeps(ref pkgs) => {
                 for i in pkgs.iter() {
-                    if !ctx.packages.contains(i) {
-                        ctx.build_deps.insert(i.clone());
+                    if !guard.ctx.packages.contains(i) {
+                        guard.ctx.build_deps.insert(i.clone());
                     }
                 }
                 if build {
-                    match ctx.distribution {
-                        Distr::Unknown => {
-                            return Err(format!("Unknown distribution"));
-                        }
-                        Distr::Ubuntu(_) => {
-                            try!(debian::apt_install(ctx, pkgs));
-                        }
-                        Distr::Alpine(_) => {
-                            try!(alpine::install(ctx, pkgs));
-                        }
-                    }
+                    try!(guard.distro.install(&mut guard.ctx, pkgs));
                 }
             }
             &B::Container(ref name) => {
-                let cont = ctx.config.containers.get(name)
+                let cont = guard.ctx.config.containers.get(name)
                     .expect("Subcontainer not found");  // TODO
                 for b in cont.setup.iter() {
-                    try!(b.build(ctx, false));
+                    try!(b.build(guard, false)
+                        .map_err(|e| SubStep(b.clone(), Box::new(e))));
                 }
                 if build {
-                    let version = try!(short_version(&cont, &ctx.config)
+                    let version = try!(short_version(&cont, &guard.ctx.config)
                         .map_err(|(s, e)| format!("step {}: {}", s, e)));
                     let path = Path::new("/vagga/base/.roots")
                         .join(format!("{}.{}", name, version)).join("root");
@@ -115,9 +71,9 @@ impl BuildCommand for Builder {
             &B::SubConfig(ref sconfig) => {
                 let path = match sconfig.source {
                     S::Container(ref container) => {
-                        let cont = ctx.config.containers.get(container)
+                        let cont = guard.ctx.config.containers.get(container)
                             .expect("Subcontainer not found");  // TODO
-                        let version = try!(short_version(&cont, &ctx.config)
+                        let version = try!(short_version(&cont, &guard.ctx.config)
                             .map_err(|(s, e)| format!("step {}: {}", s, e)));
                         Path::new("/vagga/base/.roots")
                             .join(format!("{}.{}", container, version))
@@ -134,7 +90,8 @@ impl BuildCommand for Builder {
                 let cont = subcfg.containers.get(&sconfig.container)
                     .expect("Subcontainer not found");  // TODO
                 for b in cont.setup.iter() {
-                    try!(b.build(ctx, build));
+                    try!(b.build(guard, build)
+                        .map_err(|e| SubStep(b.clone(), Box::new(e))));
                 }
             }
             &B::Text(ref files) => {
@@ -151,51 +108,40 @@ impl BuildCommand for Builder {
                     }
                 }
             }
-            &B::Ubuntu(ref name) => {
-                try!(configure_ubuntu(ctx, name));
-
+            &B::Ubuntu(ref codename) => {
+                try!(ubuntu::configure_simple(guard, codename));
                 if build {
-                    try!(debian::fetch_ubuntu_core(ctx,
-                        name, debian::BuildType::Daily));
-                    try!(debian::init_ubuntu_core(ctx));
-                    try!(debian::clobber_chfn());
+                    try!(guard.distro.bootstrap(&mut guard.ctx));
                 }
             }
             &B::UbuntuRelease(ref release_info) => {
+                try!(ubuntu::configure(guard, release_info));
                 if build {
-                    try!(debian::fetch_ubuntu_core(ctx,
-                        &release_info.version, debian::BuildType::Release));
-                }
-
-                let codename = try!(debian::read_ubuntu_codename());
-                try!(configure_ubuntu(ctx, &codename));
-
-                if build {
-                    try!(debian::init_ubuntu_core(ctx));
-                    if !release_info.keep_chfn_command {
-                        try!(debian::clobber_chfn());
-                    }
+                    try!(guard.distro.bootstrap(&mut guard.ctx));
                 }
             }
             &B::UbuntuRepo(ref repo) => {
                 if build {
-                    try!(debian::add_debian_repo(ctx, repo));
+                    let ref mut ctx = guard.ctx;
+                    try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
+                        try!(u.add_debian_repo(ctx, repo));
+                        Ok(())
+                    }));
                 }
             }
             &B::UbuntuUniverse => {
-                match ctx.distribution {
-                    Distr::Ubuntu(ref mut ubuntu) => {
-                        ubuntu.has_universe = true;
+                let ref mut ctx = guard.ctx;
+                try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
+                    try!(u.enable_universe());
+                    if build {
+                        try!(u.add_universe(ctx));
                     }
-                    _ => unreachable!(),
-                }
-                if build {
-                    try!(debian::ubuntu_add_universe(ctx));
-                }
+                    Ok(())
+                }));
             }
             &B::Sh(ref text) => {
                 if build {
-                    try!(generic::run_command(ctx,
+                    try!(generic::run_command(&mut guard.ctx,
                         &["/bin/sh".to_string(),
                           "-exc".to_string(),
                           text.to_string()]));
@@ -203,21 +149,21 @@ impl BuildCommand for Builder {
             }
             &B::Cmd(ref cmd) => {
                 if build {
-                    try!(generic::run_command(ctx, &cmd));
+                    try!(generic::run_command(&mut guard.ctx, &cmd));
                 }
             }
             &B::Env(ref pairs) => {
                 for (k, v) in pairs.iter() {
-                    ctx.environ.insert(k.clone(), v.clone());
+                    guard.ctx.environ.insert(k.clone(), v.clone());
                 }
             }
             &B::Remove(ref path) => {
                 try!(clean_dir(path, true));
-                ctx.add_remove_dir(&path);
+                guard.ctx.add_remove_dir(&path);
             }
             &B::EmptyDir(ref path) => {
                 try!(clean_dir(path, false));
-                ctx.add_empty_dir(&path);
+                guard.ctx.add_empty_dir(&path);
             }
             &B::EnsureDir(ref path) => {
                 let fpath = Path::new("/vagga/root").join(path.rel());
@@ -225,95 +171,83 @@ impl BuildCommand for Builder {
                     .map_err(|e| format!("Error creating dir: {}", e)));
                 try!(set_permissions(&fpath, Permissions::from_mode(0o755))
                     .map_err(|e| format!("Error setting permissions: {}", e)));
-                ctx.add_ensure_dir(path);
+                guard.ctx.add_ensure_dir(path);
             }
             &B::CacheDirs(ref pairs) => {
                 for (k, v) in pairs.iter() {
-                    try!(ctx.add_cache_dir(k, v.clone()));
+                    try!(guard.ctx.add_cache_dir(k, v.clone()));
                 }
             }
             &B::Depends(_) => {
             }
             &B::Git(ref git) => {
                 if build {
-                    try!(vcs::git_command(ctx, git));
+                    try!(vcs::git_command(&mut guard.ctx, git));
                 }
             }
             &B::GitInstall(ref git) => {
                 if build {
-                    try!(vcs::git_install(ctx, git));
+                    try!(vcs::git_install(&mut guard.ctx, git));
                 }
             }
             &B::Tar(ref tar) => {
                 if build {
-                    try!(tarcmd::tar_command(ctx, tar));
+                    try!(tarcmd::tar_command(&mut guard.ctx, tar));
                 }
             }
             &B::TarInstall(ref tar_inst) => {
                 if build {
-                    try!(tarcmd::tar_install(ctx, tar_inst));
+                    try!(tarcmd::tar_install(&mut guard.ctx, tar_inst));
                 }
             }
             &B::Alpine(ref version) => {
-                if let Distr::Unknown = ctx.distribution {
-                    ctx.distribution = Distr::Alpine(alpine::AlpineInfo {
-                        version: version.to_string(),
-                        base_setup: false,
-                    });
-                } else {
-                    return Err(format!("Conflicting distribution"));
-                };
-                try!(ctx.add_cache_dir(Path::new("/etc/apk/cache"),
-                                       "alpine-cache".to_string()));
-                ctx.environ.insert("LANG".to_string(),
-                                   "en_US.UTF-8".to_string());
-                ctx.environ.insert("PATH".to_string(),
-                                   "/usr/local/sbin:/usr/local/bin:\
-                                    /usr/sbin:/usr/bin:/sbin:/bin\
-                                    ".to_string());
+                try!(alpine::configure(&mut guard.distro, &mut guard.ctx,
+                    version));
                 if build {
-                    try!(alpine::setup_base(ctx, version));
+                    try!(guard.distro.bootstrap(&mut guard.ctx));
                 }
             }
             &B::PipConfig(ref pip_settings) => {
-                ctx.pip_settings = pip_settings.clone();
+                guard.ctx.pip_settings = pip_settings.clone();
             }
             &B::Py2Install(ref pkgs) => {
-                try!(pip::configure(ctx));
+                try!(pip::configure(&mut guard.ctx));
                 if build {
-                    try!(pip::pip_install(ctx, 2, pkgs));
+                    try!(pip::pip_install(&mut guard.distro, &mut guard.ctx,
+                        2, pkgs));
                 }
             }
             &B::Py3Install(ref pkgs) => {
-                try!(pip::configure(ctx));
+                try!(pip::configure(&mut guard.ctx));
                 if build {
-                    try!(pip::pip_install(ctx, 3, pkgs));
+                    try!(pip::pip_install(&mut guard.distro, &mut guard.ctx,
+                        3, pkgs));
                 }
             }
             &B::Py2Requirements(ref fname) => {
-                try!(pip::configure(ctx));
+                try!(pip::configure(&mut guard.ctx));
                 if build {
-                    try!(pip::pip_requirements(ctx, 2, fname));
+                    try!(pip::pip_requirements(&mut guard.distro,
+                        &mut guard.ctx, 2, fname));
                 }
             }
             &B::Py3Requirements(ref fname) => {
-                try!(pip::configure(ctx));
+                try!(pip::configure(&mut guard.ctx));
                 if build {
-                    try!(pip::pip_requirements(ctx, 3, fname));
+                    try!(pip::pip_requirements(&mut guard.distro,
+                        &mut guard.ctx, 3, fname));
                 }
             }
             &B::NpmInstall(ref pkgs) => {
-                if let Distr::Unknown = ctx.distribution {
-                    try!(B::Alpine(alpine::LATEST_VERSION.to_string())
-                        .build(ctx, build));
-                }
+                try!(guard.distro.npm_configure(&mut guard.ctx));
                 if build {
-                    try!(npm::npm_install(ctx, pkgs));
+                    try!(npm::npm_install(&mut guard.distro, &mut guard.ctx,
+                        pkgs));
                 }
             }
         }
         if build {
-            try!(ctx.timelog.mark(format_args!("Step: {:?}", self))
+            try!(guard.ctx.timelog.mark(format_args!("Step: {:?}", self))
                 .map_err(|e| format!("Can't write timelog: {}", e)));
         }
         Ok(())

@@ -7,15 +7,16 @@ use config::Settings;
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use argparse::{ArgumentParser, Store, StoreTrue};
-use self::context::{BuildContext};
+use self::context::{Context};
 use self::bld::{BuildCommand};
+use self::guard::Guard;
 
 mod context;
 mod bld;
 mod download;
 mod tarcmd;
 mod commands {
-    pub mod debian;
+    pub mod ubuntu;
     pub mod generic;
     pub mod alpine;
     pub mod pip;
@@ -25,6 +26,9 @@ mod commands {
 mod capsule;
 mod packages;
 mod timer;
+mod distrib;
+mod guard;
+mod error;
 
 
 pub fn run() -> i32 {
@@ -75,17 +79,8 @@ fn _build(container: &String, settings: Settings) -> Result<(), String> {
     let cont = cfg.containers.get(container)
         .expect("Container not found");  // TODO
 
-    let mut build_context = BuildContext::new(
-        &cfg, container.clone(), cont, settings);
-    try!(build_context.start());
-
-    for b in cont.setup.iter() {
-        debug!("Building step: {:?}", b);
-        try!(b.build(&mut build_context, true));
-    }
-
-    try!(build_context.finish());
-    Ok(())
+    Guard::build(Context::new(&cfg, container.clone(), cont, settings))
+    .map_err(|e| e.to_string())
 }
 
 fn _fetch_sources(container: &String, settings: Settings)

@@ -2,15 +2,19 @@ use std::path::{Path, PathBuf};
 
 use unshare::{Command};
 
-use super::super::context::BuildContext;
+use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
 use path_util::PathExt;
 use process_util::capture_stdout;
+use builder::error::StepError;
 
 
-fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
+fn find_cmd<P:AsRef<Path>>(ctx: &mut Context, cmd: P)
+    -> Result<PathBuf, StepError>
+{
+    let cmd = cmd.as_ref();
     let chroot = Path::new("/vagga/root");
-    if let Some(paths) = ctx.environ.get(&"PATH".to_string()) {
+    if let Some(paths) = ctx.environ.get("PATH") {
         for dir in paths[..].split(':') {
             let path = Path::new(dir);
             if !path.is_absolute() {
@@ -18,18 +22,18 @@ fn find_cmd(ctx: &mut BuildContext, cmd: &str) -> Result<PathBuf, String> {
                       path.display());
                 continue;
             }
-            if chroot.join(path.rel())
-                .join(cmd).exists()
+            if chroot.join(path.rel()).join(cmd).exists()
             {
                 return Ok(path.join(cmd));
             }
         }
-        return Err(format!("Command {:?} not found in {:?}", cmd, paths));
+        return Err(StepError::CommandNotFound(cmd.to_path_buf(), paths.clone()));
     }
-    return Err(format!("Command {:?} not found (no PATH)", cmd));
+    return Err(StepError::CommandNotFound(cmd.to_path_buf(),
+        "-- empty PATH --".to_string()));
 }
 
-pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
+pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     path: &Path, env: &[(&str, &str)])
     -> Result<(), String>
 {
@@ -66,19 +70,19 @@ pub fn run_command_at_env(ctx: &mut BuildContext, cmdline: &[String],
     }
 }
 
-pub fn run_command_at(ctx: &mut BuildContext, cmdline: &[String], path: &Path)
+pub fn run_command_at(ctx: &mut Context, cmdline: &[String], path: &Path)
     -> Result<(), String>
 {
     run_command_at_env(ctx, cmdline, path, &[])
 }
 
-pub fn run_command(ctx: &mut BuildContext, cmd: &[String])
+pub fn run_command(ctx: &mut Context, cmd: &[String])
     -> Result<(), String>
 {
     return run_command_at_env(ctx, cmd, &Path::new("/work"), &[]);
 }
 
-pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
+pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
     env: &[(&str, &str)])
     -> Result<Vec<u8>, String>
 {
@@ -99,4 +103,34 @@ pub fn capture_command<'x>(ctx: &mut BuildContext, cmdline: &'x[String],
         cmd.env(k, v);
     }
     capture_stdout(cmd)
+}
+
+
+pub fn command<P:AsRef<Path>>(ctx: &mut Context, cmdname: P)
+    -> Result<Command, StepError>
+{
+    let cmdpath = cmdname.as_ref();
+    let mut cmd = if cmdpath.is_absolute() {
+        Command::new(&cmdpath)
+    } else {
+        Command::new(try!(find_cmd(ctx, cmdpath)))
+    };
+
+    cmd.current_dir("/work");
+    cmd.chroot_dir("/vagga/root");
+    cmd.env_clear();
+    for (k, v) in ctx.environ.iter() {
+        cmd.env(k, v);
+    }
+    Ok(cmd)
+}
+
+pub fn run(mut cmd: Command) -> Result<(), StepError> {
+    debug!("Running {:?}", cmd);
+
+    match cmd.status() {
+        Ok(ref s) if s.success() => Ok(()),
+        Ok(s) => Err(StepError::CommandFailed(cmd, s)),
+        Err(e) => Err(StepError::CommandError(cmd, e)),
+    }
 }

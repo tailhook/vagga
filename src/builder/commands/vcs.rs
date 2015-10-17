@@ -9,7 +9,7 @@ use config::builders::GitInfo;
 use config::builders::GitInstallInfo;
 use config::builders::GitSource;
 use super::super::capsule;
-use super::super::context::BuildContext;
+use super::super::context::Context;
 use super::generic::run_command_at;
 use super::super::super::path_util::ToRelative;
 use path_util::PathExt;
@@ -85,7 +85,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 }
 
 
-pub fn git_command(ctx: &mut BuildContext, git: &GitInfo) -> Result<(), String>
+pub fn git_command(ctx: &mut Context, git: &GitInfo) -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::Git]));
     let dest = PathBuf::from("/vagga/root").join(&git.path.rel());
@@ -96,7 +96,7 @@ pub fn git_command(ctx: &mut BuildContext, git: &GitInfo) -> Result<(), String>
     Ok(())
 }
 
-pub fn git_install(ctx: &mut BuildContext, git: &GitInstallInfo)
+pub fn git_install(ctx: &mut Context, git: &GitInstallInfo)
     -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::Git]));

@@ -7,14 +7,14 @@ use unshare::{Command, Stdio};
 use container::mount::{bind_mount, unmount};
 use config::builders::TarInfo;
 use config::builders::TarInstallInfo;
-use super::context::BuildContext;
+use super::context::Context;
 use super::download::download_file;
 use super::commands::generic::run_command_at;
 use file_util::{read_visible_entries, create_dir};
 use path_util::{ToRelative, PathExt};
 
 
-pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
+pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     includes: &[&Path], excludes: &[&Path])
     -> Result<(), String>
 {
@@ -46,7 +46,7 @@ pub fn unpack_file(_ctx: &mut BuildContext, src: &Path, tgt: &Path,
     }
 }
 
-pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
+pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
     let filename = try!(download_file(ctx, &tar.url[0..]));
@@ -74,7 +74,7 @@ pub fn tar_command(ctx: &mut BuildContext, tar: &TarInfo) -> Result<(), String>
     Ok(())
 }
 
-pub fn tar_install(ctx: &mut BuildContext, tar: &TarInstallInfo)
+pub fn tar_install(ctx: &mut Context, tar: &TarInstallInfo)
     -> Result<(), String>
 {
     let filename = try!(download_file(ctx, &tar.url[0..]));

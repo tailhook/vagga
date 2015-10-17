@@ -18,6 +18,8 @@ url = "*"
 unshare = "0.1.1"
 signal = "0.1.2"
 quick-error = "0.1.4"
+mopa = "0.2.0"
+anymap = "0.11.1"
 
 [[bin]]
 name = "vagga"

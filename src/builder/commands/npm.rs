@@ -1,8 +1,11 @@
-use super::super::context::{BuildContext};
+use super::super::context::{Context};
 use super::generic::{run_command, capture_command};
 use super::super::packages;
 
 use std::path::Path;
+
+use builder::error::StepError;
+use builder::distrib::Distribution;
 
 
 pub fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
@@ -19,18 +22,20 @@ pub fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
     return res;
 }
 
-pub fn ensure_npm(ctx: &mut BuildContext, features: &[packages::Package])
-    -> Result<(), String>
+pub fn ensure_npm(distro: &mut Box<Distribution>, ctx: &mut Context,
+    features: &[packages::Package])
+    -> Result<(), StepError>
 {
-    packages::ensure_packages(ctx, features)
+    packages::ensure_packages(distro, ctx, features)
 }
 
-pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
+pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
+    pkgs: &Vec<String>)
     -> Result<(), String>
 {
     try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
                            "npm-cache".to_string()));
-    try!(ensure_npm(ctx, &scan_features(pkgs)[..]));
+    try!(ensure_npm(distro, ctx, &scan_features(pkgs)[..]));
     let mut args = vec!(
         "/usr/bin/npm".to_string(),
         "install".to_string(),
@@ -42,7 +47,7 @@ pub fn npm_install(ctx: &mut BuildContext, pkgs: &Vec<String>)
     run_command(ctx, &args[..])
 }
 
-pub fn list(ctx: &mut BuildContext) -> Result<(), String> {
+pub fn list(ctx: &mut Context) -> Result<(), String> {
     use std::fs::File;  // TODO(tailhook) migrate whole module
     use std::io::Write;  // TODO(tailhook) migrate whole module
     try!(capture_command(ctx, &[

@@ -9,6 +9,11 @@ containers:
     - !UbuntuRelease { version: 15.04 }
     - !Install [bc]
 
+  vivid-derive:
+    setup:
+    - !Container vivid
+    - !Install [bc]
+
   trusty-calc:
     setup:
     - !UbuntuRelease { version: 14.04 }
@@ -30,6 +35,11 @@ commands:
 
   vivid-calc: !Command
     container: vivid-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  vivid-derived-calc: !Command
+    container: vivid-derive
     accepts-arguments: true
     run: echo "$*" | bc
 

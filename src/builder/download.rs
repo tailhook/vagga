@@ -8,11 +8,11 @@ use shaman::sha2::Sha256;
 use unshare::{Command, Stdio};
 
 use super::capsule;
-use super::context::BuildContext;
+use super::context::Context;
 use path_util::PathExt;
 
 
-pub fn download_file(ctx: &mut BuildContext, url: &str)
+pub fn download_file(ctx: &mut Context, url: &str)
     -> Result<PathBuf, String>
 {
     let https = url.starts_with("https:");
