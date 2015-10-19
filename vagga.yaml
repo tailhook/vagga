@@ -149,6 +149,9 @@ commands:
       if [ -n "$UBUNTU_MIRROR" ]; then
           echo "ubuntu-mirror: $UBUNTU_MIRROR" >> $HOME/.vagga.yaml
       fi
+      if [ -n "$ALPINE_MIRROR" ]; then
+          echo "alpine-mirror: $ALPINE_MIRROR" >> $HOME/.vagga.yaml
+      fi
       if [ -n "$*" ]; then
         bats "$@"
       else
