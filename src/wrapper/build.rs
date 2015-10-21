@@ -20,7 +20,7 @@ use container::uidmap::{map_users};
 use config::{Container};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use file_util::create_dir;
+use file_util::{create_dir, Lock};
 use path_util::PathExt;
 use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
 use super::Wrapper;
@@ -196,6 +196,12 @@ pub fn _build_container(cconfig: &Container, container: &String,
     debug!("Container version: {:?}", ver);
     let tmppath = PathBuf::from(
         &format!("/vagga/base/.roots/.tmp.{}", container));
+
+    let _lock_guard = try!(Lock::exclusive(
+            &tmppath.with_file_name(format!(".tmp.{}.lock", container)))
+        .map_err(|e| format!("Can't lock container build ({}). \
+            Probably other process is doing build. Aborting...", e)));
+
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
         Err(x) => {
