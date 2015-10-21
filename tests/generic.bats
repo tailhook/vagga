@@ -85,3 +85,11 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = 'Environment variable name (for option `-e`/`--use-env`) can'"'"'t contain equals `=` character. To set key-value pair use `-E`/`--environ` option' ]]
 }
+
+@test "generic: unpack local tar" {
+    run vagga vagga --version
+    link=$(readlink .vagga/vagga)
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
+    [[ $link = ".roots/vagga.04d96bbf/root" ]]
+}

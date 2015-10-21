@@ -21,6 +21,18 @@ containers:
     - !Alpine v3.1
     - !Sh env
 
+  vagga:
+    setup:
+    - !Alpine v3.1
+    - !Install [wget]
+    # Download file to workdir specifically
+    - !Sh "wget -N http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz"
+    # To test unpacking local archives
+    - !Tar
+      url: ./vagga-0.4.0.tar.xz
+      subdir: vagga
+      path: /usr/lib/vagga
+
 commands:
   two-lines: !Supervise
     children:
@@ -50,3 +62,7 @@ commands:
           echo hello
           sleep 1
           echo world
+
+  vagga: !Command
+    container: vagga
+    run: ["/usr/lib/vagga/vagga"]

@@ -2,6 +2,12 @@
 Release Notes
 =============
 
+Vagga 0.4.1
+===========
+
+:Release Date: future
+
+* ``!Tar`` and ``!TarInstall`` commands now support unpacking local files
 
 Vagga 0.4.0
 ===========

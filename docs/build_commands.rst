@@ -134,11 +134,14 @@ To download and unpack tar archive use ``!Tar`` command:
      path: /
      subdir: some-project-1.0
 
-Only ``url`` field is mandatory. The ``path`` is target path to unpack into,
-and ``subdir`` is a dir inside tar file. By default ``path`` is root of new
-filesystem. The ``subdir`` is a dir inside the tar file, if omitted whole tar
-archive will be unpacked.  You *can* use ``!Tar`` command to download and
-unpack the root filesystem from scratch.
+Only ``url`` field is mandatory. If ``url`` starts with dot ``.`` it's treated
+as filename inside project directory. The ``path`` is target path to unpack
+into, and ``subdir`` is a dir inside tar file. By default ``path`` is root of
+new filesystem. The ``subdir`` is a dir inside the tar file, if omitted whole
+tar archive will be unpacked.
+
+You *can* use ``!Tar`` command to download and unpack the root filesystem from
+scratch.
 
 There is a shortcut to download tar file and build and install from there,
 which is ``!TarInstall``:
@@ -152,11 +155,12 @@ which is ``!TarInstall``:
      subdir: rust-0.12.0-x86_64-unknown-linux-gnu
      script: ./install.sh --prefix=/usr
 
-Only the ``url`` is mandatory here too. The ``script`` is by default
-``./configure --prefix=/usr; make; make install``. It's run in ``subdir`` of
-unpacked archive. If ``subdir`` is omitted it's run in the *only* subdirectory
-of the archive. If archive contains more than one directory and ``subdir`` is
-empty, it's an error, however you may use ``.`` as ``subdir``.
+Only the ``url`` is mandatory here too. Similarly, if ``url`` starts with dot
+``.`` it's treated as filename inside project directory. The ``script`` is by
+default ``./configure --prefix=/usr; make; make install``. It's run in
+``subdir`` of unpacked archive. If ``subdir`` is omitted it's run in the *only*
+subdirectory of the archive. If archive contains more than one directory and
+``subdir`` is empty, it's an error, however you may use ``.`` as ``subdir``.
 
 To remove some data from the image after building use ``!Remove`` command:
 

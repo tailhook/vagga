@@ -49,7 +49,11 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
 pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
-    let filename = try!(download_file(ctx, &tar.url[0..]));
+    let filename = if tar.url.starts_with(".") {
+        PathBuf::from("/work").join(&tar.url)
+    } else {
+        try!(download_file(ctx, &tar.url))
+    };
     // TODO(tailhook) check sha256 sum
     if &Path::new(&tar.subdir) == &Path::new(".") {
         try!(unpack_file(ctx, &filename, &fpath, &[], &[]));
@@ -77,7 +81,11 @@ pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
 pub fn tar_install(ctx: &mut Context, tar: &TarInstallInfo)
     -> Result<(), String>
 {
-    let filename = try!(download_file(ctx, &tar.url[0..]));
+    let filename = if tar.url.starts_with(".") {
+        PathBuf::from("/work").join(&tar.url)
+    } else {
+        try!(download_file(ctx, &tar.url))
+    };
     // TODO(tailhook) check sha256 sum
     let tmppath = PathBuf::from("/vagga/root/tmp")
         .join(filename.file_name().unwrap());
