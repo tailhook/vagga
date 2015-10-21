@@ -16,6 +16,7 @@ The ``vagga.yaml`` has two sections:
    container_params
    commands
    build_commands
+   build_steps
    volumes
    upgrading
    supervision

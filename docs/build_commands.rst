@@ -1,8 +1,8 @@
 .. _build_commands:
 
-===========
-Build Steps
-===========
+========================
+Container Building Guide
+========================
 
 
 Build commands are tagged values in your container definition. For example:
