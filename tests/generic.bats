@@ -88,8 +88,8 @@ setup() {
 
 @test "generic: unpack local tar" {
     run vagga vagga --version
-    link=$(readlink .vagga/vagga)
     printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
     [[ $link = ".roots/vagga.04d96bbf/root" ]]
 }
