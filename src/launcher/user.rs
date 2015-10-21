@@ -3,7 +3,7 @@ use std::path::Path;
 
 use unshare::{Command, Namespace};
 
-use options;
+use options::build_mode::BuildMode;
 use config::{Config, Settings};
 use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
@@ -15,7 +15,7 @@ use container::uidmap::get_max_uidmap;
 
 
 pub fn run_user_command(config: &Config, settings: &Settings, workdir: &Path,
-    cmd: String, args: Vec<String>, build_mode: options::BuildMode)
+    cmd: String, args: Vec<String>, build_mode: BuildMode)
     -> Result<i32, String>
 {
     match config.commands.get(&cmd) {
@@ -57,7 +57,7 @@ pub fn common_child_command_env(cmd: &mut Command, workdir: Option<&Path>,
 
 pub fn run_simple_command(settings: &Settings, cfg: &CommandInfo,
     workdir: &Path, cmdname: String, args: Vec<String>,
-    build_mode: options::BuildMode)
+    build_mode: BuildMode)
     -> Result<i32, String>
 {
     if let Some(_) = cfg.network {

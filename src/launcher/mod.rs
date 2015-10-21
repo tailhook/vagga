@@ -6,7 +6,7 @@ use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 
 use libc::getuid;
-use options;
+use options::build_mode::build_mode;
 use config::find_config;
 use config::read_settings::read_settings;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
@@ -26,7 +26,7 @@ pub fn run() -> i32 {
     let mut args = vec!();
     let mut set_env = Vec::<String>::new();
     let mut propagate_env = Vec::<String>::new();
-    let mut build_mode = Default::default();
+    let mut bmode = Default::default();
     let mut owner_check = true;
     {
         let mut ap = ArgumentParser::new();
@@ -50,7 +50,7 @@ pub fn run() -> i32 {
         ap.refer(&mut owner_check)
           .add_option(&["--ignore-owner-check"], StoreFalse,
                 "Ignore checking owner of the project directory");
-        options::build_mode(&mut ap, &mut build_mode);
+        build_mode(&mut ap, &mut bmode);
         ap.refer(&mut cname)
           .add_argument("command", Store,
                 "A vagga command to run");
@@ -172,15 +172,15 @@ pub fn run() -> i32 {
         }
         "_run" => {
             underscore::run_command(&int_settings, &int_workdir, cname, args,
-                build_mode)
+                bmode)
         }
         "_run_in_netns" => {
             underscore::run_in_netns(&int_settings, &int_workdir, cname, args,
-                build_mode)
+                bmode)
         }
         _ => {
             user::run_user_command(&config, &int_settings,
-                &int_workdir, cname, args, build_mode)
+                &int_workdir, cname, args, bmode)
         }
     };
 

@@ -5,7 +5,7 @@ use std::fs::read_link;
 use argparse::{ArgumentParser, Store, StoreTrue};
 use unshare::{Command, Namespace};
 
-use options::BuildMode;
+use options::build_mode::BuildMode;
 use config::Settings;
 use process_util::{capture_fd3, set_uidmap, copy_env_vars};
 use container::uidmap::get_max_uidmap;
@@ -14,7 +14,7 @@ use container::uidmap::get_max_uidmap;
 pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
     -> Result<String, String>
 {
-    use options::BuildMode::*;
+    use options::build_mode::BuildMode::*;
     let ver = match mode {
         Normal => try!(build_internal(settings, name, &[])),
         NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),

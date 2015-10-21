@@ -9,7 +9,7 @@ use signal::trap::Trap;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
 
-use options;
+use options::build_mode::{build_mode, BuildMode};
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
 use container::uidmap::get_max_uidmap;
@@ -28,7 +28,7 @@ use process_util::{set_uidmap, convert_status};
 
 pub fn run_supervise_command(settings: &Settings, workdir: &Path,
     sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>,
-    mut build_mode: options::BuildMode)
+    mut bmode: BuildMode)
     -> Result<i32, String>
 {
     let mut only: Vec<String> = Vec::new();
@@ -47,7 +47,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         ap.refer(&mut exclude).metavar("PROCESS_NAME")
             .add_option(&["--exclude"], List, "
                 Don't run specified processes");
-        options::build_mode(&mut ap, &mut build_mode);
+        build_mode(&mut ap, &mut bmode);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -76,7 +76,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            let ver = try!(build_container(settings, cont, build_mode));
+            let ver = try!(build_container(settings, cont, bmode));
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {

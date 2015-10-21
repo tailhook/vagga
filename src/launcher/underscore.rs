@@ -5,7 +5,7 @@ use argparse::{ArgumentParser};
 use argparse::{StoreTrue, List, StoreOption, Store};
 use unshare::Namespace;
 
-use options;
+use options::build_mode::{build_mode, BuildMode};
 use config::{Settings};
 use container::nsutil::{set_namespace};
 
@@ -15,7 +15,7 @@ use super::build::{build_container};
 
 
 pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
-    mut args: Vec<String>, mut build_mode: options::BuildMode)
+    mut args: Vec<String>, mut bmode: BuildMode)
     -> Result<i32, String>
 {
     let mut cmdargs = Vec::<String>::new();
@@ -33,7 +33,7 @@ pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
                  Currently we use hard-linked copy of the container, so it's
                  dangerous for some operations. Still it's ok for installing
                  packages or similar tasks");
-        options::build_mode(&mut ap, &mut build_mode);
+        build_mode(&mut ap, &mut bmode);
         ap.refer(&mut container)
             .add_argument("container", Store,
                 "Container to run command in")
@@ -53,7 +53,7 @@ pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
         }
     }
     args.remove(0);
-    let ver = try!(build_container(settings, &container, build_mode));
+    let ver = try!(build_container(settings, &container, bmode));
     let res = user::run_wrapper(settings, Some(workdir), cmdname, args,
         true, Some(&ver));
 
@@ -71,7 +71,7 @@ pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
 }
 
 pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
-    mut args: Vec<String>, mut build_mode: options::BuildMode)
+    mut args: Vec<String>, mut bmode: BuildMode)
     -> Result<i32, String>
 {
     let mut cmdargs = vec!();
@@ -87,7 +87,7 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
                 Run in the namespace of the process with PID.
                 By default you get shell in the \"gateway\" namespace.
                 ");
-        options::build_mode(&mut ap, &mut build_mode);
+        build_mode(&mut ap, &mut bmode);
         ap.refer(&mut container)
             .add_argument("container", Store,
                 "Container to run command in")
@@ -107,7 +107,7 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
         }
     }
     cmdargs.insert(0, container.clone());
-    let ver = try!(build_container(settings, &container, build_mode));
+    let ver = try!(build_container(settings, &container, bmode));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
         try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
