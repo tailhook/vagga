@@ -77,7 +77,7 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), String> {
             try!(symlink(&lnk, &nitem)
                 .map_err(|e| format!("Can't symlink: {}", e)));
         } else {
-            warn!("Unknown file type {:?}", entry.path());
+            //warn!("Unknown file type {:?}", &entry.path());
         }
     }
     Ok(())
