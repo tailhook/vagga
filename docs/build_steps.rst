@@ -1,3 +1,5 @@
+.. highlight:: yaml
+
 ===========
 Build Steps
 ===========
@@ -26,6 +28,20 @@ Ubuntu Commands
 ===============
 
 .. step:: Ubuntu
+
+   Simple and straightforward way to install Ubuntu LTS release.
+
+   Example::
+
+       setup:
+       - !Ubuntu trusty
+
+   The value is single string having the codename of release ``trusty`` or
+   ``precise`` known to work at the time of writing.
+
+   The Ubuntu LTS images are updated on daily basis. But vagga downloads and
+   caches the image. To update the image that was downloaded by vagga you need
+   to clean the cache.
 
 .. step:: UbuntuRelease
 
