@@ -65,7 +65,8 @@ impl BuildCommand for Builder {
                         .map_err(|(s, e)| format!("step {}: {}", s, e)));
                     let path = Path::new("/vagga/base/.roots")
                         .join(format!("{}.{}", name, version)).join("root");
-                    try!(copy_dir(&path, &Path::new("/vagga/root")));
+                    try_msg!(copy_dir(&path, &Path::new("/vagga/root")),
+                        "Error copying dir {p:?}: {err}", p=path);
                 }
             }
             &B::SubConfig(ref sconfig) => {
