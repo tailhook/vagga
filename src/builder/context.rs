@@ -65,6 +65,7 @@ impl<'a> Context<'a> {
                 PathBuf::from("dev"),
                 PathBuf::from("work"),
                 PathBuf::from("tmp"),
+                PathBuf::from("run"),
                 ).into_iter().collect(),
             empty_dirs: vec!(
                 PathBuf::from("tmp"),
