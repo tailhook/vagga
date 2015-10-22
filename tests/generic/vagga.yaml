@@ -33,6 +33,7 @@ containers:
       subdir: vagga
       path: /usr/lib/vagga
 
+
 commands:
   two-lines: !Supervise
     children:

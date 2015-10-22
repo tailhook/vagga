@@ -27,4 +27,11 @@ setup() {
     [[ $link = ".roots/calc.dcc4a56e/root" ]]
 }
 
-
+@test "inheritance: Inherit from container with deep structure" {
+    run vagga _build sub
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+    link=$(readlink .vagga/sub)
+    [[ $link = ".roots/sub.dcc4a56e/root" ]]
+}

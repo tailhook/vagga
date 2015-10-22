@@ -14,6 +14,23 @@ containers:
     - !Container calc
     - !Py2Install [injections]
 
+  deep:
+    setup:
+    - !Alpine v3.1
+    - !Sh |
+         abc=a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/t/u/v/w/x/y/z
+         ten=$abc/$abc/$abc/$abc/$abc/$abc/$abc/$abc/$abc/$abc
+         dir=/var/$ten/$ten/$ten/$ten/$ten
+         mkdir -p $dir
+         echo world > $dir/hello
+         echo $dir > /var/dir.txt
+
+  sub:
+    setup:
+    - !Container deep
+    - !Sh |
+        cat $(cat /var/dir.txt)/hello
+
 commands:
   echo: !Command
     container: base
