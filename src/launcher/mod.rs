@@ -6,11 +6,14 @@ use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 
 use libc::getuid;
+use unshare::Command;
+
 use options::build_mode::build_mode;
 use config::find_config;
 use config::read_settings::read_settings;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
 use super::path_util::ToRelative;
+use self::wrap::Wrapper;
 
 mod list;
 mod user;
@@ -18,6 +21,7 @@ mod network;
 mod supervisor;
 mod underscore;
 mod build;
+mod wrap;
 
 
 pub fn run() -> i32 {
@@ -164,8 +168,11 @@ pub fn run() -> i32 {
             list::print_list(&config, args)
         }
         "_build_shell" | "_clean" | "_version_hash" => {
-            user::run_wrapper(&int_settings,
-                Some(&int_workdir), cname, args, true, None)
+            let mut cmd: Command = Wrapper::new(None, &int_settings);
+            cmd.workdir(&int_workdir);
+            cmd.userns();
+            cmd.arg(cname).args(&args);
+            cmd.run()
         }
         "_build" => {
             build::build_command(&int_settings, args)

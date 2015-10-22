@@ -12,18 +12,17 @@ use unshare::{Command, Namespace, reap_zombies};
 use options::build_mode::{build_mode, BuildMode};
 use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
-use container::uidmap::get_max_uidmap;
 use config::{Settings};
 use config::command::{SuperviseInfo, Networking};
 use config::command::SuperviseMode::{stop_on_failure};
 use config::command::ChildCommand::{BridgeCommand};
 
 use super::network;
-use super::user::{common_child_command_env};
 use super::build::{build_container};
 use file_util::create_dir;
 use path_util::PathExt;
-use process_util::{set_uidmap, convert_status};
+use process_util::{convert_status};
+use super::wrap::Wrapper;
 
 
 pub fn run_supervise_command(settings: &Settings, workdir: &Path,
@@ -105,17 +104,13 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
     let mut children = HashMap::new();
     let mut error = false;
     for name in containers_host_net.iter() {
-        let mut cmd = Command::new("/proc/self/exe");
-        cmd.arg0("vagga_wrapper");
-        cmd.arg("--root");
-        cmd.arg(&versions[sup.children[name].get_container()]);
+        let mut cmd: Command = Wrapper::new(
+            Some(&versions[sup.children[name].get_container()]),
+            settings);
+        cmd.workdir(workdir);
+        cmd.userns();
         cmd.arg(&cmdname);
         cmd.arg(&name);
-        cmd.env_clear();
-        common_child_command_env(&mut cmd, Some(workdir), settings);
-        cmd.unshare(
-            [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-        set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
         match cmd.spawn() {
             Ok(child) => { children.insert(child.pid(), (name, child)); }
             Err(e) => {
@@ -152,17 +147,12 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
 
         for name in containers_in_netns.iter() {
             let child = sup.children.get(name).unwrap();
-            let mut cmd = Command::new("/proc/self/exe");
-            cmd.arg0("vagga_wrapper");
-            cmd.arg("--root");
-            cmd.arg(&versions[sup.children[name].get_container()]);
+            let mut cmd: Command = Wrapper::new(
+                Some(&versions[sup.children[name].get_container()]),
+                settings);
+            cmd.workdir(workdir);
             cmd.arg(&cmdname);
             cmd.arg(&name);
-            cmd.env_clear();
-            common_child_command_env(&mut cmd, Some(workdir), settings);
-            cmd.unshare(
-                [Namespace::Mount, Namespace::Ipc, Namespace::Pid]
-                .iter().cloned());
 
             try!(set_namespace(&bridge_ns, Namespace::Net)
                 .map_err(|e| format!("Error setting netns: {}", e)));

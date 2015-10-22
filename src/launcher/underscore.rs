@@ -3,15 +3,15 @@ use std::path::Path;
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, List, StoreOption, Store};
-use unshare::Namespace;
+use unshare::{Command, Namespace};
 
 use options::build_mode::{build_mode, BuildMode};
 use config::{Settings};
 use container::nsutil::{set_namespace};
 
-use super::user;
 use super::network;
 use super::build::{build_container};
+use super::wrap::Wrapper;
 
 
 pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
@@ -52,15 +52,20 @@ pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
             }
         }
     }
-    args.remove(0);
     let ver = try!(build_container(settings, &container, bmode));
-    let res = user::run_wrapper(settings, Some(workdir), cmdname, args,
-        true, Some(&ver));
+    let mut cmd: Command = Wrapper::new(Some(&ver), settings);
+    cmd.workdir(workdir);
+    cmd.arg(cmdname);
+    cmd.args(&args[1..]);
+    cmd.userns();
+    let res = cmd.run();
 
     if copy {
-        match user::run_wrapper(settings, Some(workdir), "_clean".to_string(),
-            vec!("--transient".to_string()), true, None)
-        {
+        let mut cmd: Command = Wrapper::new(None, settings);
+        cmd.workdir(workdir);
+        cmd.userns();
+        cmd.arg("_clean").arg("--transient");
+        match cmd.run() {
             Ok(0) => {}
             x => warn!(
                 "The `vagga _clean --transient` exited with status: {:?}", x),
@@ -74,7 +79,7 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
     mut args: Vec<String>, mut bmode: BuildMode)
     -> Result<i32, String>
 {
-    let mut cmdargs = vec!();
+    let mut cmdargs: Vec<String> = vec!();
     let mut container = "".to_string();
     let mut pid = None;
     {
@@ -106,13 +111,16 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
             }
         }
     }
-    cmdargs.insert(0, container.clone());
     let ver = try!(build_container(settings, &container, bmode));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
         try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
             .map_err(|e| format!("Error setting networkns: {}", e)));
     }
-    user::run_wrapper(settings, Some(workdir),
-        cname, cmdargs, false, Some(&ver))
+    let mut cmd: Command = Wrapper::new(Some(&ver), settings);
+    cmd.workdir(workdir);
+    cmd.arg(cname);
+    cmd.arg(container.clone());
+    cmd.args(&cmdargs);
+    cmd.run()
 }
