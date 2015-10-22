@@ -22,8 +22,13 @@ containers:
     # https://github.com/rust-lang/rust/blob/master/src/doc/trpl/advanced-linking.md
     - !TarInstall
       url: http://www.musl-libc.org/releases/musl-1.1.10.tar.gz
+      # We patch default thread stack size in musl libc here, because it was
+      # esiest thing to do. It may be changed in case of:
+      # 1. Rust brings the API to change thread stack size (e.g. pthread apis in nix)
+      # 2. Anybody willing to build vagga on musl-based platform instead of container
       script: |
         ./configure --disable-shared --prefix=/usr/local/musl
+        sed -i.bak 's/#define DEFAULT_STACK_SIZE .*/#define DEFAULT_STACK_SIZE 8388608/' src/internal/pthread_impl.h
         make
         make install
         du -h /usr/local/musl/lib/libc.a
@@ -44,13 +49,8 @@ containers:
         du -h /usr/local/musl/lib/libunwind.a
     - !TarInstall
       url: https://static.rust-lang.org/dist/rustc-1.3.0-src.tar.gz
-      # We patch default thread stack size in musl libc here, because it was
-      # esiest thing to do. It may be changed in case of:
-      # 1. Rust brings the API to change thread stack size (e.g. pthread apis in nix)
-      # 2. Anybody willing to build vagga on musl-based platform instead of container
       script: |
         ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl --prefix=/usr/local/musl
-        sed -i.bak 's/#define DEFAULT_STACK_SIZE .*/#define DEFAULT_STACK_SIZE 8388608/' src/internal/pthread_impl.h
         make
         make install
         # fixes: multiple dylib candidates for `std` found
