@@ -222,6 +222,14 @@ pub fn _build_container(cconfig: &Container, container: &String,
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
+    if let Some(x) = env::var_os("RUST_MIN_STACK") {
+        cmd.env("RUST_MIN_STACK", x);
+    } else {
+        // Default for glibc is 8MiB but the usual ulimit is 8MiB too, and
+        // we want some space for the thread local storage. Probably 4M is
+        // enough anyway, since we used to work with 80KiB until recently
+        cmd.env("RUST_MIN_STACK", "4194304");
+    }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE", x);
     }
