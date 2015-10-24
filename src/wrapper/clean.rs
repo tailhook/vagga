@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{read_dir, read_link};
+use std::fs::{read_dir, read_link, remove_file};
 use std::io::{stdout, stderr};
 use std::path::Path;
 use std::str::FromStr;
@@ -122,7 +122,10 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
         "Can't read dir {r:?}: {err}", r=roots)
     {
         let entry = try_msg!(entry, "Can't read dir {r:?}: {err}", r=roots);
-        if entry.file_name()[..].to_str().map(|n| n.starts_with(".tmp"))
+        let typ = try_msg!(entry.file_type(),
+            "Can't stat {p:?}: {err}", p=entry.path());
+        if typ.is_dir() &&
+           entry.file_name()[..].to_str().map(|n| n.starts_with(".tmp"))
                                          .unwrap_or(false)
         {
             try!(clean_dir_wrapper(&entry.path(), dry_run));
@@ -168,7 +171,12 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
     {
         let entry = try_msg!(entry,
                              "Can't read dir {dir:?}: {err}", dir=roots);
-        if entry.file_name()[..].to_str()
+        let typ = try_msg!(entry.file_type(),
+            "Can't stat {p:?}: {err}", p=entry.path());
+        if !typ.is_dir() {
+            try_msg!(remove_file(&entry.path()),
+                "Can't remove file {p:?}: {err}", p=entry.path());
+        } else if !typ.is_dir() || entry.file_name()[..].to_str()
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
