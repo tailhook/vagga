@@ -33,5 +33,5 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
     link=$(readlink .vagga/sub)
-    [[ $link = ".roots/sub.dcc4a56e/root" ]]
+    [[ $link = ".roots/sub.88e9d314/root" ]]
 }
