@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind};
-use std::fs::{copy, read_link, Permissions};
+use std::fs::{copy, read_link};
 use std::fs::{remove_dir_all, symlink_metadata};
 use std::fs::File;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};

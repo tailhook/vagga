@@ -1,5 +1,5 @@
 use std::io;
-use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
+use std::fs::{read_dir, remove_file, remove_dir, copy};
 use std::fs::{symlink_metadata, read_link, hard_link};
 use std::os::unix::fs::{symlink, MetadataExt};
 use std::ptr::null;
@@ -50,17 +50,35 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     // We temporarily change root, so that symlinks inside the dir
     // would do no harm. But note that dir itself can be a symlink
     try!(temporary_change_root(dir, || {
-        let diriter = try!(read_dir(&Path::new("/"))
-             .map_err(|e| format!("Can't read directory {}: {}",
-                                  dir.display(), e)));
-        for entry in diriter {
-            let entry = try_msg!(entry, "Error reading dir entry: {err}");
-            if entry.file_type().map(|x| x.is_dir()).unwrap_or(false) {
-                try_msg!(remove_dir_all(&entry.path()),
-                    "Can't remove directory {dir:?}: {err}", dir=entry.path());
+        let mut path = PathBuf::from("/");
+        let diriter = try_msg!(read_dir(&path),
+             "Can't read directory {d:?}: {err}", d=dir);
+        let mut stack = vec![diriter];
+        'next_dir: while let Some(mut diriter) = stack.pop() {
+            while let Some(entry) = diriter.next() {
+                let entry = try_msg!(entry, "Error reading dir entry: {err}");
+                let typ = try_msg!(entry.file_type(),
+                    "Can't stat {p:?}: {err}", p=entry.path());
+                path.push(entry.file_name());
+                if typ.is_dir() {
+                    stack.push(diriter);  // push directory back to stack
+                    let niter = try!(read_dir(&path)
+                         .map_err(|e| format!("Can't read directory {:?}: {}",
+                                              dir, e)));
+                    stack.push(niter);  // push new directory to stack
+                    continue 'next_dir;
+                } else {
+                    try_msg!(remove_file(&path),
+                        "Can't remove file {dir:?}: {err}", dir=entry.path());
+                    path.pop();
+                }
+            }
+            if Path::new(&path) == Path::new("/") {
+                break;
             } else {
-                try_msg!(remove_file(&entry.path()),
-                    "Can't remove file {dir:?}: {err}", dir=entry.path());
+                try_msg!(remove_dir(&path),
+                    "Can't remove dir {p:?}: {err}", p=path);
+                path.pop();
             }
         }
         Ok(())

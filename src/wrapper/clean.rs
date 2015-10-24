@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{read_dir, remove_dir_all, read_link};
+use std::fs::{read_dir, read_link};
 use std::io::{stdout, stderr};
 use std::path::Path;
 use std::str::FromStr;
@@ -8,6 +8,7 @@ use argparse::{ArgumentParser, PushConst, StoreTrue};
 
 use super::setup;
 use super::Wrapper;
+use container::util::clean_dir;
 use file_util::read_visible_entries;
 use path_util::PathExt;
 
@@ -90,14 +91,13 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     return Ok(0);
 }
 
-fn clean_dir(path: &Path, dry_run: bool) -> Result<(), String> {
+fn clean_dir_wrapper(path: &Path, dry_run: bool) -> Result<(), String> {
     // TODO(tailhook) chroot to dir for removing
     if dry_run {
         println!("Would remove {:?}", path);
     } else {
         debug!("Removing {:?}", path);
-        try!(remove_dir_all(path)
-             .map_err(|x| format!("Error removing directory: {}", x)));
+        try!(clean_dir(path, true));
     }
     Ok(())
 }
@@ -125,7 +125,7 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
         if entry.file_name()[..].to_str().map(|n| n.starts_with(".tmp"))
                                          .unwrap_or(false)
         {
-            try!(clean_dir(&entry.path(), dry_run));
+            try!(clean_dir_wrapper(&entry.path(), dry_run));
         }
     }
 
@@ -172,7 +172,7 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
-            try!(clean_dir(&entry.path(), dry_run));
+            try!(clean_dir_wrapper(&entry.path(), dry_run));
         }
     }
 
@@ -208,7 +208,7 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
                 }
             }
         }
-        try!(clean_dir(&entry.path(), dry_run));
+        try!(clean_dir_wrapper(&entry.path(), dry_run));
     }
 
     return Ok(());
