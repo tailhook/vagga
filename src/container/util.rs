@@ -1,6 +1,6 @@
 use std::io;
 use std::fs::{read_dir, remove_dir_all, remove_file, remove_dir, copy};
-use std::fs::{symlink_metadata, read_link};
+use std::fs::{symlink_metadata, read_link, hard_link};
 use std::os::unix::fs::{symlink, MetadataExt};
 use std::ptr::null;
 use std::path::{Path, PathBuf};
@@ -96,6 +96,54 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
                 .map_err(|e| Stat(oldp.clone(), e)));
             if typ.is_file() {
                 try!(copy(&oldp, &newp)
+                    .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
+            } else if typ.is_dir() {
+                let stat = try!(symlink_metadata(&oldp)
+                    .map_err(|e| Stat(oldp.clone(), e)));
+                if !newp.is_dir() {
+                    try!(create_dir_mode(&newp, stat.mode())
+                        .map_err(|e| CreateDir(newp.clone(), e)));
+                }
+                stack.push(dir);  // Return dir to stack
+                let ndir = try!(read_dir(&oldp)
+                    .map_err(|e| ReadDir(oldp.to_path_buf(), e)));
+                stack.push(ndir); // Add new dir to the stack too
+                continue 'next_dir;
+            } else if typ.is_symlink() {
+                let lnk = try!(read_link(&oldp)
+                               .map_err(|e| ReadLink(oldp.clone(), e)));
+                try!(symlink(&lnk, &newp)
+                    .map_err(|e| Symlink(newp.clone(), e)));
+            } else {
+                warn!("Unknown file type {:?}", &entry.path());
+            }
+            oldp.pop();
+            newp.pop();
+        }
+        oldp.pop();
+        newp.pop();
+    }
+    Ok(())
+}
+
+pub fn hardlink_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
+    use self::CopyDirError::*;
+    // TODO(tailhook) use reflinks if supported
+    let dir = try!(read_dir(old).map_err(|e| ReadDir(old.to_path_buf(), e)));
+    let mut stack = vec![dir];
+    let mut oldp = old.to_path_buf();
+    let mut newp = new.to_path_buf();
+    'next_dir: while let Some(mut dir) = stack.pop() {
+        while let Some(item) = dir.next() {
+            let entry = try!(item.map_err(|e| ReadDir(old.to_path_buf(), e)));
+            let filename = entry.file_name();
+            oldp.push(&filename);
+            newp.push(&filename);
+
+            let typ = try!(entry.file_type()
+                .map_err(|e| Stat(oldp.clone(), e)));
+            if typ.is_file() {
+                try!(hard_link(&oldp, &newp)
                     .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
             } else if typ.is_dir() {
                 let stat = try!(symlink_metadata(&oldp)

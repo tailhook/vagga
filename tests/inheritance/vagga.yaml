@@ -28,8 +28,6 @@ containers:
   sub:
     setup:
     - !Container deep
-    - !Sh |
-        cat $(cat /var/dir.txt)/hello
 
 commands:
   echo: !Command
@@ -44,3 +42,14 @@ commands:
   py: !Command
     container: pythonic
     run: python -c 'import injections'
+
+  deep-cat: !Command
+    container: sub
+    run: |
+      cat $(cat /var/dir.txt)/hello
+
+  deep-cat-copy: !Command
+    container: sub
+    write-mode: transient-hard-link-copy
+    run: |
+      cat $(cat /var/dir.txt)/hello

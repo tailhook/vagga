@@ -28,10 +28,17 @@ setup() {
 }
 
 @test "inheritance: Inherit from container with deep structure" {
-    run vagga _build sub
+    run vagga deep-cat
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
-    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
     link=$(readlink .vagga/sub)
-    [[ $link = ".roots/sub.88e9d314/root" ]]
+    [[ $link = ".roots/sub.e8bf6100/root" ]]
+}
+
+@test "inheritance: Test hardlink copy of the deep structure" {
+    run vagga deep-cat-copy
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
 }

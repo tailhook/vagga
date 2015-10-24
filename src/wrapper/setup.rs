@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind};
-use std::fs::{copy, read_link, hard_link, set_permissions, Permissions};
-use std::fs::{remove_dir_all, read_dir, symlink_metadata};
+use std::fs::{copy, read_link, Permissions};
+use std::fs::{remove_dir_all, symlink_metadata};
 use std::fs::File;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -15,6 +15,7 @@ use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc};
+use container::util::hardlink_dir;
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode};
@@ -299,35 +300,6 @@ pub fn get_environment(container: &Container, settings: &Settings)
     return Ok(result);
 }
 
-fn hardlink_dir(old: &Path, new: &Path) -> Result<(), String> {
-    for entry in try_msg!(read_dir(old), "Can't open dir {d:?}: {err}", d=old) {
-        let entry = try_msg!(entry, "Can't read dir entry {d:?}: {err}", d=old);
-        let stat = try_msg!(symlink_metadata(entry.path()),
-            "Can't stat file {path:?}: {err}", path=entry.path());
-        let nitem = new.join(entry.file_name());
-        let typ = try_msg!(entry.file_type(),
-            "Can't stat {f:?}: {err}", f=entry.path());
-        if typ.is_file() {
-            try!(hard_link(&entry.path(), &nitem)
-                .map_err(|e| format!("Can't hard-link file: {}", e)));
-        } else if typ.is_dir() {
-            try_msg!(create_dir(&nitem, false),
-                     "Can't create dir: {err}");
-            try!(set_permissions(&nitem, Permissions::from_mode(stat.mode()))
-                .map_err(|e| format!("Can't chmod: {}", e)));
-            try!(hardlink_dir(&entry.path(), &nitem));
-        } else if typ.is_symlink() {
-            let lnk = try!(read_link(&entry.path())
-                .map_err(|e| format!("Can't readlink: {}", e)));
-            try!(symlink(&lnk, &nitem)
-                .map_err(|e| format!("Can't symlink: {}", e)));
-        } else {
-            warn!("Unknown file type for {:?}", entry.path());
-        }
-    }
-    Ok(())
-}
-
 pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
     container_ver: &str)
     -> Result<(), String>
@@ -355,7 +327,8 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             }
             try_msg!(create_dir(&newpath, false),
                      "Error creating directory: {err}");
-            try!(hardlink_dir(&oldpath, &newpath));
+            try_msg!(hardlink_dir(&oldpath, &newpath),
+                "Can't hardlink {p:?}: {err}", p=newpath);
             try!(bind_mount(&newpath, &tgtroot)
                  .map_err(|e| format!("Error bind mount: {}", e)));
         }
