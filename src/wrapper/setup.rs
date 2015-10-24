@@ -3,7 +3,7 @@ use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind};
 use std::fs::{copy, read_link};
-use std::fs::{remove_dir_all, symlink_metadata};
+use std::fs::{symlink_metadata};
 use std::fs::File;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
@@ -15,7 +15,7 @@ use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc};
-use container::util::hardlink_dir;
+use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode};
@@ -322,7 +322,7 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             let newpath = Path::new("/vagga/base/.transient")
                 .join(format!("{}.{}", container_ver, pid));
             if newpath.exists() {
-                try_msg!(remove_dir_all(&newpath),
+                try_msg!(clean_dir(&newpath, true),
                         "Error removing dir: {err}");
             }
             try_msg!(create_dir(&newpath, false),

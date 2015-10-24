@@ -4,7 +4,7 @@ use std::io::Write;
 use std::ffi::OsString;
 use std::io::ErrorKind::NotFound;
 use std::ascii::AsciiExt;
-use std::fs::{remove_dir_all, rename};
+use std::fs::{rename};
 use std::fs::{remove_file, remove_dir};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
@@ -15,6 +15,7 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
 use unshare::{Command, Namespace, ExitStatus};
 
+use container::util::clean_dir;
 use container::mount::{bind_mount, unmount};
 use container::uidmap::{map_users};
 use config::{Container};
@@ -29,7 +30,7 @@ use super::setup;
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
-        try!(remove_dir_all(path)
+        try!(clean_dir(path, true)
              .map_err(|x| format!("Error removing directory: {}", x)));
     }
     try_msg!(create_dir(path, true),
@@ -73,7 +74,7 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     try!(rename(tmp_path, final_path)
          .map_err(|x| format!("Error renaming dir: {}", x)));
     if let Some(ref path_to_remove) = path_to_remove {
-        try!(remove_dir_all(path_to_remove)
+        try!(clean_dir(path_to_remove, true)
              .map_err(|x| format!("Error removing old dir: {}", x)));
     }
     return Ok(());
@@ -146,7 +147,7 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
                 });
                 rename(&dir, &tmpdir)
                     .map_err(|e| error!("Error renaming old dir: {}", e)).ok();
-                remove_dir_all(&tmpdir)
+                clean_dir(&tmpdir, true)
                     .map_err(|e| error!("Error removing old dir: {}", e)).ok();
             }
             Ok(_) => {}
