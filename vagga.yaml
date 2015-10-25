@@ -7,7 +7,7 @@ containers:
     - !Py2Requirements docs/requirements.txt
 
   rust-musl:
-    environ:
+    environ: &rustenv
       LD_LIBRARY_PATH: /usr/local/musl/lib:/usr/local/musl/lib/rustlib/x86_64-unknown-linux-gnu/lib
       PATH: /usr/local/musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
@@ -58,6 +58,12 @@ containers:
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
 
+  cached-image:
+    environ: *rustenv
+    setup:
+    - !Tar
+      url: http://files.zerogw.com/vagga/img/rust-musl.09dca48a.tar.xz
+
   testbase:
     setup:
     - !Ubuntu trusty
@@ -99,6 +105,11 @@ commands:
   make: !Command
     description: Build vagga
     container: rust-musl
+    run: [make]
+
+  cached-make: !Command
+    description: Build vagga (uses image download instead of building)
+    container: cached-image
     run: [make]
 
   make-release: !Command
