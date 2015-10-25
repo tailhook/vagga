@@ -18,6 +18,7 @@ mod commandline;
 mod setup;
 mod util;
 mod clean;
+mod pack;
 
 
 pub struct Wrapper<'a> {
@@ -95,6 +96,7 @@ pub fn run() -> i32 {
         "_run" => run::run_command_cmd(&wrapper, args, true),
         "_run_in_netns" => run::run_command_cmd(&wrapper, args, false),
         "_clean" => clean::clean_cmd(&wrapper, args),
+        "_pack_image" => pack::pack_image_cmd(&wrapper, args),
         _ => {
             match config.commands.get(&cmd) {
                 Some(&Command(ref cmd_info)) => {

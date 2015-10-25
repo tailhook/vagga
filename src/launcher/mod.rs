@@ -22,6 +22,7 @@ mod supervisor;
 mod underscore;
 mod build;
 mod wrap;
+mod pack;
 
 
 pub fn run() -> i32 {
@@ -184,6 +185,9 @@ pub fn run() -> i32 {
         "_run_in_netns" => {
             underscore::run_in_netns(&int_settings, &int_workdir, cname, args,
                 bmode)
+        }
+        "_pack_image" => {
+            pack::pack_command(&int_settings, args)
         }
         _ => {
             user::run_user_command(&config, &int_settings,
