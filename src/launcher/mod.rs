@@ -179,8 +179,7 @@ pub fn run() -> i32 {
             build::build_command(&int_settings, args)
         }
         "_run" => {
-            underscore::run_command(&int_settings, &int_workdir, cname, args,
-                bmode)
+            underscore::run_command(&int_settings, &int_workdir, args, bmode)
         }
         "_run_in_netns" => {
             underscore::run_in_netns(&int_settings, &int_workdir, cname, args,

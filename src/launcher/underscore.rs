@@ -14,15 +14,16 @@ use super::build::{build_container};
 use super::wrap::Wrapper;
 
 
-pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
+pub fn run_command(settings: &Settings, workdir: &Path,
     mut args: Vec<String>, mut bmode: BuildMode)
     -> Result<i32, String>
 {
     let mut cmdargs = Vec::<String>::new();
     let mut container = "".to_string();
+    let mut command = "".to_string();
     let mut copy = false;
     {
-        args.insert(0, "vagga ".to_string() + &cmdname);
+        args.insert(0, "vagga _run".to_string());
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Runs arbitrary command inside the container
@@ -38,10 +39,12 @@ pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
             .add_argument("container", Store,
                 "Container to run command in")
             .required();
-        ap.refer(&mut cmdargs)
-            .add_argument("command", List,
-                "Command (with arguments) to run inside container")
+        ap.refer(&mut command)
+            .add_argument("command", Store,
+                "Command to run inside the container")
             .required();
+        ap.refer(&mut cmdargs)
+            .add_argument("arg", List, "Arguments to the command");
 
         ap.stop_on_first_argument(true);
         match ap.parse(args.clone(), &mut stdout(), &mut stderr()) {
@@ -55,7 +58,7 @@ pub fn run_command(settings: &Settings, workdir: &Path, cmdname: String,
     let ver = try!(build_container(settings, &container, bmode));
     let mut cmd: Command = Wrapper::new(Some(&ver), settings);
     cmd.workdir(workdir);
-    cmd.arg(cmdname);
+    cmd.arg("_run");
     cmd.args(&args[1..]);
     cmd.userns();
     let res = cmd.run();
