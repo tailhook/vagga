@@ -63,6 +63,7 @@ pub fn run() -> i32 {
           .add_argument("args", List,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
+        ap.silence_double_dash(false);
         match ap.parse_args() {
             Ok(()) => {}
             Err(0) => return 0,
@@ -79,6 +80,11 @@ pub fn run() -> i32 {
             return 126;
         }
     };
+
+    if &cname[..] == "_network" {
+        args.insert(0, "vagga _network".to_string());
+        return ::network::run(args);
+    }
 
     if owner_check {
         let uid = unsafe { getuid() };

@@ -1,0 +1,79 @@
+containers:
+  flask:
+    setup:
+    - !Ubuntu trusty
+    - !PipConfig { dependencies: true }
+    - !Py3Install [flask]
+
+  nginx:
+    setup:
+    - !Ubuntu trusty
+    - !Install [nginx]
+
+  test:
+    setup:
+    - !Alpine v3.2
+    - !Install [iptables]
+    - !EnsureDir /vagga
+    volumes:
+      /vagga: !VaggaBin
+    environ:
+      PATH: /bin:/vagga:/sbin
+
+  bench:
+    setup:
+    - !Alpine v3.2
+    - !Sh |
+        echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" \
+          >> /etc/apk/repositories
+    - !Install [wrk@testing]
+
+commands:
+
+  run-normal: !Supervise
+    description: Just run flask behind an nginx (http://172.18.255.2:8000)
+    children:
+      nginx: !Command
+        container: nginx
+        network:
+          ip: 172.18.0.1
+          ports: {8000: 8000}
+        run: [nginx, -c, "/work/nginx.conf"]
+      flask: !Command
+        container: flask
+        network:
+          ip: 172.18.0.2
+          ports: {5000: 5000}
+        run: "python3 app.py"
+
+  run-flaky: !Supervise
+    description: Just run flask behind nginx with network that doesn't work
+                 50% of the time (http://172.18.255.2:8000)
+    children:
+      nginx: !Command
+        container: nginx
+        network:
+          ip: 172.18.0.1
+          ports: {8000: 8000}
+        run: [nginx, -c, "/work/nginx.conf"]
+      flask: !Command
+        container: flask
+        network:
+          ip: 172.18.0.2
+          ports: {5000: 5000}
+        run: "python3 app.py"
+      interrupt: !BridgeCommand
+        container: test
+        run: |
+          set -x
+          while true; do
+            vagga _network isolate flask
+            sleep 1
+            vagga _network fullmesh
+            sleep 1
+          done
+
+  wrk: !Command
+    description: Run wrk (should try against running server)
+    container: bench
+    run: [wrk]

@@ -1,8 +1,11 @@
+use std::env;
+use std::io::{stdout, stderr};
 use std::process::exit;
 use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
 
+use config::Config;
 use super::config::read_config;
 use self::iptables::apply_graph;
 
@@ -11,7 +14,7 @@ mod iptables;
 mod run;
 
 
-fn run() -> Result<(), Result<i32, String>> {
+pub fn run(cmdline: Vec<String>) -> i32 {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
     {
@@ -43,12 +46,9 @@ fn run() -> Result<(), Result<i32, String>> {
                 ");
         ap.stop_on_first_argument(true);
         ap.silence_double_dash(false);
-        match ap.parse_args() {
+        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
-            Err(0) => return Err(Ok(0)),
-            Err(x) => {
-                return Err(Ok(x));
-            }
+            Err(x) => return x,
         }
     }
 
@@ -58,6 +58,19 @@ fn run() -> Result<(), Result<i32, String>> {
         .expect("Error parsing configuration file");  // TODO
 
     args.insert(0, format!("vagga_network {}", kind));
+    match run_command(&cfg, kind, args) {
+        Ok(()) => 0,
+        Err(Ok(x)) => x,
+        Err(Err(e)) => {
+            error!("{}", e);
+            1
+        }
+    }
+}
+
+pub fn run_command(cfg: &Config, kind: String, args: Vec<String>)
+    -> Result<(), Result<i32, String>>
+{
     let graph = match &kind[..] {
         "fullmesh" => try!(graphs::full_mesh_cmd(&cfg, args)),
         "disjoint" => try!(graphs::disjoint_graph_cmd(&cfg, args)),
@@ -76,14 +89,5 @@ fn run() -> Result<(), Result<i32, String>> {
 }
 
 pub fn main() {
-    match run() {
-        Ok(()) => {}
-        Err(Ok(x)) => {
-            exit(x);
-        }
-        Err(Err(e)) => {
-            error!("{}", e);
-            exit(1);
-        }
-    }
+    exit(run(env::args().collect()));
 }

@@ -1,7 +1,9 @@
 use std::io::Write;
+use std::path::PathBuf;
 
 use unshare::{Command, Stdio, Namespace};
 
+use process_util::env_path_find;
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 use super::super::container::nsutil::set_namespace;
@@ -25,13 +27,14 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
     try!(set_namespace(
         format!("/tmp/vagga/namespaces/net.{}", ip), Namespace::Net)
         .map_err(|e| format!("Can't set namespace: {}", e)));
-    let mut cmd = Command::new("iptables-restore");
+    let mut cmd = Command::new(env_path_find("iptables-restore")
+        .unwrap_or(PathBuf::from("/sbin/iptables-restore")));
     cmd.stdin(Stdio::piped());
     debug!("Running {:?} for {}", cmd, ip);
     let mut prc = try!(cmd.spawn()
-        .map_err(|e| format!("Can't run iptables-restore: {}", e)));
+        .map_err(|e| format!("Can't run iptables-restore {:?}: {}", cmd, e)));
     {
-        let pipe = prc.stdin.as_mut().unwrap();
+        let ref mut pipe = prc.stdin.take().unwrap();
 
         try!(_rule(pipe, "*filter"));
         match *node {
