@@ -65,7 +65,7 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
                 for peer in peers.iter() {
                     try!(_rule(pipe,
                         format!("-A INPUT -s {}/32 -d {}/32 -j DROP",
-                        ip, peer)));
+                        peer, ip)));
                 }
             }
         }
