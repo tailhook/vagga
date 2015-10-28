@@ -92,7 +92,87 @@ This uses ``sudo`` too
 Containers
 ==========
 
-# TBD
+Here is a quick example of how to run network tests: vagga.yaml_
+
+
+The configuration runs flask_ application with nginx_ and periodically
+stops network between processes. For example here is test for normal
+connection::
+
+    $ vagga run-normal &
+    $ vagga wrk http://172.18.255.2:8000 --latency
+    Running 10s test @ http://172.18.255.2:8000
+      2 threads and 10 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency     6.07ms    1.05ms  20.21ms   94.69%
+        Req/Sec   827.65     78.83     0.92k    86.00%
+      Latency Distribution
+         50%    5.82ms
+         75%    6.11ms
+         90%    6.54ms
+         99%   11.62ms
+      16485 requests in 10.00s, 2.86MB read
+    Requests/sec:   1647.73
+    Transfer/sec:    292.78KB
+
+Here is the same test with bad network connection::
+
+    $ vagga run-flaky &
+    $ vagga wrk http://172.18.255.2:8000 --latency
+    Running 10s test @ http://172.18.255.2:8000
+      2 threads and 10 connections
+      Thread Stats   Avg      Stdev     Max   +/- Stdev
+        Latency   241.69ms  407.98ms   1.41s    81.67%
+        Req/Sec   631.83    299.12     1.14k    71.05%
+      Latency Distribution
+         50%    7.27ms
+         75%  355.09ms
+         90%  991.64ms
+         99%    1.37s
+      5032 requests in 10.01s, 0.87MB read
+    Requests/sec:    502.64
+    Transfer/sec:     89.32KB
+
+
+The run-flaky works as follows:
+
+* Stop networking packets going between nginx and flask
+  (``iptables .. -j DROP``)
+* Sleep for a second
+* Restore network
+* Sleep for a second
+* Repeat
+
+The respective part of the configuration looks like::
+
+.. code-block:: yaml
+
+   interrupt: !BridgeCommand
+     container: test
+     run: |
+       set -x
+       while true; do
+         vagga _network isolate flask
+         sleep 1
+         vagga _network fullmesh
+         sleep 1
+       done
+
+As you can see in the test there are interesting differences:
+
+* average latency is 241ms vs 5ms
+* median latency is about the same
+* 99 percentile of latency is 1.37s vs 11.62ms (i.e. 100x bigger)
+* request rate 502 vs 1647
+
+The absolute scale doesn't matter. But intuitively we could think that if
+network doesn't work 50% of the time it should be 3x slower. But it isn't.
+Different metrics are influenced in very different way.
+
+
+.. _vagga.yaml: https://github.com/tailhook/vagga/blob/master/examples/flaky_network/vagga.yaml
+.. _flask: http://flask.pocoo.org
+.. _nginx: http://nginx.org
 
 
 .. _network_partitioning:
