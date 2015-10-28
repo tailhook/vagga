@@ -7,6 +7,10 @@ Network Testing
 Usually vagga runs processes in host network namespace. But there is a mode
 for network testing.
 
+.. warning:: This documentation is awfully incomplete. There is a good article_
+   in the meantime. Except ``vagga_network`` command is replaced by
+   ``vagga _network`` subcommand (note the space after ``vagga``)
+
 
 Overview
 ========
@@ -143,7 +147,7 @@ The run-flaky works as follows:
 * Sleep for a second
 * Repeat
 
-The respective part of the configuration looks like::
+The respective part of the configuration looks like:
 
 .. code-block:: yaml
 
