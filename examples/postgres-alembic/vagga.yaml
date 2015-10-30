@@ -1,0 +1,56 @@
+#
+# Running instance with PostgreSQL and application required alembic migration.
+# Example shows usage of locks using filesystem: alembic requires to wait until
+# database is set up fully before run.
+#
+
+containers:
+  python:
+    setup:
+    - !Ubuntu trusty
+    - !Install [libpq-dev]
+    - !PipConfig {dependencies: true}
+    - !Py3Install [Flask-SQLAlchemy, alembic, psycopg2]
+    environ:
+      DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
+
+  postgres:
+    setup:
+    - !Ubuntu trusty
+    - !Install [postgresql]
+    - !EnsureDir /data
+    environ:
+      PG_PORT: 5433
+      PG_DB: test
+      PG_USER: vagga
+      PG_PASSWORD: vagga
+      PGDATA: /data
+      PG_BIN: /usr/lib/postgresql/9.3/bin
+    volumes:
+      /data: !Tmpfs
+        size: 100M
+        mode: 0o700
+
+commands:
+  run: !Supervise
+    description: Run app
+    children:
+      service: !Command
+        container: python
+        run: |
+            touch /work/.dbcreation # Create lock file
+            while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+            alembic upgrade head
+            python3 app.py
+
+      db: !Command
+        container: postgres
+        run: |
+            chown postgres:postgres $PGDATA;
+            su postgres -c "$PG_BIN/pg_ctl initdb";
+            su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
+            su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+            su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
+            su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
+            rm /work/.dbcreation # Release lock
+            sleep infinity
