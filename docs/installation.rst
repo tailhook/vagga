@@ -30,7 +30,15 @@ enabled manually.
     $ sysctl kernel.unprivileged_userns_clone
     kernel.unprivileged_userns_clone = 1
 
-  and to enable::
+  or you may get::
+
+    $ sysctl kernel.unprivileged_userns_clone
+    sysctl: cannot stat /proc/sys/kernel/unprivileged_userns_clone: No such file or directory
+
+  **Either one** is a valid outcome.
+
+  In case you've got ``kernel.unprivileged_userns_clone = 0``, use something
+  along the lines of::
 
     $ sudo sysctl -w kernel.unprivileged_userns_clone=1
     kernel.unprivileged_userns_clone = 1
