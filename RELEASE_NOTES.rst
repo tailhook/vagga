@@ -10,6 +10,9 @@ Vagga 0.4.1
 * ``!Tar`` and ``!TarInstall`` commands now support unpacking local files (#81)
 * Container build process now locked, which avoid failure with cryptic error
   message on simultaneous builds (#80)
+* Add ``_pack_image`` command
+* Upgrade rust to v1.4.0
+* Renamed and fixed ``vagga_network`` command as ``vagga _network`` subcommand
 
 Vagga 0.4.0
 ===========
