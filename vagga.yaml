@@ -43,7 +43,7 @@ containers:
         cp lib/libunwind.a /usr/local/musl/lib/
         du -h /usr/local/musl/lib/libunwind.a
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rustc-1.3.0-src.tar.gz
+      url: https://static.rust-lang.org/dist/rustc-1.4.0-src.tar.gz
       script: |
         ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl --prefix=/usr/local/musl
         make
@@ -52,7 +52,7 @@ containers:
         rm /usr/local/musl/lib/lib*-*.so
         du -h /usr/local/musl/bin/rustc
     - !TarInstall
-      url: "http://static.rust-lang.org/dist/rust-1.3.0-x86_64-unknown-linux-gnu.tar.gz"
+      url: "http://static.rust-lang.org/dist/rust-1.4.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=cargo"
 
     # For packaging
@@ -62,7 +62,7 @@ containers:
     environ: *rustenv
     setup:
     - !Tar
-      url: http://files.zerogw.com/vagga/img/rust-musl.09dca48a.tar.xz
+      url: http://files.zerogw.com/vagga/img/rust-musl.12716937.tar.xz
 
   testbase:
     setup:
