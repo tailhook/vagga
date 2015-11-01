@@ -1,0 +1,7 @@
+containers:
+  ubuntu:
+    setup: [!Ubuntu trusty]
+
+commands:
+  bad-cmd: !Command
+    container: ubuntu

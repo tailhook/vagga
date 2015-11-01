@@ -2,7 +2,7 @@ setup() {
     cd /work/tests/cyclic
 }
 
-@test "inheritance: Crash prevention" {
+@test "cyclic: Crash prevention" {
     run vagga crash-me-not
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 126 ]]

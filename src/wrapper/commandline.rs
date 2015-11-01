@@ -22,6 +22,10 @@ pub fn commandline_cmd(command: &CommandInfo,
     wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<i32, String>
 {
+    if command.run.len() == 0 {
+        return Err(format!(
+            r#"Command has empty "run" parameter. Nothing to run."#));
+    }
     // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
             .unwrap_or(&command.run[0][..] != "/bin/sh");
