@@ -174,234 +174,94 @@ pub enum Builder {
 }
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
-    return V::Enum { options: vec![
-        ("Install".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-            .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("BuildDeps".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-            .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("Container".to_string(), Box::new(V::Scalar {
-        .. Default::default() }) as Box<V::Validator>),
-        ("SubConfig".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("source".to_string(), Box::new(V::Enum { options: vec!(
-                    ("Directory".to_string(),
-                        Box::new(V::Nothing) as Box<V::Validator>),
-                    ("Container".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                    ("Git".to_string(), Box::new(V::Structure { members: vec!(
-                        ("url".to_string(), Box::new(V::Scalar {
-                            .. Default::default() }) as Box<V::Validator>),
-                        ("revision".to_string(), Box::new(V::Scalar {
-                            optional: true,
-                            .. Default::default() }) as Box<V::Validator>),
-                        ("branch".to_string(), Box::new(V::Scalar {
-                            optional: true,
-                            .. Default::default() }) as Box<V::Validator>),
-                        ), .. Default::default() }) as Box<V::Validator>),
-                    ), optional: true,
-                       default_tag: Some("Directory".to_string()),
-                    .. Default::default() }) as Box<V::Validator>),
-                ("path".to_string(), Box::new(V::Directory {
-                    absolute: Some(false),
-                    default: Some(PathBuf::from("vagga.yaml")),
-                    .. Default::default() }) as Box<V::Validator>),
-                ("container".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("cache".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("change_dir".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("Text".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Directory {
-                absolute: Some(true),
-                .. Default::default() }) as Box<V::Validator>,
-            value_element: Box::new(V::Scalar {
-                .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
+    V::Enum::new()
+    .option("Install", V::Sequence::new(V::Scalar::new()))
+    .option("BuildDeps", V::Sequence::new(V::Scalar::new()))
+    .option("Container", V::Scalar::new())
+    .option("SubConfig", V::Structure::new()
+        .member("source", V::Enum::new()
+            .option("Directory", V::Nothing)
+            .option("Container", V::Scalar::new())
+            .option("Git", V::Structure::new()
+                .member("url", V::Scalar::new())
+                .member("revision", V::Scalar::new().optional())
+                .member("branch", V::Scalar::new().optional()))
+            .optional()
+            .default_tag("Directory"))
+        .member("path".to_string(), V::Directory::new()
+            .is_absolute(false)
+            .default("vagga.yaml"))
+        .member("container", V::Scalar::new())
+        .member("cache", V::Scalar::new().optional())
+        .member("change_dir", V::Scalar::new().optional()))
+    .option("Text", V::Mapping::new(
+        V::Directory::new().is_absolute(true),
+        V::Scalar::new()))
+    .option("Ubuntu", V::Scalar::new())
+    .option("UbuntuRelease", V::Structure::new()
+        .member("version", V::Scalar::new())
+        .member("keep_chfn_command", V::Scalar::new().default(false)))
+    .option("UbuntuRepo", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("suite", V::Scalar::new())
+        .member("components", V::Sequence::new(V::Scalar::new())))
+    .option("UbuntuUniverse", V::Nothing)
+    .option("Sh", V::Scalar::new())
+    .option("Cmd", V::Sequence::new(V::Scalar::new()))
+    .option("Remove", V::Directory::new().is_absolute(true))
+    .option("EnsureDir", V::Directory::new().is_absolute(true))
+    .option("EmptyDir", V::Directory::new().is_absolute(true))
+    .option("CacheDirs", V::Mapping::new(
+        V::Directory::new().is_absolute(true),
+        V::Scalar::new()))
+    .option("Env", V::Mapping::new(
+        V::Scalar::new(),
+        V::Scalar::new()))
+    .option("Depends", V::Scalar::new())
+    .option("Git", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("revision", V::Scalar::new().optional())
+        .member("branch", V::Scalar::new().optional())
+        .member("path", V::Directory::new().is_absolute(true)))
+    .option("GitInstall", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("revision", V::Scalar::new().optional())
+        .member("branch", V::Scalar::new().optional())
+        .member("subdir", V::Directory::new()
+            .default(".").is_absolute(false))
+        .member("script", V::Scalar::new()
+                .default("./configure --prefix=/usr\n\
+                          make\n\
+                          make install\n")))
+    .option("Tar", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("sha256", V::Scalar::new().optional())
+        .member("path", V::Directory::new().is_absolute(true).default("/"))
+        .member("subdir", V::Directory::new().default("").is_absolute(false)))
+    .option("TarInstall", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("sha256", V::Scalar::new().optional())
+        .member("subdir", V::Directory::new().optional().is_absolute(false))
+        .member("script", V::Scalar::new()
+                .default("./configure --prefix=/usr\n\
+                          make\n\
+                          make install\n")))
+    .option("Alpine", V::Scalar::new())
 
-        ("Ubuntu".to_string(), Box::new(V::Scalar {
-        .. Default::default() }) as Box<V::Validator>),
-        ("UbuntuRelease".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("version".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("keep_chfn_command".to_string(), Box::new(V::Scalar {
-                    default: Some("false".to_string()),
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("UbuntuRepo".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("url".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("suite".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("components".to_string(), Box::new(V::Sequence {
-                    element: Box::new(V::Scalar {
-                        .. Default::default() }) as Box<V::Validator>,
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("UbuntuUniverse".to_string(), Box::new(V::Nothing) as Box<V::Validator>),
-        ("Sh".to_string(), Box::new(V::Scalar {
-        .. Default::default() }) as Box<V::Validator>),
-        ("Cmd".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-            .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("Remove".to_string(), Box::new(V::Directory {
-            absolute: Some(true),
-        .. Default::default() }) as Box<V::Validator>),
-        ("EnsureDir".to_string(), Box::new(V::Directory {
-            absolute: Some(true),
-        .. Default::default() }) as Box<V::Validator>),
-        ("EmptyDir".to_string(), Box::new(V::Directory {
-            absolute: Some(true),
-        .. Default::default() }) as Box<V::Validator>),
-        ("CacheDirs".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Directory {
-                absolute: Some(true),
-                .. Default::default() }) as Box<V::Validator>,
-            value_element: Box::new(V::Scalar {
-                .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("Env".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Scalar {
-                .. Default::default() }) as Box<V::Validator>,
-            value_element: Box::new(V::Scalar {
-                .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("Depends".to_string(), Box::new(V::Scalar {
-        .. Default::default() }) as Box<V::Validator>),
-        ("Git".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("url".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("revision".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("branch".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("path".to_string(), Box::new(V::Directory {
-                    absolute: Some(true),
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("GitInstall".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("url".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("revision".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("branch".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("subdir".to_string(), Box::new(V::Directory {
-                    default: Some(PathBuf::from(".")),
-                    absolute: Some(false),
-                    .. Default::default() }) as Box<V::Validator>),
-                ("script".to_string(), Box::new(V::Scalar {
-                    default: Some("./configure --prefix=/usr\n\
-                                   make\n\
-                                   make install\n\
-                                   ".to_string()),
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("Tar".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("url".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("sha256".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("path".to_string(), Box::new(V::Directory {
-                    absolute: Some(true),
-                    default: Some(PathBuf::from("/")),
-                    .. Default::default() }) as Box<V::Validator>),
-                ("subdir".to_string(), Box::new(V::Directory {
-                    default: Some(PathBuf::from("")),
-                    absolute: Some(false),
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("TarInstall".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("url".to_string(), Box::new(V::Scalar {
-                    .. Default::default() }) as Box<V::Validator>),
-                ("sha256".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("subdir".to_string(), Box::new(V::Directory {
-                    optional: true,
-                    absolute: Some(false),
-                    .. Default::default() }) as Box<V::Validator>),
-                ("script".to_string(), Box::new(V::Scalar {
-                    default: Some("./configure --prefix=/usr\n\
-                                   make\n\
-                                   make install\n\
-                                   ".to_string()),
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
+    // Python
+    .option("PipConfig", V::Structure::new()
+        .member("dependencies", V::Scalar::new().default(false).optional())
+        .member("cache_wheels", V::Scalar::new().default(true))
+        .member("find_links", V::Sequence::new(V::Scalar::new()))
+        .member("index_urls", V::Sequence::new(V::Scalar::new()))
+        .member("trusted_hosts", V::Sequence::new(V::Scalar::new())))
+    .option("Py2Install", V::Sequence::new(V::Scalar::new()))
+    .option("Py2Requirements", V::Scalar::new()
+        .default("requirements.txt"))
+    .option("Py3Install", V::Sequence::new(V::Scalar::new()))
+    .option("Py3Requirements",
+        V::Scalar::new().default("requirements.txt"))
 
-        ("Alpine".to_string(), Box::new(V::Scalar {
-        .. Default::default() }) as Box<V::Validator>),
-
-        // Python
-        ("PipConfig".to_string(), Box::new(V::Structure {
-            members: vec!(
-                ("dependencies".to_string(), Box::new(V::Scalar {
-                    default: Some("false".to_string()),
-                    optional: true,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("cache_wheels".to_string(), Box::new(V::Scalar {
-                    default: Some("true".to_string()),
-                    .. Default::default() }) as Box<V::Validator>),
-                ("find_links".to_string(), Box::new(V::Sequence {
-                    element: Box::new(V::Scalar {
-                        .. Default::default() }) as Box<V::Validator>,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("index_urls".to_string(), Box::new(V::Sequence {
-                    element: Box::new(V::Scalar {
-                        .. Default::default() }) as Box<V::Validator>,
-                    .. Default::default() }) as Box<V::Validator>),
-                ("trusted_hosts".to_string(), Box::new(V::Sequence {
-                    element: Box::new(V::Scalar {
-                        .. Default::default() }) as Box<V::Validator>,
-                    .. Default::default() }) as Box<V::Validator>),
-            ),
-        .. Default::default() }) as Box<V::Validator>),
-        ("Py2Install".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-            .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("Py2Requirements".to_string(), Box::new(V::Scalar {
-            default: Some("requirements.txt".to_string()),
-        .. Default::default() }) as Box<V::Validator>),
-        ("Py3Install".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-            .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-        ("Py3Requirements".to_string(), Box::new(V::Scalar {
-            default: Some("requirements.txt".to_string()),
-        .. Default::default() }) as Box<V::Validator>),
-
-        // Node.js
-        ("NpmInstall".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-            .. Default::default() }) as Box<V::Validator>,
-        .. Default::default() }) as Box<V::Validator>),
-
-    ], .. Default::default() }
+    // Node.js
+    .option("NpmInstall", V::Sequence::new(V::Scalar::new()))
 }
