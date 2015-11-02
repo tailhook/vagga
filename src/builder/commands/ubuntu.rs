@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::os::unix::io::{AsRawFd, FromRawFd};
 
 use config::builders::{UbuntuRepoInfo, UbuntuReleaseInfo};
+use container::util::clean_dir;
 use super::super::context::{Context};
 use super::super::download::download_file;
 use super::super::tarcmd::unpack_file;
@@ -61,7 +62,15 @@ impl Distribution for Ubuntu {
             self.apt_update = false;
             let mut cmd = try!(command(ctx, "apt-get"));
             cmd.arg("update");
-            try!(run(cmd));
+            try!(run(cmd)
+                .map_err(|error| {
+                    debug!("The apt-get update failed. \
+                        Cleaning apt-lists so that apt can proceed next time");
+                    clean_dir(&Path::new("/vagga/cache/apt-lists"), false)
+                        .map_err(|e| error!(
+                            "Cleaning apt-lists cache failed: {}", e)).ok();
+                    error
+                }));
         }
         let mut cmd = try!(command(ctx, "apt-get"));
         cmd.arg("install");
