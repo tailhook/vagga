@@ -81,6 +81,7 @@ pub struct PipSettings {
     pub index_urls: Vec<String>,
     pub trusted_hosts: Vec<String>,
     pub dependencies: bool,
+    pub cache_wheels: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -363,6 +364,9 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
                 ("dependencies".to_string(), Box::new(V::Scalar {
                     default: Some("false".to_string()),
                     optional: true,
+                    .. Default::default() }) as Box<V::Validator>),
+                ("cache_wheels".to_string(), Box::new(V::Scalar {
+                    default: Some("true".to_string()),
                     .. Default::default() }) as Box<V::Validator>),
                 ("find_links".to_string(), Box::new(V::Sequence {
                     element: Box::new(V::Scalar {

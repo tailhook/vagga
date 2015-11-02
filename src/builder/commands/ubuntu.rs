@@ -42,10 +42,12 @@ impl Distribution for Ubuntu {
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         try!(fetch_ubuntu_core(ctx, &self.version));
         let codename = try!(read_ubuntu_codename());
-        if self.codename.is_some() && self.codename != Some(codename) {
+        if self.codename.is_some() && self.codename.as_ref() != Some(&codename) {
             return Err(From::from("Codename mismatch. \
                 This is either bug of vagga or may be damaged archive"));
         }
+        ctx.binary_ident = format!("{}-ubuntu-{}",
+            ctx.binary_ident, codename);
         try!(init_ubuntu_core(ctx));
         if self.clobber_chfn {
             try!(clobber_chfn());
@@ -169,9 +171,14 @@ impl Ubuntu {
             .map_err(|e| format!("Error writing {} file: {}", name, e))
     }
 
-    pub fn ensure_codename(&mut self) -> Result<(), StepError> {
+    pub fn ensure_codename(&mut self, ctx: &mut Context)
+        -> Result<(), StepError>
+    {
         if self.codename.is_none() {
-            self.codename = Some(try!(read_ubuntu_codename()));
+            let codename = try!(read_ubuntu_codename());
+            ctx.binary_ident = format!("{}-ubuntu-{}",
+                ctx.binary_ident, codename);
+            self.codename = Some(codename);
         }
         Ok(())
     }
@@ -179,7 +186,7 @@ impl Ubuntu {
     pub fn add_universe(&mut self, ctx: &mut Context)
         -> Result<(), String>
     {
-        try!(self.ensure_codename());
+        try!(self.ensure_codename(ctx));
         let codename = self.codename.as_ref().unwrap();
         let target = "/vagga/root/etc/apt/sources.list.d/universe.list";
         try!(File::create(&Path::new(target))

@@ -89,3 +89,12 @@ setup() {
     link=$(readlink .vagga/py3req-https-alpine)
     [[ $link = ".roots/py3req-https-alpine.356eb50e/root" ]]
 }
+
+@test "pip: C dependencies caching" {
+    vagga _build ubuntu-lxml
+    vagga _build alpine-lxml
+    run vagga _run alpine-lxml python3 -c "from lxml import etree"
+    printf "%s\n" "${lines[@]}"
+    echo STATUS "$status"
+    [[ $status = 0 ]]
+}

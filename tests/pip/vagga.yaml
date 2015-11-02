@@ -49,3 +49,18 @@ containers:
     setup:
     - !Alpine v3.2
     - !Py3Requirements req-https.txt
+
+  ubuntu-lxml:
+    setup:
+    - !Ubuntu trusty
+    # - !Alpine v3.2
+    - !Install [libxml2-dev, libxslt1-dev, zlib1g-dev]
+    - !Env
+    - !Py3Install [lxml]
+
+  alpine-lxml:
+    setup:
+    - !Alpine v3.2
+    - !Install [libxml2-dev, libxslt-dev, zlib-dev]
+    - !Env { CFLAGS: "-I/usr/include/libxml2 -I/usr/include/libxslt" }
+    - !Py3Install [lxml]

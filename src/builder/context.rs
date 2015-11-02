@@ -27,6 +27,13 @@ pub struct Context<'a> {
     pub cache_dirs: BTreeMap<PathBuf, String>,
     pub environ: BTreeMap<String, String>,
 
+    /// String that identifies binary API version
+    ///
+    /// Currenty we only put OS and release here, but in future we may add
+    /// more useful things. Making it too chaotic will make a lot of cache
+    /// that is not usable.
+    pub binary_ident: String,
+
     pub settings: Settings,
     pub pip_settings: PipSettings,
     pub capsule: capsule::State,
@@ -76,6 +83,7 @@ impl<'a> Context<'a> {
             cache_dirs: vec!(
                 ).into_iter().collect(),
             environ: env,
+            binary_ident: "amd64".to_string(),
             settings: settings,
             pip_settings: Default::default(),
             capsule: Default::default(),

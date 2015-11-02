@@ -127,6 +127,50 @@ Python Commands
 
 .. step:: PipConfig
 
+   The directive configures various settings of pythonic commands below. The
+   mostly used option is ``dependencies``::
+
+       - !PipConfig
+           dependencies: true
+       - !Py3Install [flask]
+
+   Most options directly correspond to the pip command line options so refer to
+   `pip help`_ for more info.
+
+   All options:
+
+   dependencies
+       (default ``false``) allow to install dependencies. If the option is
+       ``false`` (by default) pip is run with ``pip --no-deps``
+
+   index-urls
+       (default ``[]``) List of indexes to search for packages. This
+       corresponds to ``--index-url`` (for the first element) and
+       ``--extra-index-url`` (for all subsequent elements) options on the
+       pip command-line.
+
+       When the list is empty (default) the ``pypi.python.org`` is used.
+
+   find-links
+       (default ``[]``) List of urls to html files to parse for links to
+       packages for download.
+
+   trusted-hosts
+       (default ``[]``) List of hosts that are trusted to download packages
+       from.
+
+   cache-wheels
+       (default ``true``) Cache wheels between different rebuilds of the
+       container. The downloads are always cached. Only binary wheels are
+       toggled with the option. It's useful to turn this off if you build
+       many containers with different dependencies.
+
+       Starting with vagga v0.4.1 cache is namespaced by linux distribution and
+       version. It was single shared cache in vagga <= v0.4.0
+
+   .. _pip help: https://pip.readthedocs.org/en/stable/reference/pip_install/
+
+
 .. step:: Py2Install
 
 .. step:: Py2Requirements

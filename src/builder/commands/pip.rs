@@ -6,6 +6,7 @@ use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command_at_env, capture_command};
 use builder::distrib::Distribution;
+use file_util::create_dir;
 
 
 pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
@@ -106,8 +107,18 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache"),
-                           "pip-cache".to_string()));
+    let cache_root = Path::new("/vagga/root/tmp/pip-cache");
+    try_msg!(create_dir(&cache_root, false),
+         "Error creating cache dir: {err}");
+
+    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache/http"),
+                           "pip-cache-http".to_string()));
+
+    if ctx.pip_settings.cache_wheels {
+        let cache_dir = format!("pip-cache-wheels-{}", ctx.binary_ident);
+        try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache/wheels"), cache_dir));
+    } // else just write files in tmp
+
     ctx.environ.insert("PIP_CACHE_DIR".to_string(),
                        "/tmp/pip-cache".to_string());
     Ok(())
