@@ -100,6 +100,12 @@ Ubuntu Commands
 
 .. step:: UbuntuUniverse
 
+   The singleton step. Just enables an "universe" repository::
+
+   - !Ubuntu trusty
+   - !UbuntuUniverse
+   - !Install [checkinstall]
+
 
 Alpine Commands
 ===============
