@@ -130,6 +130,22 @@ impl BuildCommand for Builder {
                     }));
                 }
             }
+            &B::UbuntuPPA(ref name) => {
+                if build {
+                    let ref mut ctx = guard.ctx;
+                    try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
+                        u.add_ubuntu_ppa(ctx, name)
+                    }));
+                }
+            }
+            &B::AptTrust(ref key) => {
+                if build {
+                    let ref mut ctx = guard.ctx;
+                    try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
+                        u.add_apt_key(ctx, key)
+                    }));
+                }
+            }
             &B::UbuntuUniverse => {
                 let ref mut ctx = guard.ctx;
                 try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {

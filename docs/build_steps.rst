@@ -45,7 +45,58 @@ Ubuntu Commands
 
 .. step:: UbuntuRelease
 
+.. step:: AptTrust
+
+   This command fetches keys with ``apt-key`` and adds them to trusted keychain
+   for package signatures. The following trusts a key for ``fkrull/deadsnakes``
+   repository::
+
+       - !AptTrust keys: [5BB92C09DB82666C]
+
+   By default this uses ``keyserver.ubuntu.com``, but you can specify
+   alternative::
+
+       - !AptTrust
+         server: hkp://pgp.mit.edu
+         keys: 1572C52609D
+
+   This is used to get rid of the error similar to the following::
+
+        WARNING: The following packages cannot be authenticated!
+          libpython3.5-minimal python3.5-minimal libpython3.5-stdlib python3.5
+        E: There are problems and -y was used without --force-yes
+
+   Options:
+
+   server
+     (default ``keyserver.ubuntu.com``) Server to fetch keys from. May be
+     a hostname or ``hkp://hostname:port`` form. Or actu
+
+   keys
+     (default ``[]``) List of keys to fetch and add to trusted keyring. Keys
+     can include full fingerprint or **suffix** of the fingerprint. The most
+     common is 8 hex digits form.
+
 .. step:: UbuntuRepo
+
+.. step:: UbuntuPPA
+
+   A shortcut to :step:`UbuntuRepo` that adds named PPA. For example, the
+   following::
+
+       - !Ubuntu trusty
+       - !AptTrust keys: [5BB92C09DB82666C]
+       - !UbuntuPPA fkrull/deadsnakes
+       - !Install [python3.5]
+
+   Is equivalent to::
+
+       - !Ubuntu trusty
+       - !UbuntuRepo
+         url: http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu
+         suite: trusty
+         components: [main]
+       - !Install [python3.5]
 
 .. step:: UbuntuUniverse
 

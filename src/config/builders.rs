@@ -13,7 +13,7 @@ pub struct DebianRepo {
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct AptKey {
-    pub key_server: String,
+    pub server: Option<String>,
     pub keys: Vec<String>,
 }
 
@@ -138,11 +138,11 @@ pub enum Builder {
     UbuntuRelease(UbuntuReleaseInfo),
     UbuntuRepo(UbuntuRepoInfo),
     UbuntuUniverse,
-    //AddUbuntuPPA(String),
+    UbuntuPPA(String),
 
     // -- Ubuntu/Debian --
     //AddDebianRepo(DebianRepo),
-    //AddAptKey(AptKey),
+    AptTrust(AptKey),
 
     // -- Arch --
     //ArchBase,
@@ -197,6 +197,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Text", V::Mapping::new(
         V::Directory::new().is_absolute(true),
         V::Scalar::new()))
+
     .option("Ubuntu", V::Scalar::new())
     .option("UbuntuRelease", V::Structure::new()
         .member("version", V::Scalar::new())
@@ -205,7 +206,11 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("url", V::Scalar::new())
         .member("suite", V::Scalar::new())
         .member("components", V::Sequence::new(V::Scalar::new())))
+    .option("UbuntuPPA", V::Scalar::new())
     .option("UbuntuUniverse", V::Nothing)
+    .option("AptTrust", V::Structure::new()
+        .member("server", V::Scalar::new().optional())
+        .member("keys", V::Sequence::new(V::Scalar::new())))
     .option("Sh", V::Scalar::new())
     .option("Cmd", V::Sequence::new(V::Scalar::new()))
     .option("Remove", V::Directory::new().is_absolute(true))

@@ -14,6 +14,13 @@ containers:
     - !Ubuntu precise
     - !Install [bc]
 
+  ppa:
+    setup:
+    - !Ubuntu trusty
+    - !AptTrust keys: [C7917B12]
+    - !UbuntuPPA chris-lea/redis-server
+    - !Install [redis-tools]
+
   dependency-conflict:
     setup:
     - !Ubuntu trusty

@@ -97,3 +97,13 @@ setup() {
     link=$(readlink .vagga/dependency-conflict)
     [[ $link = ".roots/dependency-conflict.2b4ae764/root" ]]
 }
+
+@test "ubuntu: install from ppa" {
+    run vagga _run ppa redis-cli --version
+    printf "%s\n" "${lines[@]}"
+    printf "Status: %d\n" "$status"
+    [[ $status -eq 0 ]]
+    [[ $output != "" ]]
+    link=$(readlink .vagga/ppa)
+    [[ $link = ".roots/ppa.afeadb21/root" ]]
+}

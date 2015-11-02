@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::{AsRawFd, FromRawFd};
 
-use config::builders::{UbuntuRepoInfo, UbuntuReleaseInfo};
+use config::builders::{UbuntuRepoInfo, UbuntuReleaseInfo, AptKey};
 use container::util::clean_dir;
 use super::super::context::{Context};
 use super::super::download::download_file;
@@ -181,7 +181,35 @@ impl Ubuntu {
             })
             .map_err(|e| format!("Error writing {} file: {}", name, e))
     }
-
+    pub fn add_ubuntu_ppa(&mut self, ctx: &mut Context, name: &str)
+        -> Result<(), StepError>
+    {
+        try!(self.ensure_codename(ctx));
+        let suite = self.codename.as_ref().unwrap().to_string();
+        try!(self.add_debian_repo(ctx, &UbuntuRepoInfo {
+            url: format!("http://ppa.launchpad.net/{}/ubuntu", name),
+            suite: suite,
+            components: vec!["main".to_string()],
+        }));
+        Ok(())
+    }
+    pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptKey)
+        -> Result<(), StepError>
+    {
+        let mut cmd = try!(command(ctx, "apt-key"));
+        cmd.arg("adv");
+        cmd.arg("--keyserver");
+        if let Some(ref srv) = key.server {
+            cmd.arg(srv);
+        } else {
+            cmd.arg("keyserver.ubuntu.com");
+        }
+        cmd.arg("--recv-keys");
+        for item in &key.keys {
+            cmd.arg(item);
+        }
+        run(cmd)
+    }
     pub fn ensure_codename(&mut self, ctx: &mut Context)
         -> Result<(), StepError>
     {
