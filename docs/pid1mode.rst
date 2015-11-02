@@ -7,28 +7,35 @@ What's Special With Pid 1?
 
 The first process started by the linux kernel gets PID 1. Similarly when new
 PID namespace is created first process started in that namespace gets PID 1
-(the PID as seen by the processes in that namespace, in parent namespace it
+(the PID as seen by the processes in that namespace, in the parent namespace it
 gets assigned other PID).
 
-The process with PID 1 differ from other processes in the following ways
+The process with PID 1 differs from the other processes in the following ways:
 
-* When the process with pid 1 die for any reason, all other processes are
-  killed with ``KILL`` signal
-* When any process having children dies for any reason, its children are
-  reparented to process with PID 1
-* Many signals which have default action of ``Term`` do not have one for PID 1.
+1. When the process with pid 1 die for any reason, all other processes are
+   killed with ``KILL`` signal
+2. When any process having children dies for any reason, its children are
+   reparented to process with PID 1
+3. Many signals which have default action of ``Term`` do not have one for PID 1.
 
-I may look like the most disruping one is first. But in practice most
-inconvenient one for development purposes is the last one, because, effectively
-you can't stop process by sending ``SIGTERM`` or ``SIGINT``, if process have
-not installed a singal handler.
+At a glance, first issue looks like the most annoying. But in practice
+the most inconvenient one is the last one. For development purposes it
+effectively means you can't stop process by sending ``SIGTERM`` or ``SIGINT``,
+if process have not installed a signal handler.
 
-At the end of the day all above means most processes that where not explicitly
-designed to run as PID 1 (which are all applicactions except supervisors), do
-not run well. Vagga fixes that by not running process as PID 1.
+At the end of the day, all above means most processes that were not explicitly
+designed to run as PID 1 (which are all applications except supervisors), do
+not run well. Vagga fixes that by not running process as PID 1.
+
+.. admonition:: Outdated
+
+   The following text is outdated. Vagga doesn't support any pid modes since
+   version 0.2.0. This may be fixed in future. We consider this as mostly
+   useless feature for development purposes. If you have a good use case please
+   `let us know <https://github.com/tailhook/vagga/issues/86>`_.
 
 In fact there are three modes of operation of PID 1 supported by vagga (set by
-``pid1mode`` parameter in :ref:`command configuration <commands>`):
+:opt:`pid1mode`).
 
 * ``wait`` -- (default) run command (usually it gets PID 2) and wait until it
   exits
