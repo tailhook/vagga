@@ -146,6 +146,8 @@ impl Ubuntu {
     pub fn add_debian_repo(&mut self, _: &mut Context, repo: &UbuntuRepoInfo)
         -> Result<(), String>
     {
+        self.apt_update = true;
+
         let mut hash = Sha256::new();
         hash.input_str(&repo.url);
         hash.input(&[0]);
