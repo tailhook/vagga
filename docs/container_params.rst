@@ -5,8 +5,8 @@ Container Parameters
 
 .. opt:: setup
 
-    List of steps that is executed to build container. See :ref:`build_commands`
-    for more info.
+    List of steps that is executed to build container. See
+    :ref:`build_commands` and :ref:`build_steps` for more info.
 
 .. opt:: environ-file
 

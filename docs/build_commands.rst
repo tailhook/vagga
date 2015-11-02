@@ -20,6 +20,8 @@ run sequentially, but some of them are interesting, for example
 ``!BuildDeps`` installs package right now, but also removes package at
 the end of the build to keep container smaller and cleaner.
 
+See :ref:`build_steps` for additional details on specific commands. There
+is also an :ref:`genindex`
 
 
 Generic Installers

@@ -1,11 +1,14 @@
 .. highlight:: yaml
 
+.. _build_steps:
+
 ===========
 Build Steps
 ===========
 
 This is work in progress reference of build steps. See :ref:`build_commands`
-for help until this document is done.
+for help until this document is done. There is also an alphabetic
+:ref:`genindex`
 
 All of the following build steps may be used as an item in :opt:`setup`
 setting.
