@@ -45,6 +45,30 @@ Ubuntu Commands
 
 .. step:: UbuntuRelease
 
+   This is more exensible but more cumbersome way to setup ubuntu (comparing
+   to :step:`Ubuntu`). For example to install trusty you need::
+
+   - !UbuntuRelease { version: 14.04 }
+
+   But you can install non-lts version with this command::
+
+   - !UbuntuRelease { version: 15.10 }
+
+   All options:
+
+   version
+     The verison of ubuntu to install. This must be digital ``YY.MM`` form,
+     not a code name. **Required**.
+
+   keep-chfn-command
+     (default ``false``) This may be set to ``true`` to enable
+     ``/usr/bin/chfn`` command in the container. This often doesn't work on
+     different host systems (see `#52
+     <https://github.com/tailhook/vagga/issues/52>`_ as an example). The
+     command is very rarely useful, so the option here is for completeness
+     only.
+
+
 .. step:: AptTrust
 
    This command fetches keys with ``apt-key`` and adds them to trusted keychain
@@ -78,6 +102,31 @@ Ubuntu Commands
      common is 8 hex digits form.
 
 .. step:: UbuntuRepo
+
+   Adds arbitrary debian repo to ubuntu configuration. For example to add
+   newer python::
+
+       - !UbuntuRepo
+         url: http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu
+         suite: trusty
+         components: [main]
+       - !Install [python3.5]
+
+   See :step:`UbuntuPPA` for easier way for dealing specifically with PPAs.
+
+   Options:
+
+   url
+     Url to the repository. **Required**.
+
+   suite
+     Suite of the repository. The common practice is that suite is named just
+     like codename of the ubuntu release. For example ``trusty``. **Required**.
+
+   components
+     List of the components to fetch packages from. Common practice to have a
+     ``main`` component. So usually this setting contains just single
+     element ``components: [main]``. **Required**.
 
 .. step:: UbuntuPPA
 
