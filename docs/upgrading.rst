@@ -2,6 +2,21 @@
 Upgrading
 =========
 
+
+Upgrading 0.4.0 -> 0.4.1
+========================
+
+This is minor release so it doesn't introduce any severe incompatibilities.
+The pip cache in this release is namespaced over distro and version. So old
+cache will be inactive now. And should be removed manually by cleaning
+``.vagga/.cache/pip-cache`` directory. You may do that at any time
+
+See `Release Notes`_ and `Github`_ for all changes.
+
+.. _`Release Notes`: https://github.com/tailhook/vagga/blob/master/RELEASE_NOTES.rst
+.. _`Github`: https://github.com/tailhook/vagga/compare/v0.4.0...v0.4.1
+
+
 Upgrading 0.3.x -> 0.4.x
 ========================
 

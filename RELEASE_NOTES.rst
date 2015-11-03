@@ -13,7 +13,7 @@ Vagga 0.4.1
 * Add ``_pack_image`` command
 * Upgrade rust to v1.4.0
 * Renamed and fixed ``vagga_network`` command as ``vagga _network`` subcommand
-* The pip cache is now namespaces over distro and version (was singleton)
+* The pip cache is now namespaced over distro and version (was singleton)
 * Vagga now cleans apt lists cache on failed ``apt-get update`` (#108)
 * Add ``UbuntuPPA`` and ``AptTrust`` build steps
 
