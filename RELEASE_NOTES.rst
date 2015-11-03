@@ -5,7 +5,7 @@ Release Notes
 Vagga 0.4.1
 ===========
 
-:Release Date: future
+:Release Date: 03.11.2015
 
 * ``!Tar`` and ``!TarInstall`` commands now support unpacking local files (#81)
 * Container build process now locked, which avoid failure with cryptic error
