@@ -187,6 +187,32 @@ Generic Commands
 
 .. step:: Tar
 
+   Unpacks Tar archive into container's filesystem.
+
+   Example::
+
+       - !Tar
+         url: http://something.example.com/some-project-1.0.tar.gz
+         path: /
+         subdir: some-project-1.0
+
+   Downloaded file is stored in the cache and reused indefinitely. It's
+   expected that the new version of archive will have a new url. But
+   occasionally you may need to clean the cache to get the file fetched again.
+
+   url
+     **Required**. The url or a path of the archive to fetch. If the url
+     startswith dot ``.`` it's treated as a file name relative to the project
+     directory. Otherwise it's a url of the file to download.
+   path
+     (default ``/``). Target path where archive should be unpacked to. By
+     default it's a root of the filesystem.
+   subdir
+     Subdirectory inside the archive to extract. May be ``.`` to extract the
+     root of the archive.
+
+   **This command may be used to populate the container from scratch**
+
 .. step:: TarInstall
 
 .. step:: Git
