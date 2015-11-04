@@ -215,6 +215,37 @@ Generic Commands
 
 .. step:: TarInstall
 
+   Similar to :step:`Tar` but unpacks archive into a temporary directory and
+   runs installation script.
+
+   Example::
+
+       setup:
+       - !TarInstall
+         url: http://static.rust-lang.org/dist/rust-1.4.0-x86_64-unknown-linux-gnu.tar.gz
+         script: ./install.sh --prefix=/usr
+
+
+   url
+     **Required**. The url or a path of the archive to fetch. If the url
+     startswith dot ``.`` it's treated as a file name relative to the project
+     directory. Otherwise it's a url of the file to download.
+
+   subdir
+     Subdirectory which command is run in. May be ``.`` to run command inside
+     the root of the archive.
+
+     The common case is having a single directory in the archive,
+     and that directory is used as a working directory for script by default.
+
+   script
+     The command to use for installation of the archive. Default is effectively
+     a ``./configure --prefix=/usr && make && make install``.
+
+     The script is run with ``/bin/sh -exc``, to have better error hadling
+     and display. Also this means that dash/bash-compatible shell should be
+     installed in the previous steps under path ``/bin/sh``.
+
 .. step:: Git
 
 .. step:: GitInstall
