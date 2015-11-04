@@ -50,6 +50,10 @@ containers:
     - !Alpine v3.2
     - !Py3Requirements req-https.txt
 
+  py3req-inherit:
+    setup:
+    - !Container py3req-https-alpine
+
   ubuntu-lxml:
     setup:
     - !Ubuntu trusty

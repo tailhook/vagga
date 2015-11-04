@@ -90,6 +90,14 @@ setup() {
     [[ $link = ".roots/py3req-https-alpine.356eb50e/root" ]]
 }
 
+@test "py3: container inheritance" {
+    run vagga _build py3req-inherit
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/py3req-inherit)
+    [[ $link = ".roots/py3req-inherit.356eb50e/root" ]]
+}
+
 @test "pip: C dependencies caching" {
     vagga _build ubuntu-lxml
     vagga _build alpine-lxml
