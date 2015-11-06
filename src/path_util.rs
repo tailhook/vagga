@@ -48,6 +48,7 @@ impl ToRelative for PathBuf {
 pub trait PathExt {
     fn exists(&self) -> bool;
     fn is_dir(&self) -> bool;
+    fn is_file(&self) -> bool;
 }
 
 impl PathExt for Path {
@@ -57,6 +58,9 @@ impl PathExt for Path {
     fn is_dir(&self) -> bool {
         metadata(self).map(|x| x.is_dir()).unwrap_or(false)
     }
+    fn is_file(&self) -> bool {
+        metadata(self).map(|x| x.is_file()).unwrap_or(false)
+    }
 }
 
 impl PathExt for PathBuf {
@@ -65,6 +69,9 @@ impl PathExt for PathBuf {
     }
     fn is_dir(&self) -> bool {
         self.as_path().is_dir()
+    }
+    fn is_file(&self) -> bool {
+        self.as_path().is_file()
     }
 }
 

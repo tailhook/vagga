@@ -1,4 +1,3 @@
-use std::fs::copy;
 use std::path::Path;
 
 use super::context::Context;
@@ -6,6 +5,7 @@ use super::commands::generic::run_command_at_env;
 use super::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
+use file_util::copy;
 
 pub use self::Package::*;
 

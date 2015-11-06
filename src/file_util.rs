@@ -1,4 +1,5 @@
-use std::io::Error;
+use std::io;
+use std::io::{Read, Write, Error};
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -49,6 +50,38 @@ pub fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
     }
     try!(fs::create_dir(path));
     try!(fs::set_permissions(path, fs::Permissions::from_mode(mode)));
+    Ok(())
+}
+
+pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<()>
+{
+    _copy(from.as_ref(), to.as_ref())
+}
+
+fn _copy(from: &Path, to: &Path) -> io::Result<()> {
+    if !from.is_file() {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput,
+                              "the source path is not an existing regular file"))
+    }
+
+    let mut reader = try!(fs::File::open(from));
+    let mut writer = try!(fs::File::create(to));
+    let perm = try!(reader.metadata()).permissions();
+
+    // Use buffer allocated on heap, because rust musl has very small stack
+    // (80k) is is not enough for buffer + anything else
+    let mut buf = vec![0; 65536];
+    loop {
+        let len = match reader.read(&mut buf) {
+            Ok(0) => break,
+            Ok(len) => len,
+            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
+        try!(writer.write_all(&buf[..len]));
+    }
+
+    try!(fs::set_permissions(to, perm));
     Ok(())
 }
 

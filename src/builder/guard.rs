@@ -1,4 +1,3 @@
-use std::fs::{copy};
 use std::path::Path;
 
 use builder::context::Context;
@@ -9,7 +8,7 @@ use builder::packages;
 use builder::bld::BuildCommand;
 use container::util::clean_dir;
 use container::mount::{unmount, mount_system_dirs};
-use file_util::create_dir;
+use file_util::{create_dir, copy};
 
 
 pub struct Guard<'a> {

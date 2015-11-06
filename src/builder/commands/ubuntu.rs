@@ -1,4 +1,4 @@
-use std::fs::{copy, rename, set_permissions, Permissions};
+use std::fs::{rename, set_permissions, Permissions};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
@@ -18,6 +18,7 @@ use builder::distrib::{Distribution, Named, DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
 use unshare::Stdio;
+use file_util::copy;
 
 #[derive(Debug)]
 pub enum Version {

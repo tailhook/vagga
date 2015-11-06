@@ -1,5 +1,5 @@
 use std::io;
-use std::fs::{read_dir, remove_file, remove_dir, copy};
+use std::fs::{read_dir, remove_file, remove_dir};
 use std::fs::{symlink_metadata, read_link, hard_link};
 use std::os::unix::fs::{symlink, MetadataExt};
 use std::ptr::null;
@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use libc::{c_int, c_void, timeval};
 
 use super::root::temporary_change_root;
-use file_util::create_dir_mode;
+use file_util::{create_dir_mode, copy};
 use path_util::PathExt;
 
 quick_error!{

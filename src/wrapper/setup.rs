@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind};
-use std::fs::{copy, read_link};
+use std::fs::{read_link};
 use std::fs::{symlink_metadata};
 use std::fs::File;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
@@ -18,7 +18,7 @@ use container::mount::{mount_tmpfs, mount_proc};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
-use file_util::{create_dir, create_dir_mode};
+use file_util::{create_dir, create_dir_mode, copy};
 use path_util::{ToRelative, PathExt};
 
 
