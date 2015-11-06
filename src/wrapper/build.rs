@@ -67,6 +67,10 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
             // TODO(tailhook) consider these unwraps
             tmp_path.file_name().unwrap().to_str()
             .unwrap().to_string() + ".old");
+        if rempath.is_dir() {
+            try!(clean_dir(&rempath, true)
+                 .map_err(|x| format!("Error removing old dir: {}", x)));
+        }
         try!(rename(final_path, &rempath)
              .map_err(|x| format!("Error renaming old dir: {}", x)));
         path_to_remove = Some(rempath);
