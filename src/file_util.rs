@@ -70,7 +70,7 @@ fn _copy(from: &Path, to: &Path) -> io::Result<()> {
 
     // Use buffer allocated on heap, because rust musl has very small stack
     // (80k) is is not enough for buffer + anything else
-    let mut buf = vec![0; 65536];
+    let mut buf = [0; 32768];
     loop {
         let len = match reader.read(&mut buf) {
             Ok(0) => break,
