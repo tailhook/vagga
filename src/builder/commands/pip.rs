@@ -6,7 +6,21 @@ use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command_at_env, capture_command};
 use builder::distrib::Distribution;
+use config::builders::PipSettings;
 use file_util::create_dir;
+
+
+impl Default for PipSettings {
+    fn default() -> PipSettings {
+        PipSettings {
+            find_links: Vec::new(),
+            index_urls: Vec::new(),
+            trusted_hosts: Vec::new(),
+            dependencies: false,
+            cache_wheels: true,
+        }
+    }
+}
 
 
 pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {

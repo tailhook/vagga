@@ -75,7 +75,7 @@ pub struct UbuntuRepoInfo {
     pub components: Vec<String>,
 }
 
-#[derive(Default, Clone, RustcDecodable, Debug, RustcEncodable)]
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct PipSettings {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
