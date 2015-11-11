@@ -303,6 +303,11 @@ Python Commands
    Most options directly correspond to the pip command line options so refer to
    `pip help`_ for more info.
 
+   .. note:: every time :step:`PipConfig` is specified options are **replaced**
+      rather than *augmented*. In other words if you start a block of pythonic
+      commands with :step:`PipConfig` all subsequent commands will be executed
+      with same options, no matter which :step:`PipConfig` settings was before.
+
    All options:
 
    dependencies
