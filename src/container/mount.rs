@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::ffi::CString;
-use std::fs::File;
-use std::io::Error as IoError;
+use std::fs::{File, read_link};
+use std::io::{ErrorKind, Error as IoError};
 use std::io::{BufRead, BufReader};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -225,16 +225,15 @@ pub fn mount_proc(target: &Path) -> Result<(), String>
     }
 }
 
-pub fn mount_pseudo(target: &Path, name: &str, options: &str, readonly: bool)
+pub fn mount_pseudo(target: &Path, name: &str, options: &str)
     -> Result<(), String>
 {
     let c_name = name.to_cstring();
     let c_target = target.to_cstring();
     let c_opts = options.to_cstring();
-    let mut flags = MS_NOSUID | MS_NOEXEC | MS_NODEV | MS_NOATIME;
-    if readonly {
-        flags |= MS_RDONLY;
-    }
+    // Seems this is similar to why proc is mounted with the flag
+    let flags = 0xC0ED0000; //MS_MGC_VAL
+
     debug!("Pseusofs mount {:?} {} {}", target, name, options);
     let rc = unsafe { mount(
         c_name.as_bytes().as_ptr(),
@@ -283,9 +282,38 @@ pub fn unmount(target: &Path) -> Result<(), String> {
 }
 
 pub fn mount_system_dirs() -> Result<(), String> {
-    try!(bind_mount(&Path::new("/dev"), &Path::new("/vagga/root/dev")));
+    try!(mount_dev(&Path::new("/vagga/root/dev")));
     try!(bind_mount(&Path::new("/sys"), &Path::new("/vagga/root/sys")));
     try!(mount_proc(&Path::new("/vagga/root/proc")));
     try!(bind_mount(&Path::new("/work"), &Path::new("/vagga/root/work")));
     return Ok(());
+}
+
+pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
+    try!(bind_mount(&Path::new("/dev"), &dev_dir));
+
+    let pts_dir = dev_dir.join("pts");
+    try!(mount_pseudo(&pts_dir, "devpts", "newinstance"));
+
+    let ptmx_path = dev_dir.join("ptmx");
+    match read_link(&ptmx_path) {
+        Ok(x) => {
+            if Path::new(&x) != Path::new("/dev/pts/ptmx")
+               && Path::new(&x) != Path::new("pts/ptmx")
+            {
+                warn!("The /dev/ptmx refers to {:?}. We need /dev/pts/ptmx \
+                    to operate properly. \
+                    Probably pseudo-ttys will not work", x);
+            }
+        }
+        Err(ref e) if e.kind() == ErrorKind::InvalidInput => {
+            // It's just a device. Let's try bind mount
+            try!(bind_mount(&pts_dir.join("ptmx"), &ptmx_path));
+        }
+        Err(e) => {
+            warn!("Can't stat /dev/ptmx: {}. \
+                Probably pseudo-ttys will not work", e);
+        }
+    }
+    Ok(())
 }

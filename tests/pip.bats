@@ -106,3 +106,11 @@ setup() {
     echo STATUS "$status"
     [[ $status = 0 ]]
 }
+
+@test "py3: pty works" {
+    run vagga pty-output
+    printf "%s\n" "${lines[@]}"
+    echo STATUS "$status"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = $'pty_copy\r' ]]
+}

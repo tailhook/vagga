@@ -14,7 +14,7 @@ use config::{Container, Settings};
 use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
-use container::mount::{mount_tmpfs, mount_proc};
+use container::mount::{mount_tmpfs, mount_proc, mount_dev};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
@@ -188,7 +188,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let dev_dir = mnt_dir.join("dev");
     try_msg!(create_dir(&dev_dir, false),
              "Error creating /dev: {err}");
-    try!(bind_mount(&Path::new("/dev"), &dev_dir));
+    try!(mount_dev(&dev_dir));
 
     let sys_dir = mnt_dir.join("sys");
     try_msg!(create_dir(&sys_dir, false),

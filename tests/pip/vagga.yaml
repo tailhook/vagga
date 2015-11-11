@@ -68,3 +68,14 @@ containers:
     - !Install [libxml2-dev, libxslt-dev, zlib-dev]
     - !Env { CFLAGS: "-I/usr/include/libxml2 -I/usr/include/libxslt" }
     - !Py3Install [lxml]
+
+commands:
+  pty-output: !Command
+    container: py3-ubuntu
+    run:
+    - python3
+    - -c
+    - |
+        import pty
+        pty.spawn(['echo', 'pty_copy'])
+
