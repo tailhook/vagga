@@ -257,7 +257,30 @@ Files and Directories
 
 .. step:: Text
 
+   Writes a number of text files into the container file system. Useful for
+   wrinting short configuration files (use external files and file copy
+   or symlinks for writing larger configs)
+
+   Example::
+
+       setup:
+       - !Text
+         /etc/locale.conf: |
+            LANG=en_US.UTF-8
+            LC_TIME=uk_UA.UTF-8
+
 .. step:: Remove
+
+   Remove file or a directory from the container. Useful for removing cache
+   directories.
+
+   Example::
+
+   setup:
+   - !Remove /var/cache/something
+
+   For directories consider use :step:`EmptyDir` if you need to keep cleaned
+   directory in the container.
 
 .. step:: EnsureDir
 
