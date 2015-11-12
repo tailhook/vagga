@@ -175,7 +175,8 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Remove(ref path) => {
-                try!(clean_dir(path, true));
+                let fpath = Path::new("/vagga/root").join(path.rel());
+                try!(clean_dir(&fpath, true));
                 guard.ctx.add_remove_dir(&path);
             }
             &B::EmptyDir(ref path) => {

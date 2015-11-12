@@ -68,7 +68,7 @@ impl<'a> Guard<'a> {
         }
 
         for dir in self.ctx.remove_dirs.iter() {
-            try!(clean_dir(&base.join(dir), false)
+            try!(clean_dir(&base.join(dir), true)
                 .map_err(|e| format!("Error removing dir: {}", e)));
         }
 
