@@ -12,7 +12,6 @@ use path_util::{PathExt, Expand};
 
 #[derive(PartialEq, RustcDecodable, Debug)]
 struct SecureSettings {
-    allowed_dirs: BTreeMap<String, PathBuf>,
     storage_dir: Option<PathBuf>,
     cache_dir: Option<PathBuf>,
     version_check: Option<bool>,
@@ -26,9 +25,6 @@ pub fn secure_settings_validator<'a>(has_children: bool)
     -> V::Structure<'a>
 {
     let mut s = V::Structure::new()
-        .member("allowed_dirs", V::Mapping::new(
-            V::Scalar::new(),
-            V::Scalar::new()))
         .member("storage_dir", V::Scalar::new().optional())
         .member("cache_dir", V::Scalar::new().optional())
         .member("version_check", V::Scalar::new().optional())
@@ -70,7 +66,6 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
 
 #[derive(Debug)]
 pub struct MergedSettings {
-    pub allowed_dirs: BTreeMap<String, PathBuf>,
     pub allowed_files: BTreeMap<String, PathBuf>,
     pub storage_dir: Option<PathBuf>,
     pub cache_dir: Option<PathBuf>,
@@ -81,7 +76,6 @@ pub fn read_settings(project_root: &Path)
     -> Result<(MergedSettings, Settings), String>
 {
     let mut ext_settings = MergedSettings {
-        allowed_dirs: BTreeMap::new(),
         allowed_files: BTreeMap::new(),
         storage_dir: None,
         cache_dir: None,
@@ -107,9 +101,6 @@ pub fn read_settings(project_root: &Path)
         }
         let cfg: SecureSettings = try!(parse_config(filename,
             &secure_settings_validator(true), Default::default()));
-        for (k, v) in cfg.allowed_dirs.iter() {
-            ext_settings.allowed_dirs.insert(k.clone(), v.clone());
-        }
         if let Some(dir) = cfg.storage_dir {
             ext_settings.storage_dir = Some(try!(dir.expand_home()
                 .map_err(|()| format!("Can't expand tilde `~` in storage dir \
@@ -134,9 +125,6 @@ pub fn read_settings(project_root: &Path)
             int_settings.alpine_mirror = Some(val.clone());
         }
         if let Some(cfg) = cfg.site_settings.get(project_root) {
-            for (k, v) in cfg.allowed_dirs.iter() {
-                ext_settings.allowed_dirs.insert(k.clone(), v.clone());
-            }
             if let Some(ref dir) = cfg.storage_dir {
                 ext_settings.storage_dir = Some(dir.clone());
             }
