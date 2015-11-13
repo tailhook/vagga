@@ -78,3 +78,13 @@ not to do so.
     ``mirror://mirrors.ubuntu.com/mirrors.txt`` which means mirror will be
     determined automatically. Note that it's different from default in ubuntu
     itself where ``http://archive.ubuntu.com/ubuntu/`` is the default.
+
+.. opt:: alpine-mirror
+
+    Set to your preferred alpine mirror. By default it's the random one is
+    picked from the list.
+
+    .. note:: Alpine package manager is used not only for building
+       :step:`Alpine` distribution, but also internally for fetching tools that
+       are outside of the container filesystem (for example to fetch ``git``
+       for :step:`Git` or :step:`GitInstall` command(s))
