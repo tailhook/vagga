@@ -47,20 +47,20 @@ impl PartialEq for Container {
 
 pub fn volume_validator<'x>() -> V::Enum<'x> {
     V::Enum::new()
-        .option("Tmpfs",  V::Structure::new()
-            .member("size",  V::Numeric::new()
-                .min(0).default(100*1024*1024))
-            .member("mode",  V::Numeric::new()
-                .min(0).max(0o1777).default(0o766))
-            .member("subdirs",
-                V::Mapping::new(
-                    V::Directory::new().is_absolute(false),
-                    V::Structure::new()
-                        .member("mode", V::Numeric::new()
-                            .min(0).max(0o1777).default(0o766))
-                )))
-        .option("VaggaBin",  V::Nothing)
-        .option("BindRW",  V::Scalar::new())
+    .option("Tmpfs",  V::Structure::new()
+        .member("size",  V::Numeric::new()
+            .min(0).default(100*1024*1024))
+        .member("mode",  V::Numeric::new()
+            .min(0).max(0o1777).default(0o766))
+        .member("subdirs",
+            V::Mapping::new(
+                V::Directory::new().is_absolute(false),
+                V::Structure::new()
+                    .member("mode", V::Numeric::new()
+                        .min(0).max(0o1777).default(0o766))
+            )))
+    .option("VaggaBin",  V::Nothing)
+    .option("BindRW",  V::Scalar::new())
 }
 
 pub fn container_validator<'a>() -> V::Structure<'a> {

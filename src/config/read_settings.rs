@@ -23,45 +23,24 @@ struct SecureSettings {
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
-    -> Box<V::Validator + 'a>
+    -> V::Structure<'a>
 {
-    let mut members = vec!(
-        ("allowed_dirs".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            value_element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            .. Default::default()}) as Box<V::Validator>),
-        ("storage_dir".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("cache_dir".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("version_check".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("proxy_env_vars".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("ubuntu_mirror".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("alpine_mirror".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-    );
+    let mut s = V::Structure::new()
+        .member("allowed_dirs", V::Mapping::new(
+            V::Scalar::new(),
+            V::Scalar::new()))
+        .member("storage_dir", V::Scalar::new().optional())
+        .member("cache_dir", V::Scalar::new().optional())
+        .member("version_check", V::Scalar::new().optional())
+        .member("proxy_env_vars", V::Scalar::new().optional())
+        .member("ubuntu_mirror", V::Scalar::new().optional())
+        .member("alpine_mirror", V::Scalar::new().optional());
     if has_children {
-        members.push(
-            ("site_settings".to_string(), Box::new(V::Mapping {
-                key_element: Box::new(V::Scalar {
-                    .. Default::default()}) as Box<V::Validator>,
-                value_element: secure_settings_validator(false),
-                .. Default::default()}) as Box<V::Validator>),
-        );
+        s = s.member("site_settings", V::Mapping::new(
+            V::Scalar::new(),
+            secure_settings_validator(false)));
     }
-    return Box::new(V::Structure {
-        members: members, .. Default::default()}) as Box<V::Validator>;
+    return s;
 }
 
 #[derive(PartialEq, RustcDecodable)]
@@ -127,7 +106,7 @@ pub fn read_settings(project_root: &Path)
             continue;
         }
         let cfg: SecureSettings = try!(parse_config(filename,
-            &*secure_settings_validator(true), Default::default()));
+            &secure_settings_validator(true), Default::default()));
         for (k, v) in cfg.allowed_dirs.iter() {
             ext_settings.allowed_dirs.insert(k.clone(), v.clone());
         }
