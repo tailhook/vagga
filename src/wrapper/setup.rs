@@ -241,6 +241,16 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
                 with namespaces: {}", e)));
     }
 
+    let volume_dir = mnt_dir.join("volumes");
+    try_msg!(create_dir(&volume_dir, false),
+        "Error creating /volumes: {err}");
+    for (name, dir) in &settings.external_volumes {
+        let dest = volume_dir.join(name);
+        try_msg!(create_dir(&dest, false),
+            "Error creating {p:?}: {err}", p=dest);
+        try!(bind_mount(dir, &dest));
+    }
+
     let work_dir = mnt_dir.join("work");
     try_msg!(create_dir(&work_dir, false),
         "Error creating /work: {err}");
@@ -363,8 +373,7 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
                 try!(bind_mount(&Path::new("/vagga/bin"), &dest));
             }
             &BindRW(ref bindpath) => {
-                let src = tgtroot.join(bindpath.rel());
-                try!(bind_mount(&src, &dest));
+                try!(bind_mount(&bindpath, &dest));
             }
         }
     }

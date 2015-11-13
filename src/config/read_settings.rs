@@ -1,6 +1,6 @@
 use std::env;
 use std::default::Default;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use quire::parse_config;
@@ -19,6 +19,7 @@ struct SecureSettings {
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
     site_settings: BTreeMap<PathBuf, SecureSettings>,
+    external_volumes: HashMap<String, PathBuf>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -30,7 +31,10 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("version_check", V::Scalar::new().optional())
         .member("proxy_env_vars", V::Scalar::new().optional())
         .member("ubuntu_mirror", V::Scalar::new().optional())
-        .member("alpine_mirror", V::Scalar::new().optional());
+        .member("alpine_mirror", V::Scalar::new().optional())
+        .member("external_volumes", V::Mapping::new(
+            V::Directory::new().is_absolute(false),
+            V::Directory::new().is_absolute(true)));
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -66,7 +70,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
 
 #[derive(Debug)]
 pub struct MergedSettings {
-    pub allowed_files: BTreeMap<String, PathBuf>,
+    pub external_volumes: HashMap<String, PathBuf>,
     pub storage_dir: Option<PathBuf>,
     pub cache_dir: Option<PathBuf>,
     pub shared_cache: bool,
@@ -76,7 +80,7 @@ pub fn read_settings(project_root: &Path)
     -> Result<(MergedSettings, Settings), String>
 {
     let mut ext_settings = MergedSettings {
-        allowed_files: BTreeMap::new(),
+        external_volumes: HashMap::new(),
         storage_dir: None,
         cache_dir: None,
         shared_cache: false,
@@ -124,6 +128,9 @@ pub fn read_settings(project_root: &Path)
         if let Some(ref val) = cfg.alpine_mirror {
             int_settings.alpine_mirror = Some(val.clone());
         }
+        for (k, v) in &cfg.external_volumes {
+            ext_settings.external_volumes.insert(k.clone(), v.clone());
+        }
         if let Some(cfg) = cfg.site_settings.get(project_root) {
             if let Some(ref dir) = cfg.storage_dir {
                 ext_settings.storage_dir = Some(dir.clone());
@@ -140,6 +147,9 @@ pub fn read_settings(project_root: &Path)
             }
             if let Some(ref val) = cfg.alpine_mirror {
                 int_settings.alpine_mirror = Some(val.clone());
+            }
+            for (k, v) in &cfg.external_volumes {
+                ext_settings.external_volumes.insert(k.clone(), v.clone());
             }
         }
     }

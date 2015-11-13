@@ -48,6 +48,37 @@ Supported settings:
     ``http_proxy``, ``https_proxy``, ``ftp_proxy``, ``all_proxy``,
     ``no_proxy``.
 
+.. opt:: external-volumes
+
+   A mapping of volume name to the directory inside the host file system.
+
+   .. note:: The directory must exists even if unused in any ``vagga.yaml``.
+
+   For example, here is how you might export home::
+
+        external-volumes:
+            home: /home/user
+
+   Then in `vagga.yaml` you use it as follows (prepend with `/volumes`):
+
+        volumes:
+            /root: !BindRW /volumes/home
+
+   See :ref:`volumes` for more info about defining mount points.
+
+   .. warning::
+
+      1. Usage of volume is usually a subject for filesystem permissions. I.e.
+         your user becomes `root` inside the container, and many system users
+         are not mapped (not present) in container at all. This means that
+         mounting `/var/lib/mysql` or something like that is useless, unless
+         you chown the directory
+
+      2. Any vagga project may use the volume if it's defined in global
+         config. You may specify the volume in :opt:`site-settings` if you
+         care about security (and you should).
+
+
 All project-local settings are also allowed here.
 
 

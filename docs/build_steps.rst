@@ -281,8 +281,8 @@ Files and Directories
 
    Example::
 
-   setup:
-   - !Remove /var/cache/something
+       setup:
+       - !Remove /var/cache/something
 
    For directories consider use :step:`EmptyDir` if you need to keep cleaned
    directory in the container.

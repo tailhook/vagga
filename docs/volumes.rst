@@ -64,8 +64,17 @@ Available volume types:
    absolute (inside the container). This directive can't be used to expose
    some directories not already visible. This is often used to put some
    temporary directory in development into well-defined production location.
+
    For example::
 
        volumes:
          /var/lib/mysql: !BindRW /work/tmp/mysql
+
+   There are currently two prefixes for :volume:`BindRW`:
+
+   * `/work` -- which uses directory inside the project directory
+   * `/volumes` -- which uses one of the volumes defined in settings
+     (:opt:`external-volumes`)
+
+   The behavior of vagga when using any other prefix is undefined.
 
