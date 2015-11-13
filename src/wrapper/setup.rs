@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use libc::pid_t;
 
 use config::{Container, Settings};
-use config::containers::Volume::{Tmpfs, VaggaBin, BindRW};
+use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, Snapshot};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc, mount_dev};
@@ -20,6 +20,7 @@ use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode, copy};
 use path_util::{ToRelative, PathExt};
+use wrapper::snapshot::make_snapshot;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -374,6 +375,9 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             }
             &BindRW(ref bindpath) => {
                 try!(bind_mount(&bindpath, &dest));
+            }
+            &Snapshot(ref info) => {
+                try!(make_snapshot(&dest, info));
             }
         }
     }

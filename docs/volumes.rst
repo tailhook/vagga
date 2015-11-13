@@ -78,3 +78,34 @@ Available volume types:
 
    The behavior of vagga when using any other prefix is undefined.
 
+.. volume:: Snapshot
+
+   Create a ``tmpfs`` volume, copy contents of the original folder to the
+   volume. And then mount the filesystem in place of the original directory.
+
+   This allows to pre-seed the volume at the container build time, but make
+   it writeable and throwable.
+
+   Example::
+
+        volumes:
+            /var/lib/mysql: !Snapshot
+
+   .. note:: Every start of the container will get it's own copy. Even every
+      process in `!Supervise` mode will get own copy. It's advised to keep
+      container having a snapshot volume only for single purpose (i.e. do not
+      use same container both for postgresql and python), because otherwise
+      excessive memory will be used.
+
+   Parameters:
+
+   size
+     Size of the allocated ``tmpfs`` volume. Including the size of the original
+     contents. This is the limit of how much data you can write on the volume.
+
+   owner-uid
+     The user id of the owner of the directory. If not specified the ownership
+     will be copied  from the original
+
+   Additional properties, like the source directory will be added to the later
+   versions of vagga

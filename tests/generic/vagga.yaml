@@ -7,6 +7,16 @@ containers:
           Sir, in my heart there was a kind of fighting
           That would not let me sleep.
 
+  moretext:
+    setup:
+    - !Alpine v3.1
+    - !Text
+      /etc/shakespeare: |
+          Sir, in my heart there was a kind of fighting
+          That would not let me sleep.
+    volumes:
+      /etc: !Snapshot
+
   cache_dirs:
     setup:
     - !Alpine v3.1
@@ -67,3 +77,9 @@ commands:
   vagga: !Command
     container: vagga
     run: ["/usr/lib/vagga/vagga"]
+
+  replace-shake: !Command
+    container: moretext
+    run: |
+      echo 'nope' > /etc/shakespeare
+      cat /etc/shakespeare

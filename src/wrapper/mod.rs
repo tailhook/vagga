@@ -19,6 +19,7 @@ mod setup;
 mod util;
 mod clean;
 mod pack;
+mod snapshot;
 
 
 pub struct Wrapper<'a> {

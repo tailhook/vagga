@@ -11,6 +11,22 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
 
+@test "generic: Snapshot volume works" {
+    run vagga _run moretext cat /etc/shakespeare
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
+    [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
+
+    run vagga replace-shake
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-1]} = "nope" ]]
+
+    run vagga _run moretext cat /etc/shakespeare
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
+    [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
+}
+
 @test "generic: The CacheDirs tag works" {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
