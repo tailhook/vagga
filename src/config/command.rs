@@ -222,7 +222,7 @@ fn subcommand_validator<'a>() -> Box<V::Validator + 'a> {
     ), .. Default::default()}) as Box<V::Validator>;
 }
 
-pub fn command_validator<'a>() -> Box<V::Validator + 'a> {
+pub fn command_validator<'a>() -> V::Enum<'a> {
     let mut command_members = vec!();
     command_members.extend(command_fields().into_iter());
     command_members.extend(run_fields(false).into_iter());
@@ -244,14 +244,14 @@ pub fn command_validator<'a>() -> Box<V::Validator + 'a> {
         );
     supervise_members.extend(command_fields().into_iter());
 
-    return Box::new(V::Enum { options: vec!(
+    return V::Enum { options: vec!(
         ("Command".to_string(), Box::new(V::Structure {
             members: command_members,
             .. Default::default()}) as Box<V::Validator>),
         ("Supervise".to_string(), Box::new(V::Structure {
             members: supervise_members,
             .. Default::default()}) as Box<V::Validator>),
-    ), .. Default::default()}) as Box<V::Validator>;
+    ), .. Default::default()};
 }
 
 pub trait Networking {

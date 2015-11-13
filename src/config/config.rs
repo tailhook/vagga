@@ -19,19 +19,14 @@ pub struct Config {
     pub containers: BTreeMap<String, Container>,
 }
 
-pub fn config_validator<'a>() -> Box<V::Validator + 'a> {
-    return Box::new(V::Structure { members: vec!(
-        ("containers".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            value_element: containers::container_validator(),
-            .. Default::default()}) as Box<V::Validator>),
-        ("commands".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            value_element: command_validator(),
-            .. Default::default()}) as Box<V::Validator>),
-    ), .. Default::default()}) as Box<V::Validator>;
+pub fn config_validator<'a>() -> V::Structure<'a> {
+    V::Structure::new()
+    .member("containers", V::Mapping::new(
+        V::Scalar::new(),
+        containers::container_validator()))
+    .member("commands", V::Mapping::new(
+        V::Scalar::new(),
+        command_validator()))
 }
 
 fn find_config_path(work_dir: &PathBuf) -> Option<(PathBuf, PathBuf)> {
@@ -65,7 +60,7 @@ pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
 
 pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut config: Config = match parse_config(
-        filename, &*config_validator(), Default::default())
+        filename, &config_validator(), Default::default())
     {
         Ok(cfg) => cfg,
         Err(e) => {
