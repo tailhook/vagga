@@ -6,6 +6,35 @@
 Installation
 ============
 
+
+Binary Installation
+===================
+
+.. note:: If you're ubuntu user you should use package.
+   See :ref:`instructions below<ubuntu>`.
+
+Visit http://files.zerogw.com/vagga/latest.html to find out latest
+tarball version. Then run the following::
+
+    $ wget http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz
+    $ tar -xJf vagga-0.4.0.tar.xz
+    $ cd vagga
+    $ sudo ./install.sh
+
+Or you may try more obscure way::
+
+    $ curl http://files.zerogw.com/vagga/vagga-install.sh | sh
+
+
+.. note:: Similarly we have a `-testing` variant of both ways:
+
+    * http://files.zerogw.com/vagga/latest-testing.html
+
+    .. code-block:: bash
+
+       $ curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
+
+
 Runtime Dependencies
 ====================
 
@@ -59,33 +88,6 @@ The only other optional dependency is ``iptables`` in case you will be doing
 :doc:`network tolerance testing</network>`.
 
 See instructions specific for your distribution below.
-
-
-Binary Installation
-===================
-
-.. note:: If you're ubuntu user you should use package. See instructions below.
-
-Visit http://files.zerogw.com/vagga/latest.html to find out latest
-tarball version. Then run the following::
-
-    $ wget http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz
-    $ tar -xJf vagga-0.4.0.tar.xz
-    $ cd vagga
-    $ sudo ./install.sh
-
-Or you may try more obscure way::
-
-    $ curl http://files.zerogw.com/vagga/vagga-install.sh | sh
-
-
-.. note:: Similarly we have a `-testing` variant of both ways:
-
-    * http://files.zerogw.com/vagga/latest-testing.html
-
-    .. code-block:: bash
-
-       $ curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
 
 
 .. _ubuntu:
