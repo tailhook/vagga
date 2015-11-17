@@ -1,0 +1,13 @@
+containers:
+  selenium:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [phantomjs]
+    - !Py3Install [selenium, py, pytest]
+
+commands:
+  test: !Command
+    description: Run selenium test
+    container: selenium
+    run: [py.test, test.py]
