@@ -28,6 +28,7 @@ Miscellaneous
    :maxdepth: 1
 
    examples/misc/travis
+   examples/misc/selenium
 
 
 Documentation
