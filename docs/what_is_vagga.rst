@@ -115,6 +115,8 @@ More Reading
 * `Managing Dependencies with Vagga <https://medium.com/@paulcolomiets/managing-dependencies-with-vagga-79181046db66>`_
   shows basic concepts of using vagga and what problems it solves.
 
+* `The Higher Level Package Manager <https://medium.com/@paulcolomiets/vagga-the-higher-level-package-manager-e49e85fed42a>`_ -- discussion of vagga goals and future
+
 * `Evaluating Mesos <https://medium.com/@paulcolomiets/evaluating-mesos-4a08f85473fb>`_
   discuss how to run network tolerance tests.
 
