@@ -299,6 +299,17 @@ Meta Data
 
 .. step:: Env
 
+   Set environment variables for the build.
+
+   Example::
+
+       setup:
+       - !Env HOME: /root
+
+   .. note:: The variables are used only for following build steps, and are
+      inherited on the :step:`Container` directive. But they are *not used when
+      running* the container.
+
 .. step:: Depends
 
 
