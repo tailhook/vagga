@@ -9,6 +9,10 @@ mkdir alpine 2>/dev/null || true
 cd alpine
 rm MIRRORS.txt 2>/dev/null || true
 wget --no-use-server-timestamp http://nl.alpinelinux.org/alpine/MIRRORS.txt -O MIRRORS.txt
+
+# Temporarily remove non-working mirror
+sed -i /centarra.com/D MIRRORS.txt
+
 mirror=$(sort --random-sort MIRRORS.txt | head -n 1)
 wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$APK_TOOLS -O $APK_TOOLS
 wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$BUSYBOX -O $BUSYBOX
