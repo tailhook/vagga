@@ -55,7 +55,6 @@ pub struct CommandInfo {
     pub container: String,
     pub accepts_arguments: Option<bool>,
     pub environ: BTreeMap<String, String>,
-    pub inherit_environ: Vec<String>,
     pub write_mode: WriteMode,
     pub run: Vec<String>,
     pub user_id: u32,
@@ -125,133 +124,62 @@ fn shell_command(ast: Ast) -> Vec<Ast> {
 }
 
 
-fn run_fields<'a>(network: bool) -> Vec<(String, Box<V::Validator + 'a>)> {
-    let mut res = vec!(
-        ("pid1mode".to_string(), Box::new(V::Scalar {
-            default: Some("wait".to_string()),
-            .. Default::default()}) as Box<V::Validator>),
-        ("work_dir".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("container".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("accepts_arguments".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("environ".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            value_element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            .. Default::default()}) as Box<V::Validator>),
-        ("inherit_environ".to_string(), Box::new(V::Sequence {
-            element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            .. Default::default()}) as Box<V::Validator>),
-        ("write_mode".to_string(), Box::new(V::Scalar {
-            default: Some("read-only".to_string()),
-            .. Default::default()}) as Box<V::Validator>),
-        ("run".to_string(), Box::new(V::Sequence {
-            from_scalar: Some(shell_command as fn(Ast) -> Vec<Ast>),
-            element: Box::new(V::Scalar {
-                .. Default::default()}) as Box<V::Validator>,
-            .. Default::default()}) as Box<V::Validator>),
-        ("user_id".to_string(), Box::new(V::Numeric {
-            min: Some(0),
-            max: Some(1 << 30),
-            default: Some(0),
-            .. Default::default()}) as Box<V::Validator>),
-        ("external_user_id".to_string(), Box::new(V::Numeric {
-            min: Some(0),
-            max: Some(1 << 30),
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-    );
+fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
+    let mut cmd = cmd
+        .member("pid1mode", V::Scalar::new().default("wait"))
+        .member("work_dir", V::Scalar::new().optional())
+        .member("container", V::Scalar::new())
+        .member("accepts_arguments", V::Scalar::new().optional())
+        .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
+        .member("write_mode", V::Scalar::new().default("read-only"))
+        .member("run", V::Sequence::new(V::Scalar::new())
+            .parser(shell_command as fn(Ast) -> Vec<Ast>))
+        .member("user_id", V::Numeric::new().min(0).max(1 << 30).default(0))
+        .member("external_user_id",
+            V::Numeric::new().min(0).max(1 << 30).optional());
     if network {
-        res.push(
-            ("network".to_string(), Box::new(V::Structure {
-                optional: true,
-                members: vec!(
-                ("ip".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default()}) as Box<V::Validator>),
-                ("hostname".to_string(), Box::new(V::Scalar {
-                    optional: true,
-                    .. Default::default()}) as Box<V::Validator>),
-                ("ports".to_string(), Box::new(V::Mapping {
-                    key_element: Box::new(V::Numeric {
-                        default: None,
-                        .. Default::default()}) as Box<V::Validator>,
-                    value_element: Box::new(V::Numeric {
-                        default: None,
-                        .. Default::default()}) as Box<V::Validator>,
-                    .. Default::default()}) as Box<V::Validator>),
-                ),.. Default::default()}) as Box<V::Validator>),
-        );
+        cmd = cmd
+            .member("network", V::Structure::new().optional()
+                .member("ip", V::Scalar::new().optional())
+                .member("hostname", V::Scalar::new().optional())
+                .member("ports", V::Mapping::new(
+                    V::Numeric::new(),
+                    V::Numeric::new())))
     }
-    return res;
+    return cmd;
 }
 
-fn command_fields<'a>() -> Vec<(String, Box<V::Validator + 'a>)> {
-    return vec!(
-        ("description".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("banner".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("banner_delay".to_string(), Box::new(V::Numeric {
-            optional: true,
-            min: Some(0),
-            .. Default::default()}) as Box<V::Validator>),
-        ("epilog".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        );
+fn command_fields<'a>(cmd: V::Structure) -> V::Structure {
+    cmd
+    .member("description", V::Scalar::new().optional())
+    .member("banner", V::Scalar::new().optional())
+    .member("banner_delay", V::Numeric::new().optional().min(0))
+    .member("epilog", V::Scalar::new().optional())
 }
 
-fn subcommand_validator<'a>() -> Box<V::Validator + 'a> {
-    return Box::new(V::Enum { options: vec!(
-        ("Command".to_string(), Box::new(V::Structure {
-            members: run_fields(true),
-            .. Default::default()}) as Box<V::Validator>),
-        ("BridgeCommand".to_string(), Box::new(V::Structure {
-            members: run_fields(false),
-            .. Default::default()}) as Box<V::Validator>),
-    ), .. Default::default()}) as Box<V::Validator>;
+fn subcommand_validator<'a>() -> V::Enum<'a> {
+    V::Enum::new()
+    .option("Command",
+        run_fields(command_fields(V::Structure::new()), true))
+    .option("BridgeCommand",
+        run_fields(command_fields(V::Structure::new()), false))
 }
 
 pub fn command_validator<'a>() -> V::Enum<'a> {
-    let mut command_members = vec!();
-    command_members.extend(command_fields().into_iter());
-    command_members.extend(run_fields(false).into_iter());
+    let cmd = run_fields(command_fields(V::Structure::new()), false);
+    let sup = command_fields(V::Structure::new());
 
-    let mut supervise_members = vec!(
-        ("mode".to_string(), Box::new(V::Scalar {
-            default: Some("stop-on-failure".to_string()),
-            .. Default::default()}) as Box<V::Validator>),
-        ("children".to_string(), Box::new(V::Mapping {
-            key_element: Box::new(V::Scalar {
-                ..Default::default()}) as Box<V::Validator>,
-            value_element: subcommand_validator(),
-            .. Default::default()}) as Box<V::Validator>),
-        ("kill_unresponsive_after".to_string(), Box::new(V::Numeric {
-            default: Some(2),
-            min: Some(1),
-            max: Some(86400),
-            .. Default::default()}) as Box<V::Validator>),
-        );
-    supervise_members.extend(command_fields().into_iter());
+    let sup = sup
+        .member("mode", V::Scalar::new().default("stop-on-failure"))
+        .member("children", V::Mapping::new(
+            V::Scalar::new(),
+            subcommand_validator()))
+        .member("kill_unresponsive_after",
+            V::Numeric::new().default(2).min(1).max(86400));
 
-    return V::Enum { options: vec!(
-        ("Command".to_string(), Box::new(V::Structure {
-            members: command_members,
-            .. Default::default()}) as Box<V::Validator>),
-        ("Supervise".to_string(), Box::new(V::Structure {
-            members: supervise_members,
-            .. Default::default()}) as Box<V::Validator>),
-    ), .. Default::default()};
+    return V::Enum::new()
+        .option("Command", cmd)
+        .option("Supervise", sup);
 }
 
 pub trait Networking {
