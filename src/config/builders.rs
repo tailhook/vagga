@@ -107,6 +107,12 @@ pub struct SubConfigInfo {
     pub change_dir: Option<bool>,
 }
 
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct PyFreezeInfo {
+    pub freeze_file: PathBuf,
+    pub requirements: Option<PathBuf>,
+    pub packages: Vec<String>,
+}
 
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
 pub enum Builder {
@@ -171,6 +177,7 @@ pub enum Builder {
     Py2Requirements(PathBuf),
     Py3Install(Vec<String>),
     Py3Requirements(PathBuf),
+    PyFreeze(PyFreezeInfo),
 }
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
@@ -266,6 +273,10 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Py3Install", V::Sequence::new(V::Scalar::new()))
     .option("Py3Requirements",
         V::Scalar::new().default("requirements.txt"))
+    .option("PyFreeze", V::Structure::new()
+        .member("freeze-file", V::Scalar::new().default("requirements.txt"))
+        .member("requirements", V::Scalar::new().optional())
+        .member("packages", V::Sequence::new(V::Scalar::new())))
 
     // Node.js
     .option("NpmInstall", V::Sequence::new(V::Scalar::new()))

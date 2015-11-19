@@ -389,3 +389,48 @@ Python Commands
 
 .. step:: Py3Requirements
 
+.. step:: PyFreeze
+
+   Install python dependencies and freeze them.
+
+   .. admonition:: Experimental
+
+      This command is a subject of change at any time, while we are trying to
+      figure out how this thing should work.
+
+   Example::
+
+        setup:
+        - !Ubuntu trusty
+        - !PyFreeze
+          freeze-file: "requirements.txt"
+          packages: [flask]
+
+   If the file "requirements.txt" exists. It will install the packages listed
+   in the file, otherwise it will build temporary container. Run ``pip freeze``
+   in the container and store the data in ``requirements.txt``. Then it will
+   build the real container.
+
+   The file ``requirements.txt`` is expected to be checked out into version
+   control, so everybody gets same dependencies.
+
+   If ``packages`` is changed after ``requirements.txt`` is generated, vagga
+   should be able to detect this and regenerate requirements.txt
+
+   Parameters:
+
+   freeze-file
+     (default ``requirements.txt``) The file where dependencies will be stored
+
+   requirements
+     (optional) The file where original list of dependencies is. This option
+     is an alternative to ``packages``
+
+   packages
+     (optional) List of python packages to install. Packages may optionally
+     contain versions.
+
+
+   See `the article`__ for motivation for this command
+
+

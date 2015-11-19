@@ -78,6 +78,7 @@ impl VersionHash for Builder {
                         Ok(())
                 }).map_err(err)
             }
+            &B::PyFreeze(_) => unimplemented!(),
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
                 let err = |e| Error::Io(e, path.clone());

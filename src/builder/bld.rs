@@ -256,6 +256,7 @@ impl BuildCommand for Builder {
                         &mut guard.ctx, 3, fname));
                 }
             }
+            &B::PyFreeze(_) => unimplemented!(),
             &B::NpmInstall(ref pkgs) => {
                 try!(guard.distro.npm_configure(&mut guard.ctx));
                 if build {
