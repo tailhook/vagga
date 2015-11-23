@@ -185,6 +185,38 @@ Generic Commands
 
 .. step:: Cmd
 
+.. step:: Download
+
+   Downloads file and puts it somewhere in the file system.
+
+   Example::
+
+       - !Download
+         url: https://jdbc.postgresql.org/download/postgresql-9.4-1201.jdbc41.jar
+         path: /opt/spark/lib/postgresql-9.4-1201.jdbc41.jar
+
+   .. note:: This step does not require any download tool to be installed in
+      the container. So may be used to put static binaries into container
+      without a need to install the system.
+
+   Options:
+
+   url
+     (required) URL to download file from
+   path
+     (required) Path where to put file. Should include the file name (vagga
+     doesn't try to guess it for now). Path may be in ``/tmp`` to be used only
+     during container build process.
+   mode
+     (default '0o644') Mode (permissions) of the file. May be used to make
+     executable bit enabled for downloaded script
+
+   .. warning:: The download is cached similarly to other commands. Currently
+      there is no way to control the caching. But it's common practice to
+      publish every new version of archive with different URL (i.e. include
+      version number in the url itself)
+
+
 .. step:: Tar
 
    Unpacks Tar archive into container's filesystem.

@@ -22,6 +22,7 @@ mod commands {
     pub mod pip;
     pub mod npm;
     pub mod vcs;
+    pub mod download;
 }
 mod capsule;
 mod packages;

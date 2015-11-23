@@ -16,6 +16,7 @@ use super::commands::generic;
 use super::commands::pip;
 use super::commands::npm;
 use super::commands::vcs;
+use super::commands::download;
 use super::tarcmd;
 use version::short_version;
 use builder::distrib::{DistroBox};
@@ -216,6 +217,11 @@ impl BuildCommand for Builder {
             &B::TarInstall(ref tar_inst) => {
                 if build {
                     try!(tarcmd::tar_install(&mut guard.ctx, tar_inst));
+                }
+            }
+            &B::Download(ref dlinfo) => {
+                if build {
+                    try!(download::download(&mut guard.ctx, dlinfo));
                 }
             }
             &B::Alpine(ref version) => {

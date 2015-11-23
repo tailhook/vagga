@@ -36,7 +36,9 @@ containers:
     - !Alpine v3.1
     - !Install [wget]
     # Download file to workdir specifically
-    - !Sh "wget -N http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz"
+    - !Download
+      url: http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz
+      path: /work/vagga-0.4.0.tar.xz
     # To test unpacking local archives
     - !Tar
       url: ./vagga-0.4.0.tar.xz

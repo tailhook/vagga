@@ -114,6 +114,13 @@ pub struct PyFreezeInfo {
     pub packages: Vec<String>,
 }
 
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct DownloadInfo {
+    pub url: String,
+    pub path: PathBuf,
+    pub mode: u32,
+}
+
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
 pub enum Builder {
     // -- Generic --
@@ -125,6 +132,7 @@ pub enum Builder {
     TarInstall(TarInstallInfo),
     Git(GitInfo),
     GitInstall(GitInstallInfo),
+    Download(DownloadInfo),
     Text(BTreeMap<PathBuf, String>),
     //AddFile(FileInfo),
     Remove(PathBuf),
@@ -258,6 +266,10 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
                 .default("./configure --prefix=/usr\n\
                           make\n\
                           make install\n")))
+    .option("Download", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("path", V::Directory::new().is_absolute(true))
+        .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777)))
     .option("Alpine", V::Scalar::new())
 
     // Python

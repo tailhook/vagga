@@ -108,5 +108,5 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
-    [[ $link = ".roots/vagga.04d96bbf/root" ]]
+    [[ $link = ".roots/vagga.13a63976/root" ]]
 }
