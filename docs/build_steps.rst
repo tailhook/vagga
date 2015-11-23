@@ -465,4 +465,6 @@ Python Commands
 
    See `the article`__ for motivation for this command
 
+   __ https://medium.com/p/vagga-the-higher-level-package-manager-e49e85fed42a
+
 
