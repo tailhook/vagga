@@ -71,6 +71,11 @@ pub fn run() -> i32 {
         }
     }
 
+    if &cname[..] == "_network" {
+        args.insert(0, "vagga _network".to_string());
+        return ::network::run(args);
+    }
+
     let workdir = env::current_dir().unwrap();
 
     let (config, cfg_dir) = match find_config(&workdir) {
@@ -80,11 +85,6 @@ pub fn run() -> i32 {
             return 126;
         }
     };
-
-    if &cname[..] == "_network" {
-        args.insert(0, "vagga _network".to_string());
-        return ::network::run(args);
-    }
 
     if owner_check {
         let uid = unsafe { getuid() };
