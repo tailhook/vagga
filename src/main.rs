@@ -11,6 +11,7 @@ extern crate quire;
 extern crate time;
 extern crate unshare;
 extern crate signal;
+#[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;
 #[macro_use] extern crate quick_error;

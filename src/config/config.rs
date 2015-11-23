@@ -15,12 +15,14 @@ use super::validate::validate_config;
 
 #[derive(RustcDecodable)]
 pub struct Config {
+    pub minimum_vagga: Option<String>,
     pub commands: BTreeMap<String, MainCommand>,
     pub containers: BTreeMap<String, Container>,
 }
 
 pub fn config_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
+    .member("minimum_vagga", V::Scalar::new().optional())
     .member("containers", V::Mapping::new(
         V::Scalar::new(),
         containers::container_validator()))

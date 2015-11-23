@@ -122,6 +122,13 @@ commands:
     container: rust-musl
     run: [cargo]
 
+  test-internal: !Command
+    description: Run rust tests of vagga
+    container: rust-musl
+    environ:
+      VAGGA_VERSION: v0.0.0-test
+    run: [cargo, test]
+
   build-packages: !Command
     description: Create an ubuntu (.deb) package using checkinstall in
       container and tar.gz. Both put into `dist/`

@@ -7,6 +7,26 @@ The ``vagga.yaml`` has two sections:
 * ``containers`` -- description of the containers
 * ``commands`` -- a set of commands defined for the project
 
+There is also additional top-level option:
+
+.. opt:: minimum-vagga
+
+   (default is no limit) Defines minimum version to run the configuration file.
+   If you put::
+
+        minimum-vagga: v0.4.2
+
+   Into ``vagga.yaml`` other users will see the following error::
+
+        Please upgrade vagga to at least "v0.4.2"
+
+   This is definitely optional, but useful if you start using new features, and
+   want to communicate the version number to a team. Versions from testing
+   work as well. To see your current version use::
+
+        vagga --version
+
+
 .. _containers:
 
 Containers

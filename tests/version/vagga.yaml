@@ -1,0 +1,2 @@
+# Just tests error message, should be always bigger than real
+minimum-vagga: 9999.0.0
