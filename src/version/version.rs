@@ -153,7 +153,7 @@ impl VersionHash for Builder {
                 Ok(())
             }
             &B::Copy(ref cinfo) => {
-                unimplemneted!();
+                unimplemented!();
             }
             _ => {
                 hash.input(json::encode(self).unwrap().as_bytes());
