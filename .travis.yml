@@ -7,7 +7,7 @@ install:
 - "echo alpine-mirror: http://mirrors.gigenet.com/alpinelinux/ >> ~/.vagga.yaml"
 - vagga _build test
 script:
-- "vagga _run cache-image cargo test"
+- "vagga _run cached-image cargo test"
 - "vagga \
     -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
     -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
