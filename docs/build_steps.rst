@@ -301,6 +301,50 @@ Files and Directories
             LANG=en_US.UTF-8
             LC_TIME=uk_UA.UTF-8
 
+.. step:: Copy
+
+   Copy file or directory into the container. Useful either to put build
+   artifacts from temporary location into permanent one, or to copy files
+   from the project directory into the container.
+
+   Example::
+
+        setup:
+        - !Copy
+          source: /work/config/nginx.conf
+          path: /etc/nginx/nginx.conf
+
+   For directories you might also specify regular expression to ignore::
+
+        setup:
+        - !Copy
+          source: /work/mypkg
+          path: /usr/lib/python3.4/site-packages/mypkg
+          ignore-regex: "(~|.py[co])$"
+
+
+   Options:
+
+   source
+     (required) Absolute to directory or file to copy. If path starts with
+     ``/work`` files are checksummed to get the version of the container.
+   path
+     (required) Destination path
+   ignore-regex
+     (default ``(^|/)\.(git|hg|svn)($|/)|~$|\.bak$|\.orig$|^#.*#$``)
+     Regular expression of paths to ignore. Default regexp ignores common
+     revision control folders and editor backup files.
+
+   .. warning:: If the source directory starts with `/work` all the files are
+      read and checksummed on each run of the application in the container. So
+      copying large directories for this case may influence container startup
+      time even if rebuild is not needed.
+
+   This command is useful for making deployment containers (i.e. to put
+   application code to the container file system). For this case checksumming
+   issue above doesn't apply. It's also useful to enable :opt:`auto-clean` for
+   such containers.
+
 .. step:: Remove
 
    Remove file or a directory from the container and keep it clean on the end

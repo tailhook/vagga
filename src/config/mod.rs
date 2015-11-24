@@ -1,8 +1,3 @@
-extern crate rustc_serialize;
-extern crate quire;
-extern crate libc;
-
-
 pub use self::settings::Settings;
 pub use self::containers::Container;
 pub use self::range::Range;

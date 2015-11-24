@@ -21,6 +21,7 @@ quick-error = "0.1.4"
 mopa = "0.2.0"
 anymap = "0.11.1"
 matches = "0.1.2"
+regex = "0.1.41"
 
 [[bin]]
 name = "vagga"

@@ -111,6 +111,11 @@ impl BuildCommand for Builder {
                     }
                 }
             }
+            &B::Copy(ref cinfo) => {
+                if build {
+                    unimplemented!();
+                }
+            }
             &B::Ubuntu(ref codename) => {
                 try!(ubuntu::configure_simple(guard, codename));
                 if build {

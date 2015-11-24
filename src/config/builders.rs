@@ -3,6 +3,7 @@ use std::default::Default;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
+use libc::uid_t;
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct DebianRepo {
@@ -121,6 +122,14 @@ pub struct DownloadInfo {
     pub mode: u32,
 }
 
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct CopyInfo {
+    pub source: PathBuf,
+    pub path: PathBuf,
+    pub owner_uid: Option<uid_t>,
+    pub ignore_regex: String,
+}
+
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
 pub enum Builder {
     // -- Generic --
@@ -134,7 +143,7 @@ pub enum Builder {
     GitInstall(GitInstallInfo),
     Download(DownloadInfo),
     Text(BTreeMap<PathBuf, String>),
-    //AddFile(FileInfo),
+    Copy(CopyInfo),
     Remove(PathBuf),
     EnsureDir(PathBuf),
     EmptyDir(PathBuf),
@@ -212,6 +221,12 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Text", V::Mapping::new(
         V::Directory::new().is_absolute(true),
         V::Scalar::new()))
+    .option("Copy", V::Structure::new()
+        .member("source", V::Scalar::new())
+        .member("path", V::Directory::new().is_absolute(true))
+        .member("ignore_regex", V::Scalar::new()
+            .default(r#"(^|/)\.(git|hg|svn)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
+        .member("owner_uid", V::Numeric::new().min(0).optional()))
 
     .option("Ubuntu", V::Scalar::new())
     .option("UbuntuRelease", V::Structure::new()
