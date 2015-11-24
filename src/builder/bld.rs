@@ -1,4 +1,4 @@
-use std::fs::{File, create_dir_all, set_permissions, Permissions};
+use std::fs::{File, create_dir_all, set_permissions, Permissions, remove_file};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -22,6 +22,7 @@ use version::short_version;
 use builder::distrib::{DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
+use path_util::PathExt;
 
 
 pub trait BuildCommand {
@@ -177,7 +178,13 @@ impl BuildCommand for Builder {
             }
             &B::Remove(ref path) => {
                 let fpath = Path::new("/vagga/root").join(path.rel());
-                try!(clean_dir(&fpath, true));
+                if fpath.is_dir() {
+                    try!(clean_dir(&fpath, true));
+                } else if fpath.exists() {
+                    try!(remove_file(&fpath)
+                        .map_err(|e| format!("Error removing file {:?}: {}",
+                                             &fpath, e)));
+                }
                 guard.ctx.add_remove_dir(&path);
             }
             &B::EmptyDir(ref path) => {
