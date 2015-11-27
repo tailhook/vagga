@@ -12,6 +12,7 @@ wget --no-use-server-timestamp http://nl.alpinelinux.org/alpine/MIRRORS.txt -O M
 
 # Temporarily remove non-working mirror
 sed -i /centarra.com/D MIRRORS.txt
+sed -i /dl-7.alpinelinux.org/D MIRRORS.txt
 
 mirror=$(sort --random-sort MIRRORS.txt | head -n 1)
 wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$APK_TOOLS -O $APK_TOOLS
