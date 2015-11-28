@@ -2,7 +2,7 @@ use std::io;
 use std::io::{Read, Write, Error};
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{PermissionsExt, symlink};
 use std::os::unix::io::AsRawFd;
 
 use nix;
@@ -51,6 +51,48 @@ pub fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
     try!(fs::create_dir(path));
     try!(fs::set_permissions(path, fs::Permissions::from_mode(mode)));
     Ok(())
+}
+
+pub fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
+    match fs::symlink_metadata(dir) {
+        Ok(ref stat) if stat.file_type().is_symlink() => {
+            return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
+                               "Please run `unlink {0}`"), dir.display()));
+        }
+        Ok(ref stat) if stat.file_type().is_dir() => {
+            // ok
+        }
+        Ok(_) => {
+            return Err(format!(concat!("The `{0}` must be a directory. ",
+                               "Please run `unlink {0}`"), dir.display()));
+        }
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+            try_msg!(create_dir(dir, false),
+                "Can't create {dir:?}: {err}", dir=dir);
+        }
+        Err(ref e) => {
+            return Err(format!("Can't stat `{}`: {}", dir.display(), e));
+        }
+    }
+    return Ok(());
+}
+
+pub fn ensure_symlink(target: &Path, linkpath: &Path) -> Result<(), io::Error>
+{
+    match symlink(target, linkpath) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if e.kind() == io::ErrorKind::AlreadyExists {
+                match fs::read_link(linkpath) {
+                    Ok(ref path) if Path::new(path) == target => Ok(()),
+                    Ok(_) => Err(e),
+                    Err(e) => Err(e),
+                }
+            } else  {
+                Err(e)
+            }
+        }
+    }
 }
 
 pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<()>

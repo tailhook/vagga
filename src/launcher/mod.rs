@@ -25,6 +25,7 @@ mod build;
 mod wrap;
 mod pack;
 mod version;
+mod storage;
 
 
 pub fn run() -> i32 {
@@ -119,7 +120,13 @@ pub fn run() -> i32 {
         }
     }
 
-    let (_ext_settings, int_settings) = match read_settings(&cfg_dir)
+    // Not sure this is a best place, but the variable is needed for correct
+    // reading of settings
+    if let Some(x) = env::var_os("HOME") {
+        env::set_var("VAGGA_USER_HOME", x);
+    }
+
+    let (ext_settings, int_settings) = match read_settings(&cfg_dir)
     {
         Ok(tup) => tup,
         Err(e) => {
@@ -203,6 +210,9 @@ pub fn run() -> i32 {
         }
         "_pack_image" => {
             pack::pack_command(&int_settings, args)
+        }
+        "_init_storage_dir" => {
+            storage::init_dir(&ext_settings, &cfg_dir, args)
         }
         _ => {
             user::run_user_command(&config, &int_settings,
