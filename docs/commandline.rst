@@ -59,6 +59,16 @@ vagga _version_hash CONTAINER
 
   Might be used in some automation scripts.
 
+vagga _init_storage_dir
+  If you have configured a :opt:`storage-dir` in settings, say
+  ``/vagga-storage``, when you run ``vagga _init_storage_dir abc`` will create
+  a ``/vagga-storage/abc`` and ``.vagga`` with ``.vagga/.lnk`` pointing to
+  the directory. The command ensures that the storage dir is not used for any
+  other folder.
+
+  This is created for buildbots which tend to clean ``.vagga`` directory on
+  every build (like gitlab-ci) or just very often.
+
 
 Normal Commands
 ===============
