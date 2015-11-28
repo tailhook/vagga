@@ -128,7 +128,8 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     if let Some(ref wd) = command.work_dir {
         cmd.current_dir(Path::new("/work").join(&wd));
     } else {
-        cmd.current_dir(env::var("PWD").unwrap_or("/work".to_string()));
+        cmd.current_dir(env::var("_VAGGA_WORKDIR")
+                        .unwrap_or("/work".to_string()));
     }
     for (ref k, ref v) in env.iter() {
         cmd.env(k, v);

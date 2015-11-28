@@ -123,7 +123,7 @@ pub fn run() -> i32 {
     // Not sure this is a best place, but the variable is needed for correct
     // reading of settings
     if let Some(x) = env::var_os("HOME") {
-        env::set_var("VAGGA_USER_HOME", x);
+        env::set_var("_VAGGA_HOME", x);
     }
 
     let (ext_settings, int_settings) = match read_settings(&cfg_dir)

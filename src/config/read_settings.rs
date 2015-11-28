@@ -93,7 +93,7 @@ pub fn read_settings(project_root: &Path)
         alpine_mirror: None,
     };
     let mut secure_files = vec!();
-    if let Ok(home) = env::var("VAGGA_USER_HOME") {
+    if let Ok(home) = env::var("_VAGGA_HOME") {
         let home = Path::new(&home);
         secure_files.push(home.join(".config/vagga/settings.yaml"));
         secure_files.push(home.join(".vagga/settings.yaml"));

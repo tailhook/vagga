@@ -47,7 +47,7 @@ pub fn get_version(settings: &Settings, name: &str) -> Result<String, String> {
         cmd.env("RUST_BACKTRACE", x);
     }
     if let Ok(x) = env::var("HOME") {
-        cmd.env("VAGGA_USER_HOME", x);
+        cmd.env("_VAGGA_HOME", x);
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
@@ -75,7 +75,7 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
         cmd.env("RUST_BACKTRACE", x);
     }
     if let Ok(x) = env::var("HOME") {
-        cmd.env("VAGGA_USER_HOME", x);
+        cmd.env("_VAGGA_HOME", x);
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());

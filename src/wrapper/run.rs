@@ -101,7 +101,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
 
     let mut cmd = Command::new(cpath);
     cmd.args(&args);
-    cmd.current_dir(&env::var("PWD").unwrap_or("/work".to_string()));
+    cmd.current_dir(&env::var("_VAGGA_WORKDIR")
+                    .unwrap_or("/work".to_string()));
     uid_map.map(|x| set_uidmap(&mut cmd, &x, false));
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);

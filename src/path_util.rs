@@ -103,7 +103,7 @@ impl Expand for PathBuf {
         }
         let mut it = self.iter();
         it.next();
-        if let Some(home) = env::var_os("VAGGA_USER_HOME") {
+        if let Some(home) = env::var_os("_VAGGA_HOME") {
             let home = Path::new(&home);
             Ok(home.join(it.as_path()))
         } else {

@@ -123,7 +123,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     let mut cmd = Command::new(env_path_find("id")
                                .unwrap_or(PathBuf::from("/usr/bin/id")));
     cmd.arg("--user").arg("--name");
-    if let Ok(path) = env::var("HOST_PATH") {
+    if let Ok(path) = env::var("_VAGGA_PATH") {
         cmd.env("PATH", path);
     }
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());

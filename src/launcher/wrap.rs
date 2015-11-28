@@ -39,7 +39,7 @@ impl Wrapper for Command {
         }
         copy_env_vars(&mut cmd, &settings);
         if let Some(x) = env::var_os("PATH") {
-            cmd.env("HOST_PATH", x);
+            cmd.env("_VAGGA_PATH", x);
         }
         if let Some(x) = env::var_os("RUST_LOG") {
             cmd.env("RUST_LOG", x);
@@ -48,7 +48,7 @@ impl Wrapper for Command {
             cmd.env("RUST_BACKTRACE", x);
         }
         if let Some(x) = env::var_os("HOME") {
-            cmd.env("VAGGA_USER_HOME", x);
+            cmd.env("_VAGGA_HOME", x);
         }
 
         cmd.unshare(
@@ -56,7 +56,12 @@ impl Wrapper for Command {
         cmd
     }
     fn workdir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self {
-        self.env("PWD", Path::new("/work").join(dir));
+        let dir = dir.as_ref();
+        if dir == Path::new("") { // not adding a slash at the end
+            self.env("_VAGGA_WORKDIR", Path::new("/work"));
+        } else {
+            self.env("_VAGGA_WORKDIR", Path::new("/work").join(dir));
+        }
         self
     }
     fn userns(&mut self) -> &mut Self {
