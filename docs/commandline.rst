@@ -28,16 +28,36 @@ Builtin Commands
 All commands have ``--help``, so we don't duplicate all command-line flags
 here
 
-* ``vagga _run CONTAINER CMD ARG...`` -- run arbitrary command in container
-  defined in vagga.yaml
-* ``vagga _build CONTAINER`` -- builds container without running a command
-* ``vagga _clean`` -- removes images and temporary files created by vagga. To
-  fully remove ``.vagga`` directory you can run ``vagga _clean --everything``.
+vagga _run CONTAINER CMD ARG...
+  run arbitrary command in container defined in vagga.yaml
+
+vagga _build CONTAINER
+  Builds container without running a command.
+
+  More useful in the form::
+
+      vagga _build --force container_name
+
+  To rebuid container that has previously been built.
+
+vagga _clean
+  Removes images and temporary files created by vagga. To remove old versions
+  of all images run::
+
+      vagga _clean --old
+
   For other operations see ``vagga _clean --help``
-* ``vagga _list`` -- list of commands (including builtin ones when using
-  ``--builtin`` flag)
-* ``vagga _version_hash`` -- prints version hash for the container, might be
-  used in some automation scripts
+
+vagga _list
+  List of commands (similar to running vagga without command)
+
+vagga _version_hash CONTAINER
+  Prints version hash for the container. In case the image has not been built
+  (or config has been updated since) it should return new hash. But sometimes
+  it's not possible to determine the hash in advance. In this case command
+  returns an error.
+
+  Might be used in some automation scripts.
 
 
 Normal Commands
