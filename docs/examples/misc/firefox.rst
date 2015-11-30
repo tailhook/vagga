@@ -2,10 +2,10 @@
 Firefox Browser
 ===============
 
-To run firefox, or any other GUI application, there are some extra steps
+To run firefox or any other GUI application there are some extra steps
 involved to setup a display.
 
-The ``/tmp/.X11-unix/`` director should be mounted in the container. This
+The ``/tmp/.X11-unix/`` directory should be mounted in the container. This
 can be accomplished by making it available to vagga under the name ``X11``
 by writing the following lines in your global configuration ``~/.vagga.yaml``::
 
@@ -34,18 +34,17 @@ WebGL Support
 -------------
 
 To enable webgl support further steps are necessary to install the 
-drivers inside the container, and that ultimately depends on your video card
-model.
+drivers inside the container, that depends on your video card model.
 
 To setup the proprietary nvidia drivers, download the driver from the 
-`NVIDIA website <http://www.nvidia.ca/Download/index.aspx?lang=en-us>`_ and
-use the following ``vagga.yaml``:
+`NVIDIA website <http://www.nvidia.ca/Download/index.aspx?lang=en-us>`_ in the 
+your working directory and use the following ``vagga.yaml``:
 
 .. literalinclude:: ../../../examples/firefox/vagga_webgl_nvidia.yaml
    :language: yaml
  
-For intel videocards use the following ``vagga.yaml`` (this includes also 
-chromium and java plugins):
+For intel video cards use the following ``vagga.yaml`` (this includes also 
+chromium and java plugin):
 
 .. literalinclude:: ../../../examples/firefox/vagga_webgl_intel.yaml
    :language: yaml
