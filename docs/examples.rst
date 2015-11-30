@@ -29,6 +29,7 @@ Miscellaneous
 
    examples/misc/travis
    examples/misc/selenium
+   examples/misc/firefox
 
 
 Documentation
