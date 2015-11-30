@@ -24,6 +24,12 @@ a place to write the user profile::
 
     vagga -eDISPLAY -EHOME=/tmp firefox
 
+To prevent DBUS-related errors also export the ``DBUS_SESSION_BUS_ADDRESS``
+environmental variable::
+
+   vagga -eDISPLAY -EHOME=/tmp -eDBUS_SESSION_BUS_ADDRESS firefox
+
+
 WebGL Support
 -------------
 
