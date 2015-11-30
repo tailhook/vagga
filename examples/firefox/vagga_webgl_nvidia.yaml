@@ -1,0 +1,21 @@
+containers:
+  browser:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [binutils, pkg-config, mesa-utils]
+    - !Sh sh /work/NVIDIA-Linux-x86_64-331.67.run -a -N --ui=none --no-kernel-module
+    - !Sh nvidia-xconfig -a --use-display-device=None --enable-all-gpus --virtual=1280x1024
+    - !Install [firefox]
+    volumes:
+      /tmp: !Tmpfs
+        size: 100Mi
+        mode: 0o1777
+        subdirs:
+          .X11-unix:
+      /tmp/.X11-unix: !BindRW /volumes/X11
+
+commands:
+  firefox: !Command
+    container: browser
+    run: [firefox]
