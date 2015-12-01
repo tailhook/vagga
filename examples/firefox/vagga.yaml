@@ -1,0 +1,19 @@
+containers:
+  browser:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [firefox]
+    volumes:
+      /tmp: !Tmpfs
+        size: 100Mi
+        mode: 0o1777
+        subdirs:
+          .X11-unix:
+      /tmp/.X11-unix: !BindRW /volumes/X11
+
+commands:
+  firefox: !Command
+    container: browser
+    environ: { HOME: /tmp }
+    run: [firefox]

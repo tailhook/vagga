@@ -1,0 +1,23 @@
+containers:
+  browser:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [chromium-browser]
+    - !Install [firefox, icedtea-plugin]
+    - !Install [xserver-xorg-video-intel, mesa-utils, libgl1-mesa-dri]
+    - !EnsureDir /root
+    volumes:
+      /tmp: !Tmpfs
+        size: 100Mi
+        mode: 0o1777
+        subdirs:
+          .X11-unix:
+      /tmp/.X11-unix: !BindRW /volumes/X11
+      /root: !BindRW /work/home
+
+commands:
+  firefox: !Command
+    container: browser
+    environ: { HOME: /tmp }
+    run: [firefox]
