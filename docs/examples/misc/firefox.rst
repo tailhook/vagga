@@ -13,21 +13,21 @@ by writing the following lines in your global configuration ``~/.vagga.yaml``::
       X11: /tmp/.X11-unix/
 
 Next, you can use the following ``vagga.yaml`` file to setup the actual 
-configuration. 
+configuration (we redefine the variable ``HOME`` because firefox needs to 
+write profile information).
 
 .. literalinclude:: ../../../examples/firefox/vagga.yaml
    :language: yaml
 
 When calling vagga, remember to export the ``DISPLAY`` 
-environment variable and set the ``HOME`` to be ``/tmp``  to allow firefox 
-a place to write the user profile::
+environment variable::
 
-    vagga -eDISPLAY -EHOME=/tmp firefox
+    vagga -eDISPLAY firefox
 
 To prevent DBUS-related errors also export the ``DBUS_SESSION_BUS_ADDRESS``
 environmental variable::
 
-   vagga -eDISPLAY -EHOME=/tmp -eDBUS_SESSION_BUS_ADDRESS firefox
+   vagga -eDISPLAY -eDBUS_SESSION_BUS_ADDRESS firefox
 
 
 WebGL Support

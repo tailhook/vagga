@@ -15,4 +15,5 @@ containers:
 commands:
   firefox: !Command
     container: browser
+    environ: { HOME: /tmp }
     run: [firefox]
