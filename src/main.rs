@@ -12,6 +12,7 @@ extern crate time;
 extern crate unshare;
 extern crate signal;
 extern crate regex;
+extern crate scan_dir;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;

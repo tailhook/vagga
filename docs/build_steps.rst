@@ -322,6 +322,9 @@ Files and Directories
           path: /usr/lib/python3.4/site-packages/mypkg
           ignore-regex: "(~|.py[co])$"
 
+   .. note:: The command fails if any file name has non-utf-8 decodable names.
+      This is intentional. If you really need bad filenames use traditional
+      ``cp`` or ``rsync`` commands.
 
    Options:
 

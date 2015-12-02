@@ -4,8 +4,10 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::os::unix::io::AsRawFd;
+use std::os::unix::ffi::OsStrExt;
 
 use nix;
+use shaman::digest::Digest;
 use nix::fcntl::{flock, FlockArg};
 
 use path_util::PathExt;
@@ -147,4 +149,27 @@ impl Drop for Lock {
         flock(self.file.as_raw_fd(), FlockArg::Unlock)
             .map_err(|e| error!("Couldn't unlock file: {:?}", e)).ok();
     }
+}
+
+pub fn hash_file(path: &Path, dig: &mut Digest)
+    -> Result<(), io::Error>
+{
+    // TODO(tailhook) include permissions into the equation
+    let stat = try!(fs::symlink_metadata(path));
+    if stat.file_type().is_symlink() {
+        let data = try!(fs::read_link(path));
+        dig.input(data.as_os_str().as_bytes());
+    } else {
+        let mut file = try!(fs::File::open(&path));
+        loop {
+            let mut chunk = [0u8; 8*1024];
+            let bytes = match file.read(&mut chunk[..]) {
+                Ok(0) => break,
+                Ok(bytes) => bytes,
+                Err(e) => return Err(e),
+            };
+            dig.input(&chunk[..bytes]);
+        }
+    }
+    Ok(())
 }

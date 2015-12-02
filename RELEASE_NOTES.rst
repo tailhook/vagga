@@ -2,6 +2,14 @@
 Release Notes
 =============
 
+
+Vagga 0.4.2
+===========
+
+:Release Date: future
+
+* ``!Depends`` doesn't resolve symlinks but depends on the link itself
+
 Vagga 0.4.1
 ===========
 

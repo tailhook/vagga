@@ -1,12 +1,14 @@
 use std::io;
 use std::io::{BufReader, BufRead, Read};
-use std::fs::File;
+use std::fs::{File, symlink_metadata};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use rustc_serialize::json;
+use regex::{self, Regex};
+use scan_dir::{self, ScanDir};
 
 use config::{Config, Container};
 use config::read_config;
@@ -14,7 +16,8 @@ use config::builders::{Builder};
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use self::Error::{New, ContainerNotFound};
-use path_util::PathExt;
+use path_util::{PathExt, ToRelative};
+use file_util::hash_file;
 
 
 quick_error! {
@@ -31,6 +34,16 @@ quick_error! {
             from()
             description("error versioning dependencies")
             display("version error: {}", s)
+        }
+        Regex(e: regex::Error) {
+            from()
+            description("can't compile regex")
+            display("regex compilation error: {}", e)
+        }
+        ScanDir(errors: Vec<scan_dir::Error>) {
+            from()
+            description("can't read directory")
+            display("error reading directory: {:?}", errors)
         }
         /// I/O error
         Io(err: io::Error, path: PathBuf) {
@@ -81,20 +94,8 @@ impl VersionHash for Builder {
             &B::PyFreeze(_) => unimplemented!(),
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
-                let err = |e| Error::Io(e, path.clone());
-                File::open(&path)
-                .and_then(|mut f| {
-                    loop {
-                        let mut chunk = [0u8; 8*1024];
-                        let bytes = match f.read(&mut chunk[..]) {
-                            Ok(0) => break,
-                            Ok(bytes) => bytes,
-                            Err(e) => return Err(e),
-                        };
-                        hash.input(&chunk[..bytes]);
-                    }
-                    Ok(())
-                }).map_err(err)
+                hash_file(&path, hash)
+                    .map_err(|e| Error::Io(e, path.clone()))
             }
             &B::Container(ref name) => {
                 let cont = try!(cfg.containers.get(name)
@@ -153,7 +154,43 @@ impl VersionHash for Builder {
                 Ok(())
             }
             &B::Copy(ref cinfo) => {
-                unimplemented!();
+                let ref src = cinfo.source;
+                if src.starts_with("/work") {
+                    let meta = try!(symlink_metadata(src)
+                        .map_err(|e| Error::Io(e, src.into())));
+                    if meta.file_type().is_dir() {
+                        let re = try!(Regex::new(&cinfo.ignore_regex));
+                        try!(ScanDir::all().walk(src, |iter| {
+                            let mut all_entries = iter.filter_map(|(e, _)| {
+                                let fpath = e.path();
+                                let strpath = {
+                                    // We know that directory is inside
+                                    // the source
+                                    let path = fpath.rel_to(src).unwrap();
+                                    // We know that it's decodable
+                                    let strpath = path.to_str().unwrap();
+                                    if re.is_match(strpath) {
+                                        Some(strpath.to_string())
+                                    } else {
+                                        None
+                                    }
+                                };
+                                strpath.map(|x| (fpath, x))
+                            }).collect::<Vec<_>>();
+                            all_entries.sort();
+                            // TODO(pc) hash all these files
+                            for (fpath, _) in all_entries {
+                                try!(hash_file(&fpath, hash)
+                                    .map_err(|e| Error::Io(e, fpath)));
+                            }
+                            Ok(())
+                        }).map_err(Error::ScanDir).and_then(|x| x));
+                    } else {
+                        try!(hash_file(src, hash)
+                            .map_err(|e| Error::Io(e, src.into())));
+                    }
+                }
+                Ok(())
             }
             _ => {
                 hash.input(json::encode(self).unwrap().as_bytes());

@@ -1,0 +1,24 @@
+containers:
+  dir-copy:
+    setup:
+    - !Alpine v3.2
+    - !Copy
+      source: /work/dir
+      path: /var/dir
+  file-copy:
+    setup:
+    - !Alpine v3.2
+    - !Copy
+      source: /work/file
+      path: /var/file
+
+commands:
+
+  test-dir: !Command
+    container: dir-copy
+    run: [cat, /var/dir/hello, /var/dir/world]
+
+  test-file: !Command
+    container: file-copy
+    run: [cat, /var/file]
+
