@@ -112,8 +112,9 @@ fn _copy(from: &Path, to: &Path) -> io::Result<()> {
     let mut writer = try!(fs::File::create(to));
     let perm = try!(reader.metadata()).permissions();
 
-    // Use buffer allocated on heap, because rust musl has very small stack
-    // (80k) is is not enough for buffer + anything else
+    // Smaller buffer on the stack
+    // Because rust musl has very small stack (80k)
+    // Allocating buffer on heap for each copy is too slow
     let mut buf = [0; 32768];
     loop {
         let len = match reader.read(&mut buf) {
@@ -154,7 +155,7 @@ impl Drop for Lock {
 pub fn hash_file(path: &Path, dig: &mut Digest)
     -> Result<(), io::Error>
 {
-    // TODO(tailhook) include permissions into the equation
+    // TODO(tailhook) include permissions and ownership into the equation
     let stat = try!(fs::symlink_metadata(path));
     if stat.file_type().is_symlink() {
         let data = try!(fs::read_link(path));
@@ -170,6 +171,30 @@ pub fn hash_file(path: &Path, dig: &mut Digest)
             };
             dig.input(&chunk[..bytes]);
         }
+    }
+    Ok(())
+}
+
+pub fn force_symlink(target: &Path, linkpath: &Path, perm: fs::Permissions)
+    -> Result<(), io::Error>
+{
+    let tmpname = target.with_extension(".vagga.tmp.link~");
+    try!(symlink(target, &tmpname));
+    try!(fs::set_permissions(&tmpname, perm));
+    try!(fs::rename(&tmpname, linkpath));
+    Ok(())
+}
+
+pub fn shallow_copy(src: &Path, dest: &Path) -> Result<(), io::Error> {
+    let stat = try!(fs::symlink_metadata(src));
+    let typ = stat.file_type();
+    if typ.is_dir() {
+        try!(create_dir_mode(dest, stat.permissions().mode()));
+    } else if typ.is_symlink() {
+        let value = try!(fs::read_link(&src));
+        try!(force_symlink(&value, dest, stat.permissions()));
+    } else {
+        try!(copy(src, dest));
     }
     Ok(())
 }

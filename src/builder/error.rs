@@ -2,6 +2,8 @@ use std::io;
 use std::path::PathBuf;
 
 use unshare;
+use regex;
+use scan_dir;
 
 use config::builders::Builder;
 use builder::packages::Package;
@@ -40,6 +42,18 @@ quick_error! {
         /// Can't open file, or similar
         Write(path: PathBuf, err: io::Error) {
             display("can't write file {:?}: {}", path, err)
+        }
+        /// Can't read directory for copying
+        ScanDir(errors: Vec<scan_dir::Error>) {
+            from()
+            description("can't read directory")
+            display("error reading directory: {:?}", errors)
+        }
+        /// Can't compile regex
+        Regex(e: regex::Error) {
+            from()
+            description("can't compile regex")
+            display("error compiling regex: {}", e)
         }
         /// Distribution does not support the features
         UnsupportedFeatures(features: Vec<Package>) {

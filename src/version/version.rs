@@ -163,23 +163,22 @@ impl VersionHash for Builder {
                         try!(ScanDir::all().walk(src, |iter| {
                             let mut all_entries = iter.filter_map(|(e, _)| {
                                 let fpath = e.path();
-                                let strpath = {
+                                let excluded = {
                                     // We know that directory is inside
                                     // the source
                                     let path = fpath.rel_to(src).unwrap();
                                     // We know that it's decodable
                                     let strpath = path.to_str().unwrap();
-                                    if re.is_match(strpath) {
-                                        Some(strpath.to_string())
-                                    } else {
-                                        None
-                                    }
+                                    re.is_match(strpath)
                                 };
-                                strpath.map(|x| (fpath, x))
+                                if !excluded {
+                                    Some(fpath)
+                                } else {
+                                    None
+                                }
                             }).collect::<Vec<_>>();
                             all_entries.sort();
-                            // TODO(pc) hash all these files
-                            for (fpath, _) in all_entries {
+                            for fpath in all_entries {
                                 try!(hash_file(&fpath, hash)
                                     .map_err(|e| Error::Io(e, fpath)));
                             }
@@ -189,6 +188,12 @@ impl VersionHash for Builder {
                         try!(hash_file(src, hash)
                             .map_err(|e| Error::Io(e, src.into())));
                     }
+                } else {
+                    // We don't version the files outside of the /work because
+                    // we believe they are result of the commands run above
+                    //
+                    // And we need already built container to version the files
+                    // inside the container which is ugly
                 }
                 Ok(())
             }

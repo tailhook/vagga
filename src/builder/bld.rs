@@ -1,14 +1,17 @@
 use std::fs::{File, create_dir_all, set_permissions, Permissions, remove_file};
+use std::fs::{symlink_metadata};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+
+use regex::Regex;
+use scan_dir::{ScanDir};
 
 use config::builders::Builder;
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use config::read_config;
 use container::util::{clean_dir, copy_dir};
-
 use super::super::path_util::ToRelative;
 use super::commands::ubuntu;
 use super::commands::alpine;
@@ -23,6 +26,7 @@ use builder::distrib::{DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
 use path_util::PathExt;
+use file_util::{create_dir, shallow_copy};
 
 
 pub trait BuildCommand {
@@ -34,7 +38,7 @@ impl BuildCommand for Builder {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        use builder::error::StepError::*;
+        use builder::error::StepError as E;
         match self {
             &B::Install(ref pkgs) => {
                 guard.ctx.packages.extend(pkgs.clone().into_iter());
@@ -60,7 +64,7 @@ impl BuildCommand for Builder {
                     .expect("Subcontainer not found");  // TODO
                 for b in cont.setup.iter() {
                     try!(b.build(guard, false)
-                        .map_err(|e| SubStep(b.clone(), Box::new(e))));
+                        .map_err(|e| E::SubStep(b.clone(), Box::new(e))));
                 }
                 if build {
                     let version = try!(short_version(&cont, &guard.ctx.config)
@@ -94,7 +98,7 @@ impl BuildCommand for Builder {
                     .expect("Subcontainer not found");  // TODO
                 for b in cont.setup.iter() {
                     try!(b.build(guard, build)
-                        .map_err(|e| SubStep(b.clone(), Box::new(e))));
+                        .map_err(|e| E::SubStep(b.clone(), Box::new(e))));
                 }
             }
             &B::Text(ref files) => {
@@ -113,7 +117,39 @@ impl BuildCommand for Builder {
             }
             &B::Copy(ref cinfo) => {
                 if build {
-                    unimplemented!();
+                    let ref src = cinfo.source;
+                    let dest = Path::new("/vagga/root").join(cinfo.path.rel());
+                    let typ = try!(symlink_metadata(src)
+                        .map_err(|e| E::Write(src.into(), e)));
+                    if typ.is_dir() {
+                        try!(create_dir(&dest, false)
+                            .map_err(|e| E::Write(dest.clone(), e)));
+                        let re = try!(Regex::new(&cinfo.ignore_regex));
+                        try!(ScanDir::all().walk(src, |iter| {
+                            for (entry, _) in iter {
+                                let fpath = entry.path();
+                                // We know that directory is inside
+                                // the source
+                                let path = fpath.rel_to(src).unwrap();
+                                // We know that it's decodable
+                                let strpath = path.to_str().unwrap();
+                                if re.is_match(strpath) {
+                                    continue;
+                                }
+                                let fdest = dest.join(path);
+                                println!("Entry {:?} / {:?} / {} -> {:?}", fpath,
+                                    strpath,
+                                    re.is_match(strpath),
+                                    fdest);
+                                try!(shallow_copy(&fpath, &fdest)
+                                    .map_err(|e| E::Write(fdest, e)));
+                            }
+                            Ok(())
+                        }).map_err(E::ScanDir).and_then(|x| x));
+                    } else {
+                        try!(shallow_copy(&cinfo.source, &dest)
+                             .map_err(|e| E::Write(dest.clone(), e)));
+                    }
                 }
             }
             &B::Ubuntu(ref codename) => {

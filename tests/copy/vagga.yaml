@@ -16,7 +16,7 @@ commands:
 
   test-dir: !Command
     container: dir-copy
-    run: [cat, /var/dir/hello, /var/dir/world]
+    run: [cat, /var/dir/hello, /var/dir/second]
 
   test-file: !Command
     container: file-copy
