@@ -163,22 +163,25 @@ impl VersionHash for Builder {
                         try!(ScanDir::all().walk(src, |iter| {
                             let mut all_entries = iter.filter_map(|(e, _)| {
                                 let fpath = e.path();
-                                let excluded = {
+                                let strpath = {
                                     // We know that directory is inside
                                     // the source
                                     let path = fpath.rel_to(src).unwrap();
                                     // We know that it's decodable
                                     let strpath = path.to_str().unwrap();
-                                    re.is_match(strpath)
+                                    if re.is_match(strpath) {
+                                        Some(strpath.to_string())
+                                    } else {
+                                        None
+                                    }
                                 };
-                                if !excluded {
-                                    Some(fpath)
-                                } else {
-                                    None
-                                }
+                                strpath.map(|x| (fpath, x))
                             }).collect::<Vec<_>>();
                             all_entries.sort();
-                            for fpath in all_entries {
+                            for (fpath, name) in all_entries {
+                                hash.input(b"\0");
+                                hash.input(name.as_bytes());
+                                hash.input(b"\0");
                                 try!(hash_file(&fpath, hash)
                                     .map_err(|e| Error::Io(e, fpath)));
                             }

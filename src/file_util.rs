@@ -160,7 +160,7 @@ pub fn hash_file(path: &Path, dig: &mut Digest)
     if stat.file_type().is_symlink() {
         let data = try!(fs::read_link(path));
         dig.input(data.as_os_str().as_bytes());
-    } else {
+    } else if stat.file_type().is_file() {
         let mut file = try!(fs::File::open(&path));
         loop {
             let mut chunk = [0u8; 8*1024];

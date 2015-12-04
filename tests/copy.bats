@@ -7,9 +7,9 @@ setup() {
     run vagga test-dir
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "world file" ]]
+    [[ ${lines[@]} = "world file sub" ]]
     link=$(readlink .vagga/dir-copy)
-    [[ $link = ".roots/dir-copy.718bff63/root" ]]
+    [[ $link = ".roots/dir-copy.77d41167/root" ]]
 }
 
 @test "copy: file" {
