@@ -41,12 +41,25 @@ vagga _build CONTAINER
   To rebuid container that has previously been built.
 
 vagga _clean
-  Removes images and temporary files created by vagga. To remove old versions
-  of all images run::
+  Removes images and temporary files created by vagga.
+
+  The following command removes containers that are not used by current vagga
+  config (considering the state of all files that ``vagga.yaml`` depends on)::
+
+      vagga _clean --unused
+
+  There is a faster option for removing unused containers::
 
       vagga _clean --old
 
-  For other operations see ``vagga _clean --help``
+  This is different because it only looks at symlinks in ``.vagga/*``. So may
+  be wrong (if you changed ``vagga.yaml`` and did not run the command(s)). It's
+  faster because it doesn't calculate the hashsums. But the difference in
+  speed usually not larger than a few seconds (on large configs). The existence
+  of the two commands should probably be treated as a historical accident
+  and ``--unused`` variant preferred.
+
+  For other operations and paremeters see ``vagga _clean --help``
 
 vagga _list
   List of commands (similar to running vagga without command)
