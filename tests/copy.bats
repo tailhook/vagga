@@ -9,7 +9,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[@]} = "world file sub" ]]
     link=$(readlink .vagga/dir-copy)
-    [[ $link = ".roots/dir-copy.77d41167/root" ]]
+    [[ $link = ".roots/dir-copy.6147e496/root" ]]
 }
 
 @test "copy: file" {

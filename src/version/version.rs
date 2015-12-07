@@ -169,7 +169,7 @@ impl VersionHash for Builder {
                                     let path = fpath.rel_to(src).unwrap();
                                     // We know that it's decodable
                                     let strpath = path.to_str().unwrap();
-                                    if re.is_match(strpath) {
+                                    if !re.is_match(strpath) {
                                         Some(strpath.to_string())
                                     } else {
                                         None
