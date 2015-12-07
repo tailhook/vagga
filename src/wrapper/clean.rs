@@ -18,7 +18,6 @@ enum Action {
     Temporary,
     Old,
     Everything,
-    Orphans,
     Transient,
 }
 
@@ -47,11 +46,6 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
           .add_option(&["--everything"], PushConst(Action::Everything),
                 "Clean whole `.vagga` folder. Useful when deleting a project.
                  With ``--global`` cleans whole storage-dir and cache-dir")
-          .add_option(&["--orphans"], PushConst(Action::Orphans),
-                "Without `--global` removes containers which are not in
-                 vagga.yaml any more. With `--global` removes all folders
-                 which have `.lnk` pointing to nowhere (i.e. project dir
-                 already deleted while vagga folder is not)")
           .required();
         ap.refer(&mut global)
           .add_option(&["--global"], StoreTrue,
