@@ -61,7 +61,7 @@ newer release (the following version works fine on 12.04)::
     $ wget http://gr.archive.ubuntu.com/ubuntu/pool/main/s/shadow/uidmap_4.1.5.1-1ubuntu9_amd64.deb
     $ sudo dpkg -i uidmap_4.1.5.1-1ubuntu9_amd64.deb
 
-Most distributions (known: Nix, Archlinux, Fedora), does have binaries as
+Most distributions (known: Nix, Archlinux, Fedora) have binaries as
 part of "shadow" package, so have them installed on every system.
 
 .. _root:
@@ -69,7 +69,7 @@ part of "shadow" package, so have them installed on every system.
 You should not run vagga as root
 --------------------------------
 
-Well, sometimes users get some permission denied errors and try to run vagga
+Well, sometimes users get some ``permission denied`` errors and try to run vagga
 with sudo. Running as root is **never** an answer.
 
 Here is a quick check list on permission checks:
@@ -94,8 +94,8 @@ Or it might look like a warning::
 
     WARN:vagga::launcher: You are running vagga as a user different from the owner of project directory. You may not have needed permissions (see http://bit.ly/err_root)
 
-Both show that you don't run vagga by user that owns project. The ligitimate
-reasons to run vagga as root are:
+Both show that you don't run vagga with the user that owns the project.
+The legitimate reasons to run vagga as root are:
 
 * If you run vagga in container (i.e. in vagga itself) and the root is not a
   real root

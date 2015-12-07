@@ -22,29 +22,29 @@ Container Parameters
 
 .. opt:: uids
 
-    List of ranges of user ids that need to be mapped when container runs.
-    User must have some ranges in ``/etc/subuid`` to run this contiainer,
-    and total size of all allowed ranges must be larger or equal to the sum of
-    sizes of all ranges specified in ``uids`` parameter.  Currenlty vagga
+    List of ranges of user ids that need to be mapped when the container runs.
+    User must have some ranges in ``/etc/subuid`` to run this container,
+    and the total size of all allowed ranges must be larger or equal to the sum of
+    sizes of all the ranges specified in ``uids`` parameter.  Currently vagga
     applies ranges found in ``/etc/subuid`` one by one until all ranges are
     satisfied. It's not always optimal or desirable, we will allow to customize
     mapping in later versions.
 
     Default value is ``[0-65535]`` which is usually good enough. Unless you
-    have smaller number of uids available or run container in container.
+    have a smaller number of uids available or run container in container.
 
 .. opt:: gids
 
-    List of ranges of group ids that need to be mapped when container runs.
-    User must have some ranges in ``/etc/subgid`` to run this contiainer,
-    and total size of all allowed ranges must be larger or equal to the sum of
-    sizes of all ranges specified in ``gids`` parameter.  Currenlty vagga
+    List of ranges of group ids that need to be mapped when the container runs.
+    User must have some ranges in ``/etc/subgid`` to run this container,
+    and the total size of all allowed ranges must be larger or equal to the sum of
+    sizes of all the ranges specified in ``gids`` parameter.  Currently vagga
     applies ranges found in ``/etc/subgid`` one by one until all ranges are
     satisfied. It's not always optimal or desirable, we will allow to customize
     mapping in later versions.
 
     Default value is ``[0-65535]`` which is usually good enough. Unless you
-    have smaller number of gids available or run container in container.
+    have a smaller number of gids available or run container in container.
 
 .. opt:: volumes
 
@@ -76,13 +76,13 @@ Container Parameters
 
     The path in container where to copy ``/ets/hosts`` from host. If the value
     is ``null``, no file is copied. Default is ``/etc/hosts``. The setting
-    intention is very similar to :opt:`resolv-conf-path`, so same
-    condiderations applied.
+    intention is very similar to :opt:`resolv-conf-path`, so the same
+    considerations must be applied.
 
 .. opt:: auto-clean
 
-    (experimental) Do not leave multiple versions of container lying around.
-    Removes old container version after new is successfully build. This is
+    (experimental) Do not leave multiple versions of the container lying around.
+    Removes the old container version after the new one is successfully build. This is
     mostly useful for containers which depend on binaries locally built (i.e.
     the ones that are never reproduced in future because of timestamp). For
     most containers it's a bad idea because it doesn't allow to switch between

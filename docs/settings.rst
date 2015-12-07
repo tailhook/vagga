@@ -50,9 +50,9 @@ Supported settings:
 
 .. opt:: external-volumes
 
-   A mapping of volume name to the directory inside the host file system.
+   A mapping of volume names to the directories inside the host file system.
 
-   .. note:: The directory must exists even if unused in any ``vagga.yaml``.
+   .. note:: The directories must exist even if unused in any ``vagga.yaml``.
 
    For example, here is how you might export home::
 

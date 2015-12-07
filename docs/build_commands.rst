@@ -208,11 +208,13 @@ containers. Use ``!CacheDirs`` for that:
 
 Mutliple directories may be specified at once.
 
-.. warning:: The "apt-cache" name is a name of the directory like
-   ``.vagga/.cache/apt-cache``. So the directory is shared both between
-   all the containers and all the different builders (not only same versions
-   of the single container). In case user enabled ``shared-cache`` the folder
-   will be also shared between containers of different projects.
+.. warning:: In this example, "apt-cache" is the name of the directory on your host.
+   Unless changed in the :ref:`settings`,
+   the directory can be found in ``.vagga/.cache/apt-cache``.
+   It is shared both between all the containers and
+   all the different builders (not only same versions
+   of the single container). In case the user enabled ``shared-cache``, the folder
+   will also be shared between containers of different projects.
 
 Sometimes you just want to write a file in target system:
 
@@ -281,7 +283,7 @@ marathon_ repository you may write:
       components: [main]
     - !Install [mesos, marathon]
 
-This effectively adds repository and installs ``mesos`` and ``marathon``
+This effectively adds the repository and installs ``mesos`` and ``marathon``
 packages.
 
 .. note:: Probably the key for repository should be added to be able to install
@@ -446,7 +448,7 @@ test utils. Use ``!Container`` command for that:
        - !Py3Install [nosetests]
 
 It's also sometimes useful to freeze some part of container and test next build
-steps on top of of it. For example:
+steps on top of it. For example:
 
 .. code-block:: yaml
 
