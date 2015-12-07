@@ -11,12 +11,14 @@ use super::Wrapper;
 use container::util::clean_dir;
 use file_util::read_visible_entries;
 use path_util::PathExt;
+use wrapper::build::get_version_hash;
 
 
 #[derive(Clone, Copy)]
 enum Action {
     Temporary,
     Old,
+    Unused,
     Everything,
     Transient,
 }
@@ -37,8 +39,13 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
           .add_option(&["--tmp", "--tmp-folders"],
                 PushConst(Action::Temporary),
                 "Clean temporary containers (failed builds)")
-          .add_option(&["--old", "--old-containers"], PushConst(Action::Old),
-                "Clean old versions of containers (configurable)")
+          .add_option(&["--old", "--old-containers"], PushConst(Action::Old), "
+                Clean old versions of containers (those which doesn't have a \
+                symlink in .vagga)")
+          .add_option(&["--unused"], PushConst(Action::Unused), "
+                Clean unused containers, or versions thereof. (This is not \
+                `--old` for historical reasons, we will probably merge the \
+                commands later on)")
           .add_option(&["--transient"], PushConst(Action::Transient),
                 "Clean unneeded transient folders (left from containers with
                  `write-mode` set to transient-something). The pid of process
@@ -71,6 +78,7 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         let res = match *action {
             Action::Temporary => clean_temporary(wrapper, global, dry_run),
             Action::Old => clean_old(wrapper, global, dry_run),
+            Action::Unused => clean_unused(wrapper, global, dry_run),
             Action::Transient => clean_transient(wrapper, global, dry_run),
             _ => unimplemented!(),
         };
@@ -211,6 +219,46 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
             }
         }
         try!(clean_dir_wrapper(&entry.path(), dry_run));
+    }
+
+    return Ok(());
+}
+
+fn clean_unused(wrapper: &Wrapper, global: bool, dry_run: bool)
+    -> Result<(), String>
+{
+    if global {
+        panic!("Global cleanup is not implemented yet");
+    }
+
+    try!(setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings));
+
+    let mut useful: HashSet<String> = HashSet::new();
+    for (name, _) in &wrapper.config.containers {
+        if let Some(version) = try!(get_version_hash(name, wrapper)) {
+            useful.insert(format!("{}.{}", name, &version[..8]));
+        }
+    }
+    debug!("Useful images {:?}", useful);
+
+    let roots = Path::new("/vagga/base/.roots");
+    for entry in try_msg!(read_dir(&roots),
+                         "Can't read dir {dir:?}: {err}", dir=roots)
+    {
+        let entry = try_msg!(entry,
+                             "Can't read dir {dir:?}: {err}", dir=roots);
+        let typ = try_msg!(entry.file_type(),
+            "Can't stat {p:?}: {err}", p=entry.path());
+        if !typ.is_dir() {
+            try_msg!(remove_file(&entry.path()),
+                "Can't remove file {p:?}: {err}", p=entry.path());
+        } else if !typ.is_dir() || entry.file_name()[..].to_str()
+            .map(|n| !useful.contains(&n.to_string()))
+            .unwrap_or(false)
+        {
+            try!(clean_dir_wrapper(&entry.path(), dry_run));
+        }
     }
 
     return Ok(());
