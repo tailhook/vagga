@@ -97,12 +97,12 @@ Ubuntu Commands
 
    server
      (default ``keyserver.ubuntu.com``) Server to fetch keys from. May be
-     a hostname or ``hkp://hostname:port`` form. Or actu
+     a hostname or ``hkp://hostname:port`` form.
 
    keys
      (default ``[]``) List of keys to fetch and add to trusted keyring. Keys
      can include full fingerprint or **suffix** of the fingerprint. The most
-     common is 8 hex digits form.
+     common is the 8 hex digits form.
 
 .. step:: UbuntuRepo
 
@@ -123,8 +123,8 @@ Ubuntu Commands
      Url to the repository. **Required**.
 
    suite
-     Suite of the repository. The common practice is that suite is named just
-     like codename of the ubuntu release. For example ``trusty``. **Required**.
+     Suite of the repository. The common practice is that the suite is named just
+     like the codename of the ubuntu release. For example ``trusty``. **Required**.
 
    components
      List of the components to fetch packages from. Common practice to have a
@@ -426,10 +426,10 @@ Python Commands
    Most options directly correspond to the pip command line options so refer to
    `pip help`_ for more info.
 
-   .. note:: every time :step:`PipConfig` is specified options are **replaced**
-      rather than *augmented*. In other words if you start a block of pythonic
-      commands with :step:`PipConfig` all subsequent commands will be executed
-      with same options, no matter which :step:`PipConfig` settings was before.
+   .. note:: Every time :step:`PipConfig` is specified, options are **replaced**
+      rather than *augmented*. In other words, if you start a block of pythonic
+      commands with :step:`PipConfig`, all subsequent commands will be executed
+      with the same options, no matter which :step:`PipConfig` settings were before.
 
    All options:
 
@@ -446,8 +446,8 @@ Python Commands
        When the list is empty (default) the ``pypi.python.org`` is used.
 
    find-links
-       (default ``[]``) List of urls to html files to parse for links to
-       packages for download.
+       (default ``[]``) List of URLs to HTML files that need to be parsed
+       for links that indicate the packages to be downloaded.
 
    trusted-hosts
        (default ``[]``) List of hosts that are trusted to download packages

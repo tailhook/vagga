@@ -8,7 +8,7 @@ Vagga may supervise multiple processes with single command. This is very
 useful for running multiple-component and/or networking systems.
 
 
-By supervision we mean running multiple processes and watching until all them
+By supervision we mean running multiple processes and watching until all of them
 exit. Each process is run in it's own container. Even if two processes share
 the key named "container", which means they share same root filesystem, they
 run in different namespaces, so they don't share ``/tmp``, ``/proc`` and so on.
