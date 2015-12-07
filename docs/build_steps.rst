@@ -164,6 +164,11 @@ Alpine Commands
 
 .. step:: Alpine
 
+::
+
+   setup:
+   - !Alpine v3.2
+
 
 Distribution Commands
 =====================
@@ -175,13 +180,42 @@ config if you use :step:`SubConfig` or :step:`Container`)
 
 .. step:: Install
 
+::
+
+    setup:
+    - !Ubuntu trusty
+    - !Install [gcc, gdb]        # On Ubuntu, equivalent to `apt-get install gcc gdb -y`
+    - !Install [build-essential] # `apt-get install build-essential -y`
+    # Note that `apt-get install` is run 2 times in this example
+
+
 .. step:: BuildDeps
+
+::
+
+    setup:
+    - !Ubuntu trusty
+    - !BuildDeps [wget]
+    - !Sh echo "We can use wget here, but no curl"
+    - !BuildDeps [curl]
+    - !Sh echo "We can use wget and curl here"
+    # Container built. Now, everything in BuildDeps(wget and curl) is removed from the container.
 
 
 Generic Commands
 ================
 
 .. step:: Sh
+
+::
+
+    setup:
+    - !Alpine v3.2
+    - !Sh |
+       if [ ! -z "$(which apk)" ] && [ ! -z "$(which lbu)" ]; then
+         echo "Alpine"
+       fi
+    - !Sh echo "Finished building the Alpine container"
 
 .. step:: Cmd
 
@@ -372,6 +406,14 @@ Files and Directories
    directory in the container.
 
 .. step:: EnsureDir
+
+::
+
+    setup:
+    #...
+    - !EnsureDir /var/cache/downloads
+    - !Sh if [ -d "/var/cache/downloads" ]; then echo "Directory created"; fi;
+    - !EnsureDir /creates/parent/directories
 
 .. step:: EmptyDir
 
