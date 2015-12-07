@@ -339,7 +339,7 @@ Files and Directories
    path
      (required) Destination path
    ignore-regex
-     (default ``(^|/)\.(git|hg|svn)($|/)|~$|\.bak$|\.orig$|^#.*#$``)
+     (default ``(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$``)
      Regular expression of paths to ignore. Default regexp ignores common
      revision control folders and editor backup files.
 
