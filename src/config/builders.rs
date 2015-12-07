@@ -225,7 +225,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("source", V::Scalar::new())
         .member("path", V::Directory::new().is_absolute(true))
         .member("ignore_regex", V::Scalar::new()
-            .default(r#"(^|/)\.(git|hg|svn)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
+            .default(r#"(^|/)\.(git|hg|svn|vagga)($|/)\
+                |~$|\.bak$|\.orig$|^#.*#$"#))
         .member("owner_uid", V::Numeric::new().min(0).optional()))
 
     .option("Ubuntu", V::Scalar::new())
