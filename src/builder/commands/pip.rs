@@ -18,21 +18,29 @@ impl Default for PipSettings {
             trusted_hosts: Vec::new(),
             dependencies: false,
             cache_wheels: true,
+            install_python: true,
+            python_exe: None,
         }
     }
 }
 
 
-pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
+pub fn scan_features(settings: &PipSettings, ver: u8, pkgs: &Vec<String>)
+    -> Vec<packages::Package>
+{
     let mut res = vec!();
     res.push(packages::BuildEssential);
     if ver == 2 {
-        res.push(packages::Python2);
-        res.push(packages::Python2Dev);
+        if settings.install_python {
+            res.push(packages::Python2);
+            res.push(packages::Python2Dev);
+        }
         res.push(packages::PipPy2);
     } else {
-        res.push(packages::Python3);
-        res.push(packages::Python3Dev);
+        if settings.install_python {
+            res.push(packages::Python3);
+            res.push(packages::Python3Dev);
+        }
         res.push(packages::PipPy3);
     }
     for name in pkgs.iter() {
@@ -53,7 +61,8 @@ pub fn scan_features(ver: u8, pkgs: &Vec<String>) -> Vec<packages::Package> {
 
 fn pip_args(ctx: &mut Context, ver: u8) -> Vec<String> {
     let mut args = vec!(
-        (if ver == 2 { "python2" } else { "python3" }).to_string(),
+        ctx.pip_settings.python_exe.clone()
+        .unwrap_or((if ver == 2 { "python2" } else { "python3" }).to_string()),
         "-m".to_string(), "pip".to_string(),
         "install".to_string(),
         "--ignore-installed".to_string(),
@@ -84,8 +93,8 @@ pub fn pip_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: u8, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    try!(packages::ensure_packages(distro, ctx,
-        &scan_features(ver, pkgs)[0..]));
+    let features = scan_features(&ctx.pip_settings, ver, pkgs);
+    try!(packages::ensure_packages(distro, ctx, &features));
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.extend(pkgs.clone().into_iter());
     run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
@@ -111,8 +120,8 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
         names.push(chunk.to_string());
     }
 
-    try!(packages::ensure_packages(distro, ctx,
-        &scan_features(ver, &names)[0..]));
+    let features = scan_features(&ctx.pip_settings, ver, &names);
+    try!(packages::ensure_packages(distro, ctx, &features));
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.push("--requirement".to_string());
     pip_cli.push(reqtxt.display().to_string()); // TODO(tailhook) fix conversion
@@ -142,8 +151,9 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
     use std::fs::File;  // TODO(tailhook) migrate whole module
     use std::io::Write;  // TODO(tailhook) migrate whole module
     if ctx.featured_packages.contains(&packages::PipPy2) {
-        try!(capture_command(ctx, &[
-                "python2".to_string(),
+        let python_exe = ctx.pip_settings.python_exe.clone()
+                         .unwrap_or("python2".to_string());
+        try!(capture_command(ctx, &[python_exe,
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
@@ -155,8 +165,9 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
             }));
     }
     if ctx.featured_packages.contains(&packages::PipPy3) {
-        try!(capture_command(ctx, &[
-                "python3".to_string(),
+        let python_exe = ctx.pip_settings.python_exe.clone()
+                         .unwrap_or("python3".to_string());
+        try!(capture_command(ctx, &[python_exe,
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),

@@ -504,6 +504,21 @@ Python Commands
        Starting with vagga v0.4.1 cache is namespaced by linux distribution and
        version. It was single shared cache in vagga <= v0.4.0
 
+   install-python
+       (default ``true``) Install python automatically. This will install
+       either python2 or python3 with a default version of your selected linux
+       distribution. You may set this parameter to ``false`` and install python
+       yourself. This flag doesn't disable automatic installation of pip itself
+       and version control packages. Note that by default ``python-dev`` style
+       packages are as build dependencies installed too.
+
+   python-exe
+       (default is either ``python2`` or ``python3`` depending on which command
+       is called, e.g. ``Py2Install`` or ``Py3Install``) This allows to change
+       executable of python. It may be either just name of the specific python
+       interpreter (``python3.5``) or full path. Note, when this is set, the
+       command will be called both for ``Py2*`` commands and ``Py3*`` commands.
+
    .. _pip help: https://pip.readthedocs.org/en/stable/reference/pip_install/
 
 

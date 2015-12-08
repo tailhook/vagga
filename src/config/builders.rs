@@ -83,6 +83,8 @@ pub struct PipSettings {
     pub trusted_hosts: Vec<String>,
     pub dependencies: bool,
     pub cache_wheels: bool,
+    pub install_python: bool,
+    pub python_exe: Option<String>,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -293,7 +295,9 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("cache_wheels", V::Scalar::new().default(true))
         .member("find_links", V::Sequence::new(V::Scalar::new()))
         .member("index_urls", V::Sequence::new(V::Scalar::new()))
-        .member("trusted_hosts", V::Sequence::new(V::Scalar::new())))
+        .member("trusted_hosts", V::Sequence::new(V::Scalar::new()))
+        .member("python_exe", V::Scalar::new().optional())
+        .member("install_python", V::Scalar::new().default(true)))
     .option("Py2Install", V::Sequence::new(V::Scalar::new()))
     .option("Py2Requirements", V::Scalar::new()
         .default("requirements.txt"))

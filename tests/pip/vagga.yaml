@@ -25,6 +25,15 @@ containers:
     - !Ubuntu trusty
     - !Py3Install [setuptools, urp]
 
+  py35-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !AptTrust keys: [5BB92C09DB82666C]
+    - !UbuntuPPA fkrull/deadsnakes
+    - !Install [python3.5]
+    - !PipConfig {install-python: false, python-exe: python3.5}
+    - !Py3Install [setuptools, urp]
+
   py3-git-ubuntu:
     setup:
     - !Ubuntu trusty

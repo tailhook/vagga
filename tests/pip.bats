@@ -47,6 +47,16 @@ setup() {
     [[ $link = ".roots/py3-ubuntu.c2f5a64e/root" ]]
 }
 
+@test "py3: ubuntu py3.5" {
+    vagga _build py35-ubuntu
+    run vagga _run py35-ubuntu python3.5 -m urp -Q key=val http://example.com
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
+    link=$(readlink .vagga/py35-ubuntu)
+    [[ $link = ".roots/py35-ubuntu.384faa53/root" ]]
+}
+
 @test "py3: ubuntu git" {
     run vagga _run py3-git-ubuntu urp -Q key=val http://example.com
     printf "%s\n" "${lines[@]}"
