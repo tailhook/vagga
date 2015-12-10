@@ -69,8 +69,12 @@ Parameters of `!Command`
 
 .. opt:: run
 
-   The command to run. It's either a string (which is passed to
-   ``/bin/sh -c``) or a list of command and arguments.
+   The command to run. It can be:
+
+   - either a string encompassing a shell command line (which is feeded to
+     ``/bin/sh -c``) 
+   - or a list containing first the full path to the executable to run 
+     and then possibly static arguments.
 
 .. opt:: work-dir
 
@@ -81,8 +85,14 @@ Parameters of `!Command`
 
 .. opt:: accepts-arguments
 
-   Denotes whether command accepts additional arguments. Defaults to ``false``
-   for shell commands, and ``true`` for regular commands.
+   Denotes whether command accepts additional arguments. Defaults to:
+   
+   - ``false`` for a shell command line (if ``run`` is a string);
+   - ``true`` if command is an executable (if ``run`` is a list).
+
+   NB: If command is a shell command line - even if it's composed of
+   only one call to an executable -, arguments are given to its 
+   executing context, not appended to it.
 
 .. opt:: environ
 
