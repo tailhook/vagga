@@ -225,6 +225,10 @@ vagga repository.
    1 (on fast i7) to 4 hours and more on a laptop. Subsequent builds are much
    faster (less than minute on my laptop).
 
+   Alternatively you can run ``vagga cached-make`` instead of ``vagga make``.
+   This downloads pre-built image that we use to run in Travis CI. This may be
+   changed in future.
+
 There is also a ``vagga build-packages`` command which builds ubuntu and binary
 package and puts them into ``dist/``.
 
