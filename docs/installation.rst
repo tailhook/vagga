@@ -195,6 +195,10 @@ To install kernel with this config enabled you can use linux-user-ns-enabled_ AU
 
 It's based on ``core/linux`` package and differs only with this option. After it's compiled, update your bootloader config (for GRUB it's ``grub-mkconfig``).
 
+.. warning:: After installing the custom kernel you need to rebuild all the
+   custom kernel modules. This is usually achieved by installing ``*-dkms``
+   varinant of the package and ``systemctl enable dkms``.
+
 Installing vagga from binary archive using AUR package_ (please note that vagga-bin located in new AUR4 repository so it should be activated in your system)::
 
     $ yaourt -S vagga-bin
