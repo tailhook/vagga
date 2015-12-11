@@ -184,6 +184,15 @@ To install kernel with this config enabled you can use linux-user-ns-enabled_ AU
 
     $ yaourt -S linux-user-ns-enabled
 
+.. note:: Because building kernel from sources is slow. You may use binary
+   package, by adding the following to ``/etc/pacman.conf``::
+
+        [linux-user-ns]
+        SigLevel = Never
+        Server = http://files.zerogw.com/arch-kernel/$arch
+
+   The package is still considered experimental.
+
 It's based on ``core/linux`` package and differs only with this option. After it's compiled, update your bootloader config (for GRUB it's ``grub-mkconfig``).
 
 Installing vagga from binary archive using AUR package_ (please note that vagga-bin located in new AUR4 repository so it should be activated in your system)::
