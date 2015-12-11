@@ -1,6 +1,6 @@
-==============
-What is Vagga?
-==============
+========
+Tutorial
+========
 
 Vagga is a tool to create development environments. In particular it is
 able to:
@@ -11,7 +11,6 @@ able to:
 * Execute network tolerance tests
 
 All this seamlessly works using linux namespaces (or containers).
-
 
 Example
 =======
