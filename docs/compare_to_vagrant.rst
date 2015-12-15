@@ -36,7 +36,7 @@ Linux-only
 ==========
 
 While vagrant works everywhere, vagga only works on linux systems with recent
-kernel and userspace utulities.
+kernel and userspace utilities.
 
 If you use a mac, just run vagga inside a vagrant container, just like you
 used to run docker :)

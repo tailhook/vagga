@@ -68,7 +68,7 @@ Filesystem Permissions
 Docker by default runs programs in container as root. And it's also a root on
 the host system. So usually in your development project you get files with root
 owner. While it's possible to specify your uid as a user for running a
-process in container, it's not possible to do it it portable. I.e. your uid
+process in container, it's not possible to do it portable. I.e. your uid
 in docker container should have ``passwd`` entry. And somebody else may
 have another uid so must have a different entry in ``/etc/passwd``. Also if
 some process realy needs to be root inside the container (e.g. it must spawn
@@ -90,7 +90,7 @@ While docker has enterprise support, including security updates. Vagga doesn't
 have such (yet).
 
 However, Vagga runs nothing with root privileges. So even running root process
-in guest system it's at least as secure as running any unprivileged program in
+in guest system is at least as secure as running any unprivileged program in
 host sytem. It also uses chroot and linux namespaces for more isolation.
 Compare it to docker which doesn't consider running as root inside a container
 secure.
