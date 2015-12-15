@@ -46,6 +46,9 @@ pub fn run() -> i32 {
 
     let hash = match version::long_version(&cont, &cfg) {
         Ok(hash) => hash,
+        Err((_, Error::New))  => {
+            return 29;
+        }
         Err((cmd, e)) => {
             error!("Error versioning command {}: {}", cmd, e);
             return 1;
