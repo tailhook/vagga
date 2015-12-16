@@ -104,7 +104,7 @@ impl Distribution for Ubuntu {
                 unsupp.push(*i);
                 continue;
             }
-            if let Some(lst) = system_deps(*i) {
+            if let Some(lst) = self.system_deps(*i) {
                 for i in lst.into_iter() {
                     let istr = i.to_string();
                     ctx.build_deps.remove(&istr);
@@ -241,6 +241,29 @@ impl Ubuntu {
             })
             .map_err(|e| format!("Error writing universe.list file: {}", e)));
         Ok(())
+    }
+    fn needs_node_legacy(&self) -> bool {
+        self.codename.as_ref().map(|x| &x[..] != "precise").unwrap_or(false)
+    }
+    fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
+        match pkg {
+            packages::BuildEssential => Some(vec!()),
+            packages::Https => Some(vec!()),
+            packages::Python2 => Some(vec!("python")),
+            packages::Python2Dev => Some(vec!()),
+            packages::Python3 => Some(vec!("python3")),
+            packages::Python3Dev => Some(vec!()),
+            packages::PipPy2 => None,
+            packages::PipPy3 => None,
+            packages::NodeJs if self.needs_node_legacy() => {
+                Some(vec!("nodejs", "nodejs-legacy"))
+            }
+            packages::NodeJs => Some(vec!("nodejs")),
+            packages::NodeJsDev => Some(vec!()),
+            packages::Npm => Some(vec!()),
+            packages::Git => Some(vec!()),
+            packages::Mercurial => Some(vec!()),
+        }
     }
 }
 
@@ -382,25 +405,6 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::Mercurial => Some(vec!("hg")),
     }
 }
-
-fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
-    match pkg {
-        packages::BuildEssential => Some(vec!()),
-        packages::Https => Some(vec!()),
-        packages::Python2 => Some(vec!("python")),
-        packages::Python2Dev => Some(vec!()),
-        packages::Python3 => Some(vec!("python3")),
-        packages::Python3Dev => Some(vec!()),
-        packages::PipPy2 => None,
-        packages::PipPy3 => None,
-        packages::NodeJs => Some(vec!("nodejs", "nodejs-legacy")),
-        packages::NodeJsDev => Some(vec!()),
-        packages::Npm => Some(vec!()),
-        packages::Git => Some(vec!()),
-        packages::Mercurial => Some(vec!()),
-    }
-}
-
 
 
 pub fn clobber_chfn() -> Result<(), String> {

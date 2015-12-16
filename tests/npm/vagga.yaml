@@ -9,6 +9,11 @@ containers:
     - !Ubuntu trusty
     - !NpmInstall [resolve-cli]
 
+  pkg-precise:
+    setup:
+    - !Ubuntu precise
+    - !NpmInstall [resolve-cli]
+
   pkg-alpine:
     setup:
     - !Alpine v3.1

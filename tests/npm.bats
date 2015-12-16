@@ -20,6 +20,15 @@ setup() {
     [[ $link = ".roots/pkg-ubuntu.14bc28ff/root" ]]
 }
 
+@test "npm: precise pkg" {
+    run vagga _run pkg-precise resolve .
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = /work ]]
+    link=$(readlink .vagga/pkg-precise)
+    [[ $link = ".roots/pkg-precise.47a114e9/root" ]]
+}
+
 @test "npm: alpine pkg" {
     run vagga _run pkg-alpine resolve .
     printf "%s\n" "${lines[@]}"
