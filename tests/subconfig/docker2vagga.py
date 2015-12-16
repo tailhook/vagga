@@ -4,9 +4,13 @@ from __future__ import print_function
 import json
 
 with open('Dockerfile') as f:
-    text = f.read()
+    rows = f.readlines()
 
-text = text.replace('\\\n', '')
+# cut commented lines before processing continued lines
+rows = list(filter(lambda line: not line.startswith('#'), rows))
+
+# join continued lines
+preprocessed_rows = ''.join(rows).replace('\\\n', '').splitlines()
 
 def cmdargfilter(val):
     return not val.startswith('-')
@@ -14,9 +18,7 @@ def cmdargfilter(val):
 print("containers:")
 print("  docker-raw:")
 print("    setup:")
-for line in text.splitlines():
-    if line.strip().startswith('#'):
-        continue
+for line in preprocessed_rows:
     if line.startswith('FROM '):
         image = line.split()[1]
         assert image.startswith('ubuntu:'), image
@@ -27,9 +29,7 @@ for line in text.splitlines():
 
 print("  docker-smart:")
 print("    setup:")
-for line in text.splitlines():
-    if line.strip().startswith('#'):
-        continue
+for line in preprocessed_rows:
     if line.startswith('FROM '):
         image = line.split()[1]
         assert image.startswith('ubuntu:'), image
