@@ -12,13 +12,16 @@ able to:
 
 All this seamlessly works using linux namespaces (or containers).
 
-.. hint:: Vagga is not a tool for running production. But vagga is perfect for
-   building containers which with then **run in production**. It means you get
-   container built by vagga transfer it to production system and start it by
-   docker_, lxc_, lxd_, runc_, systemd-nspawn_, lithos_ or even chroot_.  You
-   ain't need a build tool in production, right?
+.. hint:: While vagga is perfect for development environments and to build
+   containers, it should not be the tool of choice to run your software in
+   production environments.  For example, it does not offer features to
+   automatically restart your services when those fail.  For these purposes,
+   you could build the containers with vagga and then transfer them into your
+   production environment and start them with tools like: docker_, rocket_,
+   lxc_, lxd_, runc_, systemd-nspawn_, lithos_ or even chroot_.
 
 .. _docker: http://docker.com
+.. _rocket: https://coreos.com/rkt/docs/latest/
 .. _lxc: https://linuxcontainers.org/
 .. _lxd: https://linuxcontainers.org/
 .. _runc: http://runc.io
