@@ -22,6 +22,14 @@ containers:
     - !Alpine v3.1
     - !CacheDirs /var/cache: var-cache
 
+  ensure_dir:
+    setup:
+    - !Alpine v3.1
+    - !EnsureDir /var/lib/mount_point
+    - !EnsureDir /var/lib/mount_point/subdir
+    volumes:
+      /var/lib/mount_point: !BindRW /vagga/root/tmp
+
   busybox:
     setup:
     - !Alpine v3.1

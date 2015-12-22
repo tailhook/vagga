@@ -238,6 +238,14 @@ impl BuildCommand for Builder {
                     .map_err(|e| format!("Error creating dir: {}", e)));
                 try!(set_permissions(&fpath, Permissions::from_mode(0o755))
                     .map_err(|e| format!("Error setting permissions: {}", e)));
+                for mount_point in guard.ctx.container_config.volumes.keys() {
+                    if path != mount_point && path.starts_with(mount_point) {
+                        warn!("'{0}' directory is in the volume: '{1}'.\n\t\
+                               '{0}' won't be accessible inside the container.",
+                            path.display(),
+                            mount_point.display());
+                    }
+                }
                 guard.ctx.add_ensure_dir(path);
             }
             &B::CacheDirs(ref pairs) => {
