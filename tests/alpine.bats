@@ -19,6 +19,15 @@ setup() {
     [[ $output = world ]]
 }
 
+@test "alpine: Run bc on v3.3" {
+    run vagga v33-calc 100*24
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "2400" ]]
+    link=$(readlink .vagga/v33-calc)
+    [[ $link = ".roots/v33-calc.8e376b75/root" ]]
+}
+
 @test "alpine: Run bc on v3.2" {
     run vagga v32-calc 100*24
     printf "%s\n" "${lines[@]}"

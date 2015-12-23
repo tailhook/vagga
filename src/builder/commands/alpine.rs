@@ -14,7 +14,7 @@ use builder::distrib::{Distribution, Named, DistroBox};
 use builder::error::StepError;
 
 
-pub static LATEST_VERSION: &'static str = "v3.2";
+pub static LATEST_VERSION: &'static str = "v3.3";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 
