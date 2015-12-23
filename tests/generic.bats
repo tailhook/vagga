@@ -35,6 +35,17 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
 
+@test "generic: The EnsureDir tag works" {
+    run vagga _run ensure_dir echo ok
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/ensure_dir)
+    [[ $link = ".roots/ensure_dir.d67589d0/root" ]]
+    [[ ${lines[${#lines[@]}-1]} = "ok" ]]
+    [[ -d ".vagga/ensure_dir/var/lib/mount_point/subdir" ]]
+    [[ $output =~ "\"/var/lib/mount_point/subdir\" directory is in the volume: \"/var/lib/mount_point\"" ]]
+    [[ ! $output =~ "\"/var/lib/mount_point\" directory is in the volume: '/var/lib/mount_point'" ]]
+}
+
 @test "generic: The supervise command works" {
     run vagga two-lines
     printf "%s\n" "${lines[@]}"
