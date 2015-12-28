@@ -137,10 +137,6 @@ impl BuildCommand for Builder {
                                     continue;
                                 }
                                 let fdest = dest.join(path);
-                                println!("Entry {:?} / {:?} / {} -> {:?}", fpath,
-                                    strpath,
-                                    re.is_match(strpath),
-                                    fdest);
                                 try!(shallow_copy(&fpath, &fdest)
                                     .map_err(|e| E::Write(fdest, e)));
                             }
