@@ -530,50 +530,52 @@ Python Commands
 
 .. step:: Py3Requirements
 
-.. step:: PyFreeze
+.. not yet implemented
 
-   Install python dependencies and freeze them.
+    .. step:: PyFreeze
 
-   .. admonition:: Experimental
+       Install python dependencies and freeze them.
 
-      This command is a subject of change at any time, while we are trying to
-      figure out how this thing should work.
+       .. admonition:: Experimental
 
-   Example::
+          This command is a subject of change at any time, while we are trying to
+          figure out how this thing should work.
 
-        setup:
-        - !Ubuntu trusty
-        - !PyFreeze
-          freeze-file: "requirements.txt"
-          packages: [flask]
+       Example::
 
-   If the file "requirements.txt" exists. It will install the packages listed
-   in the file, otherwise it will build temporary container. Run ``pip freeze``
-   in the container and store the data in ``requirements.txt``. Then it will
-   build the real container.
+            setup:
+            - !Ubuntu trusty
+            - !PyFreeze
+              freeze-file: "requirements.txt"
+              packages: [flask]
 
-   The file ``requirements.txt`` is expected to be checked out into version
-   control, so everybody gets same dependencies.
+       If the file "requirements.txt" exists. It will install the packages listed
+       in the file, otherwise it will build temporary container. Run ``pip freeze``
+       in the container and store the data in ``requirements.txt``. Then it will
+       build the real container.
 
-   If ``packages`` is changed after ``requirements.txt`` is generated, vagga
-   should be able to detect this and regenerate requirements.txt
+       The file ``requirements.txt`` is expected to be checked out into version
+       control, so everybody gets same dependencies.
 
-   Parameters:
+       If ``packages`` is changed after ``requirements.txt`` is generated, vagga
+       should be able to detect this and regenerate requirements.txt
 
-   freeze-file
-     (default ``requirements.txt``) The file where dependencies will be stored
+       Parameters:
 
-   requirements
-     (optional) The file where original list of dependencies is. This option
-     is an alternative to ``packages``
+       freeze-file
+         (default ``requirements.txt``) The file where dependencies will be stored
 
-   packages
-     (optional) List of python packages to install. Packages may optionally
-     contain versions.
+       requirements
+         (optional) The file where original list of dependencies is. This option
+         is an alternative to ``packages``
+
+       packages
+         (optional) List of python packages to install. Packages may optionally
+         contain versions.
 
 
-   See `the article`__ for motivation for this command
+       See `the article`__ for motivation for this command
 
-   __ https://medium.com/p/vagga-the-higher-level-package-manager-e49e85fed42a
+       __ https://medium.com/p/vagga-the-higher-level-package-manager-e49e85fed42a
 
 
