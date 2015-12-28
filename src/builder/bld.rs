@@ -326,6 +326,13 @@ impl BuildCommand for Builder {
                         pkgs));
                 }
             }
+            &B::NpmDependencies(ref info) => {
+                try!(guard.distro.npm_configure(&mut guard.ctx));
+                if build {
+                    try!(npm::npm_deps(&mut guard.distro, &mut guard.ctx,
+                        info));
+                }
+            }
         }
         if build {
             try!(guard.ctx.timelog.mark(format_args!("Step: {:?}", self))

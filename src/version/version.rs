@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
-use rustc_serialize::json;
+use rustc_serialize::json::{self, Json};
 use regex::{self, Regex};
 use scan_dir::{self, ScanDir};
 
@@ -60,11 +60,33 @@ quick_error! {
         SubStepError(step: String, err: Box<Error>) {
             from(tuple: (String, Error)) -> (tuple.0, Box::new(tuple.1))
         }
+        /// Error reading package.json
+        Json(err: json::BuilderError, path: PathBuf) {
+            description("can't read json")
+            display("error reading json {:?}: {:?}", path, err)
+        }
     }
 }
 
 pub trait VersionHash {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error>;
+}
+
+fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
+    let deps = data.find(key);
+    if let Some(&Json::Object(ref ob)) = deps {
+        hash.input(key.as_bytes());
+        hash.input(b"-->\0");
+        // Note the BTree is sorted on its own
+        for (key, val) in ob {
+            hash.input(key.as_bytes());
+            hash.input(val.as_string()
+                .map(|x| x.as_bytes())
+                .unwrap_or(b"*"));
+            hash.input(b"\0");
+        }
+        hash.input(b"<--\0");
+    }
 }
 
 
@@ -92,6 +114,30 @@ impl VersionHash for Builder {
                 }).map_err(err)
             }
             &B::PyFreeze(_) => unimplemented!(),
+            &B::NpmDependencies(ref info) => {
+                let path = Path::new("/work").join(&info.file);
+                File::open(&path).map_err(|e| Error::Io(e, path.clone()))
+                .and_then(|mut f| Json::from_reader(&mut f)
+                    .map_err(|e| Error::Json(e, path.to_path_buf())))
+                .map(|data| {
+                    if info.package {
+                        npm_hash_deps(&data, "dependencies", hash);
+                    }
+                    if info.dev {
+                        npm_hash_deps(&data, "devDependencies", hash);
+                    }
+                    if info.peer {
+                        npm_hash_deps(&data, "peerDependencies", hash);
+                    }
+                    if info.bundled {
+                        npm_hash_deps(&data, "bundledDependencies", hash);
+                        npm_hash_deps(&data, "bundleDependencies", hash);
+                    }
+                    if info.optional {
+                        npm_hash_deps(&data, "optionalDependencies", hash);
+                    }
+                })
+            }
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
                 hash_file(&path, hash)

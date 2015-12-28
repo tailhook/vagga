@@ -132,6 +132,16 @@ pub struct CopyInfo {
     pub ignore_regex: String,
 }
 
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct NpmDepInfo {
+    pub file: PathBuf,
+    pub package: bool,
+    pub dev: bool,
+    pub peer: bool,
+    pub bundled: bool,
+    pub optional: bool,
+}
+
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
 pub enum Builder {
     // -- Generic --
@@ -185,10 +195,9 @@ pub enum Builder {
     //DockerPrivate(String),
     //Dockerfile(Path),
 
-    // -- Languages --
+    // -- Node --
     NpmInstall(Vec<String>),
-    //PipRequirement(Path),
-    //GemInstall(Vec<String>),
+    NpmDependencies(NpmDepInfo),
 
     // -- Python --
     PipConfig(PipSettings),
@@ -305,10 +314,17 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Py3Requirements",
         V::Scalar::new().default("requirements.txt"))
     .option("PyFreeze", V::Structure::new()
-        .member("freeze-file", V::Scalar::new().default("requirements.txt"))
+        .member("freeze_file", V::Scalar::new().default("requirements.txt"))
         .member("requirements", V::Scalar::new().optional())
         .member("packages", V::Sequence::new(V::Scalar::new())))
 
     // Node.js
     .option("NpmInstall", V::Sequence::new(V::Scalar::new()))
+    .option("NpmDependencies", V::Structure::new()
+        .member("file", V::Scalar::new().default("package.json"))
+        .member("package", V::Scalar::new().default(true))
+        .member("dev", V::Scalar::new().default(true))
+        .member("peer", V::Scalar::new().default(false))
+        .member("bundled", V::Scalar::new().default(true))
+        .member("optional", V::Scalar::new().default(false)))
 }

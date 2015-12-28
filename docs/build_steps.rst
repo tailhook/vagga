@@ -452,6 +452,82 @@ Node.JS Commands
 
 .. step:: NpmInstall
 
+   Example::
+
+        setup:
+        - !NpmInstall [babel-loader@6.0, webpack]
+
+   Install a list of node.js packages. If no linux distributions were used yet
+   ``!NpmInstall`` installs the latest ``Alpine`` distribution. Node is
+   installed automatically and analog of the ``node-dev`` package is also added
+   as a build dependency.
+
+.. step:: NpmDependencies
+
+   Works similarly to :step:`NpmInstall` but installs packages from
+   ``package.json``. For example::
+
+        - !NpmDependencies
+
+   This installs dependencies and ``devDependencies`` from ``package.json``
+   into a container (with ``--global`` flag).
+
+   You may also customize ``package.json`` and install other kinds of
+   dependencies::
+
+        - !NpmDependencies
+          file: frontend/package.json
+          peer: true
+          optional: true
+          dev: false
+
+
+   .. note:: Since npm supports a whole lot of different versioning schemes and
+      package sources, some features may not work or may not version properly.
+      You may send a pull request for some unsupported scheme. But we are going
+      to support only the popular ones. Generally, it's safe to assume that we
+      support a npmjs.org packages and git repositories with full url.
+
+   .. note:: We don't use ``npm install .`` to execute this command but
+      rather use a command-line to specify every package there. It works better
+      because ``npm install --global .`` tries to install this specific package
+      to the system, which is usually not what you want.
+
+
+   Options:
+
+   file
+       (default ``package.json``) A file to get dependencies from
+
+
+   package
+       (default ``true``) Whether to install package dependencies (i.e. the
+       ones specified in ``dependencies`` key)
+
+   dev
+       (default ``true``) Whether to install ``devDependencies`` (we assume
+       that vagga is mostly used for develoment environments so dev
+       dependencies should be on by default)
+
+   peer
+       (default ``false``) Whether to install ``peerDependencies``
+
+   bundled
+       (default ``true``) Whether to install ``bundledDependencies`` (and
+       ``bundleDependencies`` too)
+
+   optional
+       (default ``false``) Whether to install ``optionalDependencies``. *By
+       default npm tries to install them, but don't fail if it can't install.
+       Vagga tries its best to guarantee that environment is the same, so
+       dependencies should either install everywhere or not at all.
+       Additionally because we don't use "npm install package.json" as
+       described earlier we can't reproduce npm's behavior exactly. But
+       optional dependencies of dependencies will probably try to install.*
+
+   .. warning:: This is a new command. We can change default flags used, if
+      that will be more intuitive for most users.
+
 
 Python Commands
 ===============

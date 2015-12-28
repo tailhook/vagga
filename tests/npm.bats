@@ -64,3 +64,20 @@ setup() {
     link=$(readlink .vagga/git-alpine)
     [[ $link = ".roots/git-alpine.d6b3d182/root" ]]
 }
+
+@test "npm: NpmDependencies" {
+    run vagga _run npm-deps resolve .
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 124 ]]  # no resolve but has classnames --v
+    [[ -f .vagga/npm-deps/usr/lib/node_modules/classnames/index.js ]]
+    link=$(readlink .vagga/npm-deps)
+    [[ $link = ".roots/npm-deps.22206178/root" ]]
+}
+@test "npm: NpmDependencies dev" {
+    run vagga _run npm-dev-deps resolve .
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = /work ]]
+    link=$(readlink .vagga/npm-dev-deps)
+    [[ $link = ".roots/npm-dev-deps.1dd280f9/root" ]]
+}

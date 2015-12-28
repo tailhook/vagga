@@ -1,0 +1,11 @@
+{
+  "name": "something",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "classnames": "2.2"
+  },
+  "devDependencies": {
+    "resolve-cli": "0.1"
+  }
+}
