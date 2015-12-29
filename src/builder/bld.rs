@@ -110,7 +110,7 @@ impl BuildCommand for Builder {
                             .and_then(|mut f| f.write_all(text.as_bytes()))
                             .map_err(|e| format!("Can't create file: {}", e)));
                         try!(set_permissions(&realpath,
-                            Permissions::from_mode(0o755))
+                            Permissions::from_mode(0o644))
                             .map_err(|e| format!("Can't chmod file: {}", e)));
                     }
                 }
