@@ -178,9 +178,8 @@ pub fn hash_file(path: &Path, dig: &mut Digest)
 pub fn force_symlink(target: &Path, linkpath: &Path, perm: fs::Permissions)
     -> Result<(), io::Error>
 {
-    let tmpname = target.with_extension(".vagga.tmp.link~");
+    let tmpname = linkpath.with_extension(".vagga.tmp.link~");
     try!(symlink(target, &tmpname));
-    try!(fs::set_permissions(&tmpname, perm));
     try!(fs::rename(&tmpname, linkpath));
     Ok(())
 }
