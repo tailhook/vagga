@@ -26,7 +26,7 @@ use builder::distrib::{DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
 use path_util::PathExt;
-use file_util::{create_dir, shallow_copy};
+use file_util::{create_dir_mode, shallow_copy};
 
 
 pub trait BuildCommand {
@@ -71,7 +71,8 @@ impl BuildCommand for Builder {
                         .map_err(|(s, e)| format!("step {}: {}", s, e)));
                     let path = Path::new("/vagga/base/.roots")
                         .join(format!("{}.{}", name, version)).join("root");
-                    try_msg!(copy_dir(&path, &Path::new("/vagga/root")),
+                    try_msg!(copy_dir(&path, &Path::new("/vagga/root"),
+                                      None, None),
                         "Error copying dir {p:?}: {err}", p=path);
                 }
             }
@@ -122,7 +123,7 @@ impl BuildCommand for Builder {
                     let typ = try!(symlink_metadata(src)
                         .map_err(|e| E::Write(src.into(), e)));
                     if typ.is_dir() {
-                        try!(create_dir(&dest, false)
+                        try!(create_dir_mode(&dest, typ.permissions().mode())
                             .map_err(|e| E::Write(dest.clone(), e)));
                         let re = try!(Regex::new(&cinfo.ignore_regex));
                         try!(ScanDir::all().walk(src, |iter| {
@@ -137,13 +138,15 @@ impl BuildCommand for Builder {
                                     continue;
                                 }
                                 let fdest = dest.join(path);
-                                try!(shallow_copy(&fpath, &fdest)
+                                try!(shallow_copy(&fpath, &fdest,
+                                        cinfo.owner_uid, cinfo.owner_gid)
                                     .map_err(|e| E::Write(fdest, e)));
                             }
                             Ok(())
                         }).map_err(E::ScanDir).and_then(|x| x));
                     } else {
-                        try!(shallow_copy(&cinfo.source, &dest)
+                        try!(shallow_copy(&cinfo.source, &dest,
+                                          cinfo.owner_uid, cinfo.owner_gid)
                              .map_err(|e| E::Write(dest.clone(), e)));
                     }
                 }

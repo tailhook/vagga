@@ -15,7 +15,7 @@ pub fn make_snapshot(dest: &Path, info: &SnapshotInfo)
     try!(bind_mount(&dest, &tmp));
     try!(mount_tmpfs(&dest,
         &format!("size={},mode=0755", info.size)));
-    try_msg!(copy_dir(&tmp, dest),
+    try_msg!(copy_dir(&tmp, dest, info.owner_uid, info.owner_gid),
         "Error copying directory: {err}");
     try!(unmount(tmp));
     Ok(())

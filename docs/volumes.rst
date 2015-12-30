@@ -100,12 +100,13 @@ Available volume types:
    Parameters:
 
    size
-     Size of the allocated ``tmpfs`` volume. Including the size of the original
-     contents. This is the limit of how much data you can write on the volume.
+     (default ``100Mi``) Size of the allocated ``tmpfs`` volume. Including the
+     size of the original contents. This is the limit of how much data you can
+     write on the volume.
 
-   owner-uid
-     The user id of the owner of the directory. If not specified the ownership
-     will be copied  from the original
+   owner-uid, owner-gid
+     (default is to preserve) The user id of the owner of the directory. If not
+     specified the ownership will be copied  from the original
 
    Additional properties, like the source directory will be added to the later
    versions of vagga

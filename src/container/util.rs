@@ -5,10 +5,10 @@ use std::os::unix::fs::{symlink, MetadataExt};
 use std::ptr::null;
 use std::path::{Path, PathBuf};
 
-use libc::{c_int, c_void, timeval};
+use libc::{uid_t, gid_t, c_int, c_void, timeval};
 
 use super::root::temporary_change_root;
-use file_util::{create_dir_mode, copy};
+use file_util::{create_dir_mode, shallow_copy, set_owner_group};
 use path_util::PathExt;
 
 quick_error!{
@@ -96,7 +96,10 @@ pub fn get_time() -> Time {
     return tv.tv_sec as f64 + 0.000001 * tv.tv_usec as f64;
 }
 
-pub fn copy_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
+pub fn copy_dir(old: &Path, new: &Path,
+    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
+    -> Result<(), CopyDirError>
+{
     use self::CopyDirError::*;
     // TODO(tailhook) use reflinks if supported
     let dir = try!(read_dir(old).map_err(|e| ReadDir(old.to_path_buf(), e)));
@@ -110,30 +113,14 @@ pub fn copy_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
             oldp.push(&filename);
             newp.push(&filename);
 
-            let typ = try!(entry.file_type()
-                .map_err(|e| Stat(oldp.clone(), e)));
-            if typ.is_file() {
-                try!(copy(&oldp, &newp)
-                    .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
-            } else if typ.is_dir() {
-                let stat = try!(symlink_metadata(&oldp)
-                    .map_err(|e| Stat(oldp.clone(), e)));
-                if !newp.is_dir() {
-                    try!(create_dir_mode(&newp, stat.mode())
-                        .map_err(|e| CreateDir(newp.clone(), e)));
-                }
+            let copy_rc = try!(shallow_copy(&oldp, &newp, owner_uid, owner_gid)
+                .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
+            if !copy_rc {
                 stack.push(dir);  // Return dir to stack
                 let ndir = try!(read_dir(&oldp)
                     .map_err(|e| ReadDir(oldp.to_path_buf(), e)));
                 stack.push(ndir); // Add new dir to the stack too
                 continue 'next_dir;
-            } else if typ.is_symlink() {
-                let lnk = try!(read_link(&oldp)
-                               .map_err(|e| ReadLink(oldp.clone(), e)));
-                try!(symlink(&lnk, &newp)
-                    .map_err(|e| Symlink(newp.clone(), e)));
-            } else {
-                warn!("Unknown file type {:?}", &entry.path());
             }
             oldp.pop();
             newp.pop();
@@ -168,6 +155,8 @@ pub fn hardlink_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
                     .map_err(|e| Stat(oldp.clone(), e)));
                 if !newp.is_dir() {
                     try!(create_dir_mode(&newp, stat.mode())
+                        .map_err(|e| CreateDir(newp.clone(), e)));
+                    try!(set_owner_group(&newp, stat.uid(), stat.gid())
                         .map_err(|e| CreateDir(newp.clone(), e)));
                 }
                 stack.push(dir);  // Return dir to stack

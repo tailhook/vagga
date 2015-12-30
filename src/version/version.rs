@@ -140,7 +140,7 @@ impl VersionHash for Builder {
             }
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
-                hash_file(&path, hash)
+                hash_file(&path, hash, None, None)
                     .map_err(|e| Error::Io(e, path.clone()))
             }
             &B::Container(ref name) => {
@@ -228,13 +228,15 @@ impl VersionHash for Builder {
                                 hash.input(b"\0");
                                 hash.input(name.as_bytes());
                                 hash.input(b"\0");
-                                try!(hash_file(&fpath, hash)
+                                try!(hash_file(&fpath, hash,
+                                        cinfo.owner_uid, cinfo.owner_gid)
                                     .map_err(|e| Error::Io(e, fpath)));
                             }
                             Ok(())
                         }).map_err(Error::ScanDir).and_then(|x| x));
                     } else {
-                        try!(hash_file(src, hash)
+                        try!(hash_file(src, hash,
+                                cinfo.owner_uid, cinfo.owner_gid)
                             .map_err(|e| Error::Io(e, src.into())));
                     }
                 } else {

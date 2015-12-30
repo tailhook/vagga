@@ -3,7 +3,7 @@ use std::default::Default;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
-use libc::uid_t;
+use libc::{uid_t, gid_t};
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct DebianRepo {
@@ -129,6 +129,7 @@ pub struct CopyInfo {
     pub source: PathBuf,
     pub path: PathBuf,
     pub owner_uid: Option<uid_t>,
+    pub owner_gid: Option<gid_t>,
     pub ignore_regex: String,
 }
 
@@ -237,7 +238,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("path", V::Directory::new().is_absolute(true))
         .member("ignore_regex", V::Scalar::new().default(
             r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
-        .member("owner_uid", V::Numeric::new().min(0).optional()))
+        .member("owner_uid", V::Numeric::new().min(0).optional())
+        .member("owner_gid", V::Numeric::new().min(0).optional()))
 
     .option("Ubuntu", V::Scalar::new())
     .option("UbuntuRelease", V::Structure::new()

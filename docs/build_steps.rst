@@ -370,12 +370,21 @@ Files and Directories
    source
      (required) Absolute to directory or file to copy. If path starts with
      ``/work`` files are checksummed to get the version of the container.
+
    path
      (required) Destination path
+
    ignore-regex
      (default ``(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$``)
      Regular expression of paths to ignore. Default regexp ignores common
      revision control folders and editor backup files.
+
+   owner-uid, owner-gid
+     (preserved by default) Override uid and gid of files and directories when
+     copying. It's expected that most useful case is ``owner-uid: 0`` and
+     ``owner-gid: 0`` but we try to preserve the owner by default. Note that
+     unmapped users (the ones that don't belong to user's subuid/subgid range),
+     will be set to ``nobody`` (65535).
 
    .. warning:: If the source directory starts with `/work` all the files are
       read and checksummed on each run of the application in the container. So

@@ -2,15 +2,21 @@ use std::io;
 use std::io::{Read, Write, Error};
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::ffi::CString;
+use std::os::unix::fs::{PermissionsExt, MetadataExt, symlink};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
 
 use nix;
+use libc::{uid_t, gid_t, c_int};
 use shaman::digest::Digest;
 use nix::fcntl::{flock, FlockArg};
 
 use path_util::PathExt;
+
+extern "C" {
+    fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;
+}
 
 pub struct Lock {
     file: fs::File,
@@ -152,11 +158,17 @@ impl Drop for Lock {
     }
 }
 
-pub fn hash_file(path: &Path, dig: &mut Digest)
+pub fn hash_file(path: &Path, dig: &mut Digest,
+    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
     -> Result<(), io::Error>
 {
     // TODO(tailhook) include permissions and ownership into the equation
     let stat = try!(fs::symlink_metadata(path));
+    dig.input(path.as_os_str().as_bytes());
+    dig.input(b"\0");
+    dig.input(format!("mode:{:o}\0", stat.permissions().mode()).as_bytes());
+    dig.input(format!("uid:{}\0", owner_uid.unwrap_or(stat.uid())).as_bytes());
+    dig.input(format!("gid:{}\0", owner_gid.unwrap_or(stat.gid())).as_bytes());
     if stat.file_type().is_symlink() {
         let data = try!(fs::read_link(path));
         dig.input(data.as_os_str().as_bytes());
@@ -175,7 +187,7 @@ pub fn hash_file(path: &Path, dig: &mut Digest)
     Ok(())
 }
 
-pub fn force_symlink(target: &Path, linkpath: &Path, perm: fs::Permissions)
+pub fn force_symlink(target: &Path, linkpath: &Path)
     -> Result<(), io::Error>
 {
     let tmpname = linkpath.with_extension(".vagga.tmp.link~");
@@ -184,16 +196,63 @@ pub fn force_symlink(target: &Path, linkpath: &Path, perm: fs::Permissions)
     Ok(())
 }
 
-pub fn shallow_copy(src: &Path, dest: &Path) -> Result<(), io::Error> {
+pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
+    -> Result<(), io::Error>
+{
+    let rc = unsafe { lchown(
+        CString::new(target.as_os_str().as_bytes()).unwrap().as_ptr(),
+        uid, gid) };
+    if rc != 0 {
+        warn!("Can't chown {:?}: {}", target, io::Error::last_os_error());
+        Ok(())
+        // Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+/// Shallow copy of file/dir/symlink
+///
+/// The owner_uid/owner_gid parameters optionally override the owner
+///
+/// Returns false if path is a directory
+pub fn shallow_copy(src: &Path, dest: &Path,
+    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
+    -> Result<bool, io::Error>
+{
     let stat = try!(fs::symlink_metadata(src));
     let typ = stat.file_type();
+    let mut is_dir = false;
     if typ.is_dir() {
-        try!(create_dir_mode(dest, stat.permissions().mode()));
+        is_dir = true;
+        let nstat = fs::symlink_metadata(dest);
+        // We don't change permissions and owner of already created directories
+        //
+        // There are couple of reasons:
+        // 1. We consider such overlaps a "merge" of a directory, so it's
+        //    unclear which one should override the permissions
+        // 2. Changing permissions of the root directory of the copied system
+        //    is usually counter-intuitive (so we contradict rsync)
+        // 3. Some directories (/proc, /sys, /dev) are mount points and we
+        //    can't change the permissions
+        if nstat.is_err() {
+            try!(fs::create_dir(dest));
+            try!(fs::set_permissions(dest, stat.permissions()));
+            try!(set_owner_group(dest,
+                owner_uid.unwrap_or(stat.uid()),
+                owner_gid.unwrap_or(stat.gid())));
+        }
     } else if typ.is_symlink() {
         let value = try!(fs::read_link(&src));
-        try!(force_symlink(&value, dest, stat.permissions()));
+        try!(force_symlink(&value, dest));
+        try!(set_owner_group(dest,
+            owner_uid.unwrap_or(stat.uid()),
+            owner_gid.unwrap_or(stat.gid())));
     } else {
         try!(copy(src, dest));
+        try!(set_owner_group(dest,
+            owner_uid.unwrap_or(stat.uid()),
+            owner_gid.unwrap_or(stat.gid())));
     }
-    Ok(())
+    Ok(!is_dir)
 }
