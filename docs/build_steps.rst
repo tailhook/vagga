@@ -426,7 +426,29 @@ Files and Directories
 
 .. step:: EmptyDir
 
+   Cleans up a directory. It's similar to the `Remove` but keeps directory
+   created.
+
 .. step:: CacheDirs
+
+   Adds build cache directories. Example::
+
+        - !CacheDirs
+          /tmp/pip-cache/http: pip-cache-http
+          /tmp/npm-cache: npm-cache
+
+   This maps ``/tmp/pip-cache/http`` into the cache directory of the vagga, by
+   default it's ``~/.vagga/.cache/pip-cache-http``. This allows to reuse same
+   download cache by multiple rebuilds of the container. And if shared cache
+   is used also reuses the cache between multiple projects.
+
+   Be picky on the cache names, if file conficts there may lead to unexpected
+   build results.
+
+   .. note:: Vagga uses a lot of cache dirs for built-in commands. For example
+      the ones described above are used whenever you use ``Py*`` and ``Npm*``
+      commands respectively. You don't need to do anything special to use
+      cache.
 
 
 Meta Data
