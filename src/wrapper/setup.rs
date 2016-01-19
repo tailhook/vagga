@@ -295,16 +295,15 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
         try_msg!(create_dir(&tgtroot, false),
                  "Can't create rootfs mountpoint: {err}");
     }
+    let image_base = Path::new("/vagga/base/.roots").join(container_ver);
     match write_mode {
         WriteMode::ReadOnly => {
-            let nroot = Path::new("/vagga/base/.roots")
-                .join(container_ver).join("root");
+            let nroot = image_base.join("root");
             try!(bind_mount(&nroot, &tgtroot)
                  .map_err(|e| format!("Error bind mount: {}", e)));
         }
         WriteMode::TransientHardlinkCopy(pid) => {
-            let oldpath = Path::new("/vagga/base/.roots")
-                .join(container_ver).join("root");
+            let oldpath = image_base.join("root");
             let newpath = Path::new("/vagga/base/.transient")
                 .join(format!("{}.{}", container_ver, pid));
             if newpath.exists() {
@@ -319,6 +318,8 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
                  .map_err(|e| format!("Error bind mount: {}", e)));
         }
     };
+    File::create(image_base.join("last_use"))
+        .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
 
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
