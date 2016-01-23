@@ -207,15 +207,29 @@ Generic Commands
 
 .. step:: Sh
 
-::
+    Runs arbitrary shell shell command, for example::
 
-    setup:
-    - !Alpine v3.2
-    - !Sh |
-       if [ ! -z "$(which apk)" ] && [ ! -z "$(which lbu)" ]; then
-         echo "Alpine"
-       fi
-    - !Sh echo "Finished building the Alpine container"
+        - !Ubuntu trusty
+        - !Sh "apt-get install -y package"
+
+    If you have more than one-liner you may use YAMLy *literal* syntax for it::
+
+        setup:
+        - !Alpine v3.2
+        - !Sh |
+           if [ ! -z "$(which apk)" ] && [ ! -z "$(which lbu)" ]; then
+             echo "Alpine"
+           fi
+        - !Sh echo "Finished building the Alpine container"
+
+    .. warning:: To run ``!Sh`` you need ``/bin/sh`` in the container. See
+       :step:`Cmd` for more generic command runner.
+
+    .. note:: The ``!Sh`` command is run by ``/bin/sh -exc``. With the flags
+       meaning ``-e`` -- exit if any command fails, ``-x`` -- print command
+       before executing, ``-c`` -- execute command. You may undo ``-ex`` by
+       inserting ``set +ex`` at the start of the script. But it's not
+       recommended.
 
 .. step:: Cmd
 
