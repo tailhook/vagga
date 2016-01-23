@@ -233,6 +233,33 @@ Generic Commands
 
 .. step:: Cmd
 
+   Runs arbitrary command in the container. The argument provided must be
+   a YAML list. For example::
+
+       setup:
+       - !Ubuntu trusty
+       - !Cmd ["apt-get", "install", "-y", "python"]
+
+    You may use YAMLy features to get complex things. To run complex python
+    code you may use::
+
+        setup:
+        - !Cmd
+          - python
+          - -c
+          - |
+            import socket
+            print("Builder host", socket.gethostname())
+
+    Or to get behavior similar to :step:`Sh` command, but with different shell:
+
+        setup:
+        - !Cmd
+          - /bin/bash
+          - -exc
+          - |
+            echo this is a bash script
+
 .. step:: Download
 
    Downloads file and puts it somewhere in the file system.
