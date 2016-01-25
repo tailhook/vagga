@@ -4,9 +4,8 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
 use libc::{c_int};
-use libc::funcs::posix88::fcntl::open;
-use libc::funcs::posix88::unistd::close;
-use libc::consts::os::posix88::O_RDONLY;
+use libc::{open, close};
+use libc::O_RDONLY;
 use unshare::Namespace;
 
 

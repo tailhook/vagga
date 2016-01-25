@@ -7,7 +7,7 @@ use std::str::from_utf8;
 use std::path::{Path, PathBuf};
 use unshare::{Command, Stdio};
 
-use libc::funcs::posix88::unistd::{geteuid, getegid};
+use libc::{geteuid, getegid};
 use libc::{uid_t, gid_t};
 
 use config::Range;
