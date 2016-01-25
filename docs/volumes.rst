@@ -83,6 +83,23 @@ Available volume types:
    Read-only bind mount of a folder inside a container to another folder. See
    :volume:`BindRW` for more info.
 
+.. volume:: Empty
+
+   Mounts an empty read-only directory. Technically mounts a new `Tmpfs` system
+   with minimal size and makes it read-only. Useful if you want to hide some
+   built-in directory or subdirectory of ``/work`` from the container. For
+   example::
+
+        volumes:
+          /tmp: !Empty
+
+   Note, that hiding ``/work`` itself is not supported. You may hide a
+   subdirectory though::
+
+        volumes:
+          /work/src: !Empty
+
+
 .. volume:: Snapshot
 
    Create a ``tmpfs`` volume, copy contents of the original folder to the

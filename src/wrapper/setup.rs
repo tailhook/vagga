@@ -11,6 +11,7 @@ use libc::pid_t;
 
 use config::{Container, Settings};
 use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, BindRO, Snapshot};
+use config::containers::Volume::{Empty};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc, mount_dev};
@@ -354,6 +355,10 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             }
             &BindRO(ref bindpath) => {
                 try!(bind_mount(&bindpath, &dest));
+                try!(remount_ro(&dest));
+            }
+            &Empty => {
+                try!(mount_tmpfs(&dest, "size=1,mode=0"));
                 try!(remount_ro(&dest));
             }
             &Snapshot(ref info) => {
