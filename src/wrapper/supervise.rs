@@ -135,6 +135,6 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         cmd.env(k, v);
     }
 
-    run_and_wait(&mut cmd)
+    run_and_wait(&mut cmd, None)
     .map_err(|e| format!("Error running {:?}: {}", cmd, e))
 }
