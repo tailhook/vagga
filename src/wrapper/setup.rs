@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use libc::pid_t;
 
 use config::{Container, Settings};
-use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, Snapshot};
+use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, BindRO, Snapshot};
 use container::root::{change_root};
 use container::mount::{bind_mount, unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_tmpfs, mount_proc, mount_dev};
@@ -351,6 +351,10 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             }
             &BindRW(ref bindpath) => {
                 try!(bind_mount(&bindpath, &dest));
+            }
+            &BindRO(ref bindpath) => {
+                try!(bind_mount(&bindpath, &dest));
+                try!(remount_ro(&dest));
             }
             &Snapshot(ref info) => {
                 try!(make_snapshot(&dest, info));

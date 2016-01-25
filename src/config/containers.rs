@@ -19,6 +19,7 @@ pub struct SnapshotInfo {
 pub enum Volume {
     Tmpfs(TmpfsInfo),
     BindRW(PathBuf),
+    BindRO(PathBuf),
     VaggaBin,
     Snapshot(SnapshotInfo),
 }
@@ -70,6 +71,7 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
             )))
     .option("VaggaBin",  V::Nothing)
     .option("BindRW",  V::Scalar::new())
+    .option("BindRO",  V::Scalar::new())
     .option("Snapshot",  V::Structure::new()
         .member("size",  V::Numeric::new().min(0).default(100*1024*1024))
         .member("owner_uid", V::Numeric::new().min(0).optional())

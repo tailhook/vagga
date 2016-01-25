@@ -78,6 +78,11 @@ Available volume types:
 
    The behavior of vagga when using any other prefix is undefined.
 
+.. volume:: BindRO
+
+   Read-only bind mount of a folder inside a container to another folder. See
+   :volume:`BindRW` for more info.
+
 .. volume:: Snapshot
 
    Create a ``tmpfs`` volume, copy contents of the original folder to the
