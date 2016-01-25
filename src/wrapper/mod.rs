@@ -8,6 +8,7 @@ use argparse::{ArgumentParser, Store, StoreOption, List};
 use super::config::{find_config, Config, Settings};
 use super::config::command::MainCommand::{Command, Supervise};
 use config::read_settings::{read_settings, MergedSettings};
+use tty_util::{prepare_tty};
 
 
 mod debug;
@@ -80,6 +81,14 @@ pub fn run() -> i32 {
         }
     };
 
+    let tty_fd = match prepare_tty() {
+        Ok(tty_fd) => tty_fd,
+        Err(e) => {
+            writeln!(&mut err, "{}", e).ok();
+            return 121;
+        },
+    };
+
     let wrapper = Wrapper {
         root: root,
         config: &config,
@@ -94,14 +103,14 @@ pub fn run() -> i32 {
         "_build_shell" => Ok(debug::run_interactive_build_shell(&wrapper)),
         "_build" => build::build_container_cmd(&wrapper, args),
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
-        "_run" => run::run_command_cmd(&wrapper, args, true),
-        "_run_in_netns" => run::run_command_cmd(&wrapper, args, false),
+        "_run" => run::run_command_cmd(&wrapper, args, true, tty_fd),
+        "_run_in_netns" => run::run_command_cmd(&wrapper, args, false, tty_fd),
         "_clean" => clean::clean_cmd(&wrapper, args),
         "_pack_image" => pack::pack_image_cmd(&wrapper, args),
         _ => {
             match config.commands.get(&cmd) {
                 Some(&Command(ref cmd_info)) => {
-                    commandline::commandline_cmd(cmd_info, &wrapper, args)
+                    commandline::commandline_cmd(cmd_info, &wrapper, args, tty_fd)
                 }
                 Some(&Supervise(ref svc_info)) => {
                     supervise::supervise_cmd(&cmd, svc_info, &wrapper, args)

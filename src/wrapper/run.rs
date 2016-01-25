@@ -12,10 +12,11 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use path_util::PathExt;
-use process_util::{convert_status, set_uidmap, copy_env_vars};
+use process_util::{set_uidmap, copy_env_vars, run_and_wait};
 
 
-pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
+pub fn run_command_cmd(wrapper: &Wrapper,
+    cmdline: Vec<String>, user_ns: bool, tty_fd: Option<i32>)
     -> Result<i32, String>
 {
     let mut container: String = "".to_string();
@@ -110,8 +111,9 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         cmd.env(k.to_string(), v.to_string());
     }
 
-    match cmd.status() {
-        Ok(s) => Ok(convert_status(s)),
-        Err(e) => Err(format!("Error running {:?}: {}", cmd, e)),
+    if let Some(_) = tty_fd {
+        cmd.make_group_leader(true);
     }
+
+    run_and_wait(&mut cmd, tty_fd)
 }
