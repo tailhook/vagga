@@ -516,7 +516,111 @@ Sub-Containers
 
 .. step:: Container
 
+   Build a container based on another container::
+
+       container:
+         base:
+           setup:
+           - !Ubuntu trusty
+           - !Py3Install [django]
+         test:
+           setup:
+           - !Container base
+           - !Py3Install [nosetests]
+
+   There two known use cases of functionality:
+
+   1. Build test/deploy containers on top of base container (example above)
+   2. Cache container build partially if you have to rebuild last commands
+      of the container frequently
+
+   In theory, the container should behave identically as if the commands would
+   be copy-pasted to the `setup` fo dependent container, but sometimes things
+   doesn't work. Known things:
+
+   1. The packages in a :step:`BuildDeps` are removed
+   2. :step:`Remove` and :step:`EmptyDir` will empty the directory
+
+   If you have any other bugs with container nesting report in the bugtracker.
+
+
 .. step:: SubConfig
+
+    This feature allows to generate (parts of) ``vagga.yaml`` for the
+    container.  For example, here is how we use a docker2vagga_ script to
+    transform ``Dockerfile`` to vagga config:
+
+    .. code-block:: yaml
+
+      docker-parser: ❶
+        setup:
+        - !Alpine v3.1
+        - !Install [python]
+        - !Depends Dockerfile ❷
+        - !Depends docker2vagga.py ❷
+        - !Sh 'python ./docker2vagga.py > /docker.yaml' ❸
+
+      somecontainer:
+        setup:
+        - !SubConfig
+          source: !Container docker-parser ❶
+          path: docker.yaml ❹
+          container: docker-smart ❺
+
+    Few comments:
+
+    * ❶ -- container used for build, it's rebuilt automatically as a dependency for
+      "somecontainer"
+    * ❷ -- normal dependency rules apply, so you must add external files that are
+      used to generate the container and vagga file in it
+    * ❸ -- put generated vagga file inside a container
+    * ❹ -- the "path" is relative to the source if the latter is set
+    * ❺ -- name of the container used *inside* a "docker.yaml"
+
+    .. _docker2vagga: https://github.com/tailhook/vagga/blob/master/tests/subconfig/docker2vagga.py
+
+    .. warning:: The functionality of ``!SubConfig`` is experimental and is a
+       subject to change in future. In particular currently the ``/work`` mount
+       point and current directory used to build container are those of initial
+       ``vagga.yaml`` file. It may change in future.
+
+    The ``!SubConfig`` command may be used to include some commands from another
+    file without building container. Just omit ``generator`` command:
+
+    .. code-block:: yaml
+
+       subdir:
+         setup:
+         - !SubConfig
+           path: subdir/vagga.yaml
+           container: containername
+
+    The YAML file used may be a partial container, i.e. it may contain just few
+    commands, installing needed packages. The other things (including the name of
+    the base distribution) can be set by original container:
+
+    .. code-block:: yaml
+
+        # vagga.yaml
+        containers:
+          ubuntu:
+            setup:
+            - !Ubuntu trusty
+            - !SubConfig
+              path: packages.yaml
+              container: packages
+          alpine:
+            setup:
+            - !Alpine v3.1
+            - !SubConfig
+              path: packages.yaml
+              container: packages
+
+        # packages.yaml
+        containers:
+          packages:
+            setup:
+            - !Install [redis, bash, make]
 
 
 Node.JS Commands
