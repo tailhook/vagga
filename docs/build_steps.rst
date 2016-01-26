@@ -623,6 +623,108 @@ Sub-Containers
             - !Install [redis, bash, make]
 
 
+.. step:: Build
+
+   :Status: not implemented
+
+   This command is used to build some parts of the container in another one.
+   For example::
+
+        containers:
+          webpack: ❶
+            setup:
+            - !NpmInstall [webpack]
+            - !NpmDependencies
+          jsstatic:
+            setup:
+            - !Container webpack ❶
+            - !Copy ❷
+                source: /work/frontend
+                path: /tmp/js
+            - !Sh |
+                cd /tmp/js
+                webpack --output-path /var/javascripts
+            auto-clean: true ❸
+          nginx:
+            setup:
+            - !Alpine v3.3
+            - !Install [nginx]
+            - !Build
+              container: jsstatic
+              source: /var/javascripts
+              path: /srv/www
+
+   Note the following things:
+
+   * ❶ -- We use separate container for npm *dependencies* so we don't have
+     to rebuild it on each change of the sources
+   * ❷ -- We copy javascript sources into our temporary container.
+     The important part of copying operation is that all the sources are hashed
+     and versioned when copying. So container will be rebuild on source
+     changes. Since we don't need sources in the container we just put them in
+     temporary folder.
+   * ❸ -- The temporary container is cleaned automatically (there is low chance
+     that it will ever be reused)
+
+   Technically it works similar to ``!Container`` except it doesn't apply
+   configuration from the source container and allows to fetch only parts of
+   the resulting container.
+
+   Another motivating example is building a package::
+
+        containers:
+          pkg:
+            setup:
+            - !Ubuntu trusty
+            - !Install [build-essential]
+            - !EnsureDir /packages
+            - !Sh |
+                checkinstall --pkgname=myapp --pakdir=/packages make
+            auto-clean: true
+          nginx:
+            setup:
+            - !Ubuntu trusty
+            - !Build
+              container: pkg
+              source: /packages
+              temporary-mount: /tmp/packages
+            - !Sh dpkg -i /tmp/packages/mypkg_0.1.deb
+
+   Normal versioning of the containers apply. This leads to the following
+   consequences:
+
+   * Putting multiple :step:`Build` steps with the same ``container`` will
+     build container only once (this way you may extract multiple folders from
+     the single container).
+   * Despite the name ``Build`` dependencies are not rebuilt.
+   * The :step:`Build` command itself depends only on the container but on on
+     the individual files. You need to ensure that the source container is
+     versioned well (sometimes you need :step:`Copy` or :step:`Depends` for
+     the task)
+
+   Options:
+
+   container
+        (required) Name of the container to build and to extract data from
+
+   source
+        (default ``/``) Source directory (absolute path inside the source
+        container) to copy files from
+
+   path
+        Target directory (absolue path inside the resulting container) to copy
+        (either ``path`` or ``temporary-mount`` required)
+
+   temporary-mount
+        A directory to mount ``source`` into. This is useful if you don't want
+        to copy files, but rather want to use files from there. The directory
+        is created automatically if not exists, but not parent directories.
+        It's probably good idea to use a subdirectory of the temporary dir,
+        like ``/tmp/package``. The mount is **read-only** and persists until
+        the end of the container build and is not propagated through
+        :step:`Container` step.
+
+
 Node.JS Commands
 ================
 
