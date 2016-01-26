@@ -543,6 +543,11 @@ Sub-Containers
 
    If you have any other bugs with container nesting report in the bugtracker.
 
+   .. note:: :step:`Container` step doesn't influence ``environ`` and
+      ``volumes`` as all other options of the container in any way. It only
+      somewhat replicate ``setup`` sequence. We require whole environment
+      be declared manually (you you can use YAMLy aliases)
+
 
 .. step:: SubConfig
 
