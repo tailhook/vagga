@@ -8,7 +8,4 @@ install:
 - vagga _build test
 script:
 - "vagga -E VAGGA_VERSION=v0.0.0-test _run cached-image cargo test"
-- "vagga \
-    -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
-    -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
-     test tests --tap"
+- "vagga test tests --tap"
