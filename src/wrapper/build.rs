@@ -320,6 +320,11 @@ pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
                     .map(|x| debug!("Built container with name {}", x))
                     .map(|()| 0));
             }
+            &B::Build(ref binfo) => {
+                try!(build_wrapper(&binfo.container, force, wrapper)
+                    .map(|x| debug!("Built container with name {}", x))
+                    .map(|()| 0));
+            }
             &B::SubConfig(ref cfg) => {
                 match cfg.source {
                     S::Directory => {}

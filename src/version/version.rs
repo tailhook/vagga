@@ -12,7 +12,7 @@ use scan_dir::{self, ScanDir};
 
 use config::{Config, Container};
 use config::read_config;
-use config::builders::{Builder};
+use config::builders::{Builder, BuildInfo};
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use self::Error::{New, ContainerNotFound};
@@ -143,9 +143,10 @@ impl VersionHash for Builder {
                 hash_file(&path, hash, None, None)
                     .map_err(|e| Error::Io(e, path.clone()))
             }
-            &B::Container(ref name) => {
-                let cont = try!(cfg.containers.get(name)
-                    .ok_or(ContainerNotFound(name.to_string())));
+            &B::Container(ref container) |
+            &B::Build(BuildInfo { ref container, .. })=> {
+                let cont = try!(cfg.containers.get(container)
+                    .ok_or(ContainerNotFound(container.to_string())));
                 for b in cont.setup.iter() {
                     debug!("Versioning setup: {:?}", b);
                     try!(b.hash(cfg, hash));

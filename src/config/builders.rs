@@ -111,6 +111,14 @@ pub struct SubConfigInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct BuildInfo {
+    pub container: String,
+    pub source: PathBuf,
+    pub path: Option<PathBuf>,
+    pub temporary_mount: Option<PathBuf>,
+}
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct PyFreezeInfo {
     pub freeze_file: PathBuf,
     pub requirements: Option<PathBuf>,
@@ -168,6 +176,7 @@ pub enum Builder {
     BuildDeps(Vec<String>),
     Container(String),
     SubConfig(SubConfigInfo),
+    Build(BuildInfo),
 
     // -- Ubuntu --
     Ubuntu(String),
@@ -230,6 +239,14 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("container", V::Scalar::new())
         .member("cache", V::Scalar::new().optional())
         .member("change_dir", V::Scalar::new().optional()))
+    .option("Build", V::Structure::new()
+        .member("container", V::Scalar::new())
+        .member("source".to_string(),
+            V::Directory::new().is_absolute(true).default("/"))
+        .member("path".to_string(),
+            V::Directory::new().is_absolute(true).optional())
+        .member("temporary_mount".to_string(),
+            V::Directory::new().is_absolute(true).optional()))
     .option("Text", V::Mapping::new(
         V::Directory::new().is_absolute(true),
         V::Scalar::new()))

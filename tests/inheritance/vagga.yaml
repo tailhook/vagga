@@ -14,6 +14,38 @@ containers:
     - !Container calc
     - !Py2Install [injections]
 
+  hellopkg:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [checkinstall]
+    - !Text { /tmp/hello.txt: "Hello World!" }
+    - !Sh |
+        mkdir /var/pkg
+        checkinstall \
+          --default --nodoc \
+          --pkgname=hello --pkgver=1.0 --pakdir=/var/pkg \
+          cp /tmp/hello.txt /usr/share/hello.txt
+
+  hellomount:
+    setup:
+    - !Ubuntu trusty
+    - !Build
+      container: hellopkg
+      source: /var/pkg
+      temporary-mount: /tmp/pkg
+    - !Sh dpkg -i /tmp/pkg/hello_1.0-1_amd64.deb
+
+  hellocopy:
+    setup:
+    - !Ubuntu trusty
+    - !EnsureDir /tmp/pkg
+    - !Build
+      container: hellopkg
+      source: /var/pkg
+      path: /tmp/pkg
+    - !Sh dpkg -i /tmp/pkg/hello_1.0-1_amd64.deb
+
   deep:
     setup:
     - !Alpine v3.1
@@ -42,6 +74,14 @@ commands:
   py: !Command
     container: pythonic
     run: python -c 'import injections'
+
+  hello-mount: !Command
+    container: hellomount
+    run: cat /usr/share/hello.txt
+
+  hello-copy: !Command
+    container: hellocopy
+    run: cat /usr/share/hello.txt
 
   deep-cat: !Command
     container: sub

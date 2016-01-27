@@ -63,8 +63,8 @@ impl<'a> Guard<'a> {
 
         let base = Path::new("/vagga/root");
 
-        for (dir, _) in self.ctx.cache_dirs.iter().rev() {
-            try!(unmount(&base.join(dir)));
+        for path in self.ctx.mounted.iter().rev() {
+            try!(unmount(path));
         }
 
         for dir in self.ctx.remove_dirs.iter() {

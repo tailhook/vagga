@@ -24,6 +24,7 @@ pub struct Context<'a> {
     pub ensure_dirs: BTreeSet<PathBuf>,
     pub empty_dirs: BTreeSet<PathBuf>,
     pub remove_dirs: BTreeSet<PathBuf>,
+    pub mounted: Vec<PathBuf>,
     pub cache_dirs: BTreeMap<PathBuf, String>,
     pub environ: BTreeMap<String, String>,
 
@@ -78,10 +79,9 @@ impl<'a> Context<'a> {
                 PathBuf::from("tmp"),
                 PathBuf::from("var/tmp"),
                 ).into_iter().collect(),
-            remove_dirs: vec!(
-                ).into_iter().collect(),
-            cache_dirs: vec!(
-                ).into_iter().collect(),
+            remove_dirs: BTreeSet::new(),
+            mounted: Vec::new(),
+            cache_dirs: BTreeMap::new(),
             environ: env,
             binary_ident: "amd64".to_string(),
             settings: settings,
@@ -113,6 +113,7 @@ impl<'a> Context<'a> {
                  "Error creating cache dir: {err}");
             try!(clean_dir(&path, false));
             try!(bind_mount(&cache_dir, &path));
+            self.mounted.push(path);
         }
         return Ok(());
     }

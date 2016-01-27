@@ -11,6 +11,7 @@ use config::builders::Builder;
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use config::read_config;
+use container::mount::{bind_mount, remount_ro};
 use container::util::{clean_dir, copy_dir};
 use super::super::path_util::ToRelative;
 use super::commands::ubuntu;
@@ -26,7 +27,7 @@ use builder::distrib::{DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
 use path_util::PathExt;
-use file_util::{create_dir_mode, shallow_copy};
+use file_util::{create_dir_mode, create_dir, shallow_copy};
 
 
 pub trait BuildCommand {
@@ -74,6 +75,32 @@ impl BuildCommand for Builder {
                     try_msg!(copy_dir(&path, &Path::new("/vagga/root"),
                                       None, None),
                         "Error copying dir {p:?}: {err}", p=path);
+                }
+            }
+            &B::Build(ref binfo) => {
+                let ref name = binfo.container;
+                let cont = guard.ctx.config.containers.get(name)
+                    .expect("Subcontainer not found");  // TODO
+                if build {
+                    let version = try!(short_version(&cont, &guard.ctx.config)
+                        .map_err(|(s, e)| format!("step {}: {}", s, e)));
+                    let path = Path::new("/vagga/base/.roots")
+                        .join(format!("{}.{}", name, version)).join("root")
+                        .join(binfo.source.rel());
+                    if let Some(ref dest_rel) = binfo.path {
+                        let dest = Path::new("/vagga/root")
+                            .join(dest_rel.rel());
+                        try_msg!(copy_dir(&path, &dest, None, None),
+                            "Error copying dir {p:?}: {err}", p=path);
+                    } else if let Some(ref dest_rel) = binfo.temporary_mount {
+                        let dest = Path::new("/vagga/root")
+                            .join(dest_rel.rel());
+                        try_msg!(create_dir(&dest, false),
+                            "Error creating destination dir: {err}");
+                        try!(bind_mount(&path, &dest));
+                        try!(remount_ro(&dest));
+                        guard.ctx.mounted.push(dest);
+                    }
                 }
             }
             &B::SubConfig(ref sconfig) => {

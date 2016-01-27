@@ -540,6 +540,7 @@ Sub-Containers
 
    1. The packages in a :step:`BuildDeps` are removed
    2. :step:`Remove` and :step:`EmptyDir` will empty the directory
+   3. :step:`Build` with `temporary-mount` is not mounted
 
    If you have any other bugs with container nesting report in the bugtracker.
 
@@ -553,7 +554,7 @@ Sub-Containers
 
     This feature allows to generate (parts of) ``vagga.yaml`` for the
     container.  For example, here is how we use a docker2vagga_ script to
-    transform ``Dockerfile`` to vagga config:
+    transform ``Dockerfile`` into vagga config:
 
     .. code-block:: yaml
 
@@ -629,8 +630,6 @@ Sub-Containers
 
 
 .. step:: Build
-
-   :Status: not implemented
 
    This command is used to build some parts of the container in another one.
    For example::
