@@ -1,6 +1,7 @@
 use std::default::Default;
 use std::path::Path;
 use std::process::exit;
+use rand;
 
 use config::read_config;
 use config::Settings;
@@ -33,6 +34,9 @@ mod error;
 
 
 pub fn run() -> i32 {
+    // Initialize thread random generator to avoid stack overflow (see #161)
+    rand::thread_rng();
+
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
     let mut sources_only: bool = false;
