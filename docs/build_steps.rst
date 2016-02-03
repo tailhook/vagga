@@ -510,6 +510,23 @@ Meta Data
 
 .. step:: Depends
 
+   Rebuild the container when a file changes. For example:
+
+   .. code-block:: yaml
+
+      setup:
+      # ...
+      - !Depends requirements.txt
+      - !Sh "pip install -r requirements.txt"
+
+   The example is not the best one, you could use :step:`Py3Requirements` for
+   the same task.
+
+   Only the hash of the contents of a file is used in versioning the container
+   not an owner or permissions.  Consider adding the :opt:`auto-clean` option
+   if it's temporary container that depends on some generated file (sometimes
+   useful for tests).
+
 
 Sub-Containers
 ==============
