@@ -1,0 +1,21 @@
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu trusty
+
+commands:
+  yes: &yes !Command
+    description: Run yes
+    container: ubuntu
+    run: yes
+
+  no: &no !Command
+    description: Run no
+    container: ubuntu
+    run: yes no
+
+  dont_care: !Supervise
+    description: Run
+    children:
+      yes: *yes
+      no: *no
