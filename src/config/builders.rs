@@ -87,6 +87,12 @@ pub struct PipSettings {
     pub python_exe: Option<String>,
 }
 
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct NpmSettings {
+    pub install_node: bool,
+    pub npm_exe: String,
+}
+
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GitSource {
     pub url: String,
@@ -206,6 +212,7 @@ pub enum Builder {
     //Dockerfile(Path),
 
     // -- Node --
+    NpmConfig(NpmSettings),
     NpmInstall(Vec<String>),
     NpmDependencies(NpmDepInfo),
 
@@ -338,6 +345,9 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("packages", V::Sequence::new(V::Scalar::new())))
 
     // Node.js
+    .option("NpmConfig", V::Structure::new()
+        .member("npm_exe", V::Scalar::new().default("npm"))
+        .member("install_node", V::Scalar::new().default(true)))
     .option("NpmInstall", V::Sequence::new(V::Scalar::new()))
     .option("NpmDependencies", V::Structure::new()
         .member("file", V::Scalar::new().default("package.json"))

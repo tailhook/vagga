@@ -140,7 +140,7 @@ impl Distribution for Ubuntu {
             .map_err(|e| StepError::Write(PathBuf::from(pkglist), e)));
         let mut cmd = try!(command(ctx, "dpkg"));
         cmd.arg("-l");
-        // this should become into_raw_fd
+        // TODO(tailhook) fixme in rust 1.6. as_raw_fd -> into_raw_fd
         cmd.stdout(unsafe { Stdio::from_raw_fd(output.as_raw_fd()) });
         try!(run(cmd));
         Ok(())

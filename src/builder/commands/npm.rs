@@ -1,24 +1,36 @@
 use std::path::Path;
 use std::fs::File;
+use std::os::unix::io::{FromRawFd, AsRawFd};
 
-use unshare::Command;
+use unshare::{Command, Stdio};
 use rustc_serialize::json::Json;
 
 use super::super::context::{Context};
-use super::generic::{run_command, capture_command};
 use super::super::packages;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use config::builders::NpmDepInfo;
+use config::builders::{NpmSettings, NpmDepInfo};
 
+impl Default for NpmSettings {
+    fn default() -> NpmSettings {
+        NpmSettings {
+            install_node: true,
+            npm_exe: "npm".to_string(),
+        }
+    }
+}
 
-fn scan_features(pkgs: &Vec<String>) -> Vec<packages::Package> {
+fn scan_features(settings: &NpmSettings, pkgs: &Vec<String>)
+    -> Vec<packages::Package>
+{
     let mut res = vec!();
     res.push(packages::BuildEssential);
-    res.push(packages::NodeJs);
-    res.push(packages::NodeJsDev);
-    res.push(packages::Npm);
+    if settings.install_node {
+        res.push(packages::NodeJs);
+        res.push(packages::NodeJsDev);
+        res.push(packages::Npm);
+    }
     for name in pkgs.iter() {
         parse_feature(&name, &mut res);
     }
@@ -42,20 +54,20 @@ pub fn ensure_npm(distro: &mut Box<Distribution>, ctx: &mut Context,
 
 pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
-    -> Result<(), String>
+    -> Result<(), StepError>
 {
     try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
                            "npm-cache".to_string()));
-    try!(ensure_npm(distro, ctx, &scan_features(pkgs)[..]));
-    let mut args = vec!(
-        "/usr/bin/npm".to_string(),
-        "install".to_string(),
-        "--user=root".to_string(),
-        "--cache=/tmp/npm-cache".to_string(),
-        "--global".to_string(),
-        );
-    args.extend(pkgs.clone().into_iter());
-    run_command(ctx, &args[..])
+    let features = scan_features(&ctx.npm_settings, pkgs);
+    try!(ensure_npm(distro, ctx, &features));
+
+    let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
+    cmd.arg("install");
+    cmd.arg("--global");
+    cmd.arg("--user=root");
+    cmd.arg("--cache=/tmp/npm-cache");
+    cmd.args(pkgs);
+    run(cmd)
 }
 
 fn scan_dic(json: &Json, key: &str, cmd: &mut Command,
@@ -91,9 +103,9 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
 {
     try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
                            "npm-cache".to_string()));
-    let mut features = scan_features(&Vec::new());
+    let mut features = scan_features(&ctx.npm_settings, &Vec::new());
 
-    let mut cmd = try!(command(ctx, "/usr/bin/npm"));
+    let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
     cmd.arg("install");
     cmd.arg("--global");
     cmd.arg("--user=root");
@@ -126,18 +138,14 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
     run(cmd)
 }
 
-pub fn list(ctx: &mut Context) -> Result<(), String> {
-    use std::fs::File;  // TODO(tailhook) migrate whole module
-    use std::io::Write;  // TODO(tailhook) migrate whole module
-    try!(capture_command(ctx, &[
-            "/usr/bin/npm".to_string(),
-            "ls".to_string(),
-            "--global".to_string(),
-        ], &[])
-        .and_then(|out| {
-            File::create("/vagga/container/npm-list.txt")
-            .and_then(|mut f| f.write_all(&out))
-            .map_err(|e| format!("Error dumping package list: {}", e))
-        }));
-    Ok(())
+pub fn list(ctx: &mut Context) -> Result<(), StepError> {
+    let path = Path::new("/vagga/container/npm-list.txt");
+    let file = try!(File::create(&path)
+        .map_err(|e| StepError::Write(path.to_path_buf(), e)));
+    let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
+    cmd.arg("ls");
+    cmd.arg("--global");
+    // TODO(tailhook) fixme in rust 1.6. as_raw_fd -> into_raw_fd
+    cmd.stdout(unsafe { Stdio::from_raw_fd(file.as_raw_fd()) });
+    run(cmd)
 }

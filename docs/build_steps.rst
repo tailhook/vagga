@@ -827,6 +827,34 @@ Node.JS Commands
    .. warning:: This is a new command. We can change default flags used, if
       that will be more intuitive for most users.
 
+.. step:: NpmConfig
+
+   The directive configures various settings of npm commands above.
+   For example, you may want to turn off automatic nodejs installation so
+   you can use custom oversion of it::
+
+       - !NpmConfig
+           install_node: false
+           npm_exe: /usr/local/bin/npm
+       - !NpmInstall [webpack]
+
+   .. note:: Every time :step:`NpmConfig` is specified, options are
+      **replaced** rather than *augmented*. In other words, if you start a
+      block of npm commands with :step:`NpmConfig`, all subsequent
+      commands will be executed with the same options, no matter which
+      :step:`NpmConfig` settings were before.
+
+   All options:
+
+   npm-exe
+        (default is ``npm``) The npm command to use for
+        installation of packages.
+
+   install-node
+        (default ``true``) Whether to install nodejs and npm automatically.
+        Setting the option to ``false`` is useful for setting up custom
+        version of the node.js.
+
 
 Python Commands
 ===============

@@ -345,6 +345,9 @@ impl BuildCommand for Builder {
                 }
             }
             &B::PyFreeze(_) => unimplemented!(),
+            &B::NpmConfig(ref npm_settings) => {
+                guard.ctx.npm_settings = npm_settings.clone();
+            }
             &B::NpmInstall(ref pkgs) => {
                 try!(guard.distro.npm_configure(&mut guard.ctx));
                 if build {

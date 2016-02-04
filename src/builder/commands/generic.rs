@@ -9,7 +9,7 @@ use process_util::capture_stdout;
 use builder::error::StepError;
 
 
-fn find_cmd<P:AsRef<Path>>(ctx: &mut Context, cmd: P)
+fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
     -> Result<PathBuf, StepError>
 {
     let cmd = cmd.as_ref();
@@ -106,7 +106,7 @@ pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
 }
 
 
-pub fn command<P:AsRef<Path>>(ctx: &mut Context, cmdname: P)
+pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
     -> Result<Command, StepError>
 {
     let cmdpath = cmdname.as_ref();
