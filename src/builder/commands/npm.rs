@@ -2,7 +2,7 @@ use std::path::Path;
 use std::fs::File;
 use std::os::unix::io::{FromRawFd, AsRawFd};
 
-use unshare::{Command, Stdio};
+use unshare::{Stdio};
 use rustc_serialize::json::Json;
 
 use super::super::context::{Context};
@@ -61,6 +61,10 @@ pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     let features = scan_features(&ctx.npm_settings, pkgs);
     try!(ensure_npm(distro, ctx, &features));
 
+    if pkgs.len() == 0 {
+        return Ok(());
+    }
+
     let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
     cmd.arg("install");
     cmd.arg("--global");
@@ -70,8 +74,9 @@ pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     run(cmd)
 }
 
-fn scan_dic(json: &Json, key: &str, cmd: &mut Command,
-    features: &mut Vec<packages::Package>) -> Result<(), StepError>
+fn scan_dic(json: &Json, key: &str,
+    packages: &mut Vec<String>, features: &mut Vec<packages::Package>)
+    -> Result<(), StepError>
 {
     match json.find(key) {
         Some(&Json::Object(ref ob)) => {
@@ -82,7 +87,7 @@ fn scan_dic(json: &Json, key: &str, cmd: &mut Command,
                 }
                 let s = v.as_string().unwrap();
                 parse_feature(&s, features);
-                cmd.arg(format!("{}@{}", k, s));
+                packages.push(format!("{}@{}", k, s));
                 // TODO(tailhook) check the feature
             }
             Ok(())
@@ -105,36 +110,45 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
                            "npm-cache".to_string()));
     let mut features = scan_features(&ctx.npm_settings, &Vec::new());
 
+    let json = try!(File::open(&Path::new("/work").join(&info.file))
+        .map_err(|e| format!("Error opening file {:?}: {}", info.file, e))
+        .and_then(|mut f| Json::from_reader(&mut f)
+        .map_err(|e| format!("Error parsing json {:?}: {}", info.file, e))));
+    let mut packages = vec![];
+
+    if info.package {
+        try!(scan_dic(&json, "dependencies", &mut packages, &mut features));
+    }
+    if info.dev {
+        try!(scan_dic(&json, "devDependencies", &mut packages, &mut features));
+    }
+    if info.peer {
+        try!(scan_dic(&json, "peerDependencies",
+            &mut packages, &mut features));
+    }
+    if info.bundled {
+        try!(scan_dic(&json, "bundledDependencies",
+            &mut packages, &mut features));
+        try!(scan_dic(&json, "bundleDependencies",
+            &mut packages, &mut features));
+    }
+    if info.optional {
+        try!(scan_dic(&json, "optionalDependencies",
+            &mut packages, &mut features));
+    }
+
+    try!(ensure_npm(distro, ctx, &features));
+
+    if packages.len() == 0 {
+        return Ok(());
+    }
+
     let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
     cmd.arg("install");
     cmd.arg("--global");
     cmd.arg("--user=root");
     cmd.arg("--cache=/tmp/npm-cache");
-
-    let json = try!(File::open(&Path::new("/work").join(&info.file))
-        .map_err(|e| format!("Error opening file {:?}: {}", info.file, e))
-        .and_then(|mut f| Json::from_reader(&mut f)
-        .map_err(|e| format!("Error parsing json {:?}: {}", info.file, e))));
-
-    if info.package {
-        try!(scan_dic(&json, "dependencies", &mut cmd, &mut features));
-    }
-    if info.dev {
-        try!(scan_dic(&json, "devDependencies", &mut cmd, &mut features));
-    }
-    if info.peer {
-        try!(scan_dic(&json, "peerDependencies", &mut cmd, &mut features));
-    }
-    if info.bundled {
-        try!(scan_dic(&json, "bundledDependencies", &mut cmd, &mut features));
-        try!(scan_dic(&json, "bundleDependencies", &mut cmd, &mut features));
-    }
-    if info.optional {
-        try!(scan_dic(&json, "optionalDependencies", &mut cmd, &mut features));
-    }
-
-    try!(ensure_npm(distro, ctx, &features));
-
+    cmd.args(&packages);
     run(cmd)
 }
 
