@@ -355,8 +355,77 @@ Generic Commands
 
 .. step:: Git
 
+   Check out a git repository into a container. This command doesn't require
+   git to be installed in the container.
+
+   Example::
+
+        setup:
+        - !Alpine v3.1
+        - !Install [python]
+        - !Git
+          url: git://github.com/tailhook/injections
+          path: /usr/lib/python3.5/site-packages/injections
+
+   (the example above is actually a bad idea, many python packages will work
+   just from source dir, but you may get improvements at least by precompiling
+   ``*.pyc`` files, see :step:`GitInstall`)
+
+
+   Options:
+
+   url
+      (required) The git URL to use for cloning the repository
+
+   revision
+      (optional) Revision to checkout from repository. Note if you don't
+      specify a revision, the latest one will be checked out on the first
+      build and then cached indefinitely
+
+   branch
+      (optional) A branch to check out. Usually only useful if revision is
+      not specified
+
+   path
+      (required) A path where to store the repository.
+
+
 .. step:: GitInstall
 
+   Check out a git repository to a temporary directory and run script. This
+   command doesn't require git to be installed in the container.
+
+   Example::
+
+        setup:
+        - !Alpine v3.1
+        - !Install [python, py-setuptools]
+        - !GitInstall
+          url: git://github.com/tailhook/injections
+          script: python setup.py install
+
+   Options:
+
+   url
+      (required) The git URL to use for cloning the repository
+
+   revision
+      (optional) Revision to checkout from repository. Note if you don't
+      specify a revision, the latest one will be checked out on the first
+      build and then cached indefinitely
+
+   branch
+      (optional) A branch to check out. Usually only useful if revision is
+      not specified
+
+   subdir
+      (default root of the repository) A subdirectory of the repository to
+      run script in
+
+   script
+      (required) A script to run inside the repository. It's expected that
+      script does compile/install the software into the container. The script
+      is run using `/bin/sh -exc`
 
 
 Files and Directories
