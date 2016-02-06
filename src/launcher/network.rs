@@ -199,6 +199,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
               "dev", &interface_name[..]]);
     commands.push(cmd);
 
+    let mut cmd = sudo_ip_cmd();
+    cmd.args(&["link", "set", &interface_name, "up"]);
+    commands.push(cmd);
+
     let mut nforward = String::with_capacity(100);
     try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
         .and_then(|mut f| f.read_to_string(&mut nforward))
