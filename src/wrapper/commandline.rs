@@ -15,11 +15,11 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
-use process_util::{run_and_wait, set_uidmap};
+use process_util::{run_and_wait, set_uidmap, convert_status};
 
 
 pub fn commandline_cmd(command: &CommandInfo,
-    wrapper: &Wrapper, mut cmdline: Vec<String>, tty_fd: Option<i32>)
+    wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<i32, String>
 {
     if command.run.len() == 0 {
@@ -99,9 +99,6 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmd.env(k, v);
     }
 
-    if let Some(_) = tty_fd {
-        cmd.make_group_leader(true);
-    }
-
-    run_and_wait(&mut cmd, tty_fd)
+    run_and_wait(&mut cmd)
+    .map(convert_status)
 }

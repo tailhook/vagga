@@ -1,127 +1,81 @@
-use libc::{c_int, pid_t};
-use libc::{signal};
-use libc::STDIN_FILENO;
-use nix;
-use nix::errno::EINTR;
-use nix::sys::ioctl::ioctl;
-use nix::sys::signal::{SIGCONT, SIGTTIN, SIGTTOU};
-use nix::sys::wait::{waitpid, WaitStatus, WNOHANG, WUNTRACED};
-use nix::unistd::{isatty, getpid, setpgid};
+use std::io;
+use std::os::unix::io::{AsRawFd, FromRawFd};
+use std::fs::File;
 
-use unshare::{Child, Command, ExitStatus};
+use libc::{c_int, pid_t};
+use libc::{getpgrp};
+use nix::sys::ioctl::ioctl;
+use nix::unistd::{isatty, dup};
 
 
 mod ffi {
-    use libc::{c_ulong, pid_t, sighandler_t};
-
-    pub static WAIT_ANY: pid_t = -1;
-
-    pub static SIG_IGN: sighandler_t = 1;
-    pub static SIG_ERR: sighandler_t = !0;
+    use libc::{c_ulong};
 
     pub static TIOCSPGRP: c_ulong = 21520;
 }
 
 
+#[derive(Debug)]
 pub struct TtyGuard {
-    tty_fd: c_int,
-    pgrp: pid_t,
+    tty: Option<File>,
+    my_pgrp: pid_t,
+    ownership: bool,
 }
 
 impl TtyGuard {
-    pub fn new(tty_fd: c_int, pgrp: pid_t) -> Result<TtyGuard, String> {
-        try!(give_tty_to(tty_fd, pgrp));
-        Ok(TtyGuard {
-            tty_fd: tty_fd,
-            pgrp: pgrp,
+    pub fn take(&mut self) -> Result<(), io::Error> {
+        let &mut TtyGuard { ref tty, ref mut ownership, my_pgrp } = self;
+        tty.as_ref().map_or(Ok(()), |f| {
+            try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+            *ownership = true;
+            Ok(())
         })
     }
-
-    pub fn wait_child(&self, cmd: &Command, child: &Child)
-        -> Result<Option<ExitStatus>, String>
-    {
-        loop {
-            match waitpid(ffi::WAIT_ANY, Some(WNOHANG | WUNTRACED)) {
-                Ok(WaitStatus::Stopped(child_pid, signum)) => {
-                    if child_pid == child.pid() && (signum == SIGTTOU || signum == SIGTTIN) {
-                        try!(give_tty_to(self.tty_fd, child.pid()));
-                        try!(child.signal(SIGCONT)
-                             .map_err(|e| format!(
-                                 "Error sending SIGCONT to {:?}: {}", cmd, e)));
-                    }
-                    continue;
-                },
-                Ok(WaitStatus::Continued(_)) => {
-                    continue;
-                },
-                Ok(WaitStatus::Exited(child_pid, st)) => {
-                    if child_pid == child.pid() {
-                        return Ok(Some(ExitStatus::Exited(st)));
-                    }
-                    continue;
-                },
-                Ok(WaitStatus::Signaled(child_pid, signum, core)) => {
-                    if child_pid == child.pid() {
-                        return Ok(Some(ExitStatus::Signaled(signum, core)));
-                    }
-                    continue;
-                },
-                Ok(WaitStatus::StillAlive) => {
-                    return Ok(None);
-                },
-                Err(nix::Error::Sys(EINTR)) => {
-                    continue;
-                },
-                Err(e) => {
-                    return Err(
-                        format!("Error when waiting for {:?}: {}", cmd, e));
-                },
+    pub fn give(&mut self, pid: pid_t) -> Result<(), io::Error> {
+        let &mut TtyGuard { ref tty, ref mut ownership, .. } = self;
+        tty.as_ref().map_or(Ok(()), |f| {
+            try!(unsafe { give_tty_to(f.as_raw_fd(), pid) });
+            *ownership = false;
+            Ok(())
+        })
+    }
+    pub fn capture_tty() -> Result<TtyGuard, io::Error> {
+        for i in 0..2 {
+            if isatty(i).unwrap_or(false) {
+                // after we determined which FD is a TTY there is no way
+                // to ensure that the same fd will be at the same number
+                // So we duplicate it:
+                let mut guard = TtyGuard {
+                    tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
+                    my_pgrp: unsafe { getpgrp() },
+                    ownership: false,
+                };
+                try!(guard.take());
+                return Ok(guard)
             }
         }
+        Ok(TtyGuard {
+            tty: None,
+            my_pgrp: unsafe { getpgrp() },
+            ownership: false,
+        })
     }
 }
 
 impl Drop for TtyGuard {
     fn drop(&mut self) {
-        let _ = give_tty_to(self.tty_fd, self.pgrp);
+        if self.ownership {
+            self.take().ok();
+        }
     }
 }
 
-pub fn prepare_tty() -> Result<Option<c_int>, String> {
-    let tty_fd = STDIN_FILENO;
-    let is_interactive = isatty(tty_fd).unwrap_or(false);
-    if is_interactive {
-        try!(ignore_tty_signals());
-        let pid = getpid();
-        try!(setpgid(pid, pid).map_err(|e| format!("{}", e)));
-        try!(give_tty_to(tty_fd, pid));
-        Ok(Some(tty_fd))
+// dealing with file descriptors is always unsafe
+unsafe fn give_tty_to(fd: c_int, pgrp: pid_t) -> Result<(), io::Error> {
+    let res = ioctl(fd, ffi::TIOCSPGRP, &pgrp);
+    if res == 0 {
+        Ok(())
     } else {
-        Ok(None)
+        Err(io::Error::last_os_error())
     }
-}
-
-pub fn give_tty_to(fd: c_int, pgrp: pid_t) -> Result<(), String> {
-    let res = unsafe { ioctl(fd, ffi::TIOCSPGRP, &pgrp) };
-    match res {
-        res if res < 0 => Err(
-            format!("Error when giving tty with fd {} to process group {}",
-                    fd, pgrp)),
-        _ => Ok(()),
-    }
-}
-
-pub fn ignore_tty_signals() -> Result<(), String> {
-    try!(ignore_signal(SIGTTIN));
-    try!(ignore_signal(SIGTTOU));
-    Ok(())
-}
-
-fn ignore_signal(signum: i32) -> Result<(), String> {
-    let res = unsafe { signal(signum, ffi::SIG_IGN) };
-    if res == ffi::SIG_ERR {
-        return Err(
-            format!("Error when setting signal handler for signum: {}", signum));
-    }
-    Ok(())
 }

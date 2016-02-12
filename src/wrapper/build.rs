@@ -24,6 +24,7 @@ use config::builders::Source as S;
 use file_util::{create_dir, Lock};
 use path_util::PathExt;
 use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
+use process_util::{run_and_wait};
 use super::Wrapper;
 use super::setup;
 
@@ -231,7 +232,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
         cmd.env("RUST_BACKTRACE", x);
     }
 
-    let result = cmd.status();
+    let result = run_and_wait(&mut cmd);
     try!(unmount(&Path::new("/vagga/root")));
     try!(remove_dir(&Path::new("/vagga/root"))
         .map_err(|e| format!("Can't unlink root: {}", e)));

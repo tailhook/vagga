@@ -5,7 +5,7 @@ use unshare::{Command};
 use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
 use path_util::PathExt;
-use process_util::capture_stdout;
+use process_util::{capture_stdout, run_and_wait};
 use builder::error::StepError;
 
 
@@ -128,7 +128,7 @@ pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
 pub fn run(mut cmd: Command) -> Result<(), StepError> {
     debug!("Running {:?}", cmd);
 
-    match cmd.status() {
+    match run_and_wait(&mut cmd) {
         Ok(ref s) if s.success() => Ok(()),
         Ok(s) => Err(StepError::CommandFailed(Box::new(cmd), s)),
         Err(e) => Err(StepError::CommandError(Box::new(cmd), e)),

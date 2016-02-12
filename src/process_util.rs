@@ -1,16 +1,21 @@
 use std::env;
-use std::io::{Read};
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use libc::{getuid, getpgrp};
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD};
-use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, reap_zombies};
+use libc::{getuid, c_int};
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
+use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
 use config::Settings;
 use container::uidmap::{Uidmap};
 use path_util::PathExt;
 use tty_util::{TtyGuard};
+
+
+extern {
+    fn killpg(pgrp: c_int, sig: c_int) -> c_int;
+}
 
 
 pub static DEFAULT_PATH: &'static str =
@@ -64,18 +69,21 @@ pub fn capture_fd3_status(mut cmd: Command)
     Ok((status, buf))
 }
 
-pub fn run_and_wait(cmd: &mut Command, tty_fd: Option<i32>)
-    -> Result<i32, String>
+pub fn run_and_wait(cmd: &mut Command)
+    -> Result<ExitStatus, String>
 {
-    let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD]);
+    // Trap must be installed before tty_guard because TTY guard relies on
+    // SIGTTOU and SIGTTIN be masked out
+    let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
+
+    let mut tty_guard = try!(TtyGuard::capture_tty()
+        .map_err(|e| format!("Error handling tty: {}", e)));
+    // Should we make this optionally, only if stdin is a tty?
+    cmd.make_group_leader(true);
+
     info!("Running {:?}", cmd);
     let child = try!(cmd.spawn()
                      .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
-    let pgrp = unsafe { getpgrp() };
-    let tty_guard = match tty_fd {
-        Some(tty_fd) => Some(try!(TtyGuard::new(tty_fd, pgrp))),
-        None => None,
-    };
 
     for signal in trap.by_ref() {
         match signal {
@@ -97,24 +105,26 @@ pub fn run_and_wait(cmd: &mut Command, tty_fd: Option<i32>)
                          "Error sending SIGTERM to {:?}: {}", cmd, e)));
             }
             SIGCHLD => {
-                match tty_guard {
-                    Some(ref tty_guard) => {
-                        match try!(tty_guard.wait_child(&cmd, &child)) {
-                            Some(st) => {
-                                return Ok(convert_status(st));
-                            },
-                            None => {
-                                continue;
-                            },
+                for event in child_events() {
+                    use unshare::ChildEvent::*;
+                    match event {
+                        Death(pid, status) if pid == child.pid() => {
+                            return Ok(status);
                         }
-                    },
-                    None => {
-                        for (pid, status) in reap_zombies() {
-                            if pid == child.pid() {
-                                return Ok(convert_status(status));
+                        Stop(pid, SIGTTIN) | Stop(pid, SIGTTOU) => {
+                            if let Err(e) = tty_guard.give(pid) {
+                                // We shouldn't exit from here if we can't
+                                // give a tty. Hopefull user will notice the
+                                // error message.
+                                // TODO(tailhook) may be kill the proccess?
+                                error!("Can't give tty IO: {}", e);
+                            } else if unsafe { killpg(pid, SIGCONT) } == 1 {
+                                error!("Can't unpause pid {}: {}", pid,
+                                    io::Error::last_os_error());
                             }
                         }
-                    },
+                        Stop(..) | Continue(..) | Death(..) => {}
+                    }
                 }
             }
             _ => unreachable!(),
