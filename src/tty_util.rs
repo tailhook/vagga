@@ -4,7 +4,7 @@ use libc::STDIN_FILENO;
 use nix;
 use nix::errno::EINTR;
 use nix::sys::ioctl::ioctl;
-use nix::sys::signal::{SIGCONT, SIGTTIN, SIGTTOU};
+use nix::sys::signal::{kill, SIGCONT, SIGTTIN, SIGTTOU};
 use nix::sys::wait::{waitpid, WaitStatus, WNOHANG, WUNTRACED};
 use nix::unistd::{isatty, getpid, setpgid};
 
@@ -42,12 +42,10 @@ impl TtyGuard {
     {
         loop {
             match waitpid(ffi::WAIT_ANY, Some(WNOHANG | WUNTRACED)) {
-                Ok(WaitStatus::Stopped(child_pid, signum)) => {
-                    if child_pid == child.pid() && (signum == SIGTTOU || signum == SIGTTIN) {
+                Ok(WaitStatus::Stopped(_, signum)) => {
+                    if signum == SIGTTOU || signum == SIGTTIN {
                         try!(give_tty_to(self.tty_fd, child.pid()));
-                        try!(child.signal(SIGCONT)
-                             .map_err(|e| format!(
-                                 "Error sending SIGCONT to {:?}: {}", cmd, e)));
+                        kill(-child.pid(), SIGCONT).ok();
                     }
                     continue;
                 },

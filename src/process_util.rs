@@ -3,7 +3,7 @@ use std::io::{Read};
 use std::path::{Path, PathBuf};
 
 use libc::{getuid, getpgrp};
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD};
+use nix::sys::signal::{kill, SIGINT, SIGTERM, SIGCHLD};
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, reap_zombies};
 use signal::trap::Trap;
 
@@ -82,19 +82,15 @@ pub fn run_and_wait(cmd: &mut Command, tty_fd: Option<i32>)
             SIGINT => {
                 // SIGINT is usually a Ctrl+C, if we trap it here
                 // child process hasn't controlling terminal,
-                // so we send the signal to the child process
+                // so we send the signal to the child process group
                 debug!("Received SIGINT signal. Waiting process to stop..");
-                try!(child.signal(SIGINT)
-                     .map_err(|e| format!(
-                         "Error sending SIGINT to {:?}: {}", cmd, e)));
+                kill(-child.pid(), SIGINT).ok();
             }
             SIGTERM => {
                 // SIGTERM is usually sent to a specific process so we
                 // forward it to children
                 debug!("Received SIGTERM signal, propagating");
-                try!(child.signal(SIGTERM)
-                     .map_err(|e| format!(
-                         "Error sending SIGTERM to {:?}: {}", cmd, e)));
+                child.signal(SIGTERM).ok();
             }
             SIGCHLD => {
                 match tty_guard {
