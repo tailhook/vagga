@@ -122,7 +122,7 @@ Similarly might be defined test container and command:
        run: [nosetests]
 
 And your user never care how many containers are there. User only runs whatever
-comands he needs.
+commands he needs.
 
 How is it done in vagrant?
 
@@ -287,7 +287,7 @@ with services, but this doesn't solve core problem.
 
 How docker helps? It only makes situation worse, because now you need to follow
 logs of many containers, and remember to ``docker stop`` and ``docker rm`` the
-processes on every occassion.
+processes on every occasion.
 
 Vagga's way:
 
