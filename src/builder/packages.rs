@@ -40,15 +40,18 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
     for i in features.into_iter() {
         match i {
             PipPy2 | PipPy3 => {
+                let args = vec!(
+                    ctx.pip_settings.python_exe.clone()
+                    .unwrap_or((if i == PipPy2 {"python2"} else {"python3"})
+                               .to_string()),
+                    "/tmp/get-pip.py".to_string(),
+                    "--target=/tmp/pip-install".to_string(),
+                    );
                 let pip_inst = try!(download::download_file(ctx,
                     "https://bootstrap.pypa.io/get-pip.py"));
                 try!(copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
                     .map_err(|e| format!("Error copying pip: {}", e)));
-                try!(run_command_at_env(ctx, &[
-                    (if i == PipPy2 {"python2"} else {"python3"}).to_string(),
-                    "/tmp/get-pip.py".to_string(),
-                    "--target=/tmp/pip-install".to_string(),
-                    ], &Path::new("/work"), &[]));
+                try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
             _ => {
                 left.push(i);
