@@ -17,18 +17,38 @@ struct BuiltinCommand<'a> {
 }
 
 /**
-   ----------------------------------              -------------------------------------
-  |                                  \            |                                     \
-  --> GlobalOptionOrCommand ---> GlobalOptionArg ---> CommandOptionOrContainer ---> CommandOptionArg ---> CommandArg
-                  \                               |                   \                               |
-                   -------------------------------                     -------------------------------
+
+Transition table:
+             _______________________
+ +——————————|                       |
+ |  +———————| GlobalOptionOrCommand |<———+
+ |  |  +————|_______________________|    |
+ |  |  |                                 |
+ |  |  |        _________________        |
+ |  |  |       |                 |       |
+ |  |  +——————>| GlobalOptionArg |———————+
+ |  |          |_________________|
+ |  |
+ |  |       __________________________
+ |  +—————>|                          |
+ |  +——————| CommandOptionOrContainer |<——+
+ |  |  +———|__________________________|   |
+ |  |  |                                  |
+ |  |  |        __________________        |
+ |  |  |       |                  |       |
+ |  |  +——————>| CommandOptionArg |———————+
+ |  |          |__________________|
+ |  |
+ |  |             ____________
+ |  +———————————>|            |
+ |               | CommandArg |
+ +——————————————>|____________|
+
 */
 enum States<'a> {
     GlobalOptionOrCommand,
-    // GlobalOptionOrArgOrCommand,
     GlobalOptionArg(&'a Option<'a>),
     CommandOptionOrContainer(&'a BuiltinCommand<'a>),
-    // CommandOptionOrArgOrContainer,
     CommandOptionArg(&'a BuiltinCommand<'a>, &'a Option<'a>),
     CommandArg,
 }
