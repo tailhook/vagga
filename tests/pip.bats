@@ -64,7 +64,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py35-ubuntu-15.04)
-    [[ $link = ".roots/py35-ubuntu-15.04.e00f419a/root" ]]
+    [[ $link = ".roots/py35-ubuntu-15.04.f06714f7/root" ]]
 }
 
 @test "py3: ubuntu git" {
