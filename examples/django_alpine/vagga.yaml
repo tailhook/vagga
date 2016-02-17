@@ -1,0 +1,45 @@
+containers:
+  app-freezer:
+    setup:
+    - !Alpine v3.3
+    - !BuildDeps
+      - libmemcached-dev
+      - zlib-dev
+    - !Py3Install
+      - pip
+      - 'Django >=1.9,<1.10'
+      - 'dj-database-url >=0.4,<0.5'
+      - 'pylibmc >=1.5,<1.6'
+      - 'django-cache-url >=1.0,<1.1'
+    - !Sh pip freeze > requirements.txt
+  django:
+    environ:
+      DATABASE_URL: sqlite:///db.sqlite3
+    setup:
+    - !Alpine v3.3
+    - !Install
+      - libmemcached
+      - zlib
+      - libsasl
+    - !Py3Requirements requirements.txt
+  memcached:
+    setup:
+    - !Alpine v3.3
+    - !Install [memcached]
+
+commands:
+  run: !Command
+    description: Start the django development server
+    container: django
+    run: python3 manage.py runserver
+  run-cached: !Supervise
+    description: Start the django development server alongside memcached
+    children:
+      cache: !Command
+        container: memcached
+        run: memcached -u memcached -vv
+      app: !Command
+        container: django
+        environ:
+          CACHE_URL: memcached://127.0.0.1:11211
+        run: python3 manage.py runserver
