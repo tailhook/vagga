@@ -11,6 +11,7 @@ some more advanced uses of vagga with Django.
 * `Adding some code`_
 * `Trying out memcached`_
 * `Why not Postgres?`_
+* `Making Postgres data persistent`_
 
 Creating the project structure
 ==============================
@@ -557,3 +558,63 @@ Now run::
 
 Visit ``localhost:8000/admin`` and try to log in with the user and password we
 defined in the migration.
+
+Making Postgres data persistent
+-------------------------------
+
+It is possible to make the data stored in Postgres persist between runs. To do
+so, change our ``postgres`` container as follows:
+
+.. code-block:: yaml
+
+    containers:
+      postgres:
+        setup:
+        - !Ubuntu trusty
+        - !Install [postgresql]
+        - !EnsureDir /data
+        - !EnsureDir /work/.db/data
+        environ:
+          PGDATA: /data
+          PG_PORT: 5433
+          PG_DB: test
+          PG_USER: vagga
+          PG_PASSWORD: vagga
+          PG_BIN: /usr/lib/postgresql/9.3/bin
+        volumes:
+          /data: !BindRW /work/.db/data
+
+And also change the ``run-postgres`` command:
+
+.. code-block:: yaml
+
+  commands:
+    run-postgres: !Supervise
+    description: Start the django development server using Postgres database
+    children:
+      # ...
+      db: !Command
+        container: postgres
+        run: |
+            chown postgres:postgres $PGDATA;
+            if [ -z $(ls -A $PGDATA) ]; then
+              su postgres -c "$PG_BIN/pg_ctl initdb";
+              su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
+              su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+              su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
+              su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
+            else
+              su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+            fi
+            rm /work/.dbcreation # Release lock
+            sleep infinity
+
+These changes will persist the database files inside ``.db/data`` on the project
+directory. We won't have any permission on that directory, so we would not be
+able to list its contents nor delete it, unless we are root.
+
+Note that if we delete the ``.db/data`` directory, we will get the error::
+
+    Can't mount bind "/work/.db/data" to "/vagga/root/data": No such file or directory
+
+To solve that, simply create ``.db/data``.
