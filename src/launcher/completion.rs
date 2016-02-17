@@ -130,9 +130,11 @@ impl<'a> Completion<'a> {
                 if cur.starts_with("_") {
                     completions.extend(BUILTIN_COMMANDS.iter().map(|c| c.name));
                 }
-                for opt in GLOBAL_OPTIONS {
-                    if !self.single_global_options.contains(opt) {
-                        completions.extend(opt.names);
+                if cur.starts_with("-") {
+                    for opt in GLOBAL_OPTIONS {
+                        if !self.single_global_options.contains(opt) {
+                            completions.extend(opt.names);
+                        }
                     }
                 }
             },
@@ -140,9 +142,11 @@ impl<'a> Completion<'a> {
                 if cmd.accept_container {
                     completions.extend(self.containers.iter().map(|c| &c[..]));
                 }
-                for opt in cmd.options {
-                    if !self.single_command_options.contains(opt) {
-                        completions.extend(opt.names);
+                if cur.starts_with("-") {
+                    for opt in cmd.options {
+                        if !self.single_command_options.contains(opt) {
+                            completions.extend(opt.names);
+                        }
                     }
                 }
             },
