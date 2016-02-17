@@ -18,3 +18,7 @@ todo.txt
 /alpine
 
 /target
+
+# emacs files
+*~
+\#*#
