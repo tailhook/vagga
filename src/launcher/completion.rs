@@ -81,12 +81,6 @@ impl<'a> Completion<'a> {
                         return;
                     }
                 }
-                for &cmd in self.commands {
-                    if arg == cmd {
-                        self.state = States::CommandArg;
-                        return;
-                    }
-                }
                 for opt in GLOBAL_OPTIONS {
                     for &opt_name in opt.names {
                         if arg == opt_name {
@@ -100,6 +94,7 @@ impl<'a> Completion<'a> {
                         }
                     }
                 }
+                self.state = States::CommandArg;
             },
             States::GlobalOptionArg(_) => {
                 self.state = States::GlobalOptionOrCommand;
@@ -116,12 +111,6 @@ impl<'a> Completion<'a> {
                             }
                             return;
                         }
-                    }
-                }
-                for &container_name in self.containers {
-                    if arg == container_name {
-                        self.state = States::CommandArg;
-                        return;
                     }
                 }
                 self.state = States::CommandArg;
