@@ -2,32 +2,54 @@ setup() {
     cd /work/tests/completion
 }
 
-@test "completion: no args" {
+@test "completion: user" {
     run vagga _compgen
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "dont_care no yes" ]]
-}
+    [[ ${lines[@]} = "dont_care no yes \
+-E --env --environ -e --use-env --ignore-owner-check --no-build --no-version-check" ]]
 
-@test "completion: user" {
     run vagga _compgen --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "dont_care no yes" ]]
-}
+    [[ ${lines[@]} = "dont_care no yes \
+-E --env --environ -e --use-env --ignore-owner-check --no-build --no-version-check" ]]
 
-@test "completion: user partial" {
+    run vagga _compgen -- -
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "-E --env --environ -e --use-env --ignore-owner-check --no-build --no-version-check" ]]
+
+    run vagga _compgen -- --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "--env --environ --use-env --ignore-owner-check --no-build --no-version-check" ]]
+
     run vagga _compgen -- d
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "dont_care" ]]
-}
 
-@test "completion: user partial empty" {
+    run vagga _compgen -E test=123 --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "dont_care no yes \
+-E --env --environ -e --use-env --ignore-owner-check --no-build --no-version-check" ]]
+
+    run vagga _compgen -E test=123 -- d
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "dont_care" ]]
+
     run vagga _compgen -- does
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "" ]]
+
+    run vagga _compgen -- --e
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "--env --environ" ]]
 }
 
 @test "completion: builtin" {
@@ -36,37 +58,53 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[@]} = "_build _build_shell _clean _create_netns _destroy_netns \
 _init_storage_dir _list _pack_image _run _run_in_netns _version_hash" ]]
-}
 
-@test "completion: builtin partial" {
     run vagga _compgen -- _r
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "_run _run_in_netns" ]]
-}
 
-@test "completion: builtin partial empty" {
     run vagga _compgen -- _ran
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "" ]]
-}
 
-@test "completion: container" {
+    run vagga _compgen _build --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "ubuntu --force" ]]
+
+    run vagga _compgen _build -- -
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "--force" ]]
+
+    run vagga _compgen _build -- --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "--force" ]]
+
+    # TODO: do not complete --force option
+    run vagga _compgen _build --force --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "ubuntu --force" ]]
+
     run vagga _compgen _run --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "ubuntu" ]]
-}
+    [[ ${lines[@]} = "ubuntu -W --writable" ]]
 
-@test "completion: container partial" {
     run vagga _compgen _run -- u
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "ubuntu" ]]
-}
 
-@test "completion: container partial empty" {
+    run vagga _compgen --use-env HOME _run --writable -- u
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "ubuntu" ]]
+
     run vagga _compgen _run -- ud
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
