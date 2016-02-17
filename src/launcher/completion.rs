@@ -1,24 +1,19 @@
+use std::collections::HashSet;
+
 use config::{Config};
 
 
-#[derive(Debug)]
-enum OptionNumArgs {
-    Zero,
-    Single,
-    Multiple
-}
-
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Hash)]
 struct Option<'a> {
     names: &'a [&'a str],
-    num_args: OptionNumArgs,
+    has_args: bool,
+    single: bool,
 }
 
-#[derive(Debug)]
 struct BuiltinCommand<'a> {
     name: &'a str,
     accept_container: bool,
-    options: &'a [&'a Option<'a>]
+    options: &'a [&'a Option<'a>],
 }
 
 /**
@@ -28,7 +23,6 @@ struct BuiltinCommand<'a> {
                   \                               |                   \                               |
                    -------------------------------                     -------------------------------
 */
-#[derive(Debug)]
 enum States<'a> {
     GlobalOptionOrCommand,
     // GlobalOptionOrArgOrCommand,
@@ -39,11 +33,12 @@ enum States<'a> {
     CommandArg,
 }
 
-#[derive(Debug)]
 struct Completion<'a> {
     commands: &'a Vec<&'a String>,
     containers: &'a Vec<&'a String>,
     state: States<'a>,
+    single_global_options: HashSet<&'a Option<'a>>,
+    single_command_options: HashSet<&'a Option<'a>>,
 }
 
 impl<'a> Completion<'a> {
@@ -52,6 +47,8 @@ impl<'a> Completion<'a> {
             commands: commands,
             containers: containers,
             state: States::GlobalOptionOrCommand,
+            single_global_options: HashSet::new(),
+            single_command_options: HashSet::new(),
         }
     }
 
@@ -73,13 +70,13 @@ impl<'a> Completion<'a> {
                 for opt in GLOBAL_OPTIONS {
                     for &opt_name in opt.names {
                         if arg == opt_name {
-                            match opt.num_args {
-                                OptionNumArgs::Single | OptionNumArgs::Multiple => {    
-                                    self.state = States::GlobalOptionArg(opt);
-                                    return;
-                                },
-                                _ => {},
+                            if opt.has_args {
+                                self.state = States::GlobalOptionArg(opt);
                             }
+                            if opt.single {
+                                self.single_global_options.insert(opt);
+                            }
+                            return;
                         }
                     }
                 }
@@ -91,11 +88,11 @@ impl<'a> Completion<'a> {
                 for cmd_opt in cmd.options {
                     for &opt_name in cmd_opt.names {
                         if arg == opt_name {
-                            match cmd_opt.num_args {
-                                OptionNumArgs::Single | OptionNumArgs::Multiple => {
-                                    self.state = States::CommandOptionArg(cmd, cmd_opt);
-                                },
-                                _ => {},
+                            if cmd_opt.has_args {
+                                self.state = States::CommandOptionArg(cmd, cmd_opt);
+                            }
+                            if cmd_opt.single {
+                                self.single_command_options.insert(cmd_opt);
                             }
                             return;
                         }
@@ -125,7 +122,9 @@ impl<'a> Completion<'a> {
                     completions.extend(BUILTIN_COMMANDS.iter().map(|c| c.name));
                 }
                 for opt in GLOBAL_OPTIONS {
-                    completions.extend(opt.names);
+                    if !self.single_global_options.contains(opt) {
+                        completions.extend(opt.names);
+                    }
                 }
             },
             States::CommandOptionOrContainer(cmd) => {
@@ -133,7 +132,9 @@ impl<'a> Completion<'a> {
                     completions.extend(self.containers.iter().map(|c| &c[..]));
                 }
                 for opt in cmd.options {
-                    completions.extend(opt.names);
+                    if !self.single_command_options.contains(opt) {
+                        completions.extend(opt.names);
+                    }
                 }
             },
             _ => {},
@@ -148,7 +149,7 @@ const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
         name: "_build",
         accept_container: true,
         options: &[
-            &Option { names: &["--force"], num_args: OptionNumArgs::Zero },
+            &Option { names: &["--force"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
@@ -160,28 +161,28 @@ const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
         name: "_clean",
         accept_container: false,
         options: &[
-            &Option { names: &["--tmp", "--tmp-folders"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["--old", "--old-containers"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["--unused"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["--transient"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["--global"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["-n", "--dry-run"], num_args: OptionNumArgs::Zero },
+            &Option { names: &["--tmp", "--tmp-folders"], has_args: false, single: true },
+            &Option { names: &["--old", "--old-containers"], has_args: false, single: true },
+            &Option { names: &["--unused"], has_args: false, single: true },
+            &Option { names: &["--transient"], has_args: false, single: true },
+            &Option { names: &["--global"], has_args: false, single: true },
+            &Option { names: &["-n", "--dry-run"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_create_netns",
         accept_container: false,
         options: &[
-            &Option { names: &["--dry-run"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["--no-iptables"], num_args: OptionNumArgs::Zero },
+            &Option { names: &["--dry-run"], has_args: false, single: true },
+            &Option { names: &["--no-iptables"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_destroy_netns",
         accept_container: false,
         options: &[
-            &Option { names: &["--dry-run"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["--no-iptables"], num_args: OptionNumArgs::Zero },
+            &Option { names: &["--dry-run"], has_args: false, single: true },
+            &Option { names: &["--no-iptables"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
@@ -198,39 +199,39 @@ const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
         name: "_pack_image",
         accept_container: true,
         options: &[
-            &Option { names: &["-f", "--file"], num_args: OptionNumArgs::Single },
+            &Option { names: &["-f", "--file"], has_args: true, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_run",
         accept_container: true,
         options: &[
-            &Option { names: &["-W", "--writable"], num_args: OptionNumArgs::Zero },
+            &Option { names: &["-W", "--writable"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_run_in_netns",
         accept_container: true,
         options: &[
-            &Option { names: &["--pid"], num_args: OptionNumArgs::Single },
+            &Option { names: &["--pid"], has_args: true, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_version_hash",
         accept_container: true,
         options: &[
-            &Option { names: &["-s", "--short"], num_args: OptionNumArgs::Zero },
-            &Option { names: &["-fd3"], num_args: OptionNumArgs::Zero },
+            &Option { names: &["-s", "--short"], has_args: false, single: true },
+            &Option { names: &["-fd3"], has_args: false, single: true },
         ]
     },
 ];
 
 const GLOBAL_OPTIONS: &'static [&'static Option<'static>] = &[
-    &Option { names: &["-E", "--env", "--environ"], num_args: OptionNumArgs::Multiple },
-    &Option { names: &["-e", "--use-env"], num_args: OptionNumArgs::Multiple },
-    &Option { names: &["--ignore-owner-check"], num_args: OptionNumArgs::Zero },
-    &Option { names: &["--no-build"], num_args: OptionNumArgs::Zero },
-    &Option { names: &["--no-version-check"], num_args: OptionNumArgs::Zero },
+    &Option { names: &["-E", "--env", "--environ"], has_args: true, single: false },
+    &Option { names: &["-e", "--use-env"], has_args: true, single: false },
+    &Option { names: &["--ignore-owner-check"], has_args: false, single: true },
+    &Option { names: &["--no-build"], has_args: false, single: true },
+    &Option { names: &["--no-version-check"], has_args: false, single: true },
 ];
 
 
@@ -258,40 +259,3 @@ pub fn generate_completions(config: &Config, args: Vec<String>) -> Result<i32, S
 
     Ok(0)
 }
-
-// fn main() {
-//     let commands = &["paster"];
-//     let containers = &["test"];
-//     {
-//         let args = &["-E", "1", "_clean"];
-//         println!("{:?}", args);
-//         let mut state = Completion::new(commands, containers);
-//         for a in args {
-//             state.trans(a);
-//             // println!("{}", a);
-//             // println!("{:?}", state);    
-//         }
-//         println!("{:?}", state.complete(""));
-//     }
-//     return;
-//     {
-//         let args = &["-E", "test", "_run", "-W", "test", "bash"];
-//         println!("{:?}", args);
-//         let mut state = Completion::new(commands, containers);
-//         for a in args {
-//             println!("{}", a);
-//             state.trans(a);
-//             println!("{:?}", state);    
-//         }
-//     }
-//     {
-//         let args = &["-E", "123", "paster", "serve"];
-//         println!("{:?}", args);
-//         let mut state = Completion::new(commands, containers);
-//         for a in args {
-//             println!("{}", a);
-//             state.trans(a);
-//             println!("{:?}", state);    
-//         }
-//     }
-// }

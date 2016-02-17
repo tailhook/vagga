@@ -36,6 +36,12 @@ setup() {
     [[ ${lines[@]} = "dont_care no yes \
 -E --env --environ -e --use-env --ignore-owner-check --no-build --no-version-check" ]]
 
+    run vagga _compgen --no-build --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "dont_care no yes \
+-E --env --environ -e --use-env --ignore-owner-check --no-version-check" ]]
+    
     run vagga _compgen -E test=123 -- d
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -84,11 +90,10 @@ _init_storage_dir _list _pack_image _run _run_in_netns _version_hash" ]]
     [[ $status = 0 ]]
     [[ ${lines[@]} = "--force" ]]
 
-    # TODO: do not complete --force option
     run vagga _compgen _build --force --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "ubuntu --force" ]]
+    [[ ${lines[@]} = "ubuntu" ]]
 
     run vagga _compgen _run --
     printf "%s\n" "${lines[@]}"
