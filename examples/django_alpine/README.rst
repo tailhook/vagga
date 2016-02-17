@@ -143,7 +143,7 @@ Now let's change our project's settings by editing ``MyProject/settings.py``:
   import os
   import dj_database_url
   # ...
-  databases = {
+  DATABASES = {
       'default': dj_database_url.config()
   }
 
