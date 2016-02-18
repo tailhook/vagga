@@ -16,7 +16,7 @@ Creating the project structure
 ==============================
 
 In order to create the initial project structure, we will need a container with Django
-installed. First, let's create a directory for our project::
+installed. First, let's create a directory for our project:
 
     $ mkdir -p ~/projects/vagga-django-tutorial && cd ~/projects/vagga-django-tutorial
 
@@ -510,18 +510,18 @@ Add it to ``INSTALLED_APPS``:
 
 Create the migration for adding the admin user::
 
-    $ vagga _run django python3 manage.py makemigrations -n create_admin_user --empty common
+    $ vagga _run django python3 manage.py makemigrations -n create_superuser --empty common
 
 Change the migration to add our admin user:
 
 .. code-block:: python
 
-    # common/migrations/0001_create_admin_user.py
+    # common/migrations/0001_create_superuser.py
     from django.db import migrations
     from django.contrib.auth.hashers import make_password
 
 
-    def create_admin_user(apps, schema_editor):
+    def create_superuser(apps, schema_editor):
         User = apps.get_model("auth", "User")
         User.objects.create(username='admin',
                             email='admin@example.com',
@@ -538,7 +538,7 @@ Change the migration to add our admin user:
         ]
 
         operations = [
-            migrations.RunPython(create_admin_user)
+            migrations.RunPython(create_superuser)
         ]
 
 Create the database container:
