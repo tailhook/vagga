@@ -1,10 +1,12 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use config::{Config};
+use config::command::{MainCommand, SuperviseInfo};
+use config::containers::Container;
 
 
 #[derive(PartialEq, Eq, Hash)]
-struct Option<'a> {
+struct CommandOption<'a> {
     names: &'a [&'a str],
     has_args: bool,
     single: bool,
@@ -13,21 +15,33 @@ struct Option<'a> {
 struct BuiltinCommand<'a> {
     name: &'a str,
     accept_container: bool,
-    options: &'a [&'a Option<'a>],
+    options: &'a [&'a CommandOption<'a>],
+}
+
+#[derive(Clone)]
+struct SuperviseCommand<'a> {
+    name: &'a str,
+    info: &'a SuperviseInfo,
+    options: &'a [&'a CommandOption<'a>],
+}
+
+struct SuperviseOption<'a> {
+    cmd: SuperviseCommand<'a>,
+    option: &'a CommandOption<'a>,
 }
 
 /**
 
 Transition table:
-             _______________________
- +——————————|                       |
- |  +———————| GlobalOptionOrCommand |<———+
- |  |  +————|_______________________|    |
- |  |  |                                 |
- |  |  |        _________________        |
- |  |  |       |                 |       |
- |  |  +——————>| GlobalOptionArg |———————+
- |  |          |_________________|
+             _______________________                 ______________
+ +——————————|                       |——————————————>|              |
+ |  +———————| GlobalOptionOrCommand |               | SuperviseArg |
+ |  |  +————|_______________________|<———+   +——————|______________|<—————+
+ |  |  |                                 |   |                            |
+ |  |  |        _________________        |   |    ____________________    |
+ |  |  |       |                 |       |   |   |                    |   |
+ |  |  +——————>| GlobalOptionArg |———————+   +——>| SuperviseOptionArg |———+
+ |  |          |_________________|               |____________________|
  |  |
  |  |       __________________________
  |  +—————>|                          |
@@ -47,22 +61,28 @@ Transition table:
 */
 enum States<'a> {
     GlobalOptionOrCommand,
-    GlobalOptionArg(&'a Option<'a>),
+    GlobalOptionArg(&'a CommandOption<'a>),
     CommandOptionOrContainer(&'a BuiltinCommand<'a>),
-    CommandOptionArg(&'a BuiltinCommand<'a>, &'a Option<'a>),
+    CommandOptionArg(&'a BuiltinCommand<'a>, &'a CommandOption<'a>),
     CommandArg,
+    SuperviseArg(SuperviseCommand<'a>),
+    SuperviseOptionArg(SuperviseOption<'a>),
 }
 
 struct Completion<'a> {
-    commands: &'a Vec<&'a String>,
-    containers: &'a Vec<&'a String>,
+    commands: &'a BTreeMap<String, MainCommand>,
+    containers: &'a BTreeMap<String, Container>,
     state: States<'a>,
-    single_global_options: HashSet<&'a Option<'a>>,
-    single_command_options: HashSet<&'a Option<'a>>,
+    single_global_options: HashSet<&'a CommandOption<'a>>,
+    single_command_options: HashSet<&'a CommandOption<'a>>,
 }
 
 impl<'a> Completion<'a> {
-    pub fn new(commands: &'a Vec<&'a String>, containers: &'a Vec<&'a String>) -> Completion<'a> {
+    pub fn new(
+        commands: &'a BTreeMap<String, MainCommand>,
+        containers: &'a BTreeMap<String, Container>
+    ) -> Completion<'a> {
+
         Completion {
             commands: commands,
             containers: containers,
@@ -72,7 +92,8 @@ impl<'a> Completion<'a> {
         }
     }
 
-    pub fn trans(&mut self, arg: &str) {
+    pub fn trans(& mut self, arg: &str) {
+        let mut next_state: Option<States> = None;
         match self.state {
             States::GlobalOptionOrCommand => {
                 for cmd in BUILTIN_COMMANDS {
@@ -92,6 +113,26 @@ impl<'a> Completion<'a> {
                             }
                             return;
                         }
+                    }
+                }
+                for (cmd_name, user_cmd) in self.commands.iter() {
+                    if arg != cmd_name {
+                        continue;
+                    }
+                    match *user_cmd {
+                        MainCommand::Command(_) => {
+                            self.state = States::CommandArg;
+                            return;
+                        },
+                        MainCommand::Supervise(ref supervise_info) => {
+                            let supervise_cmd = SuperviseCommand {
+                                name: cmd_name,
+                                info: supervise_info,
+                                options: SUPERVISE_OPTIONS,
+                            };
+                            self.state = States::SuperviseArg(supervise_cmd);
+                            return;
+                        },
                     }
                 }
                 self.state = States::CommandArg;
@@ -119,6 +160,27 @@ impl<'a> Completion<'a> {
                 self.state = States::CommandOptionOrContainer(cmd);
             },
             States::CommandArg => {},
+            States::SuperviseArg(ref cmd) => {
+                'options_label: for cmd_opt in cmd.options {
+                    for &opt_name in cmd_opt.names {
+                        if arg == opt_name {
+                            let supervise_option = SuperviseOption {
+                                cmd: cmd.clone(),
+                                option: cmd_opt,
+                            };
+                            next_state = Some(States::SuperviseOptionArg(supervise_option));
+                            break 'options_label;
+                        }
+                    }
+                }
+            },
+            States::SuperviseOptionArg(ref opt) => {
+                next_state = Some(States::SuperviseArg(opt.cmd.clone()));
+            },
+        }
+
+        if let Some(next_state) = next_state {
+            self.state = next_state;
         }
     }
     
@@ -126,7 +188,7 @@ impl<'a> Completion<'a> {
         let mut completions: Vec<&str> = Vec::new();
         match self.state {
             States::GlobalOptionOrCommand => {
-                completions.extend(self.commands.iter().map(|c| &c[..]));
+                completions.extend(self.commands.keys().map(|c| &c[..]));
                 if cur.starts_with("_") {
                     completions.extend(BUILTIN_COMMANDS.iter().map(|c| c.name));
                 }
@@ -140,7 +202,7 @@ impl<'a> Completion<'a> {
             },
             States::CommandOptionOrContainer(cmd) => {
                 if cmd.accept_container {
-                    completions.extend(self.containers.iter().map(|c| &c[..]));
+                    completions.extend(self.containers.keys().map(|c| &c[..]));
                 }
                 if cur.starts_with("-") {
                     for opt in cmd.options {
@@ -149,6 +211,20 @@ impl<'a> Completion<'a> {
                         }
                     }
                 }
+            },
+            States::SuperviseArg(ref supervise_cmd) => {
+                for opt in supervise_cmd.options {
+                    completions.extend(opt.names);
+                }
+            },
+            States::SuperviseOptionArg(ref supervise_opt) => {
+                // TODO: specify which supervise options can accept child as argument
+                // TODO: allow to complete several option arguments one by one
+                let mut children = supervise_opt.cmd.info.children.keys()
+                    .map(|c| &c[..])
+                    .collect::<Vec<_>>();
+                children.sort();
+                completions.extend(children);
             },
             _ => {},
         }
@@ -162,7 +238,7 @@ const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
         name: "_build",
         accept_container: true,
         options: &[
-            &Option { names: &["--force"], has_args: false, single: true },
+            &CommandOption { names: &["--force"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
@@ -174,28 +250,28 @@ const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
         name: "_clean",
         accept_container: false,
         options: &[
-            &Option { names: &["--tmp", "--tmp-folders"], has_args: false, single: true },
-            &Option { names: &["--old", "--old-containers"], has_args: false, single: true },
-            &Option { names: &["--unused"], has_args: false, single: true },
-            &Option { names: &["--transient"], has_args: false, single: true },
-            &Option { names: &["--global"], has_args: false, single: true },
-            &Option { names: &["-n", "--dry-run"], has_args: false, single: true },
+            &CommandOption { names: &["--tmp", "--tmp-folders"], has_args: false, single: true },
+            &CommandOption { names: &["--old", "--old-containers"], has_args: false, single: true },
+            &CommandOption { names: &["--unused"], has_args: false, single: true },
+            &CommandOption { names: &["--transient"], has_args: false, single: true },
+            &CommandOption { names: &["--global"], has_args: false, single: true },
+            &CommandOption { names: &["-n", "--dry-run"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_create_netns",
         accept_container: false,
         options: &[
-            &Option { names: &["--dry-run"], has_args: false, single: true },
-            &Option { names: &["--no-iptables"], has_args: false, single: true },
+            &CommandOption { names: &["--dry-run"], has_args: false, single: true },
+            &CommandOption { names: &["--no-iptables"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_destroy_netns",
         accept_container: false,
         options: &[
-            &Option { names: &["--dry-run"], has_args: false, single: true },
-            &Option { names: &["--no-iptables"], has_args: false, single: true },
+            &CommandOption { names: &["--dry-run"], has_args: false, single: true },
+            &CommandOption { names: &["--no-iptables"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
@@ -212,39 +288,44 @@ const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
         name: "_pack_image",
         accept_container: true,
         options: &[
-            &Option { names: &["-f", "--file"], has_args: true, single: true },
+            &CommandOption { names: &["-f", "--file"], has_args: true, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_run",
         accept_container: true,
         options: &[
-            &Option { names: &["-W", "--writable"], has_args: false, single: true },
+            &CommandOption { names: &["-W", "--writable"], has_args: false, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_run_in_netns",
         accept_container: true,
         options: &[
-            &Option { names: &["--pid"], has_args: true, single: true },
+            &CommandOption { names: &["--pid"], has_args: true, single: true },
         ]
     },
     &BuiltinCommand { 
         name: "_version_hash",
         accept_container: true,
         options: &[
-            &Option { names: &["-s", "--short"], has_args: false, single: true },
-            &Option { names: &["-fd3"], has_args: false, single: true },
+            &CommandOption { names: &["-s", "--short"], has_args: false, single: true },
+            &CommandOption { names: &["-fd3"], has_args: false, single: true },
         ]
     },
 ];
 
-const GLOBAL_OPTIONS: &'static [&'static Option<'static>] = &[
-    &Option { names: &["-E", "--env", "--environ"], has_args: true, single: false },
-    &Option { names: &["-e", "--use-env"], has_args: true, single: false },
-    &Option { names: &["--ignore-owner-check"], has_args: false, single: true },
-    &Option { names: &["--no-build"], has_args: false, single: true },
-    &Option { names: &["--no-version-check"], has_args: false, single: true },
+const GLOBAL_OPTIONS: &'static [&'static CommandOption<'static>] = &[
+    &CommandOption { names: &["-E", "--env", "--environ"], has_args: true, single: false },
+    &CommandOption { names: &["-e", "--use-env"], has_args: true, single: false },
+    &CommandOption { names: &["--ignore-owner-check"], has_args: false, single: true },
+    &CommandOption { names: &["--no-build"], has_args: false, single: true },
+    &CommandOption { names: &["--no-version-check"], has_args: false, single: true },
+];
+
+const SUPERVISE_OPTIONS: &'static [&'static CommandOption<'static>] = &[
+    &CommandOption { names: &["--only"], has_args: true, single: false },
+    &CommandOption { names: &["--exclude"], has_args: true, single: false },
 ];
 
 
@@ -260,9 +341,7 @@ pub fn generate_completions(config: &Config, args: Vec<String>) -> Result<i32, S
         None => &default_cur_arg,
     };
 
-    let commands = config.commands.keys().collect::<Vec<_>>();
-    let containers = config.containers.keys().collect::<Vec<_>>();
-    let mut state = Completion::new(&commands, &containers);
+    let mut state = Completion::new(&config.commands, &config.containers);
     for arg in full_args {
         state.trans(arg);
     }
