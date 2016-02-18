@@ -16,7 +16,7 @@ Creating the project structure
 ==============================
 
 In order to create the initial project structure, we will need a container with Django
-installed. First, let's create a directory for our project:
+installed. First, let's create a directory for our project::
 
     $ mkdir -p ~/projects/vagga-django-tutorial && cd ~/projects/vagga-django-tutorial
 
