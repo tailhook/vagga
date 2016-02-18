@@ -6,6 +6,7 @@ AR ?= ar
 export PREFIX ?= /usr
 export DESTDIR ?=
 export VAGGA_VERSION = $(shell git describe)
+PACKAGE_FILES = vagga apk busybox alpine-keys.apk install.sh vagga-completion.sh
 
 
 all: downloads vagga
@@ -33,7 +34,7 @@ tarball:
 	tarname=vagga-$$(git describe | cut -c2-).tar.xz \
 	&& tmpdir=$$(mktemp -d) \
 	&& mkdir -p $$tmpdir/vagga \
-	&& cp vagga apk busybox alpine-keys.apk install.sh $$tmpdir/vagga \
+	&& cp $(PACKAGE_FILES) $$tmpdir/vagga \
 	&& tar -cJf dist/$$tarname -C $$tmpdir vagga \
 	&& rm -rf $$tmpdir \
 	echo Done tarball $$tarname
