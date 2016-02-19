@@ -19,6 +19,8 @@ todo.txt
 
 /target
 
+/tests/inheritance/description-pak
+
 # emacs files
 *~
 \#*#
