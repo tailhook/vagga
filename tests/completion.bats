@@ -58,15 +58,20 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[@]} = "--only --exclude" ]]
 
-    run vagga _compgen dont_care -- -
+    run vagga _compgen dont_care -- --o
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--only --exclude" ]]
+    [[ ${lines[@]} = "--only" ]]
 
     run vagga _compgen dont_care --only --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "no yes" ]]
+
+    run vagga _compgen dont_care --only yes --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "no" ]]
 
     run vagga _compgen -- does
     printf "%s\n" "${lines[@]}"

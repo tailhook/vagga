@@ -75,6 +75,7 @@ struct Completion<'a> {
     state: States<'a>,
     single_global_options: HashSet<&'a CommandOption<'a>>,
     single_command_options: HashSet<&'a CommandOption<'a>>,
+    supervise_chosen_children: HashSet<&'a str>,
 }
 
 impl<'a> Completion<'a> {
@@ -89,10 +90,11 @@ impl<'a> Completion<'a> {
             state: States::GlobalOptionOrCommand,
             single_global_options: HashSet::new(),
             single_command_options: HashSet::new(),
+            supervise_chosen_children: HashSet::new(),
         }
     }
 
-    pub fn trans(& mut self, arg: &str) {
+    pub fn trans(&mut self, arg: &'a str) {
         let mut next_state: Option<States> = None;
         match self.state {
             States::GlobalOptionOrCommand => {
@@ -175,7 +177,11 @@ impl<'a> Completion<'a> {
                 }
             },
             States::SuperviseOptionArg(ref opt) => {
-                next_state = Some(States::SuperviseArg(opt.cmd.clone()));
+                if opt.cmd.info.children.contains_key(arg) {
+                    self.supervise_chosen_children.insert(arg);
+                } else {
+                    next_state = Some(States::SuperviseArg(opt.cmd.clone()));
+                }
             },
         }
 
@@ -219,12 +225,12 @@ impl<'a> Completion<'a> {
             },
             States::SuperviseOptionArg(ref supervise_opt) => {
                 // TODO: specify which supervise options can accept child as argument
-                // TODO: allow to complete several option arguments one by one
-                let mut children = supervise_opt.cmd.info.children.keys()
-                    .map(|c| &c[..])
-                    .collect::<Vec<_>>();
-                children.sort();
-                completions.extend(children);
+                for child in supervise_opt.cmd.info.children.keys() {
+                    let child_name = &child[..];
+                    if !self.supervise_chosen_children.contains(child_name) {
+                        completions.push(child_name);
+                    }
+                }
             },
             _ => {},
         }
