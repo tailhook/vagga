@@ -22,54 +22,57 @@ struct BuiltinCommand<'a> {
 struct SuperviseCommand<'a> {
     name: &'a str,
     info: &'a SuperviseInfo,
-    options: &'a [&'a CommandOption<'a>],
+    options: &'a [&'a SuperviseOption<'a>],
 }
 
 struct SuperviseOption<'a> {
-    cmd: SuperviseCommand<'a>,
-    option: &'a CommandOption<'a>,
+    names: &'a [&'a str],
+    has_args: bool,
+    single: bool,
+    accept_children: bool,
 }
 
 /**
 
 Transition table:
-             _______________________                 ______________
- +——————————|                       |——————————————>|              |
- |  +———————| GlobalOptionOrCommand |               | SuperviseArg |
- |  |  +————|_______________________|<———+   +——————|______________|<—————+
- |  |  |                                 |   |                            |
- |  |  |        _________________        |   |    ____________________    |
- |  |  |       |                 |       |   |   |                    |   |
- |  |  +——————>| GlobalOptionArg |———————+   +——>| SuperviseOptionArg |———+
- |  |          |_________________|               |____________________|
+               ________                     ______________
+ +————————————|        |——————————————————>|              |
+ |  +—————————| Global |                   | SuperviseCmd |
+ |  |  +——————|________|<————————+   +—————|______________|<————+
+ |  |  |                         |   |                          |
+ |  |  |    ______________       |   |     _________________    |?
+ |  |  |   |              |      |   +———>|                 |———+
+ |  |  +——>| GlobalOption |——————+        | SuperviseOption |
+ |  |      |______________|          +————|_________________|<————+
+ |  |                                |                            |
+ |  |         _________              |    ____________________    |
+ |  +———————>|         |             |   |                    |   |
+ |  +————————| Command |<——————+     +——>| SuperviseOptionArg |<——+
+ |  |  +—————|_________|       |         |____________________|
+ |  |  |                       |
+ |  |  |    _______________    |
+ |  |  |   |               |   |
+ |  |  +——>| CommandOption |———+
+ |  |      |_______________|
  |  |
- |  |       __________________________
- |  +—————>|                          |
- |  +——————| CommandOptionOrContainer |<——+
- |  |  +———|__________________________|   |
- |  |  |                                  |
- |  |  |        __________________        |
- |  |  |       |                  |       |
- |  |  +——————>| CommandOptionArg |———————+
- |  |          |__________________|
- |  |
- |  |             ____________
- |  +———————————>|            |
- |               | CommandArg |
- +——————————————>|____________|
+ |  |        _____________
+ |  +——————>|             |
+ |          | CommandArgs |
+ +—————————>|_____________|
 
 */
 enum States<'a> {
-    GlobalOptionOrCommand,
-    GlobalOptionArg(&'a CommandOption<'a>),
-    CommandOptionOrContainer(&'a BuiltinCommand<'a>),
-    CommandOptionArg(&'a BuiltinCommand<'a>, &'a CommandOption<'a>),
-    CommandArg,
-    SuperviseArg(SuperviseCommand<'a>),
-    SuperviseOptionArg(SuperviseOption<'a>),
+    Global,
+    GlobalOption(&'a CommandOption<'a>),
+    Command(&'a BuiltinCommand<'a>),
+    CommandOption(&'a BuiltinCommand<'a>, &'a CommandOption<'a>),
+    CommandArgs,
+    SuperviseCmd(SuperviseCommand<'a>),
+    SuperviseOption(SuperviseCommand<'a>, &'a SuperviseOption<'a>),
+    SuperviseOptionArg(SuperviseCommand<'a>, &'a SuperviseOption<'a>),
 }
 
-struct Completion<'a> {
+struct CompletionState<'a> {
     commands: &'a BTreeMap<String, MainCommand>,
     containers: &'a BTreeMap<String, Container>,
     state: States<'a>,
@@ -78,16 +81,16 @@ struct Completion<'a> {
     supervise_chosen_children: HashSet<&'a str>,
 }
 
-impl<'a> Completion<'a> {
+impl<'a> CompletionState<'a> {
     pub fn new(
         commands: &'a BTreeMap<String, MainCommand>,
         containers: &'a BTreeMap<String, Container>
-    ) -> Completion<'a> {
+    ) -> CompletionState<'a> {
 
-        Completion {
+        CompletionState {
             commands: commands,
             containers: containers,
-            state: States::GlobalOptionOrCommand,
+            state: States::Global,
             single_global_options: HashSet::new(),
             single_command_options: HashSet::new(),
             supervise_chosen_children: HashSet::new(),
@@ -97,10 +100,10 @@ impl<'a> Completion<'a> {
     pub fn trans(&mut self, arg: &'a str) {
         let mut next_state: Option<States> = None;
         match self.state {
-            States::GlobalOptionOrCommand => {
+            States::Global => {
                 for cmd in BUILTIN_COMMANDS {
                     if cmd.name == arg {
-                        self.state = States::CommandOptionOrContainer(cmd);
+                        self.state = States::Command(cmd);
                         return;
                     }
                 }
@@ -108,7 +111,7 @@ impl<'a> Completion<'a> {
                     for &opt_name in opt.names {
                         if arg == opt_name {
                             if opt.has_args {
-                                self.state = States::GlobalOptionArg(opt);
+                                self.state = States::GlobalOption(opt);
                             }
                             if opt.single {
                                 self.single_global_options.insert(opt);
@@ -123,7 +126,7 @@ impl<'a> Completion<'a> {
                     }
                     match *user_cmd {
                         MainCommand::Command(_) => {
-                            self.state = States::CommandArg;
+                            self.state = States::CommandArgs;
                             return;
                         },
                         MainCommand::Supervise(ref supervise_info) => {
@@ -132,22 +135,22 @@ impl<'a> Completion<'a> {
                                 info: supervise_info,
                                 options: SUPERVISE_OPTIONS,
                             };
-                            self.state = States::SuperviseArg(supervise_cmd);
+                            self.state = States::SuperviseCmd(supervise_cmd);
                             return;
                         },
                     }
                 }
-                self.state = States::CommandArg;
+                self.state = States::CommandArgs;
             },
-            States::GlobalOptionArg(_) => {
-                self.state = States::GlobalOptionOrCommand;
+            States::GlobalOption(_) => {
+                self.state = States::Global;
             },
-            States::CommandOptionOrContainer(cmd) => {
+            States::Command(cmd) => {
                 for cmd_opt in cmd.options {
                     for &opt_name in cmd_opt.names {
                         if arg == opt_name {
                             if cmd_opt.has_args {
-                                self.state = States::CommandOptionArg(cmd, cmd_opt);
+                                self.state = States::CommandOption(cmd, cmd_opt);
                             }
                             if cmd_opt.single {
                                 self.single_command_options.insert(cmd_opt);
@@ -156,32 +159,30 @@ impl<'a> Completion<'a> {
                         }
                     }
                 }
-                self.state = States::CommandArg;
+                self.state = States::CommandArgs;
             },
-            States::CommandOptionArg(cmd, _) => {
-                self.state = States::CommandOptionOrContainer(cmd);
+            States::CommandOption(cmd, _) => {
+                self.state = States::Command(cmd);
             },
-            States::CommandArg => {},
-            States::SuperviseArg(ref cmd) => {
+            States::CommandArgs => {},
+            States::SuperviseCmd(ref cmd) => {
                 'options_label: for cmd_opt in cmd.options {
                     for &opt_name in cmd_opt.names {
                         if arg == opt_name {
-                            let supervise_option = SuperviseOption {
-                                cmd: cmd.clone(),
-                                option: cmd_opt,
-                            };
-                            next_state = Some(States::SuperviseOptionArg(supervise_option));
+                            next_state = Some(States::SuperviseOption(cmd.clone(), cmd_opt));
                             break 'options_label;
                         }
                     }
                 }
             },
-            States::SuperviseOptionArg(ref opt) => {
-                if opt.cmd.info.children.contains_key(arg) {
+            States::SuperviseOption(ref cmd, opt) => {
+                if cmd.info.children.contains_key(arg) {
                     self.supervise_chosen_children.insert(arg);
                 } else {
-                    next_state = Some(States::SuperviseArg(opt.cmd.clone()));
+                    next_state = Some(States::SuperviseCmd(cmd.clone()));
                 }
+            },
+            States::SuperviseOptionArg(ref cmd, opt) => {
             },
         }
 
@@ -193,7 +194,7 @@ impl<'a> Completion<'a> {
     pub fn complete(&self, cur: &str) -> Vec<&str> {
         let mut completions: Vec<&str> = Vec::new();
         match self.state {
-            States::GlobalOptionOrCommand => {
+            States::Global => {
                 completions.extend(self.commands.keys().map(|c| &c[..]));
                 if cur.starts_with("_") {
                     completions.extend(BUILTIN_COMMANDS.iter().map(|c| c.name));
@@ -206,7 +207,7 @@ impl<'a> Completion<'a> {
                     }
                 }
             },
-            States::CommandOptionOrContainer(cmd) => {
+            States::Command(cmd) => {
                 if cmd.accept_container {
                     completions.extend(self.containers.keys().map(|c| &c[..]));
                 }
@@ -218,14 +219,14 @@ impl<'a> Completion<'a> {
                     }
                 }
             },
-            States::SuperviseArg(ref supervise_cmd) => {
+            States::SuperviseCmd(ref supervise_cmd) => {
                 for opt in supervise_cmd.options {
                     completions.extend(opt.names);
                 }
             },
-            States::SuperviseOptionArg(ref supervise_opt) => {
+            States::SuperviseOption(ref supervise_cmd, supervise_opt) => {
                 // TODO: specify which supervise options can accept child as argument
-                for child in supervise_opt.cmd.info.children.keys() {
+                for child in supervise_cmd.info.children.keys() {
                     let child_name = &child[..];
                     if !self.supervise_chosen_children.contains(child_name) {
                         completions.push(child_name);
@@ -329,9 +330,9 @@ const GLOBAL_OPTIONS: &'static [&'static CommandOption<'static>] = &[
     &CommandOption { names: &["--no-version-check"], has_args: false, single: true },
 ];
 
-const SUPERVISE_OPTIONS: &'static [&'static CommandOption<'static>] = &[
-    &CommandOption { names: &["--only"], has_args: true, single: false },
-    &CommandOption { names: &["--exclude"], has_args: true, single: false },
+const SUPERVISE_OPTIONS: &'static [&'static SuperviseOption<'static>] = &[
+    &SuperviseOption { names: &["--only"], has_args: true, single: false, accept_children: true },
+    &SuperviseOption { names: &["--exclude"], has_args: true, single: false, accept_children: true },
 ];
 
 
@@ -347,7 +348,7 @@ pub fn generate_completions(config: &Config, args: Vec<String>) -> Result<i32, S
         None => &default_cur_arg,
     };
 
-    let mut state = Completion::new(&config.commands, &config.containers);
+    let mut state = CompletionState::new(&config.commands, &config.containers);
     for arg in full_args {
         state.trans(arg);
     }
