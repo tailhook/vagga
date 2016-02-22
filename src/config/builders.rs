@@ -382,7 +382,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("engine-exe", V::Scalar::new().optional()))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
     .option("ComposerRequirements", V::Structure::new()
-        .member("dev", V::Scalar::new().default(false))
+        .member("dev", V::Scalar::new().default(true))
         .member("prefer", V::Scalar::new().optional())
         .member("update", V::Scalar::new().default(false))
         .member("optimize_autoload", V::Scalar::new().default(false)))

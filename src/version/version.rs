@@ -89,6 +89,15 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
     }
 }
 
+fn hash_json(data: &Json, key: &str, hash: &mut Digest) {
+    let data = data.find(key);
+    if let Some(ref ob) = deps {
+        hash.input(key.as_bytes());
+        let encoded = format!("{}", json::as_json(&data));
+        hash.input(encoded.as_bytes())
+    }
+}
+
 
 impl VersionHash for Builder {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
@@ -138,14 +147,25 @@ impl VersionHash for Builder {
                     }
                 })
             }
-            &B::ComposerRequirements(_) => {
+            &B::ComposerRequirements(info) => {
                 let path = Path::new("/work").join("composer.json");
                 File::open(&path).map_err(|e| Error::Io(e, path.clone()))
                 .and_then(|mut f| Json::from_reader(&mut f)
                     .map_err(|e| Error::Json(e, path.to_path_buf())))
                 .map(|data| {
-                    let encoded = json::encode(&data).unwrap();
-                    hash.input(encoded.as_bytes())
+                    // just use `npm_hash_deps` here for the structure is equal
+                    npm_hash_deps(&data, "require", hash);
+                    // "autoload" and "repositories" can be quite complex, just hash everything
+                    hash_json(&data, "autoload", hash);
+                    hash_json(&data, "repositories", hash);
+
+                    hash_json(&data, "minimum-stability", hash);
+                    hash_json(&data, "prefer-stable", hash);
+
+                    if info.dev {
+                        npm_hash_deps(&data, "require-dev", hash);
+                        hash_json(&data, "autoload-dev", hash);
+                    }
                 })
             }
             &B::Depends(ref filename) => {
