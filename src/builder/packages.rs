@@ -78,11 +78,13 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     "hhvm"
                 };
 
-                try!(run_command_at_env(ctx, &[
+                let args = vec!(
                     engine_exe.to_owned(),
                     "/tmp/composer-setup.php".to_owned(),
                     "--install-dir=/tmp/composer/".to_owned(),
-                    ], &Path::new("/work"), &[]));
+                    );
+
+                try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
             _ => {
                 left.push(i);
