@@ -91,9 +91,9 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
 
 fn hash_json(data: &Json, key: &str, hash: &mut Digest) {
     let data = data.find(key);
-    if let Some(ref ob) = deps {
+    if let Some(ref ob) = data {
         hash.input(key.as_bytes());
-        let encoded = format!("{}", json::as_json(&data));
+        let encoded = format!("{}", json::as_json(&ob));
         hash.input(encoded.as_bytes())
     }
 }
@@ -147,7 +147,7 @@ impl VersionHash for Builder {
                     }
                 })
             }
-            &B::ComposerRequirements(info) => {
+            &B::ComposerRequirements(ref info) => {
                 let path = Path::new("/work").join("composer.json");
                 File::open(&path).map_err(|e| Error::Io(e, path.clone()))
                 .and_then(|mut f| Json::from_reader(&mut f)
