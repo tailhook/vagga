@@ -2,7 +2,7 @@ setup() {
     cd /work/tests/completion
 }
 
-@test "completion: user" {
+@test "completion: global" {
     run vagga _compgen
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -24,6 +24,16 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[@]} = "--version --env --environ --use-env --ignore-owner-check \
 --no-build --no-version-check" ]]
+
+    run vagga _compgen -- y
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "yes" ]]
+
+    run vagga _compgen yes --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "" ]]
 
     run vagga _compgen -- d
     printf "%s\n" "${lines[@]}"
@@ -70,6 +80,11 @@ setup() {
 
 @test "completion: supervise" {
     run vagga _compgen dont_care --
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} = "--only --exclude --no-build --no-version-check" ]]
+
+    run vagga _compgen --no-version-check -E HOME=/work dont_care --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "--only --exclude --no-build --no-version-check" ]]
