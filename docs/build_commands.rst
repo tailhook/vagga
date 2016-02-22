@@ -365,8 +365,7 @@ python3. Here is a brief example:
     - !Ubuntu trusty
     - !Py2Install [sphinx]
 
-Currently packages are installed by system pip_. We consider this an
-implementation detail and will use latest pip_ in future. The ``python-dev``
+We always fetch latest pip for installing dependencies. The ``python-dev``
 headers are installed for the time of the build too. Both ``python-dev`` and
 ``pip`` are removed when installation is finished.
 

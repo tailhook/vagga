@@ -18,3 +18,9 @@ todo.txt
 /alpine
 
 /target
+
+/tests/inheritance/description-pak
+
+# emacs files
+*~
+\#*#

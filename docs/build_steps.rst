@@ -996,11 +996,79 @@ Python Commands
 
 .. step:: Py2Install
 
+   Installs python package for Python 2.7 using pip. Example:
+
+   .. code-block:: yaml
+
+        setup:
+        - !Ubuntu trusty
+        - !Py2Install [sphinx]
+
+   We always fetch latest pip for installing dependencies. The ``python-dev``
+   headers are installed for the time of the build too. Both ``python-dev``
+   and ``pip`` are removed when installation is finished.
+
+   The following ``pip`` package specification formats are supported:
+
+   * The ``package_name==version`` to install specific version
+     **(recommended)**
+   * Bare ``package_name`` (should be used only for one-off environments)
+   * The ``git+`` and ``hg+`` links (the git and mercurial are installed as
+     build dependency automatically), since vagga 0.4 ``git+https`` and
+     ``hg+https`` are supported too (required installing ``ca-ceritificates``
+     manually before)
+
+   All other forms may work but not supported. Specifying command-line
+   arguments instead of package names is not supported.
+
+   See :step:`Py2Requirements` for the form that is both more convenient and
+   supports non-vagga installations better.
+
+   .. note:: If you configure ``python-exe`` in :step:`PipConfig` there is no
+      difference between :step:`Py2Install` and :step:`Py3Install`.
+
+.. _pip: http://pip.pypa.io
+
 .. step:: Py2Requirements
+
+   This command is similar to :step:`Py2Install` but gets package names from
+   the file. Example:
+
+   .. code-block:: yaml
+
+        setup:
+        - !Ubuntu trusty
+        - !Py2Requirements "requirements.txt"
+
+   See :step:`Py2Install` for more details on package installation and
+   :step:`PipConfig` for more configuration.
 
 .. step:: Py3Install
 
+   Same as :step:`Py2Install` but installs for Python 3.x by default.
+
+   .. code-block:: yaml
+
+        setup:
+        - !Alpine v3.3
+        - !Py3Install [sphinx]
+
+   See :step:`Py2Install` for more details on package installation and
+   :step:`PipConfig` for more configuration.
+
 .. step:: Py3Requirements
+
+   This command is similar to :step:`Py3Install` but gets package names from
+   the file. Example:
+
+   .. code-block:: yaml
+
+        setup:
+        - !Alpine v3.3
+        - !Py3Requirements "requirements.txt"
+
+   See :step:`Py2Install` for more details on package installation and
+   :step:`PipConfig` for more configuration.
 
 .. not yet implemented
 

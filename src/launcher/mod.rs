@@ -26,6 +26,7 @@ mod wrap;
 mod pack;
 mod version;
 mod storage;
+mod completion;
 
 
 pub fn run() -> i32 {
@@ -213,6 +214,9 @@ pub fn run() -> i32 {
         }
         "_init_storage_dir" => {
             storage::init_dir(&ext_settings, &cfg_dir, args)
+        }
+        "_compgen" => {
+            completion::generate_completions(&config, args)
         }
         _ => {
             user::run_user_command(&config, &int_settings,
