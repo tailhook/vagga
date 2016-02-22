@@ -9,7 +9,6 @@ use file_util::{copy, create_dir};
 
 pub use self::Package::*;
 
-const PIP_BOOTSTRAP: &'static str = "https://bootstrap.pypa.io/get-pip.py";
 const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
 
 
@@ -47,13 +46,14 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
     for i in features.into_iter() {
         match i {
             PipPy2 | PipPy3 => {
-                let pip_inst = try!(download::download_file(ctx, PIP_BOOTSTRAP));
+                let pip_inst = try!(download::download_file(ctx,
+                    "https://bootstrap.pypa.io/get-pip.py"));
                 try!(copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
                     .map_err(|e| format!("Error copying pip: {}", e)));
                 try!(run_command_at_env(ctx, &[
-                    (if i == PipPy2 {"python2"} else {"python3"}).to_owned(),
-                    "/tmp/get-pip.py".to_owned(),
-                    "--target=/tmp/pip-install".to_owned(),
+                    (if i == PipPy2 {"python2"} else {"python3"}).to_string(),
+                    "/tmp/get-pip.py".to_string(),
+                    "--target=/tmp/pip-install".to_string(),
                     ], &Path::new("/work"), &[]));
             }
             Composer => {
