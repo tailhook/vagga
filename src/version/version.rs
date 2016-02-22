@@ -138,6 +138,16 @@ impl VersionHash for Builder {
                     }
                 })
             }
+            &B::ComposerRequirements(_) => {
+                let path = Path::new("/work").join("composer.json");
+                File::open(&path).map_err(|e| Error::Io(e, path.clone()))
+                .and_then(|mut f| Json::from_reader(&mut f)
+                    .map_err(|e| Error::Json(e, path.to_path_buf())))
+                .map(|data| {
+                    let encoded = json::encode(&data).unwrap();
+                    hash.input(encoded.as_bytes())
+                })
+            }
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
                 hash_file(&path, hash, None, None)

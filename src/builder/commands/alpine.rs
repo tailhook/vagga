@@ -168,6 +168,9 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::NodeJs => Some(vec!()),
         packages::NodeJsDev => Some(vec!("nodejs-dev")),
         packages::Npm => Some(vec!()),
+        packages::PHP => Some(vec!()),
+        packages::HHVM => Some(vec!()),
+        packages::Composer => None,
         packages::Git => Some(vec!("git")),
         packages::Mercurial => Some(vec!("hg")),
     }
@@ -186,6 +189,11 @@ fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::NodeJs => Some(vec!("nodejs")),
         packages::NodeJsDev => Some(vec!()),
         packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
+        packages::PHP => Some(
+            vec!("php", "php-cli", "php-openssl", "php-phar", "php-json", "php-pdo", "php-dom")
+        ),
+        packages::HHVM => Some(vec!()),
+        packages::Composer => None,
         packages::Git => Some(vec!()),
         packages::Mercurial => Some(vec!()),
     }

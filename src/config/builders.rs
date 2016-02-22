@@ -93,6 +93,12 @@ pub struct NpmSettings {
     pub npm_exe: String,
 }
 
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct ComposerSettings {
+    pub engine: String,
+    pub engine_exe: Option<String>,
+}
+
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GitSource {
     pub url: String,
@@ -155,6 +161,14 @@ pub struct NpmDepInfo {
     pub peer: bool,
     pub bundled: bool,
     pub optional: bool,
+}
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct ComposerReqInfo {
+    pub dev: bool,
+    pub prefer: Option<String>,
+    pub update: bool,
+    pub optimize_autoload: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
@@ -223,6 +237,11 @@ pub enum Builder {
     Py3Install(Vec<String>),
     Py3Requirements(PathBuf),
     PyFreeze(PyFreezeInfo),
+
+    // -- PHP/HHVM --
+    ComposerConfig(ComposerSettings),
+    ComposerInstall(Vec<String>),
+    ComposerRequirements(ComposerReqInfo),
 }
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
@@ -356,4 +375,15 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("peer", V::Scalar::new().default(false))
         .member("bundled", V::Scalar::new().default(true))
         .member("optional", V::Scalar::new().default(false)))
+
+    // Composer
+    .option("ComposerConfig", V::Structure::new()
+        .member("engine", V::Scalar::new().default("php"))
+        .member("engine-exe", V::Scalar::new().optional()))
+    .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
+    .option("ComposerRequirements", V::Structure::new()
+        .member("dev", V::Scalar::new().default(false))
+        .member("prefer", V::Scalar::new().optional())
+        .member("update", V::Scalar::new().default(false))
+        .member("optimize_autoload", V::Scalar::new().default(false)))
 }
