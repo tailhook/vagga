@@ -60,7 +60,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
             Composer => {
-                let composer_home = Path::new("/vagga/root/tmp/composer");
+                let composer_home = Path::new("/vagga/root/usr/lib/composer");
                 try_msg!(create_dir(&composer_home, true),
                      "Error creating composer home dir {d:?}: {err}", d=composer_home);
 
@@ -81,7 +81,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                 let args = vec!(
                     engine_exe.to_owned(),
                     "/tmp/composer-setup.php".to_owned(),
-                    "--install-dir=/tmp/composer/".to_owned(),
+                    "--install-dir=/tmp/".to_owned(),
                     );
 
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
