@@ -17,6 +17,8 @@ pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
     use options::build_mode::BuildMode::*;
     let ver = match mode {
         Normal => try!(build_internal(settings, name, &[])),
+        NoImage => try!(build_internal(settings, name,
+                                       &[String::from("--no-image")])),
         NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
         NoVersion => {
             let lnk = format!(".vagga/{}", name);

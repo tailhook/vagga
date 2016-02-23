@@ -1,0 +1,67 @@
+containers:
+  alpine:
+    image-url: http://localhost:8000/images/${container_name}.${hash}.tar.xz
+    setup:
+    - !Alpine v3.3
+    - !Install [bc]
+
+  nginx:
+    volumes:
+      /var/lib/nginx/client_temp: !Tmpfs {}
+      /var/lib/nginx/proxy_temp: !Tmpfs {}
+      /var/lib/nginx/tmp: !Tmpfs {size: 10M}
+      /var/log/nginx: !BindRW /work/nginx/logs
+      /work/images: !Tmpfs {size: 100M}
+    setup:
+    - !Alpine v3.3
+    - !Install [nginx]
+    - !EnsureDir /etc/nginx
+    - !EnsureDir /var/lib/nginx
+    - !EnsureDir /var/lib/nginx/client_temp
+    - !EnsureDir /var/lib/nginx/proxy_temp
+    - !EnsureDir /var/lib/nginx/tmp
+    - !EnsureDir /var/log/nginx
+    - !Text
+      /etc/nginx/nginx.conf: |
+        daemon off;
+        worker_processes 1;
+        pid /tmp/nginx.pid;
+        error_log stderr debug;
+
+        events {
+            worker_connections 1024;
+        }
+
+        http {
+            sendfile on;
+            include /etc/nginx/mime.types;
+            default_type application/octet-stream;
+
+            client_body_temp_path /var/lib/nginx/client_temp 1 2;
+            client_max_body_size 10m;
+            proxy_temp_path /var/lib/nginx/proxy_temp 1 2;
+
+            server {
+                listen 8000 default_server;
+
+                access_log /var/log/nginx/access.log;
+
+                location /images/ {
+                    alias /work/images/;
+
+                    client_max_body_size 1g;
+                    client_body_temp_path /work/images/;
+
+                    dav_methods PUT DELETE MKCOL COPY MOVE;
+
+                    create_full_put_path on;
+                    dav_access group:rw all:r;
+                }
+            }
+        }
+
+commands:
+  nginx: !Command
+    description: Run nginx
+    container: nginx
+    run: nginx

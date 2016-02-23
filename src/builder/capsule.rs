@@ -24,6 +24,9 @@ pub use self::Feature::*;
 #[derive(Clone, Copy)]
 pub enum Feature {
     Https,
+    Gzip,
+    Bzip2,
+    Xz,
     AlpineInstaller,
     Git,
 }
@@ -97,6 +100,15 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
             Https => {
                 pkg_queue.push("wget".to_string());
                 pkg_queue.push("ca-certificates".to_string());
+            }
+            Gzip => {
+                pkg_queue.push("gzip".to_string());
+            }
+            Bzip2 => {
+                pkg_queue.push("bzip2".to_string());
+            }
+            Xz => {
+                pkg_queue.push("xz".to_string());
             }
             Git => {
                 pkg_queue.push("git".to_string());

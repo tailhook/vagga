@@ -52,7 +52,7 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !BuildDeps [wget, git]
-    - !Install [make]
+    - !Install [make, curl]
     - !Sh |
         set -ex
         cd /tmp
@@ -148,6 +148,7 @@ commands:
       if [ -n "$ALPINE_MIRROR" ]; then
           echo "alpine-mirror: $ALPINE_MIRROR" >> $HOME/.vagga.yaml
       fi
+      echo "push-image-cmd: curl -T \${source_path} http://localhost:8000/images/\${container_name}.\${hash}.tar.xz" >> $HOME/.vagga.yaml
       if [ -n "$*" ]; then
         bats "$@"
       else

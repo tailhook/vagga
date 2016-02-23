@@ -20,6 +20,7 @@ struct SecureSettings {
     alpine_mirror: Option<String>,
     site_settings: BTreeMap<PathBuf, SecureSettings>,
     external_volumes: HashMap<String, PathBuf>,
+    push_image_cmd: Option<String>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -34,7 +35,8 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("alpine_mirror", V::Scalar::new().optional())
         .member("external_volumes", V::Mapping::new(
             V::Directory::new().is_absolute(false),
-            V::Directory::new().is_absolute(true)));
+            V::Directory::new().is_absolute(true)))
+        .member("push_image_cmd", V::Scalar::new().optional());
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -71,6 +73,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
 #[derive(Debug)]
 pub struct MergedSettings {
     pub external_volumes: HashMap<String, PathBuf>,
+    pub push_image_cmd: Option<String>,
     pub storage_dir: Option<PathBuf>,
     pub cache_dir: Option<PathBuf>,
     pub shared_cache: bool,
@@ -81,6 +84,7 @@ pub fn read_settings(project_root: &Path)
 {
     let mut ext_settings = MergedSettings {
         external_volumes: HashMap::new(),
+        push_image_cmd: None,
         storage_dir: None,
         cache_dir: None,
         shared_cache: false,
@@ -91,6 +95,7 @@ pub fn read_settings(project_root: &Path)
         uid_map: None,
         ubuntu_mirror: "mirror://mirrors.ubuntu.com/mirrors.txt".to_string(),
         alpine_mirror: None,
+        push_image_cmd: None,
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {
@@ -131,6 +136,9 @@ pub fn read_settings(project_root: &Path)
         for (k, v) in &cfg.external_volumes {
             ext_settings.external_volumes.insert(k.clone(), v.clone());
         }
+        if let Some(ref val) = cfg.push_image_cmd {
+            int_settings.push_image_cmd = Some(val.clone());
+        }
         if let Some(cfg) = cfg.site_settings.get(project_root) {
             if let Some(ref dir) = cfg.storage_dir {
                 ext_settings.storage_dir = Some(dir.clone());
@@ -150,6 +158,9 @@ pub fn read_settings(project_root: &Path)
             }
             for (k, v) in &cfg.external_volumes {
                 ext_settings.external_volumes.insert(k.clone(), v.clone());
+            }
+            if let Some(ref val) = cfg.push_image_cmd {
+                int_settings.push_image_cmd = Some(val.clone());
             }
         }
     }
