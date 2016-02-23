@@ -3,27 +3,18 @@ containers:
   pkg-ubuntu:
     setup:
     - !Ubuntu trusty
-    - !ComposerInstall ["task/cli:0.3.0"]
+    - !ComposerInstall ["laravel/installer:1.3.0"]
 
   pkg-precise:
     setup:
     - !Ubuntu precise
-    - !ComposerInstall ["task/cli:0.3.0"]
+    - !Install [php5-cgi]
+    - !ComposerInstall ["nette/tester:1.7.0"]
 
   pkg-alpine:
     setup:
-    - !Alpine v3.1
-    - !ComposerInstall ["task/cli:0.3.0"]
-
-  git-ubuntu:
-    setup:
-    - !Ubuntu trusty
-    - !ComposerInstall ["https://github.com/taskphp/cli"]
-
-  git-alpine:
-    setup:
-    - !Alpine v3.1
-    - !ComposerInstall ["https://github.com/taskphp/cli"]
+    - !Alpine v3.3
+    - !ComposerInstall ["laravel/installer:1.3.0"]
 
   composer-deps:
     setup:
