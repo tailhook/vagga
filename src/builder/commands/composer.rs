@@ -105,7 +105,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
 
     ctx.add_ensure_dir(Path::new("/tmp/composer/vendor"));
     let args = vec!(
-        "ln".to_owned(),
+        "/bin/ln".to_owned(),
         "-s".to_owned(),
         "/usr/lib/composer/vendor".to_owned(),
         "/composer".to_owned());
@@ -128,7 +128,7 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
         engine_exe,
         "/tmp/composer.phar".to_owned(),
         "show".to_string(),
-        "i".to_string(),
+        "-i".to_string(),
     );
     try!(capture_command(ctx, &args, &[])
         .and_then(|out| {
