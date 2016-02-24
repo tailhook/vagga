@@ -245,6 +245,10 @@ impl Ubuntu {
     fn needs_node_legacy(&self) -> bool {
         self.codename.as_ref().map(|x| &x[..] != "precise").unwrap_or(false)
     }
+    fn has_php7(&self) -> bool {
+        let php5_only = ["precise", "trusty", "vivid", "wily"];
+        self.codename.as_ref().map(|cn| !php5_only.contains(&cn.as_ref())).unwrap_or(false)
+    }
     fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
             packages::BuildEssential => Some(vec!()),
@@ -261,6 +265,9 @@ impl Ubuntu {
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
             packages::Npm => Some(vec!()),
+            packages::PHP if self.has_php7() => {
+                Some(vec!("php7", "php7-cli"))
+            }
             packages::PHP => Some(vec!("php5", "php5-cli")),
             packages::HHVM => Some(vec!()),
             packages::Composer => None,

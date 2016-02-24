@@ -69,16 +69,13 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     .map_err(|e| format!("Error copying composer: {}", e)));
 
                 let engine_exe = if ctx.composer_settings.engine == "php" {
-                    if ctx.binary_ident.contains("ubuntu") {
-                        "php5"
-                    } else {
-                        "php"
-                    }
+                    "php"
                 } else {
                     "hhvm"
                 };
 
                 let args = vec!(
+                    "/usr/bin/env".to_owned(),
                     engine_exe.to_owned(),
                     "/tmp/composer-setup.php".to_owned(),
                     "--install-dir=/tmp/".to_owned(),

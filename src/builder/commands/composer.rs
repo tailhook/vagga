@@ -2,13 +2,16 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Write;
 
+use unshare::{Command};
+
 use super::super::context::{Context};
 use super::super::packages;
-use super::generic::{run_command, capture_command};
+use super::generic::run_command;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
 use config::builders::{ComposerSettings, ComposerReqInfo};
+use process_util::capture_stdout;
 
 impl Default for ComposerSettings {
     fn default() -> Self {
@@ -48,6 +51,27 @@ fn composer_engine(ctx: &mut Context) -> String {
     }
 }
 
+fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
+    let mut cmd =
+        if let Some(ref exe) = ctx.composer_settings.engine_exe {
+            try!(command(ctx, exe))
+        } else {
+            let mut cmd = try!(command(ctx, "/usr/bin/env"));
+            if ctx.composer_settings.engine == "php" {
+                cmd.arg("php");
+            } else if ctx.composer_settings.engine == "hhvm" {
+                cmd.arg("hhvm");
+            } else {
+                unreachable!();
+            }
+            cmd
+        };
+
+    cmd.arg("/tmp/composer.phar");
+
+    Ok(cmd)
+}
+
 pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), StepError>
@@ -60,12 +84,8 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
         return Ok(());
     }
 
-    let engine_exe = composer_engine(ctx);
-    let mut cmd = try!(command(ctx, &engine_exe));
-    cmd.arg("/tmp/composer.phar");
-    cmd.arg("global");
-    cmd.arg("require");
-    cmd.arg("--prefer-dist");
+    let mut cmd = try!(composer_cmd(ctx));
+    cmd.args(&["global", "require", "--prefer-dist"]);
     cmd.args(pkgs);
     run(cmd)
 }
@@ -79,9 +99,7 @@ pub fn composer_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
 
     try!(packages::ensure_packages(distro, ctx, &features));
 
-    let engine_exe = composer_engine(ctx);
-    let mut cmd = try!(command(ctx, &engine_exe));
-    cmd.arg("/tmp/composer.phar");
+    let mut cmd = try!(composer_cmd(ctx));
 
     if info.update { cmd.arg("update"); }
     else { cmd.arg("install"); }
@@ -99,10 +117,6 @@ pub fn composer_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    if ctx.binary_ident.contains("ubuntu") {
-        ctx.composer_settings.engine_exe = Some("php5".to_owned());
-    }
-
     ctx.add_ensure_dir(Path::new("/tmp/composer/vendor"));
     let args = vec!(
         "/bin/ln".to_owned(),
@@ -123,14 +137,11 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
 }
 
 pub fn list(ctx: &mut Context) -> Result<(), StepError> {
-    let engine_exe = composer_engine(ctx);
-    let args = vec!(
-        engine_exe,
-        "/tmp/composer.phar".to_owned(),
-        "show".to_string(),
-        "-i".to_string(),
-    );
-    try!(capture_command(ctx, &args, &[])
+    let mut cmd = try!(composer_cmd(ctx));
+    cmd.arg("show");
+    cmd.arg("-i");
+
+    try!(capture_stdout(cmd)
         .and_then(|out| {
             File::create("/vagga/container/composer-list.txt")
             .and_then(|mut f| f.write_all(&out))
