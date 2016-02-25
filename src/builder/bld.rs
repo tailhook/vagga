@@ -365,12 +365,6 @@ impl BuildCommand for Builder {
             }
             &B::ComposerConfig(ref composer_settings) => {
                 guard.ctx.composer_settings = composer_settings.clone();
-                if build &&
-                    composer_settings.engine == "hhvm" &&
-                    composer_settings.engine_exe.is_none()
-                {
-                    try!(composer::setup_hhvm(&mut guard.distro, &mut guard.ctx));
-                }
             }
             &B::ComposerInstall(ref pkgs) => {
                 try!(composer::configure(&mut guard.ctx));

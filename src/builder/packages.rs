@@ -5,12 +5,10 @@ use super::commands::generic::run_command_at_env;
 use super::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
+use builder::commands::composer;
 use file_util::{copy, create_dir};
 
 pub use self::Package::*;
-
-const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
-
 
 // All packages should be installed as build dependency except specified
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -29,8 +27,8 @@ pub enum Package {
     NodeJsDev,
     Npm,
 
-    PHP,
-    HHVM,
+    Php,
+    PhpDev,
     Composer,
 
     Git,
@@ -59,37 +57,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     .map_err(|e| format!("Error copying pip: {}", e)));
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
-            Composer => {
-                let composer_home = Path::new("/vagga/root/usr/lib/composer");
-                try_msg!(create_dir(&composer_home, true),
-                     "Error creating composer home dir {d:?}: {err}", d=composer_home);
-
-                let composer_inst = try!(download::download_file(ctx, COMPOSER_BOOTSTRAP));
-                try!(copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
-                    .map_err(|e| format!("Error copying composer: {}", e)));
-
-                let engine_exe = {
-                    if let Some(ref exe) = ctx.composer_settings.engine_exe {
-                        vec!(exe.to_owned())
-                    } else {
-                        vec!(
-                            "/usr/bin/env".to_owned(),
-                            ctx.composer_settings.engine.clone()
-                        )
-                    }
-                };
-
-                let args = {
-                    let mut args = engine_exe;
-                    args.extend(vec![
-                        "/tmp/composer-setup.php".to_owned(),
-                        "--install-dir=/tmp/".to_owned(),
-                    ]);
-                    args
-                };
-
-                try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
-            }
+            Composer => try!(composer::bootstrap(ctx)),
             _ => {
                 left.push(i);
                 continue;

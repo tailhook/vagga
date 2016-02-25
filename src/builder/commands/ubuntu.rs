@@ -265,11 +265,11 @@ impl Ubuntu {
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
             packages::Npm => Some(vec!()),
-            packages::PHP if self.has_php7() => {
+            packages::Php if self.has_php7() => {
                 Some(vec!("php7", "php7-cli"))
             }
-            packages::PHP => Some(vec!("php5", "php5-cli")),
-            packages::HHVM => Some(vec!("hhvm")),
+            packages::Php => Some(vec!("php5", "php5-cli")),
+            packages::PhpDev => Some(vec!()),
             packages::Composer => None,
             packages::Git => Some(vec!()),
             packages::Mercurial => Some(vec!()),
@@ -411,8 +411,8 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::NodeJs => Some(vec!()),
         packages::NodeJsDev => Some(vec!("nodejs-dev")),
         packages::Npm => Some(vec!("npm")),
-        packages::PHP => Some(vec!("php5-dev")),
-        packages::HHVM => Some(vec!("hhvm-dev")),
+        packages::Php => Some(vec!()),
+        packages::PhpDev => Some(vec!("php5-dev")),
         packages::Composer => None,
         packages::Git => Some(vec!("git")),
         packages::Mercurial => Some(vec!("hg")),

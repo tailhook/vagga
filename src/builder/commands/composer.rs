@@ -10,22 +10,21 @@ use super::generic::run_command;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use builder::commands::ubuntu::{self, Ubuntu};
-use config::builders::{ComposerSettings, ComposerReqInfo, AptKey, UbuntuRepoInfo};
+use builder::download;
+use config::builders::{ComposerSettings, ComposerReqInfo};
 use process_util::capture_stdout;
+use file_util::{copy, create_dir};
 
-const HHVM_APT_KEY: &'static str = "5a16e7281be7a449";
-const HHVM_REPO_URL: &'static str = "http://dl.hhvm.com/ubuntu";
-const HHVM_REPO_FOR_DISTRO: &'static [(&'static str, &'static str)] = &[
-    ("precise", "precise-lts-3.6"),
-];
+const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
+const COMPOSER_HOME: &'static str = "/usr/local/lib/composer";
+const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
 
 
 impl Default for ComposerSettings {
     fn default() -> Self {
         ComposerSettings {
-            engine: "php".to_owned(),
-            engine_exe: None,
+            install_runtime: true,
+            runtime_exe: None,
         }
     }
 }
@@ -36,10 +35,9 @@ fn scan_features(settings: &ComposerSettings, _prefer_dist: bool)
     let mut res = vec!();
     res.push(packages::BuildEssential);
     res.push(packages::Composer);
-    if settings.engine == "php" {
-        res.push(packages::PHP);
-    } else {
-        res.push(packages::HHVM);
+    if settings.install_runtime {
+        res.push(packages::Php);
+        res.push(packages::PhpDev)
     }
     // Probably it's not it worth trying to figure out whether we need Git or Mercurial and it is
     // more likely that a php project is using Git, therefore it is reasonable to simply assume we
@@ -49,29 +47,18 @@ fn scan_features(settings: &ComposerSettings, _prefer_dist: bool)
 }
 
 fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
-    let mut cmd =
-        if let Some(ref exe) = ctx.composer_settings.engine_exe {
-            try!(command(ctx, exe))
-        } else {
-            let mut cmd = try!(command(ctx, "/usr/bin/env"));
-            if ctx.composer_settings.engine == "php" {
-                cmd.arg("php");
-            } else if ctx.composer_settings.engine == "hhvm" {
-                cmd.arg("hhvm");
-            } else {
-                unreachable!();
-            }
-            cmd
-        };
-
+    let runtime = ctx.composer_settings
+        .runtime_exe
+        .clone()
+        .unwrap_or(DEFAULT_RUNTIME.to_owned());
+    let mut cmd = try!(command(ctx, runtime));
     cmd.arg("/tmp/composer.phar");
-
     Ok(cmd)
 }
 
 pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
-    -> Result<(), StepError>
+    -> Result<(), String>
 {
     let features = scan_features(&ctx.composer_settings, true);
 
@@ -84,7 +71,15 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     let mut cmd = try!(composer_cmd(ctx));
     cmd.args(&["global", "require", "--prefer-dist"]);
     cmd.args(pkgs);
-    run(cmd)
+    try!(run(cmd));
+
+    // link package binaries into /usr/local/bin to be available in PATH
+    let args = vec!(
+        "/bin/ln".to_owned(),
+        "-s".to_owned(),
+        "/usr/lib/composer/vendor/bin/*".to_owned(),
+        "/usr/local/bin/".to_owned());
+    run_command(ctx, &args)
 }
 
 pub fn composer_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
@@ -114,7 +109,7 @@ pub fn composer_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    ctx.add_ensure_dir(Path::new("/tmp/composer/vendor"));
+    ctx.add_ensure_dir(Path::new("/usr/lib/composer/vendor"));
     let args = vec!(
         "/bin/ln".to_owned(),
         "-s".to_owned(),
@@ -133,37 +128,26 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
-pub fn setup_hhvm(distro: &mut Box<Distribution>, ctx: &mut Context)
-    -> Result<(), StepError>
-{
-    let mut ubuntu = try!(distro.downcast_mut::<Ubuntu>().ok_or(
-        StepError::UnsupportedFeatures(vec![packages::HHVM])
-    ));
+pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
+    try_msg!(create_dir(COMPOSER_HOME, true),
+         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
 
-    let apt_key = AptKey {
-        server: None,
-        keys: vec![HHVM_APT_KEY.to_owned()],
-    };
+    let composer_inst = try!(download::download_file(ctx, COMPOSER_BOOTSTRAP));
+    try!(copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
+        .map_err(|e| format!("Error copying composer installer: {}", e)));
 
-    try!(ubuntu.add_apt_key(ctx, &apt_key));
-    let codename = try!(ubuntu::read_ubuntu_codename());
+    let runtime_exe = ctx.composer_settings
+        .runtime_exe
+        .clone()
+        .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
-    let suite = HHVM_REPO_FOR_DISTRO.iter()
-        .filter(|&&(d, _)| d == codename)
-        .map(|&(_, r)| r.to_owned())
-        .next()
-        .unwrap_or(codename);
+    let args = [
+        runtime_exe,
+        "/tmp/composer-setup.php".to_owned(),
+        "--install-dir=/tmp/".to_owned(),
+    ];
 
-    let repo_info = UbuntuRepoInfo {
-        url: HHVM_REPO_URL.to_owned(),
-        suite: suite,
-        components: vec!["main".to_owned()],
-    };
-
-    try!(ubuntu.add_debian_repo(ctx, &repo_info));
-    try!(ubuntu.ensure_packages(ctx, &[packages::HHVM]));
-
-    Ok(())
+    run_command(ctx, &args)
 }
 
 pub fn list(ctx: &mut Context) -> Result<(), StepError> {

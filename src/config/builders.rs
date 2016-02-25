@@ -95,8 +95,9 @@ pub struct NpmSettings {
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct ComposerSettings {
-    pub engine: String,
-    pub engine_exe: Option<String>,
+    // It is used 'runtime' instead of 'php' in order to support hhvm in the future
+    pub install_runtime: bool,
+    pub runtime_exe: Option<String>,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -378,8 +379,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
 
     // Composer
     .option("ComposerConfig", V::Structure::new()
-        .member("engine", V::Scalar::new().default("php"))
-        .member("engine-exe", V::Scalar::new().optional()))
+        .member("install_runtime", V::Scalar::new().default(true))
+        .member("runtime_exe", V::Scalar::new().default("/usr/bin/php")))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
     .option("ComposerRequirements", V::Structure::new()
         .member("dev", V::Scalar::new().default(true))

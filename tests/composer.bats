@@ -11,6 +11,7 @@ teardown() {
 # php
 
 @test "composer: php ubuntu trusty" {
+    skip
     run vagga _run php-ubuntu-trusty php5 /composer/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -20,6 +21,7 @@ teardown() {
 }
 
 @test "composer: php ubuntu precise" {
+    skip
     run vagga _run php-ubuntu-precise php5 /composer/bin/tester .
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -38,6 +40,7 @@ teardown() {
 }
 
 @test "composer: php alpine 3.2" {
+    skip
     run vagga _run php-alpine-3-2 php /composer/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -56,6 +59,7 @@ teardown() {
 }
 
 @test "composer: php ComposerRequirements dev" {
+    skip
     run vagga _run php-composer-dev-deps php /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -69,6 +73,7 @@ teardown() {
 # hhvm
 
 @test "composer: hhvm ubuntu trusty" {
+    skip
     run vagga _run hhvm-ubuntu-trusty hhvm /composer/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -77,16 +82,8 @@ teardown() {
     [[ $link = ".roots/hhvm-ubuntu-trusty.b4c3809b/root" ]]
 }
 
-@test "composer: hhvm ubuntu precise" {
-    run vagga _run hhvm-ubuntu-precise hhvm /composer/bin/tester .
-    printf "%s\n" "${lines[@]}"
-    [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "No tests found" ]]
-    link=$(readlink .vagga/hhvm-ubuntu-precise)
-    [[ $link = ".roots/hhvm-ubuntu-precise.2ae4c071/root" ]]
-}
-
 @test "composer: hhvm ComposerRequirements" {
+    skip
     run vagga _run hhvm-composer-deps hhvm /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -96,6 +93,7 @@ teardown() {
 }
 
 @test "composer: hhvm ComposerRequirements dev" {
+    skip
     run vagga _run hhvm-composer-dev-deps hhvm /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -103,12 +101,4 @@ teardown() {
     [[ -f vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/hhvm-composer-dev-deps)
     [[ $link = ".roots/hhvm-composer-dev-deps.4699733f/root" ]]
-}
-
-@test "composer: hhvm alpine fail" {
-    run vagga _build hhvm-alpine-fail
-    printf "%s\n" "${lines[@]}"
-    [[ "$output" = *"current linux distribution does not support features: [HHVM]"* ]]
-    [[ $status = 121 ]]
-    [[ ! -d .vagga/hhvm-alpine-fail ]]
 }
