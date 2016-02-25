@@ -68,18 +68,25 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                 try!(copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
                     .map_err(|e| format!("Error copying composer: {}", e)));
 
-                let engine_exe = if ctx.composer_settings.engine == "php" {
-                    "php"
-                } else {
-                    "hhvm"
+                let engine_exe = {
+                    if let Some(ref exe) = ctx.composer_settings.engine_exe {
+                        vec!(exe.to_owned())
+                    } else {
+                        vec!(
+                            "/usr/bin/env".to_owned(),
+                            ctx.composer_settings.engine.clone()
+                        )
+                    }
                 };
 
-                let args = vec!(
-                    "/usr/bin/env".to_owned(),
-                    engine_exe.to_owned(),
-                    "/tmp/composer-setup.php".to_owned(),
-                    "--install-dir=/tmp/".to_owned(),
-                    );
+                let args = {
+                    let mut args = engine_exe;
+                    args.extend(vec![
+                        "/tmp/composer-setup.php".to_owned(),
+                        "--install-dir=/tmp/".to_owned(),
+                    ]);
+                    args
+                };
 
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }

@@ -10,8 +10,13 @@ use super::generic::run_command;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use config::builders::{ComposerSettings, ComposerReqInfo};
+use builder::commands::ubuntu::{self, Ubuntu};
+use config::builders::{ComposerSettings, ComposerReqInfo, AptKey, UbuntuRepoInfo};
 use process_util::capture_stdout;
+
+const HHVM_APT_KEY: &'static str = "5a16e7281be7a449";
+const HHVM_REPO_URL: &'static str = "http://dl.hhvm.com/ubuntu";
+
 
 impl Default for ComposerSettings {
     fn default() -> Self {
@@ -37,18 +42,6 @@ fn scan_features(settings: &ComposerSettings, _prefer_dist: bool)
     // always need Git
     res.push(packages::Git);
     return res;
-}
-
-fn composer_engine(ctx: &mut Context) -> String {
-    if let Some(ref exe) = ctx.composer_settings.engine_exe {
-        exe.to_owned()
-    } else if ctx.composer_settings.engine == "php" {
-        "php".to_owned()
-    } else if ctx.composer_settings.engine == "hhvm" {
-        "hhvm".to_owned()
-    } else {
-        unreachable!();
-    }
 }
 
 fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
@@ -132,6 +125,33 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
                        "/usr/lib/composer".to_owned());
     ctx.environ.insert("COMPOSER_CACHE_DIR".to_owned(),
                        "/tmp/composer-cache".to_owned());
+
+    Ok(())
+}
+
+pub fn setup_hhvm(distro: &mut Box<Distribution>, ctx: &mut Context)
+    -> Result<(), StepError>
+{
+    let mut ubuntu = try!(distro.downcast_mut::<Ubuntu>().ok_or(
+        StepError::UnsupportedFeatures(vec![packages::HHVM])
+    ));
+
+    let apt_key = AptKey {
+        server: None,
+        keys: vec![HHVM_APT_KEY.to_owned()],
+    };
+
+    try!(ubuntu.add_apt_key(ctx, &apt_key));
+    let codename = try!(ubuntu::read_ubuntu_codename());
+
+    let repo_info = UbuntuRepoInfo {
+        url: HHVM_REPO_URL.to_owned(),
+        suite: codename,
+        components: vec!["main".to_owned()],
+    };
+
+    try!(ubuntu.add_debian_repo(ctx, &repo_info));
+    try!(ubuntu.ensure_packages(ctx, &[packages::HHVM]));
 
     Ok(())
 }

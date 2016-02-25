@@ -269,7 +269,7 @@ impl Ubuntu {
                 Some(vec!("php7", "php7-cli"))
             }
             packages::PHP => Some(vec!("php5", "php5-cli")),
-            packages::HHVM => Some(vec!()),
+            packages::HHVM => Some(vec!("hhvm")),
             packages::Composer => None,
             packages::Git => Some(vec!()),
             packages::Mercurial => Some(vec!()),
@@ -412,7 +412,7 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::NodeJsDev => Some(vec!("nodejs-dev")),
         packages::Npm => Some(vec!("npm")),
         packages::PHP => Some(vec!()),
-        packages::HHVM => Some(vec!()),
+        packages::HHVM => Some(vec!("hhvm-dev")),
         packages::Composer => None,
         packages::Git => Some(vec!("git")),
         packages::Mercurial => Some(vec!("hg")),
