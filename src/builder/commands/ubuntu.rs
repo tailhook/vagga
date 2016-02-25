@@ -411,7 +411,7 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::NodeJs => Some(vec!()),
         packages::NodeJsDev => Some(vec!("nodejs-dev")),
         packages::Npm => Some(vec!("npm")),
-        packages::PHP => Some(vec!()),
+        packages::PHP => Some(vec!("php5-dev")),
         packages::HHVM => Some(vec!("hhvm-dev")),
         packages::Composer => None,
         packages::Git => Some(vec!("git")),

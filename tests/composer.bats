@@ -43,7 +43,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3-2)
-    [[ $link = ".roots/php-alpine-3-2.471f38eb/root" ]]
+    [[ $link = ".roots/php-alpine-3-2.e4506fdc/root" ]]
 }
 
 @test "composer: php ComposerRequirements" {
@@ -78,7 +78,6 @@ teardown() {
 }
 
 @test "composer: hhvm ubuntu precise" {
-    skip
     run vagga _run hhvm-ubuntu-precise hhvm /composer/bin/tester .
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]

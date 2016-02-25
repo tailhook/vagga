@@ -16,6 +16,9 @@ use process_util::capture_stdout;
 
 const HHVM_APT_KEY: &'static str = "5a16e7281be7a449";
 const HHVM_REPO_URL: &'static str = "http://dl.hhvm.com/ubuntu";
+const HHVM_REPO_FOR_DISTRO: &'static [(&'static str, &'static str)] = &[
+    ("precise", "precise-lts-3.6"),
+];
 
 
 impl Default for ComposerSettings {
@@ -31,6 +34,7 @@ fn scan_features(settings: &ComposerSettings, _prefer_dist: bool)
     -> Vec<packages::Package>
 {
     let mut res = vec!();
+    res.push(packages::BuildEssential);
     res.push(packages::Composer);
     if settings.engine == "php" {
         res.push(packages::PHP);
@@ -144,9 +148,15 @@ pub fn setup_hhvm(distro: &mut Box<Distribution>, ctx: &mut Context)
     try!(ubuntu.add_apt_key(ctx, &apt_key));
     let codename = try!(ubuntu::read_ubuntu_codename());
 
+    let suite = HHVM_REPO_FOR_DISTRO.iter()
+        .filter(|&&(d, _)| d == codename)
+        .map(|&(_, r)| r.to_owned())
+        .next()
+        .unwrap_or(codename);
+
     let repo_info = UbuntuRepoInfo {
         url: HHVM_REPO_URL.to_owned(),
-        suite: codename,
+        suite: suite,
         components: vec!["main".to_owned()],
     };
 
