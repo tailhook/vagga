@@ -102,7 +102,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     [[ -f vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/hhvm-composer-dev-deps)
-    [[ $link = ".roots/hhvm-composer-dev-deps.0108a157/root" ]]
+    [[ $link = ".roots/hhvm-composer-dev-deps.4699733f/root" ]]
 }
 
 @test "composer: hhvm alpine fail" {
