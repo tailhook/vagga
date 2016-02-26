@@ -32,7 +32,6 @@ containers:
     - !ComposerRequirements
 
   # hhvm
-
   hhvm-base:
     setup:
     - !Ubuntu trusty
