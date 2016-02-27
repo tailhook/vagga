@@ -90,3 +90,8 @@ a pull request to add your example here.
     __ https://github.com/sashasimkin/xrandom/blob/master/vagga.yaml
     .. _elasticsearch: https://www.elastic.co/products/elasticsearch
     .. _hard way: https://github.com/sashasimkin/xrandom/blob/541584058dea6211a60c80327eccc70373914d8a/README.md#the-hard-way
+
+* `A collection of examples from Andrea Ferretti`__ includes nim, ocaml, scala
+  and more.
+
+    __ https://github.com/andreaferretti/vagga-examples
