@@ -1,6 +1,15 @@
-========
-Examples
-========
+======================
+Examples and Tutorials
+======================
+
+Tutorials
+=========
+
+.. toctree::
+   :maxdepth: 1
+
+   what_is_vagga
+   examples/tutorials/django
 
 
 By Category
