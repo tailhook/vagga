@@ -4,6 +4,7 @@ use std::path::Path;
 
 use unshare::{Command, Stdio};
 use rand::{thread_rng, Rng};
+use regex::Regex;
 
 use super::super::super::file_util::create_dir;
 use super::super::context::{Context};
@@ -15,6 +16,7 @@ use builder::error::StepError;
 
 
 pub static LATEST_VERSION: &'static str = "v3.3";
+static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 
@@ -122,10 +124,20 @@ pub fn choose_mirror() -> String {
     return mirror.to_string();
 }
 
+fn check_version(version: &String) -> Result<(), String> {
+    let version_regex = try!(Regex::new(ALPINE_VERSION_REGEX)
+                             .map_err(|e| format!("{}", e)));
+    match version_regex.is_match(&version) {
+        true => Ok(()),
+        false => Err(format!("Error checking alpine version: '{}'", version).to_string()),
+    }
+}
+
 fn setup_base(ctx: &mut Context, version: &String)
     -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
+    try!(check_version(version));
     try_msg!(create_dir("/vagga/root/etc/apk", true),
         "Error creating apk dir: {err}");
     let mirror = ctx.settings.alpine_mirror.clone()
