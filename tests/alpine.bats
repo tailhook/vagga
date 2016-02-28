@@ -8,6 +8,13 @@ setup() {
     [[ $link = ".roots/v31.f87ff413/root" ]]
 }
 
+@test "alpine: Check version" {
+    run vagga _build alpine-check-version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *"Error checking alpine version"* ]]
+}
+
 @test "alpine: Run echo command" {
     run vagga echo-cmd hello
     printf "%s\n" "${lines[@]}"
