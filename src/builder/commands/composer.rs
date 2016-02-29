@@ -87,7 +87,7 @@ pub fn composer_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
     match info.prefer {
         Some(ref p) if !["source", "dist"].contains(&p.as_ref()) => {
             return Err(From::from(format!(
-                "Value of 'ComposerRequirements.prefer' must be either \
+                "Value of 'ComposerDependencies.prefer' must be either \
                 'source' or 'dist', '{}' given", p
             )))
         }
