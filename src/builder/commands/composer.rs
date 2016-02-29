@@ -157,13 +157,23 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
 pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     let mut cmd = try!(composer_cmd(ctx));
     cmd.arg("show");
-    cmd.arg("-i");
 
     try!(capture_stdout(cmd)
         .and_then(|out| {
             File::create("/vagga/container/composer-list.txt")
             .and_then(|mut f| f.write_all(&out))
-            .map_err(|e| format!("Error dumping package list: {}", e))
+            .map_err(|e| format!("Error dumping composer package list: {}", e))
+        }));
+
+    let mut cmd = try!(composer_cmd(ctx));
+    cmd.arg("global");
+    cmd.arg("show");
+
+    try!(capture_stdout(cmd)
+        .and_then(|out| {
+            File::create("/vagga/container/composer-list-global.txt")
+            .and_then(|mut f| f.write_all(&out))
+            .map_err(|e| format!("Error dumping composer package list: {}", e))
         }));
 
     Ok(())
