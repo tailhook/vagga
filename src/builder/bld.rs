@@ -373,7 +373,7 @@ impl BuildCommand for Builder {
                         &mut guard.ctx, pkgs));
                 }
             }
-            &B::ComposerRequirements(ref info) => {
+            &B::ComposerDependencies(ref info) => {
                 try!(composer::configure(&mut guard.ctx));
                 if build {
                     try!(composer::composer_requirements(&mut guard.distro,

@@ -46,7 +46,7 @@ teardown() {
     [[ $link = ".roots/php-alpine-3-2.e4506fdc/root" ]]
 }
 
-@test "composer: php ComposerRequirements" {
+@test "composer: php ComposerDependencies" {
     run vagga _run php-composer-deps php /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -55,7 +55,7 @@ teardown() {
     [[ $link = ".roots/php-composer-deps.89ed1ffe/root" ]]
 }
 
-@test "composer: php ComposerRequirements dev" {
+@test "composer: php ComposerDependencies dev" {
     run vagga _run php-composer-dev-deps php /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -65,11 +65,11 @@ teardown() {
     [[ $link = ".roots/php-composer-dev-deps.0108a157/root" ]]
 }
 
-@test "composer: php ComposerRequirements wrong prefer" {
+@test "composer: php ComposerDependencies wrong prefer" {
     run vagga _build php-composer-deps-wrong-prefer
     printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
-    [[ $output = *"Value of 'ComposerRequirements.prefer' must be either 'source' or 'dist', 'wrong' given"* ]]
+    [[ $output = *"Value of 'ComposerDependencies.prefer' must be either 'source' or 'dist', 'wrong' given"* ]]
 }
 
 # hhvm
@@ -83,7 +83,7 @@ teardown() {
     [[ $link = ".roots/hhvm-ubuntu-trusty.82c9c640/root" ]]
 }
 
-@test "composer: hhvm ComposerRequirements" {
+@test "composer: hhvm ComposerDependencies" {
     run vagga _run hhvm-composer-deps hhvm /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -92,7 +92,7 @@ teardown() {
     [[ $link = ".roots/hhvm-composer-deps.2dc0dd96/root" ]]
 }
 
-@test "composer: hhvm ComposerRequirements dev" {
+@test "composer: hhvm ComposerDependencies dev" {
     run vagga _run hhvm-composer-dev-deps hhvm /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]

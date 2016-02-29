@@ -147,7 +147,7 @@ impl VersionHash for Builder {
                     }
                 })
             }
-            &B::ComposerRequirements(ref info) => {
+            &B::ComposerDependencies(ref info) => {
                 let path = Path::new("/work").join("composer.lock");
                 if path.exists() { try!(
                     File::open(&path).map_err(|e| Error::Io(e, path.clone()))

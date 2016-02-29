@@ -9,7 +9,7 @@ teardown() {
 
 # php
 
-@test "composer: php ComposerRequirements dev" {
+@test "composer: php ComposerDependencies dev" {
     run vagga _run php-composer-dev-deps php /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -23,7 +23,7 @@ teardown() {
 
 # hhvm
 
-@test "composer: hhvm ComposerRequirements dev" {
+@test "composer: hhvm ComposerDependencies dev" {
     run vagga _run hhvm-composer-dev-deps hhvm /work/vendor/bin/laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]

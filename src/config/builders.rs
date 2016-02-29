@@ -242,7 +242,7 @@ pub enum Builder {
     // -- PHP/HHVM --
     ComposerConfig(ComposerSettings),
     ComposerInstall(Vec<String>),
-    ComposerRequirements(ComposerReqInfo),
+    ComposerDependencies(ComposerReqInfo),
 }
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
@@ -383,7 +383,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("runtime_exe", V::Scalar::new().default("/usr/bin/php"))
         .member("install_dev", V::Scalar::new().default(false)))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
-    .option("ComposerRequirements", V::Structure::new()
+    .option("ComposerDependencies", V::Structure::new()
         .member("dev", V::Scalar::new().default(true))
         .member("prefer", V::Scalar::new().optional())
         .member("optimize_autoload", V::Scalar::new().default(false)))

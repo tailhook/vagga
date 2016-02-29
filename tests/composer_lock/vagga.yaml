@@ -3,7 +3,7 @@ containers:
   php-composer-dev-deps:
     setup:
     - !Alpine v3.3
-    - !ComposerRequirements
+    - !ComposerDependencies
 
   # hhvm
   hhvm-base:
@@ -23,6 +23,6 @@ containers:
   hhvm-composer-dev-deps:
     setup:
     - !Container hhvm-base
-    - !ComposerRequirements
+    - !ComposerDependencies
     environ:
       HHVM_REPO_CENTRAL_PATH: /run/hhvm.hhbc

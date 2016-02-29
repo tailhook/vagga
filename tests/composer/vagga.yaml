@@ -24,17 +24,17 @@ containers:
   php-composer-deps:
     setup:
     - !Alpine v3.3
-    - !ComposerRequirements { dev: false }
+    - !ComposerDependencies { dev: false }
 
   php-composer-dev-deps:
     setup:
     - !Alpine v3.3
-    - !ComposerRequirements
+    - !ComposerDependencies
 
   php-composer-deps-wrong-prefer:
     setup:
     - !Alpine v3.3
-    - !ComposerRequirements
+    - !ComposerDependencies
       prefer: wrong
 
   # hhvm
@@ -62,11 +62,11 @@ containers:
   hhvm-composer-deps:
     setup:
     - !Container hhvm-base
-    - !ComposerRequirements { dev: false }
+    - !ComposerDependencies { dev: false }
     environ: *hhvm-environ
 
   hhvm-composer-dev-deps:
     setup:
     - !Container hhvm-base
-    - !ComposerRequirements
+    - !ComposerDependencies
     environ: *hhvm-environ
