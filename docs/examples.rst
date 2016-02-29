@@ -1,10 +1,19 @@
-========
-Examples
-========
+======================
+Examples and Tutorials
+======================
+
+Tutorials
+=========
+
+.. toctree::
+   :maxdepth: 1
+
+   what_is_vagga
+   examples/tutorials/django
 
 
-By Category
-===========
+Examples By Category
+====================
 
 Bellow is a list of sample configs from `vagga/examples
 <https://github.com/tailhook/vagga/tree/master/examples>`_. To run any of them
@@ -39,6 +48,14 @@ Documentation
    :maxdepth: 1
 
    examples/doc/sphinx
+
+External Links
+--------------
+
+* `A collection of examples from Andrea Ferretti`__. Includes nim, ocaml, scala
+  and more.
+
+    __ https://github.com/andreaferretti/vagga-examples
 
 
 Real World Examples

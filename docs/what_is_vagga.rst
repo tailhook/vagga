@@ -1,6 +1,6 @@
-========
-Tutorial
-========
+===========
+Entry Point
+===========
 
 Vagga is a tool to create development environments. In particular it is
 able to:
