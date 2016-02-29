@@ -148,6 +148,21 @@ impl VersionHash for Builder {
                 })
             }
             &B::ComposerRequirements(ref info) => {
+                let path = Path::new("/work").join("composer.lock");
+                if path.exists() { try!(
+                    File::open(&path).map_err(|e| Error::Io(e, path.clone()))
+                    .and_then(|mut f| Json::from_reader(&mut f)
+                        .map_err(|e| Error::Json(e, path.to_path_buf())))
+                    .map(|data| {
+                        data.find("hash").map(
+                            |h| h.as_string().map(|h| hash.input(h.as_bytes()))
+                        );
+                        data.find("content-hash").map(
+                            |h| h.as_string().map(|h| hash.input(h.as_bytes()))
+                        );
+                    })
+                );}
+
                 let path = Path::new("/work").join("composer.json");
                 File::open(&path).map_err(|e| Error::Io(e, path.clone()))
                 .and_then(|mut f| Json::from_reader(&mut f)
@@ -155,6 +170,10 @@ impl VersionHash for Builder {
                 .map(|data| {
                     // just use `npm_hash_deps` here for the structure is equal
                     npm_hash_deps(&data, "require", hash);
+                    npm_hash_deps(&data, "conflict", hash);
+                    npm_hash_deps(&data, "replace", hash);
+                    npm_hash_deps(&data, "provide", hash);
+                    npm_hash_deps(&data, "suggest", hash);
                     // "autoload" and "repositories" can be quite complex, just hash everything
                     hash_json(&data, "autoload", hash);
                     hash_json(&data, "repositories", hash);

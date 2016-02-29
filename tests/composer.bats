@@ -63,7 +63,13 @@ teardown() {
     [[ -f vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/php-composer-dev-deps)
     [[ $link = ".roots/php-composer-dev-deps.0108a157/root" ]]
+}
 
+@test "composer: php ComposerRequirements wrong prefer" {
+    run vagga _build php-composer-deps-wrong-prefer
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *"Value of 'ComposerRequirements.prefer' must be either 'source' or 'dist', 'wrong' given"* ]]
 }
 
 # hhvm
@@ -74,7 +80,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/hhvm-ubuntu-trusty)
-    [[ $link = ".roots/hhvm-ubuntu-trusty.76604d51/root" ]]
+    [[ $link = ".roots/hhvm-ubuntu-trusty.82c9c640/root" ]]
 }
 
 @test "composer: hhvm ComposerRequirements" {
@@ -83,7 +89,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/hhvm-composer-deps)
-    [[ $link = ".roots/hhvm-composer-deps.5a0a4f31/root" ]]
+    [[ $link = ".roots/hhvm-composer-deps.2dc0dd96/root" ]]
 }
 
 @test "composer: hhvm ComposerRequirements dev" {
@@ -93,5 +99,5 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     [[ -f vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/hhvm-composer-dev-deps)
-    [[ $link = ".roots/hhvm-composer-dev-deps.6b4c28db/root" ]]
+    [[ $link = ".roots/hhvm-composer-dev-deps.6b3887d3/root" ]]
 }

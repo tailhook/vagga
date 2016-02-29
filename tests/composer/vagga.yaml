@@ -31,6 +31,12 @@ containers:
     - !Alpine v3.3
     - !ComposerRequirements
 
+  php-composer-deps-wrong-prefer:
+    setup:
+    - !Alpine v3.3
+    - !ComposerRequirements
+      prefer: wrong
+
   # hhvm
   hhvm-base:
     setup:

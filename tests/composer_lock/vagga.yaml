@@ -1,0 +1,28 @@
+containers:
+  # php
+  php-composer-dev-deps:
+    setup:
+    - !Alpine v3.3
+    - !ComposerRequirements
+
+  # hhvm
+  hhvm-base:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !AptTrust keys: [5a16e7281be7a449]
+    - !UbuntuRepo
+      url: http://dl.hhvm.com/ubuntu
+      suite: trusty
+      components: [main]
+    - !Install [hhvm]
+    - !ComposerConfig
+      install_runtime: false
+      runtime_exe: /usr/bin/hhvm
+
+  hhvm-composer-dev-deps:
+    setup:
+    - !Container hhvm-base
+    - !ComposerRequirements
+    environ:
+      HHVM_REPO_CENTRAL_PATH: /run/hhvm.hhbc
