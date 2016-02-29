@@ -1,0 +1,12 @@
+{
+  "name": "something",
+  "version": "1.0.0",
+  "description": "",
+  "type": "project",
+  "require": {
+    "laravel/installer": "~1.3"
+  },
+  "require-dev": {
+    "nette/tester": "~1.7"
+  }
+}

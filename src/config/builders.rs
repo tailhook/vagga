@@ -98,6 +98,7 @@ pub struct ComposerSettings {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
     pub install_runtime: bool,
     pub runtime_exe: Option<String>,
+    pub install_dev: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -168,7 +169,6 @@ pub struct NpmDepInfo {
 pub struct ComposerReqInfo {
     pub dev: bool,
     pub prefer: Option<String>,
-    pub update: bool,
     pub optimize_autoload: bool,
 }
 
@@ -380,11 +380,11 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     // Composer
     .option("ComposerConfig", V::Structure::new()
         .member("install_runtime", V::Scalar::new().default(true))
-        .member("runtime_exe", V::Scalar::new().default("/usr/bin/php")))
+        .member("runtime_exe", V::Scalar::new().default("/usr/bin/php"))
+        .member("install_dev", V::Scalar::new().default(false)))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
     .option("ComposerRequirements", V::Structure::new()
         .member("dev", V::Scalar::new().default(true))
         .member("prefer", V::Scalar::new().optional())
-        .member("update", V::Scalar::new().default(false))
         .member("optimize_autoload", V::Scalar::new().default(false)))
 }
