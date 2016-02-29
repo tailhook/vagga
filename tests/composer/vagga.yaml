@@ -31,6 +31,12 @@ containers:
     - !Alpine v3.3
     - !ComposerDependencies
 
+  php-composer-deps-prefer-dist:
+    setup:
+    - !Alpine v3.3
+    - !ComposerDependencies
+      prefer: dist
+
   php-composer-deps-wrong-prefer:
     setup:
     - !Alpine v3.3

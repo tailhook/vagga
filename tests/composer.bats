@@ -65,6 +65,15 @@ teardown() {
     [[ $link = ".roots/php-composer-dev-deps.0108a157/root" ]]
 }
 
+@test "composer: php ComposerDependencies prefer dist" {
+    run vagga _run php-composer-deps-prefer-dist php /work/vendor/bin/laravel --version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    link=$(readlink .vagga/php-composer-deps-prefer-dist)
+    [[ $link = ".roots/php-composer-deps-prefer-dist.0108a157/root" ]]
+}
+
 @test "composer: php ComposerDependencies wrong prefer" {
     run vagga _build php-composer-deps-wrong-prefer
     printf "%s\n" "${lines[@]}"
