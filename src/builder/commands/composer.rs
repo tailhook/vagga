@@ -73,7 +73,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     }
 
     let mut cmd = try!(composer_cmd(ctx));
-    cmd.args(&["global", "require", "--prefer-dist"]);
+    cmd.args(&["global", "require", "--prefer-dist", "--update-no-dev"]);
     cmd.args(pkgs);
     try!(run(cmd));
     Ok(())
