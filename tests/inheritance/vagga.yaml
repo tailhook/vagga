@@ -61,6 +61,17 @@ containers:
     setup:
     - !Container deep
 
+  c01: { setup: [!Alpine v3.1] }
+  c02: { setup: [!Container c01] }
+  c03: { setup: [!Container c02] }
+  c04: { setup: [!Container c03] }
+  c05: { setup: [!Container c04] }
+  c06: { setup: [!Container c05] }
+  c07: { setup: [!Container c06] }
+  c08: { setup: [!Container c07] }
+  c09: { setup: [!Container c08] }
+  c10: { setup: [!Container c09] }
+
 commands:
   echo: !Command
     container: base
@@ -93,3 +104,7 @@ commands:
     write-mode: transient-hard-link-copy
     run: |
       cat $(cat /var/dir.txt)/hello
+
+  ok: !Command
+    container: c10
+    run: echo 10

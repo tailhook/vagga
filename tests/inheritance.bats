@@ -60,3 +60,12 @@ setup() {
     link=$(readlink .vagga/hellocopy)
     [[ $link = ".roots/hellocopy.208979ad/root" ]]
 }
+
+@test "inheritance: Deep inheritance" {
+    run vagga ok
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "10" ]]
+    link=$(readlink .vagga/c10)
+    [[ $link = ".roots/c10.f87ff413/root" ]]
+}
