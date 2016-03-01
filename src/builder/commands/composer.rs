@@ -24,12 +24,13 @@ impl Default for ComposerSettings {
     fn default() -> Self {
         ComposerSettings {
             install_runtime: true,
+            install_dev: false,
             runtime_exe: None,
         }
     }
 }
 
-fn scan_features(settings: &ComposerSettings, install_dev: bool)
+fn scan_features(settings: &ComposerSettings)
     -> Vec<packages::Package>
 {
     let mut res = vec!();
@@ -37,8 +38,7 @@ fn scan_features(settings: &ComposerSettings, install_dev: bool)
     res.push(packages::Composer);
     if settings.install_runtime {
         res.push(packages::Php);
-
-        if install_dev {
+        if settings.install_dev {
             res.push(packages::BuildEssential);
             res.push(packages::PhpDev)
         }
@@ -65,7 +65,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    let features = scan_features(&ctx.composer_settings, false);
+    let features = scan_features(&ctx.composer_settings);
     try!(packages::ensure_packages(distro, ctx, &features));
 
     if pkgs.len() == 0 {
@@ -83,7 +83,7 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
     ctx: &mut Context, info: &ComposerDepInfo)
     -> Result<(), StepError>
 {
-    let features = scan_features(&ctx.composer_settings, info.dev);
+    let features = scan_features(&ctx.composer_settings);
     try!(packages::ensure_packages(distro, ctx, &features));
 
     let mut cmd = try!(composer_cmd(ctx));

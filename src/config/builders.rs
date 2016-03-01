@@ -97,6 +97,7 @@ pub struct NpmSettings {
 pub struct ComposerSettings {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
     pub install_runtime: bool,
+    pub install_dev: bool,
     pub runtime_exe: Option<String>,
 }
 
@@ -385,7 +386,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     // Composer
     .option("ComposerConfig", V::Structure::new()
         .member("install_runtime", V::Scalar::new().default(true))
-        .member("runtime_exe", V::Scalar::new().default("/usr/bin/php")))
+        .member("install_dev", V::Scalar::new().default(false))
+        .member("runtime_exe", V::Scalar::new().default("php")))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
     .option("ComposerDependencies", V::Structure::new()
         .member("working_dir", V::Scalar::new().optional())
