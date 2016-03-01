@@ -11,7 +11,7 @@ use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
 use builder::download;
-use config::builders::{ComposerSettings, ComposerReqInfo};
+use config::builders::{ComposerSettings, ComposerDepInfo};
 use process_util::capture_stdout;
 use file_util::{copy, create_dir};
 
@@ -25,12 +25,11 @@ impl Default for ComposerSettings {
         ComposerSettings {
             install_runtime: true,
             runtime_exe: None,
-            install_dev: false,
         }
     }
 }
 
-fn scan_features(settings: &ComposerSettings)
+fn scan_features(settings: &ComposerSettings, install_dev: bool)
     -> Vec<packages::Package>
 {
     let mut res = vec!();
@@ -39,7 +38,7 @@ fn scan_features(settings: &ComposerSettings)
     if settings.install_runtime {
         res.push(packages::Php);
 
-        if settings.install_dev {
+        if install_dev {
             res.push(packages::BuildEssential);
             res.push(packages::PhpDev)
         }
@@ -66,7 +65,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    let features = scan_features(&ctx.composer_settings);
+    let features = scan_features(&ctx.composer_settings, false);
     try!(packages::ensure_packages(distro, ctx, &features));
 
     if pkgs.len() == 0 {
@@ -80,32 +79,30 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     Ok(())
 }
 
-pub fn composer_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
-    info: &ComposerReqInfo)
+pub fn composer_dependencies(distro: &mut Box<Distribution>,
+    ctx: &mut Context, info: &ComposerDepInfo)
     -> Result<(), StepError>
 {
-    match info.prefer {
-        Some(ref p) if !["source", "dist"].contains(&p.as_ref()) => {
-            return Err(From::from(format!(
-                "Value of 'ComposerDependencies.prefer' must be either \
-                'source' or 'dist', '{}' given", p
-            )))
-        }
-        _ => {}
-    }
-
-    let features = scan_features(&ctx.composer_settings);
+    let features = scan_features(&ctx.composer_settings, info.dev);
     try!(packages::ensure_packages(distro, ctx, &features));
 
     let mut cmd = try!(composer_cmd(ctx));
     cmd.arg("install");
 
     if !info.dev { cmd.arg("--no-dev"); }
-    if info.optimize_autoload { cmd.arg("--optimize-autoload"); }
+    if info.ignore_platform_reqs { cmd.arg("--ignore-platform-reqs"); }
+    if info.no_autoloader { cmd.arg("--no_autoloader"); }
+    if info.no_scripts { cmd.arg("--no-scripts"); }
+    if info.no_plugins { cmd.arg("--no-plugins"); }
+    if info.optimize_autoloader { cmd.arg("--optimize-autoloader"); }
 
     match info.prefer {
-        Some(ref p) if p == "dist" => { cmd.arg("--prefer-dist"); }
-        Some(ref p) if p == "source" => { cmd.arg("--prefer-source"); }
+        Some(ref p) if p == "dist" => { cmd.arg("--prefer-dist"); },
+        Some(ref p) if p == "source" => { cmd.arg("--prefer-source"); },
+        Some(ref p) => return Err(From::from(format!(
+            "Value of 'ComposerDependencies.prefer' must be either \
+            'source' or 'dist', '{}' given", p
+        ))),
         _ => {}
     }
 

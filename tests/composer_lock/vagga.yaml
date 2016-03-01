@@ -1,6 +1,6 @@
 containers:
   # php
-  php-composer-dev-deps:
+  php-composer-deps-lock:
     setup:
     - !Alpine v3.3
     - !ComposerDependencies
@@ -20,7 +20,7 @@ containers:
       install_runtime: false
       runtime_exe: /usr/bin/hhvm
 
-  hhvm-composer-dev-deps:
+  hhvm-composer-deps-lock:
     setup:
     - !Container hhvm-base
     - !ComposerDependencies
