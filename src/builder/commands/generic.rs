@@ -130,7 +130,7 @@ pub fn run(mut cmd: Command) -> Result<(), StepError> {
 
     match cmd.status() {
         Ok(ref s) if s.success() => Ok(()),
-        Ok(s) => Err(StepError::CommandFailed(cmd, s)),
-        Err(e) => Err(StepError::CommandError(cmd, e)),
+        Ok(s) => Err(StepError::CommandFailed(Box::new(cmd), s)),
+        Err(e) => Err(StepError::CommandError(Box::new(cmd), e)),
     }
 }

@@ -1,19 +1,6 @@
-use std::fs::{File, create_dir_all, set_permissions, Permissions, remove_file};
-use std::fs::{symlink_metadata};
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
-
-use regex::Regex;
-use scan_dir::{ScanDir};
-
 use config::builders::Builder;
 use config::builders::Builder as B;
-use config::builders::Source as S;
-use config::read_config;
-use container::mount::{bind_mount, remount_ro};
-use container::util::{clean_dir, copy_dir};
-use super::super::path_util::ToRelative;
+use container::util::{clean_dir};
 use super::commands::ubuntu;
 use super::commands::alpine;
 use super::commands::generic;
@@ -21,161 +8,49 @@ use super::commands::pip;
 use super::commands::npm;
 use super::commands::vcs;
 use super::commands::download;
+use super::commands::subcontainer;
+use super::commands::copy;
+use super::commands::text;
+use super::commands::dirs;
+use super::commands::packaging;
 use super::tarcmd;
-use version::short_version;
 use builder::distrib::{DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
-use path_util::PathExt;
-use file_util::{create_dir_mode, create_dir, shallow_copy};
 
 
 pub trait BuildCommand {
     fn build(&self, ctx: &mut Guard, build: bool) -> Result<(), StepError>;
 }
 
-
 impl BuildCommand for Builder {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        use builder::error::StepError as E;
         match self {
             &B::Install(ref pkgs) => {
-                guard.ctx.packages.extend(pkgs.clone().into_iter());
-                for i in pkgs.iter() {
-                    guard.ctx.build_deps.remove(i);
-                }
-                if build {
-                    try!(guard.distro.install(&mut guard.ctx, pkgs));
-                }
+                try!(packaging::install(pkgs, guard, build))
             }
             &B::BuildDeps(ref pkgs) => {
-                for i in pkgs.iter() {
-                    if !guard.ctx.packages.contains(i) {
-                        guard.ctx.build_deps.insert(i.clone());
-                    }
-                }
-                if build {
-                    try!(guard.distro.install(&mut guard.ctx, pkgs));
-                }
+                try!(packaging::build_deps(pkgs, guard, build))
             }
             &B::Container(ref name) => {
-                let cont = guard.ctx.config.containers.get(name)
-                    .expect("Subcontainer not found");  // TODO
-                for b in cont.setup.iter() {
-                    try!(b.build(guard, false)
-                        .map_err(|e| E::SubStep(b.clone(), Box::new(e))));
-                }
-                if build {
-                    let version = try!(short_version(&cont, &guard.ctx.config)
-                        .map_err(|(s, e)| format!("step {}: {}", s, e)));
-                    let path = Path::new("/vagga/base/.roots")
-                        .join(format!("{}.{}", name, version)).join("root");
-                    try_msg!(copy_dir(&path, &Path::new("/vagga/root"),
-                                      None, None),
-                        "Error copying dir {p:?}: {err}", p=path);
-                }
+                try!(subcontainer::clone(name, guard, build))
             }
             &B::Build(ref binfo) => {
-                let ref name = binfo.container;
-                let cont = guard.ctx.config.containers.get(name)
-                    .expect("Subcontainer not found");  // TODO
-                if build {
-                    let version = try!(short_version(&cont, &guard.ctx.config)
-                        .map_err(|(s, e)| format!("step {}: {}", s, e)));
-                    let path = Path::new("/vagga/base/.roots")
-                        .join(format!("{}.{}", name, version)).join("root")
-                        .join(binfo.source.rel());
-                    if let Some(ref dest_rel) = binfo.path {
-                        let dest = Path::new("/vagga/root")
-                            .join(dest_rel.rel());
-                        try_msg!(copy_dir(&path, &dest, None, None),
-                            "Error copying dir {p:?}: {err}", p=path);
-                    } else if let Some(ref dest_rel) = binfo.temporary_mount {
-                        let dest = Path::new("/vagga/root")
-                            .join(dest_rel.rel());
-                        try_msg!(create_dir(&dest, false),
-                            "Error creating destination dir: {err}");
-                        try!(bind_mount(&path, &dest));
-                        try!(remount_ro(&dest));
-                        guard.ctx.mounted.push(dest);
-                    }
-                }
+                try!(subcontainer::build(binfo, guard, build))
             }
             &B::SubConfig(ref sconfig) => {
-                let path = match sconfig.source {
-                    S::Container(ref container) => {
-                        let cont = guard.ctx.config.containers.get(container)
-                            .expect("Subcontainer not found");  // TODO
-                        let version = try!(short_version(&cont, &guard.ctx.config)
-                            .map_err(|(s, e)| format!("step {}: {}", s, e)));
-                        Path::new("/vagga/base/.roots")
-                            .join(format!("{}.{}", container, version))
-                            .join("root").join(&sconfig.path)
-                    }
-                    S::Git(ref _git) => {
-                        unimplemented!();
-                    }
-                    S::Directory => {
-                        Path::new("/work").join(&sconfig.path)
-                    }
-                };
-                let subcfg = try!(read_config(&path));
-                let cont = subcfg.containers.get(&sconfig.container)
-                    .expect("Subcontainer not found");  // TODO
-                for b in cont.setup.iter() {
-                    try!(b.build(guard, build)
-                        .map_err(|e| E::SubStep(b.clone(), Box::new(e))));
-                }
+                try!(subcontainer::subconfig(sconfig, guard, build))
             }
             &B::Text(ref files) => {
                 if build {
-                    for (path, text) in files.iter() {
-                        let realpath = Path::new("/vagga/root")
-                            .join(path.rel());
-                        try!(File::create(&realpath)
-                            .and_then(|mut f| f.write_all(text.as_bytes()))
-                            .map_err(|e| format!("Can't create file: {}", e)));
-                        try!(set_permissions(&realpath,
-                            Permissions::from_mode(0o644))
-                            .map_err(|e| format!("Can't chmod file: {}", e)));
-                    }
+                    try!(text::write_text_files(files, guard))
                 }
             }
             &B::Copy(ref cinfo) => {
                 if build {
-                    let ref src = cinfo.source;
-                    let dest = Path::new("/vagga/root").join(cinfo.path.rel());
-                    let typ = try!(symlink_metadata(src)
-                        .map_err(|e| E::Write(src.into(), e)));
-                    if typ.is_dir() {
-                        try!(create_dir_mode(&dest, typ.permissions().mode())
-                            .map_err(|e| E::Write(dest.clone(), e)));
-                        let re = try!(Regex::new(&cinfo.ignore_regex));
-                        try!(ScanDir::all().walk(src, |iter| {
-                            for (entry, _) in iter {
-                                let fpath = entry.path();
-                                // We know that directory is inside
-                                // the source
-                                let path = fpath.rel_to(src).unwrap();
-                                // We know that it's decodable
-                                let strpath = path.to_str().unwrap();
-                                if re.is_match(strpath) {
-                                    continue;
-                                }
-                                let fdest = dest.join(path);
-                                try!(shallow_copy(&fpath, &fdest,
-                                        cinfo.owner_uid, cinfo.owner_gid)
-                                    .map_err(|e| E::Write(fdest, e)));
-                            }
-                            Ok(())
-                        }).map_err(E::ScanDir).and_then(|x| x));
-                    } else {
-                        try!(shallow_copy(&cinfo.source, &dest,
-                                          cinfo.owner_uid, cinfo.owner_gid)
-                             .map_err(|e| E::Write(dest.clone(), e)));
-                    }
+                    try!(copy::copy(cinfo, guard))
                 }
             }
             &B::Ubuntu(ref codename) => {
@@ -244,35 +119,14 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Remove(ref path) => {
-                let fpath = Path::new("/vagga/root").join(path.rel());
-                if fpath.is_dir() {
-                    try!(clean_dir(&fpath, true));
-                } else if fpath.exists() {
-                    try!(remove_file(&fpath)
-                        .map_err(|e| format!("Error removing file {:?}: {}",
-                                             &fpath, e)));
-                }
-                guard.ctx.add_remove_dir(&path);
+                try!(dirs::remove(path, guard))
             }
             &B::EmptyDir(ref path) => {
                 try!(clean_dir(path, false));
                 guard.ctx.add_empty_dir(&path);
             }
             &B::EnsureDir(ref path) => {
-                let fpath = Path::new("/vagga/root").join(path.rel());
-                try!(create_dir_all(&fpath)
-                    .map_err(|e| format!("Error creating dir: {}", e)));
-                try!(set_permissions(&fpath, Permissions::from_mode(0o755))
-                    .map_err(|e| format!("Error setting permissions: {}", e)));
-                for mount_point in guard.ctx.container_config.volumes.keys() {
-                    if path != mount_point && path.starts_with(mount_point) {
-                        warn!("{0:?} directory is in the volume: {1:?}.\n\t\
-                               {0:?} will be unaccessible inside the container.",
-                            path,
-                            mount_point);
-                    }
-                }
-                guard.ctx.add_ensure_dir(path);
+                try!(dirs::ensure(path, guard));
             }
             &B::CacheDirs(ref pairs) => {
                 for (k, v) in pairs.iter() {
@@ -307,11 +161,7 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Alpine(ref version) => {
-                try!(alpine::configure(&mut guard.distro, &mut guard.ctx,
-                    version));
-                if build {
-                    try!(guard.distro.bootstrap(&mut guard.ctx));
-                }
+                try!(alpine::setup(version, guard, build))
             }
             &B::PipConfig(ref pip_settings) => {
                 guard.ctx.pip_settings = pip_settings.clone();
