@@ -88,7 +88,9 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
 
     let mut cmd = try!(composer_cmd(ctx));
     cmd.arg("install");
-
+    if let Some(ref dir) = info.working_dir {
+        cmd.arg(format!("--working-dir={}", dir));
+    }
     if !info.dev { cmd.arg("--no-dev"); }
     if info.ignore_platform_reqs { cmd.arg("--ignore-platform-reqs"); }
     if info.no_autoloader { cmd.arg("--no_autoloader"); }

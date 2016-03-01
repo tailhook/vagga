@@ -166,6 +166,7 @@ pub struct NpmDepInfo {
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct ComposerDepInfo {
+    pub working_dir: Option<String>,
     pub dev: bool,
     pub prefer: Option<String>,
     pub ignore_platform_reqs: bool,
@@ -387,6 +388,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("runtime_exe", V::Scalar::new().default("/usr/bin/php")))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
     .option("ComposerDependencies", V::Structure::new()
+        .member("working_dir", V::Scalar::new().optional())
         .member("dev", V::Scalar::new().default(true))
         .member("prefer", V::Scalar::new().optional())
         .member("ignore_platform_reqs", V::Scalar::new().default(false))
