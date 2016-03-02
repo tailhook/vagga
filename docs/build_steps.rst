@@ -1128,12 +1128,15 @@ Composer Commands
 
         setup:
         - !Alpine v3.3
-        - !ComposerInstall ["laravel/installer:1.3.0"]
+        - !ComposerInstall ["phpunit/phpunit:~5.2.0"]
 
    Install a list of php packages using ``composer global require --prefer-dist
    --update-no-dev``. Packages are install in ``/usr/local/lib/composer/vendor``
-   and symlinked to ``/composer`` so you can call binaries using
-   ``php /composer/bin/bin_name``.
+   and symlinked to ``/composer``.
+
+   Calling binaries installed by Composer can be done by running, for example::
+
+        php /composer/bin/phpunit
 
    Composer itself is located at ``/tmp/composer.phar`` and is not available
    after container is built.
@@ -1149,7 +1152,7 @@ Composer Commands
    ``require-dev`` as Composer default behavior.
 
    Options correspond to the ones available to the ``composer install`` command
-   line so refer to `composer command line` for detailed info.
+   line so refer to `composer cli docs`_ for detailed info.
 
    Options:
 
@@ -1187,7 +1190,7 @@ Composer Commands
        (default ``false``) Autoload classes from the classmap only. Implicitly
        enables ``optimize_autoloader``.
 
-   .. _composer command line: https://getcomposer.org/doc/03-cli.md#install
+   .. _composer cli docs: https://getcomposer.org/doc/03-cli.md#install
 
 .. step:: ComposerConfig
 

@@ -427,6 +427,103 @@ The ``Py2Requirements`` command exists too.
 
 .. _dependent_containers:
 
+
+Composer Installer
+==================
+
+Installing Composer packages can be done in two ways: global and local. For
+example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !ComposerInstall [laravel/installer]
+
+The packages will be installed using Composer's ``global require`` at
+``/usr/local/lib/composer/vendor``. The ``vendor`` directory will be symlinked to
+``/composer`` for convenience. This is only useful for installing packages that
+provide binaries used to bootstrap your project (like the Laravel installer, for
+instance):
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !ComposerInstall [laravel/installer]
+    - !Sh php /composer/bin/laravel new src
+
+Alternatively, you can use Composer's ``crate-project`` command:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !ComposerInstall # just to have composer available
+    - !Sh php /tmp/composer.phar create-project --prefer-dist laravel/laravel src
+
+.. note:: In the examples above, it is used ``src`` (``/work/src``) instead of
+    ``.`` (``/work``) because Composer only accepts creating a new project in an
+    empty directory.
+
+For your project dependencies, you should install packages localy (on
+``/work/vendor``) from your ``composer.json``. For example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !ComposerDependencies
+
+This command will install packages (including dev) from ``composer.json`` into
+``/work/vendor`` using Composer's ``install`` command. You can also specify some
+options available from composer, for example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !ComposerDependencies
+      working_dir: src # run command inside src directory
+      dev: false # do not install dev dependencies
+      optimize_autoloader: true
+
+If you want to use ``hhvm``, you can disable the installation of the ``php``
+runtime:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !ComposerConfig
+      install_runtime: false
+      runtime_exe: hhvm
+
+Note that you will have to manually `install hhvm`_:
+
+.. code-block:: yaml
+
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !AptTrust keys: ["hhvm apt key here"]
+    - !UbuntuRepo
+      url: http://dl.hhvm.com/ubuntu
+      suite: trusty
+      components: [main]
+    - !Install [hhvm]
+    - !ComposerConfig
+      install_runtime: false
+      runtime_exe: hhvm
+
+
+.. note:: The ``composer.phar`` and additional utilities (like ``build-essential``
+    and ``git``) will be removed after end of container building. You must
+    ``!Download`` or ``!Install`` them explicitly if you rely on them later.
+
+.. _install hhvm: https://docs.hhvm.com/hhvm/installation/linux
+
+
 Dependent Containers
 ====================
 
