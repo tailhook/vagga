@@ -1119,3 +1119,106 @@ Python Commands
        __ https://medium.com/p/vagga-the-higher-level-package-manager-e49e85fed42a
 
 
+Composer Commands
+================
+
+.. step:: ComposerInstall
+
+   Example::
+
+        setup:
+        - !Alpine v3.3
+        - !ComposerInstall ["laravel/installer:1.3.0"]
+
+   Install a list of php packages using ``composer global require --prefer-dist
+   --update-no-dev``. Packages are install in ``/usr/local/lib/composer/vendor``
+   and symlinked to ``/composer`` so you can call binaries using
+   ``php /composer/bin/bin_name``.
+
+   Composer itself is located at ``/tmp/composer.phar`` and is not available
+   after container is built.
+
+.. step:: ComposerDependencies
+
+   Install packages locally from ``composer.json`` using ``composer install``.
+   For example::
+
+        - !ComposerDependencies
+
+   Dependencies are installed into ``/work/vendor`` including those listed in
+   ``require-dev`` as Composer default behavior.
+
+   Options correspond to the ones available to the ``composer install`` command
+   line so refer to `composer command line` for detailed info.
+
+   Options:
+
+   working_dir
+       (default ``None``) Use the given directory as working directory
+
+   dev
+       (default ``true``) Whether to install ``require-dev`` (this is Composer
+       default behavior).
+
+   prefer
+       (default ``None``) Preferred way to download packages. Can be either
+       ``source`` or ``dist``. If no specified, will use Composer default
+       behavior (use ``dist`` for stable).
+
+   ignore_platform_reqs
+       (default ``false``) Ignore ``php``, ``hhvm``, ``lib-*`` and ``ext-*``
+       requirements.
+
+   no_autoloader
+       (default ``false``) Skips autoloader generation.
+
+   no_scripts
+       (default ``false``) Skips execution of scripts defined in
+       ``composer.json``.
+
+   no_plugins
+       (default ``false``) Disables plugins.
+
+   optimize_autoloader
+       (default ``false``) Convert PSR-0/4 autoloading to classmap to get a
+       faster autoloader.
+
+   classmap_authoritative
+       (default ``false``) Autoload classes from the classmap only. Implicitly
+       enables ``optimize_autoloader``.
+
+   .. _composer command line: https://getcomposer.org/doc/03-cli.md#install
+
+.. step:: ComposerConfig
+
+   The directive configures various settings of composer commands above.
+   For example, you may want to use hhvm instead of php::
+
+      - !ComposerConfig
+           install_runtime: false
+           runtime_exe: hhvm
+       - !ComposerInstall [phpunit/phpunit]
+
+   .. note:: Every time :step:`ComposerConfig` is specified, options are
+      **replaced** rather than *augmented*. In other words, if you start a
+      block of composer commands with :step:`ComposerConfig`, all subsequent
+      commands will be executed with the same options, no matter which
+      :step:`ComposerConfig` settings were before.
+
+   All options:
+
+   runtime_exe
+        (default ``php``) The command to use for running Composer.
+
+   install_runtime
+        (default ``true``) Whether to install the default runtime (php)
+        automatically. Setting the option to ``false`` is useful when using
+        hhvm, for example.
+
+   install_dev
+        (default ``false``) Whether to install development packages (php-dev).
+        Defaults to false since it is rare for php projects to build modules and
+        it may require manual configuration.
+
+   .. note:: Setting ``install_runtime`` to false still installs Composer at
+   ``/tmp/composer.phar``.
