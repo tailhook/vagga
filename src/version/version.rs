@@ -148,7 +148,16 @@ impl VersionHash for Builder {
                 })
             }
             &B::ComposerDependencies(ref info) => {
-                let path = Path::new("/work").join("composer.lock");
+                let base_path: PathBuf = {
+                    let path = Path::new("/work");
+                    if let Some(ref working_dir) = info.working_dir {
+                        path.join(working_dir)
+                    } else {
+                        path.to_owned()
+                    }
+                };
+
+                let path = base_path.join("composer.lock");
                 if path.exists() { try!(
                     File::open(&path).map_err(|e| Error::Io(e, path.clone()))
                     .and_then(|mut f| Json::from_reader(&mut f)
@@ -163,7 +172,7 @@ impl VersionHash for Builder {
                     })
                 );}
 
-                let path = Path::new("/work").join("composer.json");
+                let path = base_path.join("composer.json");
                 File::open(&path).map_err(|e| Error::Io(e, path.clone()))
                 .and_then(|mut f| Json::from_reader(&mut f)
                     .map_err(|e| Error::Json(e, path.to_path_buf())))
