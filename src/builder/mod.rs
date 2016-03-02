@@ -25,6 +25,11 @@ mod commands {
     pub mod composer;
     pub mod vcs;
     pub mod download;
+    pub mod subcontainer;
+    pub mod copy;
+    pub mod text;
+    pub mod dirs;
+    pub mod packaging;
 }
 mod capsule;
 mod packages;

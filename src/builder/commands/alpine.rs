@@ -6,6 +6,7 @@ use unshare::{Command, Stdio};
 use rand::{thread_rng, Rng};
 use regex::Regex;
 
+use builder::guard::Guard;
 use super::super::super::file_util::create_dir;
 use super::super::context::{Context};
 use super::super::capsule;
@@ -228,5 +229,15 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
                        "/usr/local/sbin:/usr/local/bin:\
                         /usr/sbin:/usr/bin:/sbin:/bin\
                         ".to_string());
+    Ok(())
+}
+
+pub fn setup(version: &String, guard: &mut Guard, build: bool)
+    -> Result<(), StepError>
+{
+    try!(configure(&mut guard.distro, &mut guard.ctx, version));
+    if build {
+        try!(guard.distro.bootstrap(&mut guard.ctx));
+    }
     Ok(())
 }

@@ -24,7 +24,7 @@ quick_error! {
             display("this step requires some linux distribution to be active")
         }
         // Should substep include container name? or is it obvours?
-        SubStep(step: Builder, err: Box<StepError>) {
+        SubStep(step: Box<Builder>, err: Box<StepError>) {
             display("sub-step {:?} failed: {}", step, err)
         }
         /// Trying to run command failed because command is not found
@@ -32,11 +32,11 @@ quick_error! {
             display("command {:?} not found in one of {:?}", name, path)
         }
         /// Error starting external command
-        CommandError(cmd: unshare::Command, err: unshare::Error) {
+        CommandError(cmd: Box<unshare::Command>, err: unshare::Error) {
             display("error running {:?} {}", cmd, err)
         }
         /// Error running external command
-        CommandFailed(cmd: unshare::Command, status: unshare::ExitStatus) {
+        CommandFailed(cmd: Box<unshare::Command>, status: unshare::ExitStatus) {
             display("error running {:?} {}", cmd, status)
         }
         /// Can't open file, or similar
@@ -50,8 +50,7 @@ quick_error! {
             display("error reading directory: {:?}", errors)
         }
         /// Can't compile regex
-        Regex(e: regex::Error) {
-            from()
+        Regex(e: Box<regex::Error>) {
             description("can't compile regex")
             display("error compiling regex: {}", e)
         }

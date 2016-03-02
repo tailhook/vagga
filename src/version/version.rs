@@ -35,8 +35,7 @@ quick_error! {
             description("error versioning dependencies")
             display("version error: {}", s)
         }
-        Regex(e: regex::Error) {
-            from()
+        Regex(e: Box<regex::Error>) {
             description("can't compile regex")
             display("regex compilation error: {}", e)
         }
@@ -97,7 +96,6 @@ fn hash_json(data: &Json, key: &str, hash: &mut Digest) {
         hash.input(encoded.as_bytes())
     }
 }
-
 
 impl VersionHash for Builder {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
@@ -264,7 +262,8 @@ impl VersionHash for Builder {
                     let meta = try!(symlink_metadata(src)
                         .map_err(|e| Error::Io(e, src.into())));
                     if meta.file_type().is_dir() {
-                        let re = try!(Regex::new(&cinfo.ignore_regex));
+                        let re = try!(Regex::new(&cinfo.ignore_regex)
+                            .map_err(|e| Error::Regex(Box::new(e))));
                         try!(ScanDir::all().walk(src, |iter| {
                             let mut all_entries = iter.filter_map(|(e, _)| {
                                 let fpath = e.path();
