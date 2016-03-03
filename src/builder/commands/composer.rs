@@ -169,7 +169,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
     let args = [
         "/bin/sh".to_owned(),
         "-exc".to_owned(),
-        "find $(ls -d /etc/php*) -name 'conf.d' | grep /etc/php".to_owned(),
+        "find $(ls -d /etc/php*) -name 'conf.d' | grep -E '^/etc/php'".to_owned(),
     ];
 
     let conf_d = try!(capture_command(ctx, &args, &[])
