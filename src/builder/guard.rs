@@ -59,7 +59,8 @@ impl<'a> Guard<'a> {
             try!(npm::list(&mut self.ctx));
         }
         if self.ctx.featured_packages.contains(&packages::Composer) {
-            try!(composer::list(&mut self.ctx));
+            //try!(composer::list(&mut self.ctx));
+            try!(composer::finish(&mut self.ctx));
         }
 
         try!(self.distro.finish(&mut self.ctx));

@@ -6,7 +6,7 @@ use unshare::{Command};
 
 use super::super::context::{Context};
 use super::super::packages;
-use super::generic::run_command;
+use super::generic::{run_command, capture_command};
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
@@ -17,6 +17,9 @@ use file_util::{copy, create_dir};
 
 const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
 const COMPOSER_HOME: &'static str = "/usr/local/lib/composer";
+const COMPOSER_CACHE: &'static str = "/tmp/composer-cache";
+const COMPOSER_VENDOR_DIR: &'static str = "/usr/local/lib/composer/vendor";
+const COMPOSER_BIN_DIR: &'static str = "/usr/local/bin";
 const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
 
 
@@ -112,28 +115,24 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    ctx.add_ensure_dir(Path::new("/usr/local/lib/composer/vendor"));
-    let args = vec!(
-        "/bin/ln".to_owned(),
-        "-s".to_owned(),
-        "/usr/local/lib/composer/vendor".to_owned(),
-        "/composer".to_owned());
-    try!(run_command(ctx, &args));
-
     try!(ctx.add_cache_dir(Path::new("/tmp/composer-cache"),
                            "composer-cache".to_string()));
 
     ctx.environ.insert("COMPOSER_HOME".to_owned(),
-                       "/usr/local/lib/composer".to_owned());
+                       COMPOSER_HOME.to_owned());
+    ctx.environ.insert("COMPOSER_VENDOR_DIR".to_owned(),
+                       COMPOSER_VENDOR_DIR.to_owned());
+    ctx.environ.insert("COMPOSER_BIN_DIR".to_owned(),
+                       COMPOSER_BIN_DIR.to_owned());
     ctx.environ.insert("COMPOSER_CACHE_DIR".to_owned(),
-                       "/tmp/composer-cache".to_owned());
+                       COMPOSER_CACHE.to_owned());
 
     Ok(())
 }
 
 pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
     try_msg!(create_dir(COMPOSER_HOME, true),
-         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
+        "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
 
     let composer_inst = try!(download::download_file(ctx, COMPOSER_BOOTSTRAP));
     try!(copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
@@ -149,28 +148,93 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
         "/tmp/composer-setup.php".to_owned(),
         "--install-dir=/tmp/".to_owned(),
     ];
+    try!(run_command(ctx, &args));
 
-    run_command(ctx, &args)
+    let args = [
+        "ln".to_owned(),
+        "-s".to_owned(),
+        "/tmp/composer.phar".to_owned(),
+        "/usr/local/bin/composer".to_owned(),
+    ];
+    try!(run_command(ctx, &args));
+
+    if ctx.composer_settings.install_runtime {
+        try!(setup_include_path(ctx));
+    }
+
+    Ok(())
 }
 
-pub fn list(ctx: &mut Context) -> Result<(), StepError> {
+fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
+    let args = [
+        "/bin/sh".to_owned(),
+        "-exc".to_owned(),
+        "find $(ls -d /etc/php*) -name 'conf.d' | grep /etc/php".to_owned(),
+    ];
+
+    let conf_d = try!(capture_command(ctx, &args, &[])
+        .and_then(|result| {
+            String::from_utf8(result).map_err(|e| format!("{}", e))
+        }));
+
+    let conf_d: Vec<String> = {
+        let conf_d_lines: Vec<String> = conf_d
+            .lines()
+            .filter(|l| !l.is_empty())
+            .map(|l| l.to_owned())
+            .collect();
+
+        if !conf_d_lines.is_empty() {
+            conf_d_lines
+        } else {
+            let args = [
+                "/bin/sh".to_owned(),
+                "-exc".to_owned(),
+                "php --ini | grep -E 'conf.d$' | cut -d ':' -f 2 | cut -d ' ' -f 2".to_owned()
+            ];
+            let conf = try!(capture_command(ctx, &args, &[])
+                .and_then(|result| {
+                    String::from_utf8(result)
+                    .map_err(|e| format!("{}", e))
+                }));
+            let args = [
+                "mkdir".to_owned(),
+                "-p".to_owned(),
+                conf.clone(),
+            ];
+            try!(run_command(ctx, &args));
+            vec!(conf)
+        }
+    };
+
+    for conf in conf_d {
+        let args = [
+            "/bin/sh".to_owned(),
+            "-exc".to_owned(),
+            format!("echo 'include_path=.:/usr/local/lib/composer' > {}/vagga.ini", &conf),
+        ];
+        try!(run_command(ctx, &args));
+    }
+
+    Ok(())
+}
+
+pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
+    try!(list(ctx));
+    try!(run_command(ctx, &[
+        "rm".to_owned(),
+        "/usr/local/bin/composer".to_owned(),
+    ]));
+    Ok(())
+}
+
+fn list(ctx: &mut Context) -> Result<(), StepError> {
     let mut cmd = try!(composer_cmd(ctx));
     cmd.arg("show");
 
     try!(capture_stdout(cmd)
         .and_then(|out| {
             File::create("/vagga/container/composer-list.txt")
-            .and_then(|mut f| f.write_all(&out))
-            .map_err(|e| format!("Error dumping composer package list: {}", e))
-        }));
-
-    let mut cmd = try!(composer_cmd(ctx));
-    cmd.arg("global");
-    cmd.arg("show");
-
-    try!(capture_stdout(cmd)
-        .and_then(|out| {
-            File::create("/vagga/container/composer-list-global.txt")
             .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping composer package list: {}", e))
         }));

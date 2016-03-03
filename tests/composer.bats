@@ -13,7 +13,7 @@ teardown() {
 # php
 
 @test "composer: php ubuntu trusty" {
-    run vagga _run php-ubuntu-trusty php5 /composer/bin/laravel --version
+    run vagga _run php-ubuntu-trusty laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
@@ -22,7 +22,8 @@ teardown() {
 }
 
 @test "composer: php ubuntu precise" {
-    run vagga _run php-ubuntu-precise php5 /composer/bin/tester .
+    skip
+    run vagga _run php-ubuntu-precise tester .
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "No tests found" ]]
@@ -31,7 +32,7 @@ teardown() {
 }
 
 @test "composer: php alpine 3.3" {
-    run vagga _run php-alpine-3-3 php /composer/bin/laravel --version
+    run vagga _run php-alpine-3-3 laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
@@ -40,7 +41,7 @@ teardown() {
 }
 
 @test "composer: php alpine 3.2" {
-    run vagga _run php-alpine-3-2 php /composer/bin/laravel --version
+    run vagga _run php-alpine-3-2 laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
@@ -49,7 +50,7 @@ teardown() {
 }
 
 @test "composer: php ComposerDependencies" {
-    run vagga _run php-composer-deps php /work/vendor/bin/laravel --version
+    run vagga _run php-composer-deps laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
@@ -58,17 +59,17 @@ teardown() {
 }
 
 @test "composer: php ComposerDependencies dev" {
-    run vagga _run php-composer-dev-deps php /work/vendor/bin/laravel --version
+    run vagga _run php-composer-dev-deps laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
-    [[ -f vendor/nette/tester/composer.json ]]
+    # [[ -f /usr/local/lib/composer/vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/php-composer-dev-deps)
     [[ $link = ".roots/php-composer-dev-deps.0108a157/root" ]]
 }
 
 @test "composer: php ComposerDependencies prefer dist" {
-    run vagga _run php-composer-deps-prefer-dist php /work/vendor/bin/laravel --version
+    run vagga _run php-composer-deps-prefer-dist laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
@@ -85,12 +86,12 @@ teardown() {
 
 @test "composer: php ComposerDependencies lock" {
     cd /work/tests/composer_lock
-    run vagga _run php-composer-deps-lock php /work/vendor/bin/laravel --version
+    run vagga _run php-composer-deps-lock laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"The lock file is not up to date with the latest changes in composer.json"* ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
-    [[ -f vendor/nette/tester/composer.json ]]
+    # [[ -f /usr/local/lib/composer/vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/php-composer-deps-lock)
     [[ $link = ".roots/php-composer-deps-lock.a6277bfe/root" ]]
 
@@ -99,41 +100,41 @@ teardown() {
 # hhvm
 
 @test "composer: hhvm ubuntu trusty" {
-    run vagga _run hhvm-ubuntu-trusty hhvm /composer/bin/laravel --version
+    run vagga _run hhvm-ubuntu-trusty laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/hhvm-ubuntu-trusty)
-    [[ $link = ".roots/hhvm-ubuntu-trusty.76604d51/root" ]]
+    [[ $link = ".roots/hhvm-ubuntu-trusty.7619aac5/root" ]]
 }
 
 @test "composer: hhvm ComposerDependencies" {
-    run vagga _run hhvm-composer-deps hhvm /work/vendor/bin/laravel --version
+    run vagga _run hhvm-composer-deps laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/hhvm-composer-deps)
-    [[ $link = ".roots/hhvm-composer-deps.5a0a4f31/root" ]]
+    [[ $link = ".roots/hhvm-composer-deps.57f7b1e2/root" ]]
 }
 
 @test "composer: hhvm ComposerDependencies dev" {
-    run vagga _run hhvm-composer-dev-deps hhvm /work/vendor/bin/laravel --version
+    run vagga _run hhvm-composer-dev-deps laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
-    [[ -f vendor/nette/tester/composer.json ]]
+    # [[ -f /usr/local/lib/composer/vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/hhvm-composer-dev-deps)
-    [[ $link = ".roots/hhvm-composer-dev-deps.6b4c28db/root" ]]
+    [[ $link = ".roots/hhvm-composer-dev-deps.eb3c0986/root" ]]
 }
 
 @test "composer: hhvm ComposerDependencies lock" {
     cd /work/tests/composer_lock
-    run vagga _run hhvm-composer-deps-lock hhvm /work/vendor/bin/laravel --version
+    run vagga _run hhvm-composer-deps-lock laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"The lock file is not up to date with the latest changes in composer.json"* ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
-    [[ -f vendor/nette/tester/composer.json ]]
+    # [[ -f /usr/local/lib/composer/vendor/nette/tester/composer.json ]]
     link=$(readlink .vagga/hhvm-composer-deps-lock)
-    [[ $link = ".roots/hhvm-composer-deps-lock.1bdb0e0c/root" ]]
+    [[ $link = ".roots/hhvm-composer-deps-lock.b587d75f/root" ]]
 }
