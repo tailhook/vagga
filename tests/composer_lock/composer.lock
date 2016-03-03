@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "d8595bde286864cf62dfbaf01f62fd51",
-    "content-hash": "b261ec3664e116f765a910f8a3489b20",
+    "hash": "2cfec3d768c00a77245bab9808c6514e",
+    "content-hash": "d4ce65969eb5a1eb452b767eaac4102f",
     "packages": [
         {
             "name": "guzzlehttp/guzzle",
@@ -223,6 +223,52 @@
             "time": "2015-12-19 20:43:45"
         },
         {
+            "name": "pimple/pimple",
+            "version": "v2.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/silexphp/Pimple.git",
+                "reference": "ea22fb2880faf7b7b0e17c9809c6fe25b071fd76"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/silexphp/Pimple/zipball/ea22fb2880faf7b7b0e17c9809c6fe25b071fd76",
+                "reference": "ea22fb2880faf7b7b0e17c9809c6fe25b071fd76",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Pimple": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                }
+            ],
+            "description": "Pimple is a simple Dependency Injection Container for PHP 5.3",
+            "homepage": "http://pimple.sensiolabs.org",
+            "keywords": [
+                "container",
+                "dependency injection"
+            ],
+            "time": "2014-07-24 07:10:08"
+        },
+        {
             "name": "psr/http-message",
             "version": "1.0",
             "source": {
@@ -273,26 +319,26 @@
         },
         {
             "name": "symfony/console",
-            "version": "v3.0.3",
+            "version": "v2.8.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "2ed5e2706ce92313d120b8fe50d1063bcfd12e04"
+                "reference": "56cc5caf051189720b8de974e4746090aaa10d44"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/2ed5e2706ce92313d120b8fe50d1063bcfd12e04",
-                "reference": "2ed5e2706ce92313d120b8fe50d1063bcfd12e04",
+                "url": "https://api.github.com/repos/symfony/console/zipball/56cc5caf051189720b8de974e4746090aaa10d44",
+                "reference": "56cc5caf051189720b8de974e4746090aaa10d44",
                 "shasum": ""
             },
             "require": {
-                "php": ">=5.5.9",
+                "php": ">=5.3.9",
                 "symfony/polyfill-mbstring": "~1.0"
             },
             "require-dev": {
                 "psr/log": "~1.0",
-                "symfony/event-dispatcher": "~2.8|~3.0",
-                "symfony/process": "~2.8|~3.0"
+                "symfony/event-dispatcher": "~2.1|~3.0.0",
+                "symfony/process": "~2.1|~3.0.0"
             },
             "suggest": {
                 "psr/log": "For using the console logger",
@@ -302,7 +348,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0-dev"
+                    "dev-master": "2.8-dev"
                 }
             },
             "autoload": {
@@ -329,7 +375,7 @@
             ],
             "description": "Symfony Console Component",
             "homepage": "https://symfony.com",
-            "time": "2016-02-28 16:24:34"
+            "time": "2016-02-28 16:20:50"
         },
         {
             "name": "symfony/polyfill-mbstring",
@@ -438,64 +484,183 @@
             "description": "Symfony Process Component",
             "homepage": "https://symfony.com",
             "time": "2016-02-02 13:44:19"
+        },
+        {
+            "name": "task/console",
+            "version": "v0.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/taskphp/console.git",
+                "reference": "00bfa982c4502938ca0110d2f23c5cd04ffcbcc3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/taskphp/console/zipball/00bfa982c4502938ca0110d2f23c5cd04ffcbcc3",
+                "reference": "00bfa982c4502938ca0110d2f23c5cd04ffcbcc3",
+                "shasum": ""
+            },
+            "require": {
+                "symfony/console": "~2.4",
+                "task/plugin": "~1.1"
+            },
+            "require-dev": {
+                "henrikbjorn/phpspec-code-coverage": "1.0.*@dev",
+                "phpspec/phpspec": "2.0.*@dev",
+                "satooshi/php-coveralls": "~0.6",
+                "task/task": "~0.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Task\\Plugin\\Console\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mike Fisher",
+                    "email": "mike@mbfisher.com"
+                }
+            ],
+            "description": "Utilities for working with Symfony's Console component and Task",
+            "time": "2015-09-08 12:36:28"
+        },
+        {
+            "name": "task/plugin",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/taskphp/plugin.git",
+                "reference": "7bd56cc18f081b7d85f91db6ff375d825f438d53"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/taskphp/plugin/zipball/7bd56cc18f081b7d85f91db6ff375d825f438d53",
+                "reference": "7bd56cc18f081b7d85f91db6ff375d825f438d53",
+                "shasum": ""
+            },
+            "require": {
+                "symfony/console": "~2.4"
+            },
+            "require-dev": {
+                "phpspec/phpspec": "2.0.*@dev"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Task\\Plugin\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mike Fisher",
+                    "email": "mike@mbfisher.com"
+                }
+            ],
+            "description": "Utilities for building Task plugins",
+            "time": "2014-04-23 10:05:45"
+        },
+        {
+            "name": "task/task",
+            "version": "v0.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/taskphp/task.git",
+                "reference": "85441293b1a804c2376d4cb70565ad7ee6a9c211"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/taskphp/task/zipball/85441293b1a804c2376d4cb70565ad7ee6a9c211",
+                "reference": "85441293b1a804c2376d4cb70565ad7ee6a9c211",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0",
+                "pimple/pimple": "~2.0",
+                "symfony/console": "~2.4",
+                "task/console": "~0.3"
+            },
+            "require-dev": {
+                "bossa/phpspec2-expect": "~1.0",
+                "henrikbjorn/phpspec-code-coverage": "dev-feature/multiple-reports@dev",
+                "mikey179/vfsstream": "~1.2",
+                "task/phpspec": "~0.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Task\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mike Fisher",
+                    "email": "mike@mbfisher.com"
+                },
+                {
+                    "name": "Aran Wilkinson",
+                    "email": "aran3001@gmail.com"
+                }
+            ],
+            "description": "PHP task runner",
+            "time": "2014-08-12 08:04:53"
         }
     ],
     "packages-dev": [
         {
-            "name": "nette/tester",
-            "version": "v1.7.0",
+            "name": "task/cli",
+            "version": "v0.3.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/nette/tester.git",
-                "reference": "efbc31ff4ee0bef28da712a726316e8b0b5bf262"
+                "url": "https://github.com/taskphp/cli.git",
+                "reference": "e3133d6b953d31d6cb0f9a7915065b8953761db4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nette/tester/zipball/efbc31ff4ee0bef28da712a726316e8b0b5bf262",
-                "reference": "efbc31ff4ee0bef28da712a726316e8b0b5bf262",
+                "url": "https://api.github.com/repos/taskphp/cli/zipball/e3133d6b953d31d6cb0f9a7915065b8953761db4",
+                "reference": "e3133d6b953d31d6cb0f9a7915065b8953761db4",
                 "shasum": ""
             },
-            "require": {
-                "php": ">=5.3.0"
+            "require-dev": {
+                "satooshi/php-coveralls": "~0.6",
+                "task/box": "~0.1",
+                "task/filesystem": "~0.1",
+                "task/phpunit": "~0.1",
+                "task/process": "~0.1",
+                "task/task": "~0.1"
             },
             "bin": [
-                "src/tester"
+                "bin/task"
             ],
             "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "1.7-dev"
-                }
-            },
             "autoload": {
-                "classmap": [
-                    "src/"
-                ]
+                "psr-4": {
+                    "Task\\Cli\\": "src/"
+                }
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
-                "BSD-3-Clause",
-                "GPL-2.0",
-                "GPL-3.0"
+                "MIT"
             ],
             "authors": [
                 {
-                    "name": "David Grudl",
-                    "homepage": "https://davidgrudl.com"
-                },
-                {
-                    "name": "Nette Community",
-                    "homepage": "https://nette.org/contributors"
+                    "name": "Mike Fisher",
+                    "email": "mike@mbfisher.com"
                 }
             ],
-            "description": "An easy-to-use PHP unit testing framework.",
-            "homepage": "https://tester.nette.org",
-            "keywords": [
-                "nette",
-                "testing",
-                "unit"
-            ],
-            "time": "2016-02-08 10:30:15"
+            "description": "CLI for Task",
+            "time": "2014-05-30 10:55:55"
         }
     ],
     "aliases": [],

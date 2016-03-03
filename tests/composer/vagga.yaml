@@ -57,22 +57,11 @@ containers:
     - !ComposerConfig
       install_runtime: false
       runtime_exe: /usr/bin/hhvm
+    - !Sh echo 'include_path=.:/usr/local/lib/composer' >> /etc/hhvm/php.ini
 
   hhvm-ubuntu-trusty:
     setup:
     - !Container hhvm-base
     - !ComposerInstall ["laravel/installer:1.3.0"]
-    environ: &hhvm-environ
+    environ:
       HHVM_REPO_CENTRAL_PATH: /run/hhvm.hhbc
-
-  hhvm-composer-deps:
-    setup:
-    - !Container hhvm-base
-    - !ComposerDependencies { dev: false }
-    environ: *hhvm-environ
-
-  hhvm-composer-dev-deps:
-    setup:
-    - !Container hhvm-base
-    - !ComposerDependencies
-    environ: *hhvm-environ
