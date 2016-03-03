@@ -431,8 +431,8 @@ The ``Py2Requirements`` command exists too.
 Composer Installer
 ==================
 
-Installing Composer packages can be done in two ways: global and local. For
-example:
+Composer packages can be installed either explicitly or from ``composer.json``.
+For example:
 
 .. code-block:: yaml
 
@@ -441,17 +441,16 @@ example:
     - !ComposerInstall [laravel/installer]
 
 The packages will be installed using Composer's ``global require`` at
-``/usr/local/lib/composer/vendor``. The ``vendor`` directory will be symlinked to
-``/composer`` for convenience. This is only useful for installing packages that
-provide binaries used to bootstrap your project (like the Laravel installer, for
-instance):
+``/usr/local/lib/composer/vendor``. This is only useful for installing packages
+that provide binaries used to bootstrap your project (like the Laravel installer,
+for instance):
 
 .. code-block:: yaml
 
     setup:
     - !Ubuntu trusty
     - !ComposerInstall [laravel/installer]
-    - !Sh php /composer/bin/laravel new src
+    - !Sh laravel new src
 
 Alternatively, you can use Composer's ``crate-project`` command:
 
@@ -460,14 +459,14 @@ Alternatively, you can use Composer's ``crate-project`` command:
     setup:
     - !Ubuntu trusty
     - !ComposerInstall # just to have composer available
-    - !Sh php /tmp/composer.phar create-project --prefer-dist laravel/laravel src
+    - !Sh composer create-project --prefer-dist laravel/laravel src
 
 .. note:: In the examples above, it is used ``src`` (``/work/src``) instead of
-    ``.`` (``/work``) because Composer only accepts creating a new project in an
-    empty directory.
+   ``.`` (``/work``) because Composer only accepts creating a new project in an
+   empty directory.
 
-For your project dependencies, you should install packages localy (on
-``/work/vendor``) from your ``composer.json``. For example:
+For your project dependencies, you should install packages from your
+``composer.json``. For example:
 
 .. code-block:: yaml
 
@@ -476,8 +475,19 @@ For your project dependencies, you should install packages localy (on
     - !ComposerDependencies
 
 This command will install packages (including dev) from ``composer.json`` into
-``/work/vendor`` using Composer's ``install`` command. You can also specify some
-options available from composer, for example:
+``/usr/local/lib/composer/vendor`` using Composer's ``install`` command.
+
+.. note:: The ``/usr/local/lib/composer`` directory will be automatically added
+   to PHP's ``include_path``.
+
+.. warning:: Most PHP frameworks expect to find the ``vendor`` directory at the
+   same path as your project in order to require ``autoload.php``, so you may
+   need to fix your application entry point (in a Laravel 5 project, for example,
+   you should edit ``bootstrap/autoload.php`` and change the line
+   ``require __DIR__.'/../vendor/autoload.php';`` to ``require 'vendor/autoload.php';``.
+
+You can also specify some options available from Composer command line, for
+example:
 
 .. code-block:: yaml
 
@@ -499,7 +509,7 @@ runtime:
       install_runtime: false
       runtime_exe: hhvm
 
-Note that you will have to manually `install hhvm`_:
+Note that you will have to manually `install hhvm`_ and set the ``include_path``:
 
 .. code-block:: yaml
 
@@ -515,11 +525,12 @@ Note that you will have to manually `install hhvm`_:
     - !ComposerConfig
       install_runtime: false
       runtime_exe: hhvm
+    - !Sh echo '.:/usr/local/lib/composer' >> /etc/hhvm/php.ini
 
 
-.. note:: The ``composer.phar`` and additional utilities (like ``build-essential``
-    and ``git``) will be removed after end of container building. You must
-    ``!Download`` or ``!Install`` them explicitly if you rely on them later.
+.. note:: Composer executable and additional utilities (like ``build-essential``
+   and ``git``) will be removed after end of container building. You must
+   ``!Download`` or ``!Install`` them explicitly if you rely on them later.
 
 .. _install hhvm: https://docs.hhvm.com/hhvm/installation/linux
 

@@ -1131,25 +1131,25 @@ Composer Commands
         - !ComposerInstall ["phpunit/phpunit:~5.2.0"]
 
    Install a list of php packages using ``composer global require --prefer-dist
-   --update-no-dev``. Packages are install in ``/usr/local/lib/composer/vendor``
-   and symlinked to ``/composer``.
+   --update-no-dev``. Packages are installed in ``/usr/local/lib/composer/vendor``.
 
-   Calling binaries installed by Composer can be done by running, for example::
+   Binaries are automatically symlinked to ``/usr/local/bin`` by Composer so
+   they are available in your PATH.
 
-        php /composer/bin/phpunit
-
-   Composer itself is located at ``/tmp/composer.phar`` and is not available
-   after container is built.
+   Composer itself is located at ``/tmp/composer.phar`` and symlinked to
+   ``/usr/local/bin/composer``. After container is built, Composer is no longer
+   available.
 
 .. step:: ComposerDependencies
 
-   Install packages locally from ``composer.json`` using ``composer install``.
-   For example::
+   Install packages from ``composer.json`` using ``composer install``. For
+   example::
 
         - !ComposerDependencies
 
-   Dependencies are installed into ``/work/vendor`` including those listed in
-   ``require-dev`` as Composer default behavior.
+   Similarly to :step:`ComposerInstall`, packages are installed at
+   ``/usr/local/lib/composer/vendor``, including those listed at ``require-dev``,
+   as Composer default behavior.
 
    Options correspond to the ones available to the ``composer install`` command
    line so refer to `composer cli docs`_ for detailed info.
@@ -1223,5 +1223,8 @@ Composer Commands
         Defaults to false since it is rare for php projects to build modules and
         it may require manual configuration.
 
-   .. note:: Setting ``install_runtime`` to false still installs Composer at
-   ``/tmp/composer.phar``.
+   include_path
+        (default ``.:/usr/local/lib/composer``) Set ``include_path``. This option
+        overrides the default ``include_path`` instead of appending to it;
+
+   .. note:: Setting ``install_runtime`` to false still installs Composer.
