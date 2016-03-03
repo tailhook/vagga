@@ -15,7 +15,7 @@ use config::builders::{ComposerSettings, ComposerDepInfo};
 use process_util::capture_stdout;
 use file_util::{copy, create_dir};
 
-const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
+const DEFAULT_RUNTIME: &'static str = "php";
 const DEFAULT_INCLUDE_PATH: &'static str = ".:/usr/local/lib/composer";
 
 const COMPOSER_HOME: &'static str = "/usr/local/lib/composer";
@@ -61,7 +61,8 @@ fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
         .runtime_exe
         .clone()
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
-    let mut cmd = try!(command(ctx, runtime));
+    let mut cmd = try!(command(ctx, "/usr/bin/env"));
+    cmd.arg(runtime);
     cmd.arg("/tmp/composer.phar");
     cmd.arg("--no-interaction");
     Ok(cmd)
@@ -147,6 +148,7 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
     let args = [
+        "/usr/bin/env".to_owned(),
         runtime_exe,
         "/tmp/composer-setup.php".to_owned(),
         "--install-dir=/tmp/".to_owned(),
@@ -227,7 +229,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
 }
 
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
-    try!(list(ctx));
+    try!(list_packages(ctx));
     try!(run_command(ctx, &[
         "rm".to_owned(),
         "/usr/local/bin/composer".to_owned(),
@@ -235,7 +237,7 @@ pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
     Ok(())
 }
 
-fn list(ctx: &mut Context) -> Result<(), StepError> {
+fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
     let mut cmd = try!(composer_cmd(ctx));
     cmd.arg("show");
 
