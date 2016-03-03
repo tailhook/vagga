@@ -99,6 +99,7 @@ pub struct ComposerSettings {
     pub install_runtime: bool,
     pub install_dev: bool,
     pub runtime_exe: Option<String>,
+    pub include_path: Option<String>,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -387,7 +388,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("ComposerConfig", V::Structure::new()
         .member("install_runtime", V::Scalar::new().default(true))
         .member("install_dev", V::Scalar::new().default(false))
-        .member("runtime_exe", V::Scalar::new().default("php")))
+        .member("runtime_exe", V::Scalar::new().optional())
+        .member("include_path", V::Scalar::new().optional()))
     .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
     .option("ComposerDependencies", V::Structure::new()
         .member("working_dir", V::Scalar::new().optional())

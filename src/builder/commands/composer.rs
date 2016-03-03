@@ -16,6 +16,8 @@ use process_util::capture_stdout;
 use file_util::{copy, create_dir};
 
 const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
+const DEFAULT_INCLUDE_PATH: &'static str = ".:/usr/local/lib/composer";
+
 const COMPOSER_HOME: &'static str = "/usr/local/lib/composer";
 const COMPOSER_CACHE: &'static str = "/tmp/composer-cache";
 const COMPOSER_VENDOR_DIR: &'static str = "/usr/local/lib/composer/vendor";
@@ -29,6 +31,7 @@ impl Default for ComposerSettings {
             install_runtime: true,
             install_dev: false,
             runtime_exe: None,
+            include_path: None,
         }
     }
 }
@@ -207,11 +210,15 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
         }
     };
 
+    let include_path = ctx.composer_settings.include_path
+        .clone()
+        .unwrap_or(DEFAULT_INCLUDE_PATH.to_owned());
+
     for conf in conf_d {
         let args = [
             "/bin/sh".to_owned(),
             "-exc".to_owned(),
-            format!("echo 'include_path=.:/usr/local/lib/composer' > {}/vagga.ini", &conf),
+            format!("echo 'include_path={}' > {}/vagga.ini", include_path, &conf),
         ];
         try!(run_command(ctx, &args));
     }
