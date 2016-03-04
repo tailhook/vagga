@@ -31,6 +31,11 @@ containers:
     - !Alpine v3.3
     - !ComposerDependencies
 
+  php-composer-dev-deps-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !ComposerDependencies
+
   php-composer-deps-prefer-dist:
     setup:
     - !Alpine v3.3
