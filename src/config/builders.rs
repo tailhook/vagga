@@ -88,6 +88,12 @@ pub struct PipSettings {
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct GemSettings {
+    pub install_ruby: bool,
+    pub gem_exe: Option<String>,
+}
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct NpmSettings {
     pub install_node: bool,
     pub npm_exe: String,
@@ -145,6 +151,14 @@ pub struct CopyInfo {
     pub owner_uid: Option<uid_t>,
     pub owner_gid: Option<gid_t>,
     pub ignore_regex: String,
+}
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct GemBundleInfo {
+    pub gemfile: PathBuf,
+    pub with: Vec<String>,
+    pub without: Vec<String>,
+    pub deployment: bool,
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
@@ -210,6 +224,11 @@ pub enum Builder {
     //DockerImage(String),
     //DockerPrivate(String),
     //Dockerfile(Path),
+
+    // -- Ruby --
+    GemConfig(GemSettings),
+    GemInstall(Vec<String>),
+    GemBundle(GemBundleInfo),
 
     // -- Node --
     NpmConfig(NpmSettings),
@@ -343,6 +362,17 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("freeze_file", V::Scalar::new().default("requirements.txt"))
         .member("requirements", V::Scalar::new().optional())
         .member("packages", V::Sequence::new(V::Scalar::new())))
+
+    // Ruby
+    .option("GemConfig", V::Structure::new()
+        .member("install_ruby", V::Scalar::new().default(true))
+        .member("gem_exe", V::Structure::new().default("gem")))
+    .option("GemInstall", V::Sequence::new(V::Scalar::new()))
+    .option("GemBundle", V::Structure::new()
+        .member("gemfile", V::Scalar::new().default("gemfile"))
+        .member("with", V::Sequence::new(V::Scalar::new()))
+        .member("without", V::Sequence::new(V::Scalar::new()))
+        .member("deployment", V::Scalar::new().default(false)))
 
     // Node.js
     .option("NpmConfig", V::Structure::new()

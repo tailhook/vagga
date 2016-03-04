@@ -23,6 +23,10 @@ pub enum Package {
     PipPy2,
     PipPy3,
 
+    Ruby,       // not build dep
+    Rubydev,
+    Gem,
+
     NodeJs,     // not build dep
     NodeJsDev,
     Npm,
