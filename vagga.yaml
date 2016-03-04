@@ -16,8 +16,7 @@ containers:
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates]
     - !Install [file]  # dependency of checkinstall (bug #46)
-    - !BuildDeps [cmake, llvm-dev, libc++-dev, curl, python,
-        autoconf, automake, autotools-dev, libtool, texlive-extra-utils]
+    - !BuildDeps [cmake, libc++-dev, curl, autoconf, automake, libtool]
     # Build script derived from
     # https://github.com/rust-lang/rust-buildbot/blob/master/slaves/linux/build-musl.sh
     - !TarInstall
