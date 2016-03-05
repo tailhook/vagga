@@ -200,13 +200,11 @@ impl BuildCommand for Builder {
                 guard.ctx.gem_settings = gem_settings.clone();
             }
             &B::GemInstall(ref pkgs) => {
-                try!(gem::configure((&mut guard.ctx)));
                 if build {
                     try!(gem::install(&mut guard.distro, &mut guard.ctx, pkgs));
                 }
             }
             &B::GemBundle(ref info) => {
-                try!(gem::configure((&mut guard.ctx)));
                 if build {
                     try!(gem::bundle(&mut guard.distro, &mut guard.ctx, info));
                 }

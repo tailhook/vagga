@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{Read, Write};
 
@@ -6,7 +6,7 @@ use regex::Regex;
 
 use super::super::context::{Context};
 use super::super::packages;
-use super::generic::{run_command, capture_command};
+use super::generic::capture_command;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
@@ -14,9 +14,6 @@ use config::builders::{GemSettings, GemBundleInfo};
 use process_util::capture_stdout;
 
 const DEFAULT_GEM_EXE: &'static str = "gem";
-
-const GEM_HOME: &'static str = "/usr/local/lib/rubygems";
-const GEM_CACHE: &'static str = "/usr/local/lib/rubygems/cache";
 const BIN_DIR: &'static str = "/usr/local/bin";
 const RUBY_VERSION_WITH_GEM: f32 = 1.9;
 const GEM_VERSION_WITH_NO_DOCUMENT_OPT: f32 = 2.0;
@@ -65,20 +62,21 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
             )
         )
 }
-fn gem_dir(ctx: &mut Context) -> Result<String, String> {
+fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
 
     let args = [
         gem_exe,
         "env".to_owned(),
-        // "find /usr/lib/ruby/gems -name 'cache' | grep -E /usr/lib/ruby/.*?/cache".to_owned(),
         "gemdir".to_owned(),
     ];
 
-    capture_command(ctx, &args, &[])
+    let gem_dir = try!(capture_command(ctx, &args, &[])
         .and_then(|x| String::from_utf8(x)
-            .map_err(|e| format!("Error getting gem dir: {}", e)))
+            .map_err(|e| format!("Error getting gem dir: {}", e))));
+
+    Ok(Path::new(gem_dir.trim()).join("cache"))
 }
 
 fn scan_features(settings: &GemSettings, git_required: bool)
@@ -111,6 +109,8 @@ pub fn install(distro: &mut Box<Distribution>,
     if try!(ruby_version(ctx)) < RUBY_VERSION_WITH_GEM {
         try!(packages::ensure_packages(distro, ctx, &[packages::RubyGems]));
     }
+
+    try!(configure(ctx));
 
     if pkgs.len() == 0 {
         return Ok(());
@@ -168,6 +168,8 @@ pub fn bundle(distro: &mut Box<Distribution>,
         try!(packages::ensure_packages(distro, ctx, &[packages::RubyGems]));
     }
 
+    try!(configure(ctx));
+
     let mut cmd = try!(command(ctx, "bundle"));
     cmd.args(&["install", "--system", "--binstubs", BIN_DIR]);
 
@@ -192,10 +194,9 @@ pub fn bundle(distro: &mut Box<Distribution>,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    try!(ctx.add_cache_dir(Path::new(GEM_CACHE),
+    let gem_cache = try!(gem_cache_dir(ctx));
+    try!(ctx.add_cache_dir(&gem_cache,
                            "gems-cache".to_string()));
-    ctx.environ.insert("GEM_HOME".to_owned(),
-                       GEM_HOME.to_owned());
 
     Ok(())
 }
