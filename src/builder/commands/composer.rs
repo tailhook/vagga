@@ -1,8 +1,10 @@
 use std::path::Path;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
+use std::os::unix::fs as unix_fs;
 
 use unshare::{Command};
+use regex::Regex;
 
 use super::super::context::{Context};
 use super::super::packages;
@@ -13,9 +15,9 @@ use builder::commands::generic::{command, run};
 use builder::download;
 use config::builders::{ComposerSettings, ComposerDepInfo};
 use process_util::capture_stdout;
-use file_util::{copy, create_dir};
+use file_util;
 
-const DEFAULT_RUNTIME: &'static str = "php";
+const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
 const DEFAULT_INCLUDE_PATH: &'static str = ".:/usr/local/lib/composer";
 
 const COMPOSER_HOME: &'static str = "/usr/local/lib/composer";
@@ -61,8 +63,7 @@ fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
         .runtime_exe
         .clone()
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
-    let mut cmd = try!(command(ctx, "/usr/bin/env"));
-    cmd.arg(runtime);
+    let mut cmd = try!(command(ctx, runtime));
     cmd.arg("/tmp/composer.phar");
     cmd.arg("--no-interaction");
     Ok(cmd)
@@ -135,11 +136,11 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
 }
 
 pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
-    try_msg!(create_dir(COMPOSER_HOME, true),
+    try_msg!(file_util::create_dir(COMPOSER_HOME, true),
         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
 
     let composer_inst = try!(download::download_file(ctx, COMPOSER_BOOTSTRAP));
-    try!(copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
+    try!(file_util::copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
         .map_err(|e| format!("Error copying composer installer: {}", e)));
 
     let runtime_exe = ctx.composer_settings
@@ -148,20 +149,14 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
     let args = [
-        "/usr/bin/env".to_owned(),
         runtime_exe,
         "/tmp/composer-setup.php".to_owned(),
         "--install-dir=/tmp/".to_owned(),
     ];
     try!(run_command(ctx, &args));
 
-    let args = [
-        "ln".to_owned(),
-        "-s".to_owned(),
-        "/tmp/composer.phar".to_owned(),
-        "/usr/local/bin/composer".to_owned(),
-    ];
-    try!(run_command(ctx, &args));
+    // try_msg!(unix_fs::symlink("/tmp/composer.phar", "/usr/local/bin/composer"),
+    //     "Error creating symlink '/usr/local/bin/composer -> /tmp/composer.phar': {err}");
 
     if ctx.composer_settings.install_runtime {
         try!(setup_include_path(ctx));
@@ -171,58 +166,79 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
 }
 
 fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
-    let args = [
-        "/bin/sh".to_owned(),
-        "-exc".to_owned(),
-        "find $(ls -d /etc/php*) -name 'conf.d' | grep -E '^/etc/php'".to_owned(),
-    ];
+    let runtime_exe = ctx.composer_settings
+        .runtime_exe
+        .clone()
+        .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
-    let conf_d = try!(capture_command(ctx, &args, &[])
-        .and_then(|result| {
-            String::from_utf8(result).map_err(|e| format!("{}", e))
-        }));
+    let args = [runtime_exe, "--ini".to_owned()];
+    let php_dir = try!(capture_command(ctx, &args, &[])
+        .and_then(|x| String::from_utf8(x)
+            .map_err(|e| format!("Error parsing command output: {}", e)))
+        .map_err(|e| format!("Error reading command output: {}", e)));
 
-    let conf_d: Vec<String> = {
-        let conf_d_lines: Vec<String> = conf_d
-            .lines()
-            .filter(|l| !l.is_empty())
-            .map(|l| l.to_owned())
-            .collect();
-
-        if !conf_d_lines.is_empty() {
-            conf_d_lines
-        } else {
-            let args = [
-                "/bin/sh".to_owned(),
-                "-exc".to_owned(),
-                "php --ini | grep -E 'conf.d$' | cut -d ':' -f 2 | cut -d ' ' -f 2".to_owned()
-            ];
-            let conf = try!(capture_command(ctx, &args, &[])
-                .and_then(|result| {
-                    String::from_utf8(result)
-                    .map_err(|e| format!("{}", e))
-                }));
-            let args = [
-                "mkdir".to_owned(),
-                "-p".to_owned(),
-                conf.clone(),
-            ];
-            try!(run_command(ctx, &args));
-            vec!(conf)
-        }
+    let re = try_msg!(Regex::new(r#".*?(/etc/php\d?).*?"#), "Invalid regex: {err}");
+    let captures = match re.captures(&php_dir) {
+        Some(captures) => captures,
+        None => return Err("PHP configuration directory was not found".to_owned()),
     };
 
-    let include_path = ctx.composer_settings.include_path
-        .clone()
+    let php_config = Path::new(captures.at(1).unwrap());
+
+    // check for php conf dir at /etc/php[5,7]
+    // let dir = format!("{:?}", Path::new("/etc/php").exists());
+    // panic!("\n\n{}\n\n", dir);
+    // let php_config = {
+    //     let mut php_config = Path::new("/etc/php");
+    //     if !php_config.is_dir() {
+    //         php_config = Path::new("/etc/php5");
+    //     }
+    //     if !php_config.is_dir() {
+    //         php_config = Path::new("/etc/php7");
+    //     }
+    //     if !php_config.is_dir() {
+    //         return Err("PHP configuration directory was not found".to_owned())
+    //     }
+    //     php_config
+    // };
+
+    // check if conf.d exists at 'conf_dir'
+    let conf_d = php_config.join("conf.d");
+    if !conf_d.exists() {
+        // if it don't, create it
+        try!(file_util::create_dir(&conf_d, true)
+            .map_err(|e| format!("Error creating directory {:?}: {}", &conf_d, e)));
+    }
+
+    let vagga_ini_content = ctx.composer_settings
+        .include_path.clone()
         .unwrap_or(DEFAULT_INCLUDE_PATH.to_owned());
 
-    for conf in conf_d {
-        let args = [
-            "/bin/sh".to_owned(),
-            "-exc".to_owned(),
-            format!("echo 'include_path={}' > {}/vagga.ini", include_path, &conf),
-        ];
-        try!(run_command(ctx, &args));
+    // create vagga.ini file
+    try!(File::create(&conf_d.join("vagga.ini"))
+        .and_then(|mut f| f.write_all(vagga_ini_content.as_bytes()))
+        .map_err(|e| format!("Error creating file {:?}: {}",
+            &conf_d.join("vagga.ini"), e)));
+
+    // check for other conf.d directories and add vagga.ini to them
+    // (like /etc/php5/cli/conf.d and /etc/php5/apache2/conf.d on Ubuntu)
+    let dir_iter = try!(fs::read_dir(&php_config)
+        .map_err(|e| format!("Error reading directory {:?}: {}", &php_config, e)));
+    for entry in dir_iter {
+        let entry = try_msg!(entry, "Error reading directory entry: {err}");
+        let metadata = try_msg!(entry.metadata(), "Error reading metadata: {err}");
+        if !metadata.is_dir() ||
+            entry.path().ends_with("mods-available") {
+            continue
+        }
+        let conf_d = entry.path().join("conf.d");
+        if conf_d.is_dir() {
+            // create vagga.ini file
+            try!(File::create(&conf_d.join("vagga.ini"))
+                .and_then(|mut f| f.write_all(vagga_ini_content.as_bytes()))
+                .map_err(|e| format!("Error creating file {:?}: {}",
+                    &conf_d.join("vagga.ini"), e)));
+        }
     }
 
     Ok(())
@@ -230,10 +246,9 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
 
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
     try!(list_packages(ctx));
-    try!(run_command(ctx, &[
-        "rm".to_owned(),
-        "/usr/local/bin/composer".to_owned(),
-    ]));
+    // try!(fs::remove_file(Path::new("/usr/local/bin/composer"))
+    //     .map_err(|e| format!("Error removing symlink '/usr/local/bin/composer': {}", e)));
+
     Ok(())
 }
 
