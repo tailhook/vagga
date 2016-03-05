@@ -3,7 +3,7 @@ use std::path::Path;
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
 use builder::error::{Error};
-use builder::commands::{npm, pip};
+use builder::commands::{gem, npm, pip};
 use builder::packages;
 use builder::bld::BuildCommand;
 use container::util::clean_dir;
@@ -50,6 +50,9 @@ impl<'a> Guard<'a> {
     }
 
     pub fn finish(&mut self) -> Result<(), String> {
+        if self.ctx.featured_packages.contains(&packages::Bundler) {
+            try!(gem::list(&mut self.ctx));
+        }
         if self.ctx.featured_packages.contains(&packages::PipPy2) ||
            self.ctx.featured_packages.contains(&packages::PipPy3)
         {

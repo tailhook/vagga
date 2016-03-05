@@ -255,6 +255,10 @@ impl Ubuntu {
             packages::Python3Dev => Some(vec!()),
             packages::PipPy2 => None,
             packages::PipPy3 => None,
+            packages::Ruby => Some(vec!("ruby")),
+            packages::RubyDev => Some(vec!()),
+            packages::RubyGems => Some(vec!()),
+            packages::Bundler => None,
             packages::NodeJs if self.needs_node_legacy() => {
                 Some(vec!("nodejs", "nodejs-legacy"))
             }
@@ -398,6 +402,10 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::Python3Dev => Some(vec!("python3-dev")),
         packages::PipPy2 => None,
         packages::PipPy3 => None,
+        packages::Ruby => Some(vec!()),
+        packages::RubyDev => Some(vec!("ruby-dev")),
+        packages::RubyGems => Some(vec!()),
+        packages::Bundler => None,
         packages::NodeJs => Some(vec!()),
         packages::NodeJsDev => Some(vec!("nodejs-dev")),
         packages::Npm => Some(vec!("npm")),

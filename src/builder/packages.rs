@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::context::Context;
 use super::commands::generic::run_command_at_env;
+use super::commands::gem;
 use super::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
@@ -24,8 +25,9 @@ pub enum Package {
     PipPy3,
 
     Ruby,       // not build dep
-    Rubydev,
-    Gem,
+    RubyDev,
+    RubyGems,
+    Bundler,
 
     NodeJs,     // not build dep
     NodeJsDev,
@@ -43,6 +45,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
     let mut left = vec!();
     for i in features.into_iter() {
         match i {
+            Bundler => try!(gem::setup_bundler(ctx)),
             PipPy2 | PipPy3 => {
                 let args = vec!(
                     ctx.pip_settings.python_exe.clone()

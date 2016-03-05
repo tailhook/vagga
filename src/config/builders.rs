@@ -155,7 +155,7 @@ pub struct CopyInfo {
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct GemBundleInfo {
-    pub gemfile: PathBuf,
+    pub gemfile: Option<PathBuf>,
     pub with: Vec<String>,
     pub without: Vec<String>,
     pub deployment: bool,
@@ -366,10 +366,10 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     // Ruby
     .option("GemConfig", V::Structure::new()
         .member("install_ruby", V::Scalar::new().default(true))
-        .member("gem_exe", V::Structure::new().default("gem")))
+        .member("gem_exe", V::Scalar::new().default("gem")))
     .option("GemInstall", V::Sequence::new(V::Scalar::new()))
     .option("GemBundle", V::Structure::new()
-        .member("gemfile", V::Scalar::new().default("gemfile"))
+        .member("gemfile", V::Scalar::new().optional())
         .member("with", V::Sequence::new(V::Scalar::new()))
         .member("without", V::Sequence::new(V::Scalar::new()))
         .member("deployment", V::Scalar::new().default(false)))

@@ -8,7 +8,7 @@ use container::util::clean_dir;
 use config::Config;
 use config::Container;
 use config::Settings;
-use config::builders::{PipSettings, NpmSettings};
+use config::builders::{PipSettings, GemSettings, NpmSettings};
 use super::capsule;
 use super::packages;
 use super::timer;
@@ -37,6 +37,7 @@ pub struct Context<'a> {
 
     pub settings: Settings,
     pub pip_settings: PipSettings,
+    pub gem_settings: GemSettings,
     pub npm_settings: NpmSettings,
     pub capsule: capsule::State,
     pub packages: BTreeSet<String>,
@@ -87,6 +88,7 @@ impl<'a> Context<'a> {
             binary_ident: "amd64".to_string(),
             settings: settings,
             pip_settings: Default::default(),
+            gem_settings: Default::default(),
             npm_settings: Default::default(),
             capsule: Default::default(),
             packages: BTreeSet::new(),
