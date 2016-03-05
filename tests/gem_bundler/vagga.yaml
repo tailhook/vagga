@@ -1,0 +1,20 @@
+containers:
+  pkg-alpine-33:
+    setup:
+    - !Alpine v3.3
+    - !GemInstall [rdoc:4.2.0]
+
+  pkg-alpine-32:
+    setup:
+    - !Alpine v3.2
+    - !GemInstall [rdoc]
+
+  pkg-ubuntu-trusty:
+    setup:
+    - !Ubuntu trusty
+    - !GemInstall [rdoc]
+
+  pkg-ubuntu-precise:
+    setup:
+    - !Ubuntu precise
+    - !GemInstall [rdoc]
