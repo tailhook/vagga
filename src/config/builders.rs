@@ -246,7 +246,7 @@ pub enum Builder {
     Py3Requirements(PathBuf),
     PyFreeze(PyFreezeInfo),
 
-    // -- PHP/HHVM --
+    // -- PHP --
     ComposerConfig(ComposerSettings),
     ComposerInstall(Vec<String>),
     ComposerDependencies(ComposerDepInfo),

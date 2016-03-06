@@ -4,7 +4,6 @@ use std::io::Write;
 use std::os::unix::fs as unix_fs;
 
 use unshare::{Command};
-use regex::Regex;
 
 use super::super::context::{Context};
 use super::super::packages;
@@ -178,10 +177,8 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
 
     for conf_d in conf_dirs.iter() {
         // create vagga.ini file
-        try!(File::create(&conf_d.join("vagga.ini"))
-            .and_then(|mut f| f.write_all(vagga_ini_content.as_bytes()))
-            .map_err(|e| format!("Error creating file {:?}: {}",
-                &conf_d.join("vagga.ini"), e)));
+        try!(create_vaggaini(&conf_d.join("vagga.ini"),
+                             &vagga_ini_content));
     }
 
     if !conf_dirs.is_empty() {
@@ -194,23 +191,31 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
     // find php directories
     let php_dirs = try!(find_dirs(ctx, "/etc/php*"));
 
-    for dir in php_dirs {
+    for dir in php_dirs.iter() {
         // create conf.d
         try!(file_util::create_dir(&dir.join("conf.d"), true)
             .map_err(|e| format!("Error creating directory {:?}: {}", &dir, e)));
 
         // create vagga.ini
-        try!(File::create(&dir.join("conf.d").join("vagga.ini"))
-            .and_then(|mut f| f.write_all(vagga_ini_content.as_bytes()))
-            .map_err(|e| format!("Error creating file {:?}: {}",
-                &dir.join("vagga.ini"), e)));
+        try!(create_vaggaini(&dir.join("conf.d").join("vagga.ini"),
+                             &vagga_ini_content));
+    }
+
+    if php_dirs.is_empty() {
+        // no /etc/php found
+        return Err("PHP configuration directory was not found".to_owned())
     }
 
     Ok(())
 }
 
+fn create_vaggaini(location: &Path, content: &str) -> Result<(), String> {
+    File::create(location)
+        .and_then(|mut f| f.write_all(content.as_bytes()))
+        .map_err(|e| format!("Error creating file {:?}: {}", location, e))
+}
+
 fn find_dirs(ctx: &mut Context, search: &str) -> Result<Vec<PathBuf>, String> {
-    // find php directories
     let args = [
         "find".to_owned(),
         "/etc".to_owned(),
@@ -221,7 +226,7 @@ fn find_dirs(ctx: &mut Context, search: &str) -> Result<Vec<PathBuf>, String> {
         .and_then(|x| String::from_utf8(x) // convert output to String
             .map(|x| x.lines() // iterate over lines
                 .filter(|l| !l.trim().is_empty()) // filter empty lines
-                .map(|l| PathBuf::from(format!("/vagga/root{}", l))) // convert to PathBuf
+                .map(|l| PathBuf::from(format!("/vagga/root{}", l))) // vagga/root{/etc/php}
                 .collect())
             .map_err(|e| format!("Error parsing command output: {}", e)))
         .map_err(|e| format!("Error reading command output: {}", e)));

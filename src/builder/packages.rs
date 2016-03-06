@@ -6,7 +6,7 @@ use super::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::composer;
-use file_util::{copy, create_dir};
+use file_util::copy;
 
 pub use self::Package::*;
 
