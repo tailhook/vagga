@@ -4,6 +4,7 @@ use std::io::Write;
 use std::os::unix::fs as unix_fs;
 
 use unshare::{Command};
+use regex::Regex;
 
 use super::super::context::{Context};
 use super::super::packages;
@@ -177,8 +178,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
 
     for conf_d in conf_dirs.iter() {
         // create vagga.ini file
-        try!(create_vaggaini(&conf_d.join("vagga.ini"),
-                             &vagga_ini_content));
+        try!(create_vagga_ini(&conf_d.join("vagga.ini"), &vagga_ini_content));
     }
 
     if !conf_dirs.is_empty() {
@@ -186,30 +186,21 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
         return Ok(())
     }
 
-    // If we didn't find any conf.d, create one at the the root of php directory
+    // If we didn't find any conf.d, ask 'php --ini'
+    let conf_d = try!(ask_php_for_conf_d(ctx));
 
-    // find php directories
-    let php_dirs = try!(find_dirs(ctx, "/etc/php*"));
-
-    for dir in php_dirs.iter() {
-        // create conf.d
-        try!(file_util::create_dir(&dir.join("conf.d"), true)
-            .map_err(|e| format!("Error creating directory {:?}: {}", &dir, e)));
-
-        // create vagga.ini
-        try!(create_vaggaini(&dir.join("conf.d").join("vagga.ini"),
-                             &vagga_ini_content));
+    // create conf.d
+    if !conf_d.exists() {
+        try!(file_util::create_dir(&conf_d, true)
+        .map_err(|e| format!("Error creating directory {:?}: {}", conf_d, e)));
     }
-
-    if php_dirs.is_empty() {
-        // no /etc/php found
-        return Err("PHP configuration directory was not found".to_owned())
-    }
+    // create vagga.ini file
+    try!(create_vagga_ini(&conf_d, &vagga_ini_content));
 
     Ok(())
 }
 
-fn create_vaggaini(location: &Path, content: &str) -> Result<(), String> {
+fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
     File::create(location)
         .and_then(|mut f| f.write_all(content.as_bytes()))
         .map_err(|e| format!("Error creating file {:?}: {}", location, e))
@@ -231,6 +222,28 @@ fn find_dirs(ctx: &mut Context, search: &str) -> Result<Vec<PathBuf>, String> {
             .map_err(|e| format!("Error parsing command output: {}", e)))
         .map_err(|e| format!("Error reading command output: {}", e)));
     Ok(dirs)
+}
+
+fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
+    let runtime_exe = ctx.composer_settings
+        .runtime_exe
+        .clone()
+        .unwrap_or(DEFAULT_RUNTIME.to_owned());
+
+    let args = [runtime_exe, "--ini".to_owned()];
+    let output = try!(capture_command(ctx, &args, &[])
+        .and_then(|x| String::from_utf8(x)
+            .map_err(|e| format!("Error parsing command output: {}", e)))
+        .map_err(|e| format!("Error reading command output: {}", e)));
+
+    // match any line that ends with /etc/php*/**/conf.d, get first result
+    let re = try_msg!(Regex::new(r#"(?m).*?(/etc/php\d/.*?conf.d)$"#), "Invalid regex: {err}");
+
+    let conf_d = try!(re.captures(&output)
+        .and_then(|cap| cap.at(1))
+        .ok_or("PHP configuration directory was not found".to_owned()));
+
+    Ok(PathBuf::from(conf_d))
 }
 
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
