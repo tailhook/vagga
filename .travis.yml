@@ -2,10 +2,10 @@ sudo: required
 dist: trusty
 install:
 - "curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh"
-- vagga cached-make
 - "echo ubuntu-mirror: http://mirrors.us.kernel.org/ubuntu/ > ~/.vagga.yaml"
 - "echo alpine-mirror: http://mirrors.gigenet.com/alpinelinux/ >> ~/.vagga.yaml"
+- vagga make
 - vagga _build test
 script:
-- "vagga -E VAGGA_VERSION=v0.0.0-test _run cached-image cargo test"
+- "vagga -E VAGGA_VERSION=v0.0.0-test _run rust-musl cargo test"
 - "vagga test tests --tap"

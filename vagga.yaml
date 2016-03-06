@@ -8,61 +8,44 @@ containers:
 
   rust-musl:
     environ: &rustenv
-      LD_LIBRARY_PATH: /usr/local/musl/lib:/usr/local/musl/lib/rustlib/x86_64-unknown-linux-gnu/lib
-      PATH: /usr/local/musl/bin:/usr/local/bin:/usr/bin:/bin
+      LD_LIBRARY_PATH: /musl/lib/rustlib/x86_64-unknown-linux-musl/lib
+      PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
     setup:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates]
     - !Install [file]  # dependency of checkinstall (bug #46)
-    - !BuildDeps [cmake, llvm-dev, libc++-dev, curl, python,
-        autoconf, automake, autotools-dev, libtool, texlive-extra-utils]
-    # Build instructions from
-    # https://github.com/rust-lang/rust/blob/master/src/doc/trpl/advanced-linking.md
+    - !BuildDeps [cmake, libc++-dev, curl, autoconf, automake, libtool]
+    # Build script derived from
+    # https://github.com/rust-lang/rust-buildbot/blob/master/slaves/linux/build-musl.sh
     - !TarInstall
-      url: http://www.musl-libc.org/releases/musl-1.1.10.tar.gz
+      url: http://www.musl-libc.org/releases/musl-1.1.11.tar.gz
       script: |
-        ./configure --disable-shared --prefix=/usr/local/musl
-        make
+        ./configure --prefix=/musl --disable-shared
+        make -j2
         make install
-        du -h /usr/local/musl/lib/libc.a
-    - !EnsureDir /usr/lib/llvm-3.6/share/llvm
-    - !BuildDeps [subversion]
+
+    - !Tar
+      url: http://llvm.org/releases/3.7.0/llvm-3.7.0.src.tar.xz
+      path: /tmp/llvm
     - !TarInstall
-      url: http://llvm.org/releases/3.6.1/llvm-3.6.1.src.tar.xz
+      url: http://llvm.org/releases/3.7.0/libunwind-3.7.0.src.tar.xz
       script: |
-        cd projects
-        svn co http://llvm.org/svn/llvm-project/libcxxabi/trunk/ libcxxabi
-        svn co http://llvm.org/svn/llvm-project/libunwind/trunk/ libunwind
-        sed -i 's#^\(include_directories\).*$#\0\n\1(../libcxxabi/include)#' libunwind/CMakeLists.txt
-        mkdir libunwind/build
-        cd libunwind/build
-        cmake -DLLVM_PATH=../../.. -DLIBUNWIND_ENABLE_SHARED=0 ..
-        make
-        cp lib/libunwind.a /usr/local/musl/lib/
-        du -h /usr/local/musl/lib/libunwind.a
+        cmake . -DLLVM_PATH=/tmp/llvm/llvm-3.7.0.src -DLIBUNWIND_ENABLE_SHARED=0
+        make -j2
+        cp lib/libunwind.a /musl/lib
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rustc-1.5.0-src.tar.gz
-      script: |
-        ./configure --target=x86_64-unknown-linux-musl --musl-root=/usr/local/musl --prefix=/usr/local/musl
-        make
-        make install
-        # fixes: multiple dylib candidates for `std` found
-        rm /usr/local/musl/lib/lib*-*.so
-        du -h /usr/local/musl/bin/rustc
+      url: "http://static.rust-lang.org/dist/rust-1.7.0-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
     - !TarInstall
-      url: "http://static.rust-lang.org/dist/rust-1.5.0-x86_64-unknown-linux-gnu.tar.gz"
-      script: "./install.sh --prefix=/usr --components=cargo"
+      url: "http://static.rust-lang.org/dist/rust-std-1.7.0-x86_64-unknown-linux-musl.tar.gz"
+      script: "./install.sh --prefix=/musl \
+               --components=rust-std-x86_64-unknown-linux-musl"
+    - !Sh 'ln -s /musl/lib/rustlib/x86_64-unknown-linux-musl /usr/lib/rustlib/x86_64-unknown-linux-musl'
 
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
-
-  cached-image:
-    environ: *rustenv
-    setup:
-    - !Tar
-      url: http://files.zerogw.com/vagga/img/rust-musl.655f7816.tar.xz
 
   testbase:
     setup:
@@ -105,11 +88,6 @@ commands:
   make: !Command
     description: Build vagga
     container: rust-musl
-    run: [make]
-
-  cached-make: !Command
-    description: Build vagga (uses image download instead of building)
-    container: cached-image
     run: [make]
 
   make-release: !Command
