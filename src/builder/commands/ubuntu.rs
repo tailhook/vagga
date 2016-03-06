@@ -267,7 +267,7 @@ impl Ubuntu {
             packages::NodeJsDev => Some(vec!()),
             packages::Npm => Some(vec!()),
             packages::Php if self.has_php7() => {
-                Some(vec!("php7.0-common", "php7.0-cli"))
+                Some(vec!("php-common", "php-cli"))
             }
             packages::Php => Some(vec!("php5-common", "php5-cli")),
             packages::PhpDev => Some(vec!()),
@@ -291,7 +291,7 @@ impl Ubuntu {
             packages::NodeJsDev => Some(vec!("nodejs-dev")),
             packages::Npm => Some(vec!("npm")),
             packages::Php => Some(vec!()),
-            packages::PhpDev if self.has_php7() => Some(vec!("php7.0-dev")),
+            packages::PhpDev if self.has_php7() => Some(vec!("php-dev")),
             packages::PhpDev => Some(vec!("php5-dev")),
             packages::Composer => None,
             packages::Git => Some(vec!("git")),
