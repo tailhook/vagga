@@ -180,20 +180,23 @@ Default Arch Linux kernel doesn't contain ``CONFIG_USER_NS=y`` in configuration,
 
     $ zgrep CONFIG_USER_NS /proc/config.gz
 
-To install kernel with this config enabled you can use linux-user-ns-enabled_ AUR package::
-
-    $ yaourt -S linux-user-ns-enabled
-
-.. note:: Because building kernel from sources is slow. You may use binary
-   package, by adding the following to ``/etc/pacman.conf``::
+You may use binary package from authors of vagga, by adding the following
+to ``/etc/pacman.conf``::
 
         [linux-user-ns]
         SigLevel = Never
         Server = http://files.zerogw.com/arch-kernel/$arch
 
-   The package is still considered experimental.
+.. note:: alternatively you may use a package from AUR::
 
-It's based on ``core/linux`` package and differs only with this option. After it's compiled, update your bootloader config (for GRUB it's ``grub-mkconfig``).
+    $ yaourt -S linux-user-ns-enabled
+
+
+Package is based on ``core/linux`` package and differ only with
+``CONFIG_USER_NS`` option.  After it's compiled, update your bootloader
+config, for GRUB it's probably::
+
+    grub-mkconfig -o /boot/grub/grub.cfg
 
 .. warning:: After installing a custom kernel you need to rebuild all the
    custom kernel modules. This is usually achieved by installing ``*-dkms``
@@ -202,7 +205,15 @@ It's based on ``core/linux`` package and differs only with this option. After it
 
    __ https://wiki.archlinux.org/index.php/Dynamic_Kernel_Module_Support
 
-Installing vagga from binary archive using AUR package_ (please note that vagga-bin located in new AUR4 repository so it should be activated in your system)::
+Then **reboot your machine** and choose ``linux-user-ns-enabled`` kernel
+at grub prompt. After boot, check it with ``uname -a`` (you should have
+text ``linux-user-ns-enabled`` in the output).
+
+.. note:: TODO how to make it default boot option in grub?
+
+Installing vagga from binary archive using AUR package_ (please note that
+vagga-bin located in new AUR4 repository so it should be activated in your
+system)::
 
     $ yaourt -S vagga-bin
 
