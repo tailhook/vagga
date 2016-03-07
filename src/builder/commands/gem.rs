@@ -63,13 +63,14 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
         .map_err(|e| format!("Error getting gem version: {}", e)));
 
     let re = Regex::new(r#"^(\d+?\.\d+?)\."#).expect("Invalid regex");
-    let try!(version = re.captures(&gem_ver)
+    let version = try!(re.captures(&gem_ver)
         .and_then(|cap| cap.at(1))
         .ok_or("Gem version was not found".to_owned()));
 
     version.parse::<f32>()
         .map_err(|e| format!("Erro parsing gem version: {}", e))
 }
+
 fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
@@ -143,16 +144,21 @@ pub fn install(distro: &mut Box<Distribution>,
 }
 
 fn requires_git(gemfile: &Path) -> Result<bool, String> {
-    let re = try!(
-        Regex::new(r#"(git .*? do)|(:(git|github|gist|bitbucket) =>)|(git_source\(.*?\))"#)
-        .map_err(|e| format!("Regex error: {}", e))
-    );
+    let re = Regex::new(
+        r#"(git .*? do)|(:(git|github|gist|bitbucket) =>)|(git_source\(.*?\))"#
+    ).expect("Invalid regex");
+
+    let gemfile = if gemfile.is_absolute() {
+        gemfile.to_path_buf()
+    } else {
+        Path::new("/work").join(gemfile)
+    };
 
     let gemfile_data = {
         let mut buf = String::new();
-        try!(File::open(gemfile)
+        try!(File::open(&gemfile)
             .and_then(|mut f| f.read_to_string(&mut buf))
-            .map_err(|e| format!("Error reading Gemfile: {}", e)));
+            .map_err(|e| format!("Error reading Gemfile ({:?}): {}", &gemfile, e)));
 
         buf
     };
