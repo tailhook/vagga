@@ -30,18 +30,22 @@ impl Default for GemSettings {
 
 fn ruby_version(ctx: &mut Context) -> Result<f32, String> {
     let args = [
-        "/bin/sh".to_owned(),
-        "-exc".to_owned(),
-        "ruby --version | cut -d ' ' -f 2 | cut -d '.' -f -2".to_owned(),
+        "ruby".to_owned(),
+        "--version".to_owned(),
     ];
 
-    capture_command(ctx, &args, &[])
+    let ruby_ver = try!(capture_command(ctx, &args, &[])
         .and_then(|x| String::from_utf8(x)
-            .map_err(|e| format!("Error getting ruby version: {}", e))
-            .and_then(|v| v.trim().parse::<f32>()
-                .map_err(|e| format!("Erro parsing ruby version ({}): {}", &v, e))
-            )
-        )
+            .map_err(|e| format!("Error parsing ruby version: {}", e)))
+        .map_err(|e| format!("Error getting ruby version: {}", e)));
+
+    let re = Regex::new(r#"^ruby (\d+?\.\d+?)\."#).expect("Invalid regex");
+    let version = try!(re.captures(&ruby_ver)
+        .and_then(|cap| cap.at(1))
+        .ok_or("Ruby version was not found".to_owned()));
+
+    version.parse::<f32>()
+        .map_err(|e| format!("Erro parsing ruby version: {}", e))
 }
 
 fn gem_version(ctx: &mut Context) -> Result<f32, String> {
@@ -49,18 +53,22 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
 
     let args = [
-        "/bin/sh".to_owned(),
-        "-exc".to_owned(),
-        format!("{} --version | cut -d '.' -f -2", gem_exe),
+        gem_exe,
+        "--version".to_owned(),
     ];
 
-    capture_command(ctx, &args, &[])
+    let gem_ver = try!(capture_command(ctx, &args, &[])
         .and_then(|x| String::from_utf8(x)
-            .map_err(|e| format!("Error getting gem version: {}", e))
-            .and_then(|v| v.trim().parse::<f32>()
-                .map_err(|e| format!("Erro parsing gem version ({}): {}", &v, e))
-            )
-        )
+            .map_err(|e| format!("Error parsing gem version: {}", e)))
+        .map_err(|e| format!("Error getting gem version: {}", e)));
+
+    let re = Regex::new(r#"^(\d+?\.\d+?)\."#).expect("Invalid regex");
+    let try!(version = re.captures(&gem_ver)
+        .and_then(|cap| cap.at(1))
+        .ok_or("Gem version was not found".to_owned()));
+
+    version.parse::<f32>()
+        .map_err(|e| format!("Erro parsing gem version: {}", e))
 }
 fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
