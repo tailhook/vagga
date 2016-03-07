@@ -4,6 +4,7 @@ use std::io::Write;
 use std::os::unix::fs as unix_fs;
 
 use unshare::{Command};
+use scan_dir::{self, ScanDir};
 use regex::Regex;
 
 use super::super::context::{Context};
@@ -173,8 +174,19 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
         format!("include_path={}", include_path)
     };
 
-    // find conf.d directories (various can exist on Ubuntu)
-    let conf_dirs = try!(find_dirs(ctx, "/etc/php**/conf.d"));
+    // Find conf.d directories
+    // In Ubuntu, we can have several 'conf.d', one for each SAPI
+    // (/etc/php5/cli/conf.d, /etc/php5/cgi/conf.d, /etc/php5/apache2/conf.d)
+    // but there's no global 'conf.d'
+    let conf_dirs = try!(find_conf_dirs().map_err(|errors| {
+        if errors.len() == 1 {
+            format!("Error finding PHP configuration directories: {}", errors[0])
+        } else {
+            // Concatenate errors if there is more than 1
+            let init = format!("Errors finding PHP configuration directories: {}", errors[0]);
+            errors[1..].iter().fold(init, |acc, v| format!("{}; {}", acc, v))
+        }
+    }));
 
     for conf_d in conf_dirs.iter() {
         // create vagga.ini file
@@ -206,22 +218,20 @@ fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
         .map_err(|e| format!("Error creating file {:?}: {}", location, e))
 }
 
-fn find_dirs(ctx: &mut Context, search: &str) -> Result<Vec<PathBuf>, String> {
-    let args = [
-        "find".to_owned(),
-        "/etc".to_owned(),
-        "-path".to_owned(),
-        search.to_owned(),
-    ];
-    let dirs: Vec<PathBuf> = try!(capture_command(ctx, &args, &[])
-        .and_then(|x| String::from_utf8(x) // convert output to String
-            .map(|x| x.lines() // iterate over lines
-                .filter(|l| !l.trim().is_empty()) // filter empty lines
-                .map(|l| PathBuf::from(format!("/vagga/root{}", l))) // vagga/root{/etc/php}
-                .collect())
-            .map_err(|e| format!("Error parsing command output: {}", e)))
-        .map_err(|e| format!("Error reading command output: {}", e)));
-    Ok(dirs)
+fn find_conf_dirs() -> Result<Vec<PathBuf>, Vec<scan_dir::Error>> {
+    let php_dir = if Path::new("/etc/php5").exists() {
+        "/etc/php5"
+    } else if Path::new("/etc/php7").exists() {
+        "/etc/php7"
+    } else {
+        "/etc/php"
+    };
+
+    ScanDir::dirs().walk("/vagga/root/etc", |iter| {
+        iter.filter(|&(_, ref name)| name == "conf.d")
+        .map(|(ref entry, _)| PathBuf::from(entry.path()))
+        .collect::<Vec<PathBuf>>()
+    })
 }
 
 fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
@@ -237,7 +247,7 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
         .map_err(|e| format!("Error reading command output: {}", e)));
 
     // match any line that ends with /etc/php*/**/conf.d, get first result
-    let re = try_msg!(Regex::new(r#"(?m).*?(/etc/php\d/.*?conf.d)$"#), "Invalid regex: {err}");
+    let re = Regex::new(r#"(?m).*?(/etc/php\d/.*?conf.d)$"#).expect("Invalid regex");
 
     let conf_d = try!(re.captures(&output)
         .and_then(|cap| cap.at(1))
