@@ -174,19 +174,8 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
         format!("include_path={}", include_path)
     };
 
-    // Find conf.d directories
-    // In Ubuntu, we can have several 'conf.d', one for each SAPI
-    // (/etc/php5/cli/conf.d, /etc/php5/cgi/conf.d, /etc/php5/apache2/conf.d)
-    // but there's no global 'conf.d'
-    let conf_dirs = try!(find_conf_dirs().map_err(|errors| {
-        if errors.len() == 1 {
-            format!("Error finding PHP configuration directories: {}", errors[0])
-        } else {
-            // Concatenate errors if there is more than 1
-            let init = format!("Errors finding PHP configuration directories: {}", errors[0]);
-            errors[1..].iter().fold(init, |acc, v| format!("{}; {}", acc, v))
-        }
-    }));
+    let conf_dirs = try_msg!(find_conf_dirs(),
+                             "Error listing PHP configuration directories: {err}");
 
     for conf_d in conf_dirs.iter() {
         // create vagga.ini file
@@ -218,19 +207,24 @@ fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
         .map_err(|e| format!("Error creating file {:?}: {}", location, e))
 }
 
-fn find_conf_dirs() -> Result<Vec<PathBuf>, Vec<scan_dir::Error>> {
-    let php_dir = if Path::new("/etc/php5").exists() {
-        "/etc/php5"
-    } else if Path::new("/etc/php7").exists() {
-        "/etc/php7"
-    } else {
-        "/etc/php"
-    };
-
-    ScanDir::dirs().walk("/vagga/root/etc", |iter| {
-        iter.filter(|&(_, ref name)| name == "conf.d")
-        .map(|(ref entry, _)| PathBuf::from(entry.path()))
-        .collect::<Vec<PathBuf>>()
+fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
+    ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
+        iter.filter(|&(_, ref name)| name.starts_with("php"))
+        .flat_map(|(ref entry, _)| {
+            ScanDir::dirs().read(entry.path(), |iter| {
+                iter.filter(|&(ref entry, ref name)| {
+                    name == "conf.d" ||
+                    entry.path().join("conf.d").exists()
+                })
+                .map(|(ref entry, _)| {
+                    let path = entry.path();
+                    if path.ends_with("conf.d") { path }
+                    else { path.join("conf.d") }
+                })
+                .collect()
+            })
+        })
+        .collect()
     })
 }
 
