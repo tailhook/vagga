@@ -144,15 +144,11 @@ pub fn install(distro: &mut Box<Distribution>,
 }
 
 fn requires_git(gemfile: &Path) -> Result<bool, String> {
+    let gemfile = Path::new("/work").join(gemfile);
+
     let re = Regex::new(
         r#"(git .*? do)|(:(git|github|gist|bitbucket) =>)|(git_source\(.*?\))"#
     ).expect("Invalid regex");
-
-    let gemfile = if gemfile.is_absolute() {
-        gemfile.to_path_buf()
-    } else {
-        Path::new("/work").join(gemfile)
-    };
 
     let gemfile_data = {
         let mut buf = String::new();
