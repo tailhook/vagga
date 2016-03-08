@@ -170,10 +170,7 @@ pub fn bundle(distro: &mut Box<Distribution>,
     ctx: &mut Context, info: &GemBundleInfo)
     -> Result<(), StepError>
 {
-    let gemfile = info.gemfile.clone()
-        .unwrap_or(Path::new("/work").join("Gemfile"));
-
-    let git_required = try!(requires_git(&gemfile));
+    let git_required = try!(requires_git(&info.gemfile));
     let features = scan_features(&ctx.gem_settings, git_required);
     try!(packages::ensure_packages(distro, ctx, &features));
 
@@ -187,10 +184,8 @@ pub fn bundle(distro: &mut Box<Distribution>,
     let mut cmd = try!(command(ctx, "bundle"));
     cmd.args(&["install", "--system", "--binstubs", BIN_DIR]);
 
-    if let Some(ref gemfile) = info.gemfile {
-        cmd.arg("--gemfile");
-        cmd.arg(gemfile);
-    }
+    cmd.arg("--gemfile");
+    cmd.arg(&info.gemfile);
 
     if !info.without.is_empty() {
         cmd.arg("--without");

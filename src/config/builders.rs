@@ -155,7 +155,7 @@ pub struct CopyInfo {
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct GemBundleInfo {
-    pub gemfile: Option<PathBuf>,
+    pub gemfile: PathBuf,
     pub without: Vec<String>,
 }
 
@@ -367,7 +367,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("gem_exe", V::Scalar::new().default("gem")))
     .option("GemInstall", V::Sequence::new(V::Scalar::new()))
     .option("GemBundle", V::Structure::new()
-        .member("gemfile", V::Scalar::new().optional())
+        .member("gemfile", V::Scalar::new().default("Gemfile"))
         .member("without", V::Sequence::new(V::Scalar::new())))
 
     // Node.js
