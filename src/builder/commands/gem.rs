@@ -192,17 +192,10 @@ pub fn bundle(distro: &mut Box<Distribution>,
         cmd.arg(gemfile);
     }
 
-    if !info.with.is_empty() {
-        cmd.arg("--with");
-        cmd.args(&info.with);
-    }
-
     if !info.without.is_empty() {
         cmd.arg("--without");
         cmd.args(&info.without);
     }
-
-    if info.deployment { cmd.arg("--deployment"); }
 
     run(cmd)
 }
