@@ -112,6 +112,48 @@ impl VersionHash for Builder {
                 }).map_err(err)
             }
             &B::PyFreeze(_) => unimplemented!(),
+            &B::GemBundle(ref info) => {
+                let re_gem = Regex::new(
+                    r"(?xm)^gem\s
+                      '([:alpha:][\w-]*?)' # gem name
+                      (?:,\s?'(.+?)')? # optional gem version
+                      (?:,\s?(.*?))? # aditional info
+                      (?:\s?\#.*?)?$ # ignore comments"
+                ).expect("Invalid regex");
+
+                let re_source = Regex::new(r"(?m)^source '(.+?)'(?:\s?#.*?)?$")
+                    .expect("Invalid regex");
+
+                let path = Path::new("/work").join(&info.gemfile);
+
+                File::open(&path)
+                .and_then(|mut f| {
+                    let f = BufReader::new(f);
+                    for line in f.lines() {
+                        let line = try!(line);
+                        if let Some(cap) = re_source.captures(line.trim()) {
+                            cap.at(1).map(|source| {
+                                hash.input(b"source");
+                                hash.input(source.as_bytes());
+                            });
+                            continue
+                        }
+                        if let Some(cap) = re_gem.captures(line.trim()) {
+                            cap.at(1).map(|c| hash.input(c.as_bytes()));
+                            cap.at(2).map(|c| hash.input(c.as_bytes()));
+                            cap.at(3).map(|c| {
+                                let iter = c.split(",").flat_map(|part| {
+                                    part.split(": ").map(|p| p.trim())
+                                });
+                                for part in iter {
+                                    hash.input(part.as_bytes());
+                                }
+                            });
+                        }
+                    }
+                    Ok(())
+                }).map_err(|e| Error::Io(e, path.clone()))
+            }
             &B::NpmDependencies(ref info) => {
                 let path = Path::new("/work").join(&info.file);
                 File::open(&path).map_err(|e| Error::Io(e, path.clone()))
