@@ -12,6 +12,7 @@ use config::Settings;
 
 
 mod version;
+mod gemfile;
 
 pub use self::version::{short_version, Error};
 
