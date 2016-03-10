@@ -829,6 +829,18 @@ Node.JS Commands
    ``!NpmInstall`` installs the latest ``Alpine`` distribution. Node is
    installed automatically and analog of the ``node-dev`` package is also added
    as a build dependency.
+   
+   .. note:: Packages installed this way (as well as those installed by
+   ``!NpmDependencies`` are located under ``/usr/lib/node_modules``. In order
+   for node.js to find them, one should set the environment variable ``NODE_PATH``,
+   making the example become
+
+   Example::
+
+        setup:
+        - !NpmInstall [babel-loader@6.0, webpack]
+        environ:
+          NODE_PATH: /usr/lib/node_modules
 
 .. step:: NpmDependencies
 
