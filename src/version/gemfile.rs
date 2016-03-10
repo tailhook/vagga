@@ -50,8 +50,8 @@ pub fn hash(info: &GemBundleInfo, gemfile_contents: &str, hash: &mut Digest)
     let re_group = Regex::new(r"(?m)^group\s+?(.*?)\s+?do(?:\s?#.*?)?$")
         .expect("Invalid regex");
 
-    // Match a group block with gem declarations in the same line
-    let re_group_inline = Regex::new(r"^group (.*?) do\s+?(.*?)\s+?end(?:\s?#.*?)?$")
+    // Match the start of a path block
+    let re_path = Regex::new(r"(?m)^path\s+?('.*?')\s+?do(?:\s?#.*?)?$")
         .expect("Invalid regex");
 
     let mut lines = gemfile_contents.lines();
@@ -70,18 +70,6 @@ pub fn hash(info: &GemBundleInfo, gemfile_contents: &str, hash: &mut Digest)
         } else if let Some(cap) = re_gem.captures(line) {
             let caps: Vec<&str> = cap.iter().map(|c| c.unwrap_or("")).collect();
             try!(hash_gem_line(info, &caps, hash));
-        // try to match an inline group block
-        } else if let Some(cap) = re_group_inline.captures(line) {
-            let groups = ArgValue::parse(&cap[1]);
-            if should_skip(&groups, info) { continue }
-            for gem in cap[2].split(";") {
-                let gem = gem.trim();
-                // match the gem declaration found in the inline group block
-                if let Some(cap) = re_gem.captures(gem) {
-                    let caps: Vec<&str> = cap.iter().map(|c| c.unwrap_or("")).collect();
-                    try!(hash_gem_line(info, &caps, hash));
-                }
-            }
         // try to match the start of a group block
         } else if let Some(cap) = re_group.captures(line) {
             let groups = ArgValue::List(cap[1]
@@ -91,6 +79,10 @@ pub fn hash(info: &GemBundleInfo, gemfile_contents: &str, hash: &mut Digest)
             if should_skip(&groups, info) {
                 skip_group(&mut lines);
             }
+        // try to match the start of a path block
+        } else if let Some(cap) = re_group.captures(line) {
+            let path = &cap[1];
+            try!(process_path_block(&mut lines, path, info, &re_path, hash));
         }
     }
 
@@ -115,10 +107,33 @@ fn should_skip(groups: &ArgValue, info: &GemBundleInfo) -> bool {
 /// Iterates over the lines, ignoring everything until a line containing "end" is found
 fn skip_group(lines: &mut Lines) {
     while let Some(line) = lines.next() {
-        if line.trim() == "end" {
-            break
+        if line.trim() == "end" { break }
+    }
+}
+
+fn process_path_block(lines: &mut Lines, path: &str,
+                      info: &GemBundleInfo, re: &Regex,
+                      hash: &mut Digest)
+                      -> Result<(), String>
+{
+    while let Some(line) = lines.next() {
+        if line.trim() == "end" { break }
+        if let Some(cap) = re.captures(line) {
+            let mut caps: Vec<String> = cap.iter()
+                .map(|c| c.unwrap_or("").to_owned())
+                .collect();
+            caps.get_mut(2).map(|args| {
+                if args.len() > 0 {
+                    args.push(',');
+                }
+                args.push_str(" :path => ");
+                args.push_str(path);
+            });
+            let caps: Vec<_> = caps.iter().map(|c| c.as_ref()).collect();
+            try!(hash_gem_line(info, &caps, hash));
         }
     }
+    Ok(())
 }
 
 fn switch_in_list(input: &str, target: char, replacement: &str) -> String {
