@@ -12,8 +12,11 @@ use config::Settings;
 
 
 mod version;
+mod error;
+mod managers;
 
-pub use self::version::{short_version, Error};
+pub use self::version::short_version;
+pub use self::error::Error;
 
 
 pub fn run() -> i32 {

@@ -1,71 +1,24 @@
-use std::io;
 use std::io::{BufReader, BufRead, Read};
 use std::fs::{File, symlink_metadata};
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use rustc_serialize::json::{self, Json};
-use regex::{self, Regex};
-use scan_dir::{self, ScanDir};
+use regex::Regex;
+use scan_dir::ScanDir;
 
 use config::{Config, Container};
 use config::read_config;
 use config::builders::{Builder, BuildInfo};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use self::Error::{New, ContainerNotFound};
+use super::error::Error;
+use super::error::Error::{New, ContainerNotFound};
 use path_util::{PathExt, ToRelative};
 use file_util::hash_file;
-
-
-quick_error! {
-    /// Versioning error
-    #[derive(Debug)]
-    pub enum Error {
-        /// Hash sum can't be calculated because some files need to be
-        /// generated during build
-        New {
-            description("dependencies are not ready")
-        }
-        /// Some error occured. Unfortunately all legacy errors are strings
-        String(s: String) {
-            from()
-            description("error versioning dependencies")
-            display("version error: {}", s)
-        }
-        Regex(e: Box<regex::Error>) {
-            description("can't compile regex")
-            display("regex compilation error: {}", e)
-        }
-        ScanDir(errors: Vec<scan_dir::Error>) {
-            from()
-            description("can't read directory")
-            display("error reading directory: {:?}", errors)
-        }
-        /// I/O error
-        Io(err: io::Error, path: PathBuf) {
-            cause(err)
-            description("io error")
-            display("Error reading {:?}: {}", path, err)
-        }
-        /// Container needed for build is not found
-        ContainerNotFound(name: String) {
-            description("container not found")
-            display("container {:?} not found", name)
-        }
-        /// Some step of subcontainer failed
-        SubStepError(step: String, err: Box<Error>) {
-            from(tuple: (String, Error)) -> (tuple.0, Box::new(tuple.1))
-        }
-        /// Error reading package.json
-        Json(err: json::BuilderError, path: PathBuf) {
-            description("can't read json")
-            display("error reading json {:?}: {:?}", path, err)
-        }
-    }
-}
+use super::managers::composer;
 
 pub trait VersionHash {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error>;
@@ -85,15 +38,6 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
             hash.input(b"\0");
         }
         hash.input(b"<--\0");
-    }
-}
-
-fn hash_json(data: &Json, key: &str, hash: &mut Digest) {
-    let data = data.find(key);
-    if let Some(ref ob) = data {
-        hash.input(key.as_bytes());
-        let encoded = format!("{}", json::as_json(&ob));
-        hash.input(encoded.as_bytes())
     }
 }
 
@@ -145,55 +89,7 @@ impl VersionHash for Builder {
                     }
                 })
             }
-            &B::ComposerDependencies(ref info) => {
-                let base_path: PathBuf = {
-                    let path = Path::new("/work");
-                    if let Some(ref working_dir) = info.working_dir {
-                        path.join(working_dir)
-                    } else {
-                        path.to_owned()
-                    }
-                };
-
-                let path = base_path.join("composer.lock");
-                if path.exists() { try!(
-                    File::open(&path).map_err(|e| Error::Io(e, path.clone()))
-                    .and_then(|mut f| Json::from_reader(&mut f)
-                        .map_err(|e| Error::Json(e, path.to_path_buf())))
-                    .map(|data| {
-                        data.find("hash").map(
-                            |h| h.as_string().map(|h| hash.input(h.as_bytes()))
-                        );
-                        data.find("content-hash").map(
-                            |h| h.as_string().map(|h| hash.input(h.as_bytes()))
-                        );
-                    })
-                );}
-
-                let path = base_path.join("composer.json");
-                File::open(&path).map_err(|e| Error::Io(e, path.clone()))
-                .and_then(|mut f| Json::from_reader(&mut f)
-                    .map_err(|e| Error::Json(e, path.to_path_buf())))
-                .map(|data| {
-                    // just use `npm_hash_deps` here for the structure is equal
-                    npm_hash_deps(&data, "require", hash);
-                    npm_hash_deps(&data, "conflict", hash);
-                    npm_hash_deps(&data, "replace", hash);
-                    npm_hash_deps(&data, "provide", hash);
-                    npm_hash_deps(&data, "suggest", hash);
-                    // "autoload" and "repositories" can be quite complex, just hash everything
-                    hash_json(&data, "autoload", hash);
-                    hash_json(&data, "repositories", hash);
-
-                    hash_json(&data, "minimum-stability", hash);
-                    hash_json(&data, "prefer-stable", hash);
-
-                    if info.dev {
-                        npm_hash_deps(&data, "require-dev", hash);
-                        hash_json(&data, "autoload-dev", hash);
-                    }
-                })
-            }
+            &B::ComposerDependencies(ref info) => composer::hash(info, hash),
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
                 hash_file(&path, hash, None, None)
