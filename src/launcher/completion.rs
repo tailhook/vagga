@@ -20,28 +20,10 @@ struct BuiltinCommand<'a> {
 
 #[derive(PartialEq, Eq, Hash)]
 struct SuperviseOption<'a> {
-    names: &'a [&'a str],
-    has_args: bool,
-    single: bool,
+    opt: &'a CommandOption<'a>,
     accept_children: bool,
 }
 
-
-const GLOBAL_OPTIONS: &'static [&'static CommandOption<'static>] = &[
-    &CommandOption { names: &["-V", "--version"], has_args: false, single: true },
-    &CommandOption { names: &["-E", "--env", "--environ"], has_args: true, single: false },
-    &CommandOption { names: &["-e", "--use-env"], has_args: true, single: false },
-    &CommandOption { names: &["--ignore-owner-check"], has_args: false, single: true },
-    &CommandOption { names: &["--no-build"], has_args: false, single: true },
-    &CommandOption { names: &["--no-version-check"], has_args: false, single: true },
-];
-
-const SUPERVISE_OPTIONS: &'static [&'static SuperviseOption<'static>] = &[
-    &SuperviseOption { names: &["--only"], has_args: true, single: true, accept_children: true },
-    &SuperviseOption { names: &["--exclude"], has_args: true, single: true, accept_children: true },
-    &SuperviseOption { names: &["--no-build"], has_args: false, single: true, accept_children: false },
-    &SuperviseOption { names: &["--no-version-check"], has_args: false, single: true, accept_children: false },
-];
 
 const NO_BUILD: &'static CommandOption<'static> = &CommandOption {
     names: &["--no-build"], has_args: false, single: true
@@ -50,6 +32,34 @@ const NO_BUILD: &'static CommandOption<'static> = &CommandOption {
 const NO_VERSION_CHECK: &'static CommandOption<'static> = &CommandOption {
     names: &["--no-version-check"], has_args: false, single: true
 };
+
+const GLOBAL_OPTIONS: &'static [&'static CommandOption<'static>] = &[
+    &CommandOption { names: &["-V", "--version"], has_args: false, single: true },
+    &CommandOption { names: &["-E", "--env", "--environ"], has_args: true, single: false },
+    &CommandOption { names: &["-e", "--use-env"], has_args: true, single: false },
+    &CommandOption { names: &["--ignore-owner-check"], has_args: false, single: true },
+    NO_BUILD,
+    NO_VERSION_CHECK,
+];
+
+const SUPERVISE_OPTIONS: &'static [&'static SuperviseOption<'static>] = &[
+    &SuperviseOption {
+        opt: &CommandOption { names: &["--only"], has_args: true, single: true },
+        accept_children: true,
+    },
+    &SuperviseOption {
+        opt: &CommandOption { names: &["--exclude"], has_args: true, single: true },
+        accept_children: true,
+    },
+    &SuperviseOption {
+        opt: NO_BUILD,
+        accept_children: false,
+    },
+    &SuperviseOption {
+        opt: NO_VERSION_CHECK,
+        accept_children: false,
+    },
+];
 
 const BUILTIN_COMMANDS: &'static [&'static BuiltinCommand<'static>] = &[
     &BuiltinCommand {
@@ -257,7 +267,7 @@ impl<'a> CompletionState<'a> {
                     next_state = self.maybe_supervise_option(arg, cmd_name);
                 },
                 States::SuperviseOption(cmd_name, opt) => {
-                    if opt.has_args {
+                    if opt.opt.has_args {
                         next_state = Some(States::SuperviseOptionArg(cmd_name, opt));
                     } else {
                         next_state = self.maybe_supervise_option(arg, cmd_name);
@@ -289,7 +299,7 @@ impl<'a> CompletionState<'a> {
 
         if let Some(next_state) = next_state {
             match next_state {
-                States::SuperviseOption(_, opt) if opt.single => {
+                States::SuperviseOption(_, opt) if opt.opt.single => {
                     self.supervise_single_options.insert(opt);
                 },
                 States::SuperviseOptionArg(cmd_name, opt) => {
@@ -347,7 +357,7 @@ impl<'a> CompletionState<'a> {
         -> Option<States<'a>>
     {
         for opt in SUPERVISE_OPTIONS {
-            for &opt_name in opt.names {
+            for &opt_name in opt.opt.names {
                 if arg == opt_name {
                     return Some(States::SuperviseOption(cmd_name, opt));
                 }
@@ -389,7 +399,7 @@ impl<'a> CompletionState<'a> {
             },
             States::SuperviseCmd(_) => {
                 for opt in SUPERVISE_OPTIONS {
-                    completions.extend(opt.names);
+                    completions.extend(opt.opt.names);
                 }
             },
             States::SuperviseOption(cmd_name, opt) |
@@ -443,10 +453,10 @@ impl<'a> CompletionState<'a> {
                 }
             }
         }
-        if cur.starts_with("-") || !opt.has_args {
+        if cur.starts_with("-") || !opt.opt.has_args {
             for sv_opt in SUPERVISE_OPTIONS {
                 if !self.supervise_single_options.contains(sv_opt) {
-                    completions.extend(sv_opt.names);
+                    completions.extend(sv_opt.opt.names);
                 }
             }
         }
