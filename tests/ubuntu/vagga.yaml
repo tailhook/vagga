@@ -4,6 +4,12 @@ containers:
     setup:
     - !Ubuntu trusty
 
+  trusty-i386:
+    setup:
+    - !UbuntuRelease
+      version: 14.04.4
+      arch: i386
+
   trusty-calc:
     setup:
     - !Ubuntu trusty
@@ -41,6 +47,10 @@ commands:
     container: trusty
     accepts-arguments: true
     run: echo "$@"
+
+  check-arch: !Command
+    container: trusty-i386
+    run: dpkg --print-architecture
 
   trusty-calc: !Command
     container: trusty-calc
