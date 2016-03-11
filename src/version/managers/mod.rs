@@ -29,6 +29,31 @@ fn hash_json_deps(data: &Json, key: &str, hash: &mut Digest) {
     }
 }
 
+fn hash_json_recursive(data: &Json, hash: &mut Digest) {
+    match data {
+        &Json::Object(ref ob) => {
+            for (k, v) in ob.iter() {
+                hash.input(k.as_bytes());
+                hash_json_recursive(v, hash);
+            }
+        }
+        &Json::Array(ref ar) => {
+            for i in ar.iter() {
+                hash_json_recursive(i, hash);
+            }
+        }
+        &Json::String(ref val) => hash.input(val.as_bytes()),
+        &Json::U64(val) => hash.input(format!("{}", val).as_bytes()),
+        &Json::I64(val) => hash.input(format!("{}", val).as_bytes()),
+        &Json::F64(val) => hash.input(format!("{}", val).as_bytes()),
+        &Json::Boolean(val) => {
+            if val { hash.input(b"true") }
+            else { hash.input(b"false") }
+        }
+        _ => {}
+    }
+}
+
 fn hash_json(data: &Json, key: &str, hash: &mut Digest) {
     let data = data.find(key);
     if let Some(ref ob) = data {

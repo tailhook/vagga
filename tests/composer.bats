@@ -4,10 +4,7 @@ setup() {
 
 teardown() {
     cd /work/tests/composer
-    if [ -d vendor ]; then rm -r vendor; fi
     if [ -f composer.lock ]; then rm composer.lock; fi
-    cd /work/tests/composer_lock
-    if [ -d vendor ]; then rm -r vendor; fi
 }
 
 # php
@@ -99,7 +96,7 @@ teardown() {
     [[ $output = *"The lock file is not up to date with the latest changes in composer.json"* ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-lock)
-    [[ $link = ".roots/php-composer-deps-lock.7a67ea1e/root" ]]
+    [[ $link = ".roots/php-composer-deps-lock.f057483c/root" ]]
 }
 
 # hhvm
