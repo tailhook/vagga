@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use libc::{getuid, c_int};
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
+use nix::sys::signal::{SIGQUIT};
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
@@ -74,7 +75,8 @@ pub fn run_and_wait(cmd: &mut Command)
 {
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
-    let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
+    let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
+                                SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
 
     let mut tty_guard = try!(TtyGuard::capture_tty()
         .map_err(|e| format!("Error handling tty: {}", e)));
@@ -92,17 +94,16 @@ pub fn run_and_wait(cmd: &mut Command)
                 // child process hasn't controlling terminal,
                 // so we send the signal to the child process
                 debug!("Received SIGINT signal. Waiting process to stop..");
-                try!(child.signal(SIGINT)
-                     .map_err(|e| format!(
-                         "Error sending SIGINT to {:?}: {}", cmd, e)));
+                if unsafe { killpg(child.pid(), SIGINT) } < 0 {
+                     error!("Error sending SIGINT to {:?}: {}", cmd,
+                        io::Error::last_os_error());
+                }
             }
-            SIGTERM => {
-                // SIGTERM is usually sent to a specific process so we
-                // forward it to children
-                debug!("Received SIGTERM signal, propagating");
-                try!(child.signal(SIGTERM)
-                     .map_err(|e| format!(
-                         "Error sending SIGTERM to {:?}: {}", cmd, e)));
+            SIGTERM|SIGQUIT => {
+                debug!("Received {} signal, propagating", signal);
+                child.signal(signal)
+                 .map_err(|e| error!("Error sending {} to {:?}: {}",
+                                     signal, cmd, e)).ok();
             }
             SIGCHLD => {
                 for event in child_events() {
