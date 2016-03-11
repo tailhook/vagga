@@ -30,6 +30,7 @@ pub enum Version {
 pub struct Ubuntu {
     version: Version,
     codename: Option<String>,
+    arch: String,
     apt_update: bool,
     has_universe: bool,
     clobber_chfn: bool,
@@ -42,7 +43,7 @@ impl Named for Ubuntu {
 impl Distribution for Ubuntu {
     fn name(&self) -> &'static str { "Ubuntu" }
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
-        try!(fetch_ubuntu_core(ctx, &self.version));
+        try!(fetch_ubuntu_core(ctx, &self.version, self.arch.clone()));
         let codename = try!(read_ubuntu_codename());
         if self.codename.is_some() && self.codename.as_ref() != Some(&codename) {
             return Err(From::from("Codename mismatch. \
@@ -290,12 +291,11 @@ pub fn read_ubuntu_codename() -> Result<String, String>
                 lsb_release_path=lsb_release_path))
 }
 
-pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version)
+pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
     -> Result<(), String>
 {
     let url_base = "http://cdimage.ubuntu.com/ubuntu";
     let kind = "core";
-    let arch = "amd64";
     let url = match *ver {
         Version::Daily { ref codename } => {
             format!(
@@ -421,6 +421,7 @@ pub fn configure(guard: &mut Guard, info: &UbuntuReleaseInfo)
 {
     try!(guard.distro.set(Ubuntu {
         version: Version::Release { version: info.version.clone() },
+        arch: info.arch.clone(),
         codename: None, // unknown yet
         apt_update: true,
         has_universe: false,
@@ -451,6 +452,7 @@ pub fn configure_simple(guard: &mut Guard, codename: &str)
 {
     try!(guard.distro.set(Ubuntu {
         version: Version::Daily { codename: codename.to_string() },
+        arch: "amd64".to_string(),
         codename: Some(codename.to_string()),
         clobber_chfn: true,
         apt_update: true,
