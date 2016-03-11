@@ -8,8 +8,10 @@
 use std::collections::HashSet;
 use std::fs::{File};
 use std::io::{Write};
+use std::os::unix::io::{FromRawFd, RawFd};
 use std::path::Path;
 
+use nix::unistd::dup;
 use unshare::{Command, Stdio};
 
 use config::settings::Settings;
@@ -39,12 +41,16 @@ pub struct State {
 }
 
 // Also used in alpine
-pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
+pub fn apk_run(args: &[&str], packages: &[String], stdout: Option<RawFd>) -> Result<(), String> {
     let mut cmd = Command::new("/vagga/bin/apk");
     cmd.stdin(Stdio::null())
         .env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
+    if let Some(stdout_fd) = stdout {
+        let fd = try!(dup(stdout_fd).map_err(|e| format!("{}", e)));
+        cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
+    }
     debug!("Running APK {:?}", cmd);
     return match cmd.status().map_err(|e| format!("Can't run apk: {}", e))
     {
@@ -55,13 +61,13 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
 }
 
 
-pub fn ensure_features(ctx: &mut Context, features: &[Feature])
+pub fn ensure_features(ctx: &mut Context, features: &[Feature], stdout: Option<RawFd>)
     -> Result<(), String>
 {
-    return ensure(&mut ctx.capsule, &ctx.settings, features);
+    return ensure(&mut ctx.capsule, &ctx.settings, features, stdout);
 }
 
-pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
+pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature], stdout: Option<RawFd>)
     -> Result<(), String>
 {
     if features.len() == 0 {
@@ -84,7 +90,7 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
             "add",
             "--force",
             "/vagga/bin/alpine-keys.apk",
-            ], &[]));
+            ], &[], stdout));
         let mirror = settings.alpine_mirror.clone()
             .unwrap_or(choose_mirror());
         try!(File::create(&Path::new("/etc/apk/repositories"))
@@ -126,11 +132,11 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
             try!(apk_run(&[
                 "--update-cache",
                 "add",
-                ], &pkg_queue[0..]));
+                ], &pkg_queue[0..], stdout));
         } else {
             try!(apk_run(&[
                 "add",
-                ], &pkg_queue[0..]));
+                ], &pkg_queue[0..], stdout));
         }
         capsule.installed_packages.extend(pkg_queue.into_iter());
     }

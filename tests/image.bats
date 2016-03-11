@@ -31,8 +31,7 @@ setup() {
     [[ $output = *"image.tar: POSIX tar archive (GNU)"* ]]
     run file images/image.tgz
     printf "%s\n" "${lines[@]}"
-    # FIXME:
-    # [[ $output = *"image.tar: gzip compressed data"* ]]
+    [[ $output = *"image.tgz: gzip compressed data"* ]]
 
     run vagga _pack_image alpine -f images/image.tar.xz -t unknown
     [[ $output = *"Unknown compression type: unknown"* ]]

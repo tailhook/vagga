@@ -16,7 +16,7 @@ pub fn download_file(ctx: &mut Context, url: &str)
 {
     let https = url.starts_with("https:");
     if https {
-        try!(capsule::ensure_features(ctx, &[capsule::Https]));
+        try!(capsule::ensure_features(ctx, &[capsule::Https], None));
     }
     let mut hash = Sha256::new();
     hash.input_str(url);

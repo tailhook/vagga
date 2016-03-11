@@ -99,7 +99,7 @@ fn pack_image(image_path: &Option<PathBuf>, compression_type: &Option<String>,
 
     if capsule_features.len() > 0 {
         let mut ctx = Context::new(&cfg, container.clone(), cont, settings.clone());
-        try!(capsule::ensure_features(&mut ctx, &capsule_features));
+        try!(capsule::ensure_features(&mut ctx, &capsule_features, Some(2)));
     }
 
     info!("Running {:?}", tar_cmd);

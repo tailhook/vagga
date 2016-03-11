@@ -36,7 +36,7 @@ pub fn run_simple_command(settings: &Settings, cfg: &CommandInfo,
         return Err(format!(
             "Network is not supported for !Command use !Supervise"))
     }
-    let ver = try!(build_container(settings, &cfg.container, build_mode));
+    let ver = try!(build_container(settings, &cfg.container, build_mode, None));
     let mut cmd: Command = Wrapper::new(Some(&ver), settings);
     cmd.workdir(workdir);
     cmd.arg(cmdname);

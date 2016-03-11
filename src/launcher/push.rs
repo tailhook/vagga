@@ -20,7 +20,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         Err(code) => return Ok(code),
     };
 
-    let ver = try!(build_container(settings, &opt.name, opt.build_mode));
+    let ver = try!(build_container(settings, &opt.name, opt.build_mode, None));
     let hash = match ver.rsplitn(2, ".").next() {
         Some(v) => v,
         None => return Err(format!("Incorrect container version")),

@@ -1,9 +1,11 @@
 use std::env;
 use std::io::{stdout, stderr};
 use std::fs::read_link;
+use std::os::unix::io::{FromRawFd, RawFd};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
-use unshare::{Command, Namespace};
+use nix::unistd::dup;
+use unshare::{Command, Namespace, Stdio};
 
 use options::build_mode::BuildMode;
 use config::Settings;
@@ -11,14 +13,14 @@ use process_util::{capture_fd3, set_uidmap, copy_env_vars, squash_stdio};
 use container::uidmap::get_max_uidmap;
 
 
-pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
+pub fn build_container(settings: &Settings, name: &String, mode: BuildMode, stdout: Option<RawFd>)
     -> Result<String, String>
 {
     use options::build_mode::BuildMode::*;
     let ver = match mode {
-        Normal => try!(build_internal(settings, name, &[])),
+        Normal => try!(build_internal(settings, name, &[], stdout)),
         NoImage => try!(build_internal(settings, name,
-                                       &[String::from("--no-image")])),
+                                       &[String::from("--no-image")], stdout)),
         NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
         NoVersion => {
             let lnk = format!(".vagga/{}", name);
@@ -60,11 +62,14 @@ pub fn get_version(settings: &Settings, name: &str) -> Result<String, String> {
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-fn build_internal(settings: &Settings, name: &str, args: &[String])
+fn build_internal(settings: &Settings, name: &str, args: &[String], stdout: Option<RawFd>)
     -> Result<String, String>
 {
     let mut cmd = Command::new("/proc/self/exe");
-    squash_stdio(&mut cmd);
+    if let Some(stdout_fd) = stdout {
+        let fd = try!(dup(stdout_fd).map_err(|e| format!("{}", e)));
+        cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
+    }
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
@@ -121,7 +126,7 @@ pub fn build_command(settings: &Settings, args: Vec<String>)
         args.push("--force".to_string());
     }
 
-    build_internal(settings, &name, &args)
+    build_internal(settings, &name, &args, None)
     .map(|v| debug!("Container {:?} build with version {:?}", name, v))
     .map(|()| 0)
 }
