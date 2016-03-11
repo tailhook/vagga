@@ -2,7 +2,7 @@
 Configuration
 =============
 
-Main vagga configration file is ``vagga.yaml`` it's usually in the root of the
+Main vagga configration file is ``vagga.yaml``. It's usually in the root of the
 project dir. It can also be in ``.vagga/vagga.yaml`` (but it's not recommended).
 
 .. toctree::
