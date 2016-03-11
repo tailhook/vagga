@@ -43,7 +43,6 @@ pub fn hash(info: &ComposerDepInfo, hash: &mut Digest) -> Result<(), Error> {
         super::hash_json_deps(&data, "conflict", hash);
         super::hash_json_deps(&data, "replace", hash);
         super::hash_json_deps(&data, "provide", hash);
-        super::hash_json_deps(&data, "suggest", hash);
         // "autoload" and "repositories" can be quite complex, just hash everything
         super::hash_json(&data, "autoload", hash);
         super::hash_json(&data, "repositories", hash);
