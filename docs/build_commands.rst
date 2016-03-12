@@ -428,8 +428,8 @@ The ``Py2Requirements`` command exists too.
 .. _dependent_containers:
 
 
-Composer Installer
-==================
+PHP/Composer Installer
+======================
 
 Composer packages can be installed either explicitly or from ``composer.json``.
 For example:
@@ -441,9 +441,9 @@ For example:
     - !ComposerInstall [laravel/installer]
 
 The packages will be installed using Composer's ``global require`` at
-``/usr/local/lib/composer/vendor``. This is only useful for installing packages
-that provide binaries used to bootstrap your project (like the Laravel installer,
-for instance):
+``/usr/local/lib/composer/vendor``. This is only useful for installing
+packages that provide binaries used to bootstrap your project (like the
+Laravel installer, for instance):
 
 .. code-block:: yaml
 
@@ -528,11 +528,16 @@ Note that you will have to manually `install hhvm`_ and set the ``include_path``
     - !Sh echo '.:/usr/local/lib/composer' >> /etc/hhvm/php.ini
 
 
-.. note:: Composer executable and additional utilities (like ``build-essential``
-   and ``git``) will be removed after end of container building. You must
-   ``!Download`` or ``!Install`` them explicitly if you rely on them later.
+.. note:: Composer executable and additional utilities (like
+   ``build-essential`` and ``git``) will be removed after end of container
+   building. You must ``!Download`` or ``!Install`` them explicitly if you
+   rely on them later.
 
 .. _install hhvm: https://docs.hhvm.com/hhvm/installation/linux
+
+
+.. warning:: PHP/Composer support is recently added to the vagga some things
+   may change as we gain experience with the tool.
 
 
 Dependent Containers

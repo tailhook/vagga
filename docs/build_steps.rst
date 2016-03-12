@@ -1131,8 +1131,11 @@ Python Commands
        __ https://medium.com/p/vagga-the-higher-level-package-manager-e49e85fed42a
 
 
-Composer Commands
-================
+PHP/Composer Commands
+=====================
+
+.. note:: PHP/Composer support is recently added to the vagga some things may
+   change as we gain experience with the tool.
 
 .. step:: ComposerInstall
 
