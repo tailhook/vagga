@@ -68,10 +68,7 @@ fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), Error> {
         for package in packages.iter() {
             hash.input(b"-->\0");
             for key in LOCKFILE_RELEVANT_KEYS.iter() {
-                hash.input(key.as_bytes());
-                if let Some(jsn) = package.find(key) {
-                    super::hash_json_recursive(jsn, hash)
-                }
+                super::hash_json(package, key, hash);
             }
             super::hash_json_deps(&package, "require", hash);
             super::hash_json_deps(&package, "require-dev", hash);

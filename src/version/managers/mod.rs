@@ -58,7 +58,6 @@ fn hash_json(data: &Json, key: &str, hash: &mut Digest) {
     let data = data.find(key);
     if let Some(ref ob) = data {
         hash.input(key.as_bytes());
-        let encoded = format!("{}", json::as_json(&ob));
-        hash.input(encoded.as_bytes())
+        hash_json_recursive(ob, hash);
     }
 }
