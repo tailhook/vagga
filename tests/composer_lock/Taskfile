@@ -1,0 +1,10 @@
+<?php
+
+require 'vendor/autoload.php';
+
+$project = new Task\Project('vagga');
+$project->addTask('greet', function () {
+    $this->getOutput()->writeln('Hello, Vagga!');
+});
+
+return $project;
