@@ -20,6 +20,8 @@ todo.txt
 /target
 
 /tests/inheritance/description-pak
+/tests/composer/vendor
+/tests/composer_lock/vendor
 
 # emacs files
 *~

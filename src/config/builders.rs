@@ -93,6 +93,15 @@ pub struct NpmSettings {
     pub npm_exe: String,
 }
 
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct ComposerSettings {
+    // It is used 'runtime' instead of 'php' in order to support hhvm in the future
+    pub install_runtime: bool,
+    pub install_dev: bool,
+    pub runtime_exe: Option<String>,
+    pub include_path: Option<String>,
+}
+
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GitSource {
     pub url: String,
@@ -155,6 +164,19 @@ pub struct NpmDepInfo {
     pub peer: bool,
     pub bundled: bool,
     pub optional: bool,
+}
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct ComposerDepInfo {
+    pub working_dir: Option<String>,
+    pub dev: bool,
+    pub prefer: Option<String>,
+    pub ignore_platform_reqs: bool,
+    pub no_autoloader: bool,
+    pub no_scripts: bool,
+    pub no_plugins: bool,
+    pub optimize_autoloader: bool,
+    pub classmap_authoritative: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
@@ -223,6 +245,11 @@ pub enum Builder {
     Py3Install(Vec<String>),
     Py3Requirements(PathBuf),
     PyFreeze(PyFreezeInfo),
+
+    // -- PHP --
+    ComposerConfig(ComposerSettings),
+    ComposerInstall(Vec<String>),
+    ComposerDependencies(ComposerDepInfo),
 }
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
@@ -356,4 +383,22 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("peer", V::Scalar::new().default(false))
         .member("bundled", V::Scalar::new().default(true))
         .member("optional", V::Scalar::new().default(false)))
+
+    // Composer
+    .option("ComposerConfig", V::Structure::new()
+        .member("install_runtime", V::Scalar::new().default(true))
+        .member("install_dev", V::Scalar::new().default(false))
+        .member("runtime_exe", V::Scalar::new().optional())
+        .member("include_path", V::Scalar::new().optional()))
+    .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
+    .option("ComposerDependencies", V::Structure::new()
+        .member("working_dir", V::Scalar::new().optional())
+        .member("dev", V::Scalar::new().default(true))
+        .member("prefer", V::Scalar::new().optional())
+        .member("ignore_platform_reqs", V::Scalar::new().default(false))
+        .member("no_autoloader", V::Scalar::new().default(false))
+        .member("no_scripts", V::Scalar::new().default(false))
+        .member("no_plugins", V::Scalar::new().default(false))
+        .member("optimize_autoloader", V::Scalar::new().default(false))
+        .member("classmap_authoritative", V::Scalar::new().default(false)))
 }

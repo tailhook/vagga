@@ -92,7 +92,7 @@ impl Distribution for Ubuntu {
         let mut to_install = vec!();
         let mut unsupp = vec!();
         for i in features.iter() {
-            if let Some(lst) = build_deps(*i) {
+            if let Some(lst) = self.build_deps(*i) {
                 for i in lst.into_iter() {
                     if !ctx.packages.contains(i) {
                         if ctx.build_deps.insert(i.to_string()) {
@@ -245,6 +245,11 @@ impl Ubuntu {
     fn needs_node_legacy(&self) -> bool {
         self.codename.as_ref().map(|x| &x[..] != "precise").unwrap_or(false)
     }
+    fn has_php7(&self) -> bool {
+        let php5_only = ["precise", "trusty", "vivid", "wily"];
+        self.codename.as_ref().map(|cn| !php5_only.contains(&cn.as_ref())).unwrap_or(false)
+    }
+
     fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
             packages::BuildEssential => Some(vec!()),
@@ -261,8 +266,36 @@ impl Ubuntu {
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
             packages::Npm => Some(vec!()),
+            packages::Php if self.has_php7() => {
+                Some(vec!("php-common", "php-cli"))
+            }
+            packages::Php => Some(vec!("php5-common", "php5-cli")),
+            packages::PhpDev => Some(vec!()),
+            packages::Composer => None,
             packages::Git => Some(vec!()),
             packages::Mercurial => Some(vec!()),
+        }
+    }
+
+    fn build_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
+        match pkg {
+            packages::BuildEssential => Some(vec!("build-essential")),
+            packages::Https => Some(vec!("ca-certificates")),
+            packages::Python2 => Some(vec!()),
+            packages::Python2Dev => Some(vec!("python-dev")),
+            packages::Python3 => Some(vec!()),
+            packages::Python3Dev => Some(vec!("python3-dev")),
+            packages::PipPy2 => None,
+            packages::PipPy3 => None,
+            packages::NodeJs => Some(vec!()),
+            packages::NodeJsDev => Some(vec!("nodejs-dev")),
+            packages::Npm => Some(vec!("npm")),
+            packages::Php => Some(vec!()),
+            packages::PhpDev if self.has_php7() => Some(vec!("php-dev")),
+            packages::PhpDev => Some(vec!("php5-dev")),
+            packages::Composer => None,
+            packages::Git => Some(vec!("git")),
+            packages::Mercurial => Some(vec!("hg")),
         }
     }
 }
@@ -386,24 +419,6 @@ fn init_debian_build(ctx: &mut Context) -> Result<(), String> {
     // TODO(tailhook) decide if we want to delete package databases
     // ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
     return Ok(());
-}
-
-fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
-    match pkg {
-        packages::BuildEssential => Some(vec!("build-essential")),
-        packages::Https => Some(vec!("ca-certificates")),
-        packages::Python2 => Some(vec!()),
-        packages::Python2Dev => Some(vec!("python-dev")),
-        packages::Python3 => Some(vec!()),
-        packages::Python3Dev => Some(vec!("python3-dev")),
-        packages::PipPy2 => None,
-        packages::PipPy3 => None,
-        packages::NodeJs => Some(vec!()),
-        packages::NodeJsDev => Some(vec!("nodejs-dev")),
-        packages::Npm => Some(vec!("npm")),
-        packages::Git => Some(vec!("git")),
-        packages::Mercurial => Some(vec!("hg")),
-    }
 }
 
 
