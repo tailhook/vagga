@@ -25,6 +25,7 @@ impl Wrapper for Command {
             cmd.arg(root);
         };
 
+        cmd.make_group_leader(true);
         cmd.env_clear();
 
         // Unfortunately OSString does not have starts_with yet

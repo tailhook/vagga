@@ -12,7 +12,7 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use path_util::PathExt;
-use process_util::{convert_status, set_uidmap, copy_env_vars};
+use process_util::{set_uidmap, copy_env_vars, run_and_wait, convert_status};
 
 
 pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
@@ -110,8 +110,5 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         cmd.env(k.to_string(), v.to_string());
     }
 
-    match cmd.status() {
-        Ok(s) => Ok(convert_status(s)),
-        Err(e) => Err(format!("Error running {:?}: {}", cmd, e)),
-    }
+    run_and_wait(&mut cmd).map(convert_status)
 }
