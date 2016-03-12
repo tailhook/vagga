@@ -2,14 +2,15 @@ use std::env;
 use std::io::{Read};
 use std::path::{Path, PathBuf};
 
-use libc::getuid;
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD};
+use libc::{getuid, getpgrp};
+use nix::sys::signal::{kill, SIGINT, SIGTERM, SIGCHLD};
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, reap_zombies};
 use signal::trap::Trap;
 
 use config::Settings;
 use container::uidmap::{Uidmap};
 use path_util::PathExt;
+use tty_util::{TtyGuard};
 
 
 pub static DEFAULT_PATH: &'static str =
@@ -17,7 +18,6 @@ pub static DEFAULT_PATH: &'static str =
 
 pub static PROXY_ENV_VARS: [&'static str; 5] =
     [ "http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy" ];
-
 
 
 pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
@@ -64,19 +64,27 @@ pub fn capture_fd3_status(mut cmd: Command)
     Ok((status, buf))
 }
 
-pub fn run_and_wait(cmd: &mut Command)
+pub fn run_and_wait(cmd: &mut Command, tty_fd: Option<i32>)
     -> Result<i32, String>
 {
     let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD]);
     info!("Running {:?}", cmd);
-    let child = try!(cmd.spawn().map_err(|e| format!("{}", e)));
+    let child = try!(cmd.spawn()
+                     .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let pgrp = unsafe { getpgrp() };
+    let tty_guard = match tty_fd {
+        Some(tty_fd) => Some(try!(TtyGuard::new(tty_fd, pgrp))),
+        None => None,
+    };
 
     for signal in trap.by_ref() {
         match signal {
             SIGINT => {
-                // SIGINT is usually a Ctrl+C so it's sent to whole process
-                // group, so we don't need to do anything special
+                // SIGINT is usually a Ctrl+C, if we trap it here
+                // child process hasn't controlling terminal,
+                // so we send the signal to the child process group
                 debug!("Received SIGINT signal. Waiting process to stop..");
+                kill(-child.pid(), SIGINT).ok();
             }
             SIGTERM => {
                 // SIGTERM is usually sent to a specific process so we
@@ -85,10 +93,24 @@ pub fn run_and_wait(cmd: &mut Command)
                 child.signal(SIGTERM).ok();
             }
             SIGCHLD => {
-                for (pid, status) in reap_zombies() {
-                    if pid == child.pid() {
-                        return Ok(convert_status(status));
-                    }
+                match tty_guard {
+                    Some(ref tty_guard) => {
+                        match try!(tty_guard.wait_child(&cmd, &child)) {
+                            Some(st) => {
+                                return Ok(convert_status(st));
+                            },
+                            None => {
+                                continue;
+                            },
+                        }
+                    },
+                    None => {
+                        for (pid, status) in reap_zombies() {
+                            if pid == child.pid() {
+                                return Ok(convert_status(status));
+                            }
+                        }
+                    },
                 }
             }
             _ => unreachable!(),
