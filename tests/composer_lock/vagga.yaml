@@ -1,0 +1,6 @@
+containers:
+  # php
+  php-composer-deps-lock:
+    setup:
+    - !Alpine v3.3
+    - !ComposerDependencies

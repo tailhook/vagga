@@ -15,7 +15,7 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
-use process_util::{run_and_wait, set_uidmap};
+use process_util::{run_and_wait, set_uidmap, convert_status};
 
 
 pub fn commandline_cmd(command: &CommandInfo,
@@ -100,5 +100,5 @@ pub fn commandline_cmd(command: &CommandInfo,
     }
 
     run_and_wait(&mut cmd)
-    .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+    .map(convert_status)
 }

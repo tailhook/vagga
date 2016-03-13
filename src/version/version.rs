@@ -1,72 +1,23 @@
-use std::io;
 use std::io::{BufReader, BufRead, Read};
 use std::fs::{File, symlink_metadata};
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use rustc_serialize::json::{self, Json};
-use regex::{self, Regex};
-use scan_dir::{self, ScanDir};
+use regex::Regex;
+use scan_dir::ScanDir;
 
 use config::{Config, Container};
 use config::read_config;
 use config::builders::{Builder, BuildInfo};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use self::Error::{New, ContainerNotFound};
 use path_util::{PathExt, ToRelative};
 use file_util::hash_file;
-use super::gemfile;
-
-
-quick_error! {
-    /// Versioning error
-    #[derive(Debug)]
-    pub enum Error {
-        /// Hash sum can't be calculated because some files need to be
-        /// generated during build
-        New {
-            description("dependencies are not ready")
-        }
-        /// Some error occured. Unfortunately all legacy errors are strings
-        String(s: String) {
-            from()
-            description("error versioning dependencies")
-            display("version error: {}", s)
-        }
-        Regex(e: Box<regex::Error>) {
-            description("can't compile regex")
-            display("regex compilation error: {}", e)
-        }
-        ScanDir(errors: Vec<scan_dir::Error>) {
-            from()
-            description("can't read directory")
-            display("error reading directory: {:?}", errors)
-        }
-        /// I/O error
-        Io(err: io::Error, path: PathBuf) {
-            cause(err)
-            description("io error")
-            display("Error reading {:?}: {}", path, err)
-        }
-        /// Container needed for build is not found
-        ContainerNotFound(name: String) {
-            description("container not found")
-            display("container {:?} not found", name)
-        }
-        /// Some step of subcontainer failed
-        SubStepError(step: String, err: Box<Error>) {
-            from(tuple: (String, Error)) -> (tuple.0, Box::new(tuple.1))
-        }
-        /// Error reading package.json
-        Json(err: json::BuilderError, path: PathBuf) {
-            description("can't read json")
-            display("error reading json {:?}: {:?}", path, err)
-        }
-    }
-}
+use super::error::Error::{self, New, ContainerNotFound};
+use super::managers::{bundler, composer};
 
 pub trait VersionHash {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error>;
@@ -113,21 +64,6 @@ impl VersionHash for Builder {
                 }).map_err(err)
             }
             &B::PyFreeze(_) => unimplemented!(),
-            &B::GemBundle(ref info) => {
-                let path = Path::new("/work").join(&info.gemfile);
-
-                File::open(&path)
-                .and_then(|mut f| {
-                    let mut buf = String::new();
-                    try!(f.read_to_string(&mut buf));
-                    Ok(buf)
-                })
-                .map_err(|e| Error::Io(e, path.clone()))
-                .and_then(|contents| {
-                    gemfile::hash(info, &contents, hash)
-                    .map_err(From::from)
-                })
-            }
             &B::NpmDependencies(ref info) => {
                 let path = Path::new("/work").join(&info.file);
                 File::open(&path).map_err(|e| Error::Io(e, path.clone()))
@@ -152,6 +88,8 @@ impl VersionHash for Builder {
                     }
                 })
             }
+            &B::GemBundle(ref info) => bundler::hash(info, hash),
+            &B::ComposerDependencies(ref info) => composer::hash(info, hash),
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);
                 hash_file(&path, hash, None, None)

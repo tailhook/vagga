@@ -136,7 +136,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         try!(network::join_gateway_namespaces());
         try!(unshare_namespace(Namespace::Mount)
             .map_err(|e| format!("Failed to create mount namespace: {}", e)));
-        try!(mount_tmpfs(&nsdir, "size=10m"));
+        try!(mount_tmpfs(&nsdir, "size=10m,mode=0755"));
 
         let bridge_ns = nsdir.join("bridge");
         let ip = try!(network::setup_bridge(&bridge_ns, &forwards));

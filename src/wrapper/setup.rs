@@ -238,6 +238,8 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try_msg!(create_dir(&old_root, false),
              "Error creating /vagga/old_root: {err}");
     try!(change_root(&mnt_dir, &old_root));
+    try!(unmount(&Path::new("/work/.vagga/.mnt"))
+         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
     try!(unmount(&Path::new("/vagga/old_root")));
 
     Ok(())
@@ -395,8 +397,6 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
 
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
          .map_err(|e| format!("Error changing root: {}", e)));
-    try!(unmount(&Path::new("/work/.vagga/.mnt"))
-         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
     try!(unmount(&Path::new("/tmp"))
          .map_err(|e| format!("Error unmounting `/tmp`: {}", e)));
     Ok(())

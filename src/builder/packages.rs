@@ -6,10 +6,10 @@ use super::commands::gem;
 use super::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
+use builder::commands::composer;
 use file_util::copy;
 
 pub use self::Package::*;
-
 
 // All packages should be installed as build dependency except specified
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -32,6 +32,10 @@ pub enum Package {
     NodeJs,     // not build dep
     NodeJsDev,
     Npm,
+
+    Php,
+    PhpDev,
+    Composer,
 
     Git,
     Mercurial,
@@ -60,6 +64,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     .map_err(|e| format!("Error copying pip: {}", e)));
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
+            Composer => try!(composer::bootstrap(ctx)),
             _ => {
                 left.push(i);
                 continue;

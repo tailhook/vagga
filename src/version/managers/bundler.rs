@@ -1,8 +1,13 @@
+use std::io::Read;
+use std::fs::File;
+use std::path::Path;
 use std::str::Lines;
 
 use regex::Regex;
 use shaman::digest::Digest;
+
 use config::builders::GemBundleInfo;
+use version::error::Error;
 
 #[derive(Debug)]
 enum ArgValue {
@@ -27,9 +32,20 @@ impl ArgValue {
 /// Hash Gemfile data,
 ///
 /// Iterates over provided Gemfile contents, hashing each line that is a gem declaration.
-pub fn hash(info: &GemBundleInfo, gemfile_contents: &str, hash: &mut Digest)
-    -> Result<(), String>
+pub fn hash(info: &GemBundleInfo,hash: &mut Digest)
+    -> Result<(), Error>
 {
+    let path = Path::new("/work").join(&info.gemfile);
+
+    let gemfile_contents = try!(File::open(&path)
+        .and_then(|mut f| {
+            let mut buf = String::new();
+            try!(f.read_to_string(&mut buf));
+            Ok(buf)
+        })
+        .map_err(|e| Error::Io(e, path.clone()))
+    );
+
     // Match a source line of the Gemfile
     let re_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
 

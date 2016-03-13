@@ -547,7 +547,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     let iip = format!("172.18.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
 
     try!(File::create(link_to)
-        .map_err(|e| format!("Can't create namespace file: {}", e)));
+        .map_err(|e| format!("Can't create namespace file {:?}: {}",
+                             link_to, e)));
 
 
     let mut cmd = ip_cmd();
@@ -625,9 +626,11 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let iif = eif.clone() + "g";
 
     try!(File::create(link_net)
-        .map_err(|e| format!("Can't create namespace file: {}", e)));
+        .map_err(|e| format!("Can't create namespace file {:?}: {}",
+            link_net, e)));
     try!(File::create(link_uts)
-        .map_err(|e| format!("Can't create namespace file: {}", e)));
+        .map_err(|e| format!("Can't create namespace file {:?}: {}",
+            link_uts, e)));
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",

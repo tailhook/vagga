@@ -7,6 +7,7 @@ use super::commands::generic;
 use super::commands::pip;
 use super::commands::gem;
 use super::commands::npm;
+use super::commands::composer;
 use super::commands::vcs;
 use super::commands::download;
 use super::commands::subcontainer;
@@ -224,6 +225,23 @@ impl BuildCommand for Builder {
                 if build {
                     try!(npm::npm_deps(&mut guard.distro, &mut guard.ctx,
                         info));
+                }
+            }
+            &B::ComposerConfig(ref composer_settings) => {
+                guard.ctx.composer_settings = composer_settings.clone();
+            }
+            &B::ComposerInstall(ref pkgs) => {
+                try!(composer::configure(&mut guard.ctx));
+                if build {
+                    try!(composer::composer_install(&mut guard.distro,
+                        &mut guard.ctx, pkgs));
+                }
+            }
+            &B::ComposerDependencies(ref info) => {
+                try!(composer::configure(&mut guard.ctx));
+                if build {
+                    try!(composer::composer_dependencies(&mut guard.distro,
+                        &mut guard.ctx, info));
                 }
             }
         }

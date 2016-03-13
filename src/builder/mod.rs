@@ -23,6 +23,7 @@ mod commands {
     pub mod pip;
     pub mod gem;
     pub mod npm;
+    pub mod composer;
     pub mod vcs;
     pub mod download;
     pub mod subcontainer;
