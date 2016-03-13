@@ -49,9 +49,6 @@ pub fn hash(info: &GemBundleInfo,hash: &mut Digest)
     // Match a source line of the Gemfile
     let re_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
 
-    // Match a ruby version line
-    let re_ruby = Regex::new(r"(?m)^ruby '(.+?)'").expect("Invalid regex");
-
     // Match a line describing a gem dependency in the format:
     //   gem 'gem-name', 'optional version', positional: :arguments
     let re_gem = Regex::new(
@@ -77,10 +74,6 @@ pub fn hash(info: &GemBundleInfo,hash: &mut Digest)
         //   source 'https://rubygems.org'
         if let Some(cap) = re_source.captures(line) {
             hash.input(b"source");
-            hash.input(cap[1].as_bytes());
-        // try to match a ruby version line
-        } else if let Some(cap) = re_ruby.captures(line) {
-            hash.input(b"ruby");
             hash.input(cap[1].as_bytes());
         // try to match a gem declaration
         } else if let Some(cap) = re_gem.captures(line) {
