@@ -1,13 +1,8 @@
 containers:
-  pkg-alpine-33:
+  pkg-alpine:
     setup:
     - !Alpine v3.3
     - !GemInstall [rdoc:4.2.0]
-
-  pkg-alpine-32:
-    setup:
-    - !Alpine v3.2
-    - !GemInstall [rdoc]
 
   pkg-ubuntu-trusty:
     setup:
