@@ -36,7 +36,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         .arg("_pack_image")
         .arg(&opt.name)
         .arg("-f").arg(&image_path)
-        .arg("-t").arg("xz");
+        .arg("-J");
     match pack_cmd.status() {
         Ok(st) if !st.success() => {
             return Err(format!("Error when packing image: {:?}", pack_cmd));

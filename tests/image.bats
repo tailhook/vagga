@@ -8,9 +8,9 @@ setup() {
     rm -rf images/image.*
 
     vagga _pack_image alpine -f images/image.tar
-    vagga _pack_image alpine -f images/image.tar.gz -t gz
-    vagga _pack_image alpine -f images/image.tar.bz2 -t bz2
-    vagga _pack_image alpine -f images/image.tar.xz -t xz
+    vagga _pack_image alpine -f images/image.tar.gz -z
+    vagga _pack_image alpine -f images/image.tar.bz2 -j
+    vagga _pack_image alpine -f images/image.tar.xz -J
     run file images/image.tar
     printf "%s\n" "${lines[@]}"
     [[ $output = *"image.tar: POSIX tar archive (GNU)"* ]]
@@ -25,17 +25,13 @@ setup() {
     [[ $output = *"image.tar.xz: XZ compressed data"* ]]
 
     vagga _pack_image alpine > images/image.tar
-    vagga _pack_image alpine -t gz > images/image.tgz
+    vagga _pack_image alpine -z > images/image.tgz
     run file images/image.tar
     printf "%s\n" "${lines[@]}"
     [[ $output = *"image.tar: POSIX tar archive (GNU)"* ]]
     run file images/image.tgz
     printf "%s\n" "${lines[@]}"
     [[ $output = *"image.tgz: gzip compressed data"* ]]
-
-    run vagga _pack_image alpine -f images/image.tar.xz -t unknown
-    [[ $output = *"Unknown compression type: unknown"* ]]
-    [[ $status = 1 ]]
 }
 
 @test "image: push & pull" {

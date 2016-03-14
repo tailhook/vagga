@@ -56,9 +56,8 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         }
             
     }
-    if let Some(ref compression_type) = options.compression_type {
-        cmd.arg("-t");
-        cmd.arg(compression_type);
+    if let Some(compression_type) = options.compression_type {
+        cmd.arg(compression_type.get_short_option());
     }
     cmd.arg("--container-version");
     cmd.arg(&container_ver);

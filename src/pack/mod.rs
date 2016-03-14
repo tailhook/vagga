@@ -9,13 +9,14 @@ use builder::capsule;
 use builder::context::Context;
 use config::read_config;
 use config::Settings;
+use options::compression_type::{compression_type, CompressionType};
 use process_util::convert_status;
 
 
 pub fn run() -> i32 {
     let mut container: String = "".to_string();
     let mut file_path: Option<PathBuf> = None;
-    let mut compression_type: Option<String> = None;
+    let mut compression: Option<CompressionType> = None;
     let mut settings: Settings = Default::default();
     let mut ver: String = "".to_string();
     {
@@ -30,9 +31,7 @@ pub fn run() -> i32 {
         ap.refer(&mut file_path)
             .add_option(&["-f", "--file"], ParseOption,
                 "File to store tar archive at");
-        ap.refer(&mut compression_type)
-            .add_option(&["-t", "--compression-type"], ParseOption,
-                "Compression type to compress image");
+        compression_type(&mut ap, &mut compression);
         ap.refer(&mut settings)
           .add_option(&["--settings"], Store,
                 "User settings for the container");
@@ -46,15 +45,17 @@ pub fn run() -> i32 {
         }
     }
 
-    pack_image(&file_path, &compression_type, &container, &ver, &settings)
+    pack_image(&file_path, &compression, &container, &ver, &settings)
         .map(|()| 0)
         .map_err(|e| error!("{}", e))
         .unwrap_or(1)
 }
 
-fn pack_image(image_path: &Option<PathBuf>, compression_type: &Option<String>,
-              container: &String, version: &String, settings: &Settings)
-              -> Result<(), String> {
+fn pack_image(image_path: &Option<PathBuf>,
+    compression_type: &Option<CompressionType>, container: &String,
+    version: &String, settings: &Settings)
+    -> Result<(), String>
+{
     let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
         .expect("Error parsing configuration file");
     let cont = cfg.containers.get(container)
@@ -68,27 +69,9 @@ fn pack_image(image_path: &Option<PathBuf>, compression_type: &Option<String>,
     tar_cmd.stdin(Stdio::null())
         .arg("tar")
         .arg("-c");
-    match *compression_type {
-        Some(ref compression_type) => {
-            match compression_type.as_ref() {
-                "gz" => {
-                    tar_cmd.arg("-z");
-                    capsule_features.push(capsule::Gzip);
-                },
-                "bz2" => {
-                    tar_cmd.arg("-j");
-                    capsule_features.push(capsule::Bzip2);
-                },
-                "xz" => {
-                    tar_cmd.arg("-J");
-                    capsule_features.push(capsule::Xz);
-                },
-                t => {
-                    return Err(format!("Unknown compression type: {}", t));
-                },
-            }
-        },
-        None => {},
+    if let Some(compression_type) = *compression_type {
+        tar_cmd.arg(compression_type.get_short_option());
+        capsule_features.push(compression_type.get_capsule_feature());
     }
     if let Some(ref image_path) = *image_path {
         tar_cmd.arg("-f").arg(image_path);
