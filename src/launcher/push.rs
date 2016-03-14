@@ -56,12 +56,12 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         .join(&roots)
         .join(&ver)
         .join("image.tar.xz");
-    match settings.push_image_cmd {
-        Some(ref push_image_cmd) => {
+    match settings.push_image_script {
+        Some(ref push_image_script) => {
             let mut upload_cmd = Command::new("/bin/sh");
             upload_cmd.stdin(Stdio::null())
                 .arg("-c")
-                .arg(push_image_cmd)
+                .arg(push_image_script)
                 .env("source_path", source_path.to_str().unwrap())
                 .env("container_name", &opt.name)
                 .env("hash", &hash);
