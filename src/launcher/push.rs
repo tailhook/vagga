@@ -60,7 +60,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         Some(ref push_image_script) => {
             let mut upload_cmd = Command::new("/bin/sh");
             upload_cmd.stdin(Stdio::null())
-                .arg("-c")
+                .arg("-exc")
                 .arg(push_image_script)
                 .env("source_path", source_path.to_str().unwrap())
                 .env("container_name", &opt.name)
