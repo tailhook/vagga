@@ -226,7 +226,7 @@ pub fn _build_container(cconfig: &Container, container: &String,
         cmd.arg(format!("{}.{}", container, &ver[..8]));
     }
     if force || no_image {
-        cmd.arg("--no-image");
+        cmd.arg("--no-image-download");
     }
     cmd.arg("--settings");
     cmd.arg(json::encode(wrapper.settings).unwrap());
@@ -302,7 +302,7 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             .add_option(&["--force"], StoreTrue,
                 "Force build even if container is considered up to date");
         ap.refer(&mut no_image)
-            .add_option(&["--no-image"], StoreTrue,
+            .add_option(&["--no-image-download"], StoreTrue,
                 "Do not download image");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}

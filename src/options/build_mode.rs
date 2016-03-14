@@ -20,7 +20,7 @@ impl Default for BuildMode {
 pub fn build_mode<'x>(ap: &mut ArgumentParser<'x>, mode: &'x mut BuildMode)
 {
     ap.refer(mode)
-    .add_option(&["--no-image"], StoreConst(BuildMode::NoImage), "
+    .add_option(&["--no-image-download"], StoreConst(BuildMode::NoImage), "
         Do not download container image from image index.
         ")
     .add_option(&["--no-build"], StoreConst(BuildMode::NoBuild), "

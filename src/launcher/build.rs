@@ -13,14 +13,15 @@ use process_util::{capture_fd3, set_uidmap, copy_env_vars, squash_stdio};
 use container::uidmap::get_max_uidmap;
 
 
-pub fn build_container(settings: &Settings, name: &String, mode: BuildMode, stdout: Option<RawFd>)
+pub fn build_container(settings: &Settings, name: &String,
+    mode: BuildMode, stdout: Option<RawFd>)
     -> Result<String, String>
 {
     use options::build_mode::BuildMode::*;
     let ver = match mode {
         Normal => try!(build_internal(settings, name, &[], stdout)),
         NoImage => try!(build_internal(settings, name,
-                                       &[String::from("--no-image")], stdout)),
+            &[String::from("--no-image-download")], stdout)),
         NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
         NoVersion => {
             let lnk = format!(".vagga/{}", name);

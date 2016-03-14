@@ -70,7 +70,7 @@ pub fn run() -> i32 {
           .add_option(&["--container-version"], Store,
                 "Version for the container build");
         ap.refer(&mut no_image)
-          .add_option(&["--no-image"], StoreTrue,
+          .add_option(&["--no-image-download"], StoreTrue,
                 "Do not download container image");
         match ap.parse_args() {
             Ok(()) => {}
