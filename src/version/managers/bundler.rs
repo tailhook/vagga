@@ -8,112 +8,75 @@ use shaman::digest::Digest;
 use config::builders::GemBundleInfo;
 use version::error::Error;
 
-#[derive(Debug)]
-enum ArgValue {
-    Single(String),
-    List(Vec<String>),
+struct GemlineHasher<'a> {
+    info: &'a GemBundleInfo,
+    re_gemline: Regex,
+    re_group_keyword: Regex,
+    re_group_arrow: Regex,
 }
 
-impl ArgValue {
-    fn parse(input: &str) -> Self {
-        let trim = |c| c == ' ' || c == ':';
-        if input.starts_with("[") && input.ends_with("]") {
-            ArgValue::List(input[1..(input.len()-1)]
-            .split(",")
-            .map(|x| x.trim_matches(|c| trim(c)).to_owned())
-            .collect())
-        } else {
-            ArgValue::Single(input.trim_matches(|c| trim(c)).to_owned())
+impl<'a> GemlineHasher<'a> {
+    pub fn new(info: &'a GemBundleInfo) -> Self {
+        // Match a line describing a gem dependency in the format:
+        //   gem 'gem-name', 'optional version', positional: :arguments
+        let re_gem = Regex::new(
+            r"(?xm)^\s*?gem\s
+              '([:alpha:][\w-]*?)' # gem name
+              (?:,\s*?'(.+?)')? # optional gem version
+              (?:,\s*?(.*?))? # extra args
+              (?:\s*?\#.*?)?$ # ignore comments"
+        ).expect("Invalid regex");
+
+        let re_keyword = Regex::new(r"(?m),\s+?group:\s+?(.+?)(?:,\s+?\w+?:.*?)?$")
+            .expect("Invalid regex");
+        let re_arrow = Regex::new(r"(?m),\s+?:group\s+?=>\s+?(.+?)(?:,\s+?:\w+?\s+?=>\s+?.*?)?$")
+            .expect("Invalid regex");
+
+        GemlineHasher {
+            info: info,
+            re_gemline: re_gem,
+            re_group_keyword: re_keyword,
+            re_group_arrow: re_arrow,
         }
     }
-}
 
-/// Hash Gemfile data,
-///
-/// Iterates over provided Gemfile contents, hashing each line that is a gem declaration.
-pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
-    -> Result<(), Error>
-{
-    // Match a source line of the Gemfile
-    let re_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
-
-    // Match a line describing a gem dependency in the format:
-    //   gem 'gem-name', 'optional version', positional: :arguments
-    let re_gem = Regex::new(
-        r"(?xm)^\s*?gem\s
-          '([:alpha:][\w-]*?)' # gem name
-          (?:,\s*?'(.+?)')? # optional gem version
-          (?:,\s*?(.*?))? # aditional info
-          (?:\s*?\#.*?)?$ # ignore comments"
-    ).expect("Invalid regex");
-
-    // Match the start of a group block
-    let re_group = Regex::new(r"(?m)^group\s+?(.*?)\s+?do(?:\s?#.*?)?$")
-        .expect("Invalid regex");
-
-    // Match the start of a path block
-    let re_path = Regex::new(r"(?m)^path\s+?('.*?')\s+?do(?:\s?#.*?)?$")
-        .expect("Invalid regex");
-
-    let path = Path::new("/work").join(&info.gemfile);
-
-    let gemlock = try!(path.parent()
-        .map(|dir| dir.join("Gemfile.lock"))
-        .ok_or("Gemfile should be under /work".to_owned()));
-    if gemlock.exists() {
-        try!(hash_lock_file(&gemlock, hash));
+    pub fn is_gemline(&self, line: &str) -> bool {
+        self.re_gemline.is_match(line)
     }
 
-    hash.input(b"-->\0");
-
-    let mut f = try!(File::open(&path)
-        .map_err(|e| Error::Io(e, path.clone())));
-    let mut reader = BufReader::new(f);
-
-    let mut lines = reader.lines();
-    while let Some(line) = lines.next() {
-        let line = try!(line.map_err(|e| Error::Io(e, path.to_path_buf())));
-        let line = line.trim();
-        // try to get source lines of Gemfile which usually contains:
-        //   source 'https://rubygems.org'
-        if let Some(cap) = re_source.captures(line) {
-            hash.input(b"source");
-            hash.input(cap[1].as_bytes());
-        // try to match a gem declaration
-        } else if let Some(cap) = re_gem.captures(line) {
-            let caps: Vec<&str> = cap.iter().map(|c| c.unwrap_or("")).collect();
-            try!(hash_gem_line(info, &caps, hash));
-        // try to match the start of a group block
-        } else if let Some(cap) = re_group.captures(line) {
-            let groups = ArgValue::List(cap[1]
-                .split(",")
-                .map(|x| x.trim_matches(|c| c == ' ' || c == ':').to_owned())
-                .collect());
-            if should_skip(&groups, info) {
-                try!(skip_group(&mut lines, &path));
+    pub fn hash(&self, line: &str, hash: &mut Digest) {
+        if let Some(captures) = self.re_gemline.captures(line) {
+            let gem_name = &captures[1];
+            let gem_version = captures.at(2).unwrap_or("*");
+            let gem_extra = captures.at(3).unwrap_or("");
+            // check if gem is in excluded group
+            if let Some(cap) = self.re_group_keyword.captures(gem_extra) {
+                if should_skip(&cap[1], self.info) {
+                    return
+                }
             }
-        // try to match the start of a path block
-        } else if let Some(cap) = re_group.captures(line) {
-            let path_block = &cap[1];
-            try!(process_path_block(&mut lines, path_block, info, &re_path, hash, &path));
+            if let Some(cap) = self.re_group_arrow.captures(gem_extra) {
+                if should_skip(&cap[1], self.info) {
+                    return
+                }
+            }
+
+            hash.input(gem_name.as_bytes());
+            hash.input(gem_version.as_bytes());
+            hash.input(gem_extra.as_bytes());
+
+            hash.input(b"\0");
         }
     }
-
-    hash.input(b"<--\0");
-    Ok(())
 }
 
 /// Tell whether the group should be skipped
-fn should_skip(groups: &ArgValue, info: &GemBundleInfo) -> bool {
-    match groups {
-        &ArgValue::Single(ref value) => {
-            info.without.contains(&value.to_owned())
-        }
-        &ArgValue::List(ref list) => {
-            list.iter()
-            .fold(true, |acc, group| info.without.contains(group) && acc)
-        }
-    }
+fn should_skip(groups: &str, info: &GemBundleInfo) -> bool {
+    groups.split(",")
+        .map(|g| g.trim_matches(|c| [' ', ':', '[', ']'].contains(&c)))
+        // need to alocate to satisfy type checker
+        // &String != &str
+        .fold(true, |acc, group| info.without.contains(&group.to_owned()) && acc)
 }
 
 /// Skip a group block
@@ -130,11 +93,72 @@ fn skip_group<B>(lines: &mut Lines<B>, filename: &Path)
     Ok(())
 }
 
-fn process_path_block<B>(lines: &mut Lines<B>,
-                         path: &str,
-                         info: &GemBundleInfo,
-                         re: &Regex,
+/// Hash Gemfile data,
+///
+/// Iterates over provided Gemfile contents, hashing each line that is a gem declaration.
+pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
+    -> Result<(), Error>
+{
+    // Match a source line of the Gemfile
+    let re_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
+
+    // Match the start of a group block
+    let re_group = Regex::new(r"(?m)^group\s+?(.*?)\s+?do(?:\s?#.*?)?$")
+        .expect("Invalid regex");
+
+    // Match the start of a path block
+    let re_path = Regex::new(r"(?m)^path\s+?('.*?')\s+?do(?:\s?#.*?)?$")
+        .expect("Invalid regex");
+
+    let gemline_hasher = GemlineHasher::new(info);
+
+    let path = Path::new("/work").join(&info.gemfile);
+
+    let gemlock = try!(path.parent()
+        .map(|dir| dir.join("Gemfile.lock"))
+        .ok_or("Gemfile should be under /work".to_owned()));
+    if gemlock.exists() {
+        try!(hash_lock_file(&gemlock, hash));
+    }
+
+    hash.input(b"-->\0");
+
+    let f = try!(File::open(&path).map_err(|e| Error::Io(e, path.clone())));
+    let reader = BufReader::new(f);
+
+    let mut lines = reader.lines();
+    while let Some(line) = lines.next() {
+        let line = try!(line.map_err(|e| Error::Io(e, path.to_path_buf())));
+        let line = line.trim();
+        // try to get source lines of Gemfile which usually contains:
+        //   source 'https://rubygems.org'
+        if let Some(cap) = re_source.captures(line) {
+            hash.input(b"source");
+            hash.input(cap[1].as_bytes());
+        // try to match a gem declaration
+        } else if gemline_hasher.is_gemline(line) {
+            gemline_hasher.hash(line, hash);
+        // try to match the start of a group block
+        } else if let Some(cap) = re_group.captures(line) {
+            let groups = &cap[1];
+            if should_skip(&groups, info) {
+                try!(skip_group(&mut lines, &path));
+            }
+        // try to match the start of a path block
+        } else if let Some(cap) = re_path.captures(line) {
+            let path_name = &cap[1];
+            try!(process_path_block(&gemline_hasher, hash, &mut lines, path_name, &path));
+        }
+    }
+
+    hash.input(b"<--\0");
+    Ok(())
+}
+
+fn process_path_block<B>(gemline_hasher: &GemlineHasher,
                          hash: &mut Digest,
+                         lines: &mut Lines<B>,
+                         path: &str,
                          filename: &Path)
                          -> Result<(), Error>
                          where B: BufRead
@@ -142,100 +166,18 @@ fn process_path_block<B>(lines: &mut Lines<B>,
     while let Some(line) = lines.next() {
         let line = try!(line.map_err(|e| Error::Io(e, filename.to_path_buf())));
         if line.trim() == "end" { break }
-        if let Some(cap) = re.captures(&line) {
-            let mut caps: Vec<String> = cap.iter()
-                .map(|c| c.unwrap_or("").to_owned())
-                .collect();
-            caps.get_mut(2).map(|args| {
-                if args.len() > 0 {
-                    args.push(',');
-                }
-                args.push_str(" :path => ");
-                args.push_str(path);
-            });
-            let caps: Vec<_> = caps.iter().map(|c| c.as_ref()).collect();
-            try!(hash_gem_line(info, &caps, hash));
+
+        if gemline_hasher.is_gemline(&line) {
+            hash.input(path.as_bytes());
+            gemline_hasher.hash(&line, hash);
         }
     }
-    Ok(())
-}
-
-fn switch_in_list(input: &str, target: char, replacement: &str) -> String {
-    let mut in_list = false;
-    let replacer = |c| {
-        if c == '[' && !in_list { in_list = true; }
-        else if c == ']' && in_list { in_list = false; }
-        return in_list && c == target
-    };
-    input.replace(replacer, replacement)
-}
-
-fn change_commas(input: &str) -> String {
-    switch_in_list(input, ',', ";")
-}
-
-fn restore_commas(input: &str) -> String {
-    switch_in_list(input, ';', ",")
-}
-
-fn parse_pos_args(cap: &str) -> Result<Vec<(String, ArgValue)>, String> {
-    let re_keyword = Regex::new(r"(?:(.+?):\s+?(.+))").expect("Invalid regex");
-    let re_arrow = Regex::new(r"(?::(.+?)\s+?=>\s+?(.+))").expect("Invalid regex");
-
-    if !cap.is_empty() {
-        // change ',' with ',' in lists '[]' so we can split args by ','
-        let cap = change_commas(cap);
-        let mut pos_args = Vec::new();
-        for arg in cap.split(",") {
-            let parts = try!(re_keyword.captures(&arg)
-                .or(re_arrow.captures(&arg))
-                .ok_or(format!("Invalid gem argument: {}", &arg)));
-
-            let part_1 = parts[1].to_owned();
-            // restore ','
-            let part_2 = restore_commas(parts[2].trim_matches(':'));
-            pos_args.push((part_1, ArgValue::parse(&part_2)));
-        }
-        Ok(pos_args)
-    } else {
-        Ok(Vec::new())
-    }
-}
-
-/// Try to parse a gem dependency line
-fn hash_gem_line(info: &GemBundleInfo, cap: &Vec<&str>, hash: &mut Digest)
-    -> Result<(), String>
-{
-    let gem_name = cap[1];
-    let gem_version = if cap[2] == "" { "*" } else { cap[2] };
-    let pos_args = try!(parse_pos_args(cap[3]));
-
-    // check if gem is in excluded group
-    let skip_gem = pos_args.iter().position(|&(ref k, ref v)| {
-            k == "group" &&
-            should_skip(v, info)
-        }).is_some();
-    if skip_gem { return Ok(()) }
-
-    hash.input(gem_name.as_bytes());
-    hash.input(gem_version.as_bytes());
-    for (key, value) in pos_args {
-        hash.input(key.as_bytes());
-        match value {
-            ArgValue::Single(value) => hash.input(value.as_bytes()),
-            ArgValue::List(list) => for i in list {
-                hash.input(i.as_bytes());
-            }
-        }
-    }
-
-    hash.input(b"\0");
     Ok(())
 }
 
 fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), Error> {
-    let mut f = try!(File::open(path).map_err(|e| Error::Io(e, path.to_path_buf())));
-    let mut reader = BufReader::new(f);
+    let f = try!(File::open(path).map_err(|e| Error::Io(e, path.to_path_buf())));
+    let reader = BufReader::new(f);
 
     let re_gem = Regex::new(r"^\s*?(?P<gem>[\w-]+?)\s*?\((?P<version>[\w\.-]+?)\)?$")
         .expect("Invalid regex");
