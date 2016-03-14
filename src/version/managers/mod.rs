@@ -1,4 +1,4 @@
-use rustc_serialize::json::{self, Json};
+use rustc_serialize::json::Json;
 use shaman::digest::Digest;
 
 pub mod composer;
