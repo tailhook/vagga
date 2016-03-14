@@ -6,7 +6,7 @@ use regex::Regex;
 
 use super::super::context::Context;
 use super::super::packages;
-use super::generic::capture_command;
+use super::generic::{capture_command, run_command_at_env};
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
@@ -24,6 +24,7 @@ impl Default for GemSettings {
         GemSettings {
             install_ruby: true,
             gem_exe: None,
+            update_gem: true,
         }
     }
 }
@@ -192,6 +193,20 @@ pub fn bundle(distro: &mut Box<Distribution>,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
+    if ctx.gem_settings.gem_exe.is_none() &&
+        ctx.gem_settings.update_gem
+    {
+        let args = [
+            DEFAULT_GEM_EXE.to_owned(),
+            "update".to_owned(),
+            "--system".to_owned(),
+            "--no-document".to_owned(),
+        ];
+        // Debian based distros doesn't allow updating gem unless this flag is set
+        let env = [("REALLY_GEM_UPDATE_SYSTEM", "1")];
+        try!(run_command_at_env(ctx, &args, Path::new("/work"), &env));
+    }
+
     let gem_cache = try!(gem_cache_dir(ctx));
     try!(ctx.add_cache_dir(&gem_cache,
                            "gems-cache".to_string()));

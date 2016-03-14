@@ -91,6 +91,7 @@ pub struct PipSettings {
 pub struct GemSettings {
     pub install_ruby: bool,
     pub gem_exe: Option<String>,
+    pub update_gem: bool,
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
@@ -388,15 +389,6 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("requirements", V::Scalar::new().optional())
         .member("packages", V::Sequence::new(V::Scalar::new())))
 
-    // Ruby
-    .option("GemConfig", V::Structure::new()
-        .member("install_ruby", V::Scalar::new().default(true))
-        .member("gem_exe", V::Scalar::new().default("gem")))
-    .option("GemInstall", V::Sequence::new(V::Scalar::new()))
-    .option("GemBundle", V::Structure::new()
-        .member("gemfile", V::Scalar::new().default("Gemfile"))
-        .member("without", V::Sequence::new(V::Scalar::new())))
-
     // Node.js
     .option("NpmConfig", V::Structure::new()
         .member("npm_exe", V::Scalar::new().default("npm"))
@@ -409,6 +401,16 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("peer", V::Scalar::new().default(false))
         .member("bundled", V::Scalar::new().default(true))
         .member("optional", V::Scalar::new().default(false)))
+
+    // Ruby
+    .option("GemConfig", V::Structure::new()
+        .member("install_ruby", V::Scalar::new().default(true))
+        .member("gem_exe", V::Scalar::new().default("gem"))
+        .member("update_gem", V::Scalar::new().default(true)))
+    .option("GemInstall", V::Sequence::new(V::Scalar::new()))
+    .option("GemBundle", V::Structure::new()
+        .member("gemfile", V::Scalar::new().default("Gemfile"))
+        .member("without", V::Sequence::new(V::Scalar::new())))
 
     // Composer
     .option("ComposerConfig", V::Structure::new()
