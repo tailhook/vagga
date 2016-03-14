@@ -100,7 +100,7 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
     -> Result<(), Error>
 {
     // Match a source line of the Gemfile
-    let re_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
+    let re_gem_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
 
     // Match the start of a group block
     let re_group = Regex::new(r"(?m)^group\s+?(.*?)\s+?do(?:\s?#.*?)?$")
@@ -111,7 +111,7 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
         .expect("Invalid regex");
 
     // Match the start of a source block
-    let re_path = Regex::new(r"(?m)^source\s+?('.*?')\s+?do(?:\s?#.*?)?$")
+    let re_source = Regex::new(r"(?m)^source\s+?('.*?')\s+?do(?:\s?#.*?)?$")
         .expect("Invalid regex");
 
     let gemline_hasher = GemlineHasher::new(info);
@@ -136,7 +136,7 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
         let line = line.trim();
         // try to get source lines of Gemfile which usually contains:
         //   source 'https://rubygems.org'
-        if let Some(cap) = re_source.captures(line) {
+        if let Some(cap) = re_gem_source.captures(line) {
             hash.input(b"source");
             hash.input(cap[1].as_bytes());
         // try to match a gem declaration
@@ -153,7 +153,7 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
             let path_name = &cap[1];
             try!(process_block(&gemline_hasher, hash, &mut lines, path_name, &path));
         // try to match the start of a source block
-        } else if let Some(cap) = re_path.captures(line) {
+        } else if let Some(cap) = re_source.captures(line) {
             let source_name = &cap[1];
             try!(process_block(&gemline_hasher, hash, &mut lines, source_name, &path));
         }
