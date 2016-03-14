@@ -8,7 +8,7 @@
 use std::collections::HashSet;
 use std::fs::{File};
 use std::io::{Write};
-use std::os::unix::io::{FromRawFd, RawFd};
+use std::os::unix::io::FromRawFd;
 use std::path::Path;
 
 use nix::unistd::dup;

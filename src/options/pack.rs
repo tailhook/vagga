@@ -1,7 +1,7 @@
 use std::io::{stdout, stderr};
 use std::path::PathBuf;
 
-use argparse::{ArgumentParser, Store, ParseOption, StoreConst};
+use argparse::{ArgumentParser, Store, ParseOption};
 use super::build_mode::{build_mode, BuildMode};
 use super::compression_type::{compression_type, CompressionType};
 

@@ -1,16 +1,12 @@
-use std::env;
 use std::path::{Path, PathBuf};
 
-use rustc_serialize::json;
-
-use unshare::{Command, Namespace, Stdio};
+use unshare::{Command, Stdio};
 
 use builder::capsule;
 use builder::context::{Context as BuilderContext};
-use container::uidmap::{map_users};
 use options::pack::Options;
 use wrapper::Wrapper;
-use process_util::{convert_status, copy_env_vars, set_uidmap};
+use process_util::convert_status;
 use super::build;
 use super::setup;
 
