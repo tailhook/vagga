@@ -1,7 +1,6 @@
-use std::io::Read;
+use std::io::{Read, BufRead, BufReader, Lines};
 use std::fs::File;
 use std::path::Path;
-use std::str::Lines;
 
 use regex::Regex;
 use shaman::digest::Digest;
@@ -32,20 +31,9 @@ impl ArgValue {
 /// Hash Gemfile data,
 ///
 /// Iterates over provided Gemfile contents, hashing each line that is a gem declaration.
-pub fn hash(info: &GemBundleInfo,hash: &mut Digest)
+pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
     -> Result<(), Error>
 {
-    let path = Path::new("/work").join(&info.gemfile);
-
-    let gemfile_contents = try!(File::open(&path)
-        .and_then(|mut f| {
-            let mut buf = String::new();
-            try!(f.read_to_string(&mut buf));
-            Ok(buf)
-        })
-        .map_err(|e| Error::Io(e, path.clone()))
-    );
-
     // Match a source line of the Gemfile
     let re_source = Regex::new(r"(?m)^source '(.+?)'").expect("Invalid regex");
 
@@ -67,8 +55,24 @@ pub fn hash(info: &GemBundleInfo,hash: &mut Digest)
     let re_path = Regex::new(r"(?m)^path\s+?('.*?')\s+?do(?:\s?#.*?)?$")
         .expect("Invalid regex");
 
-    let mut lines = gemfile_contents.lines();
+    let path = Path::new("/work").join(&info.gemfile);
+
+    let gemlock = try!(path.parent()
+        .map(|dir| dir.join("Gemfile.lock"))
+        .ok_or("Gemfile should be under /work".to_owned()));
+    if gemlock.exists() {
+        try!(hash_lock_file(&gemlock, hash));
+    }
+
+    hash.input(b"-->\0");
+
+    let mut f = try!(File::open(&path)
+        .map_err(|e| Error::Io(e, path.clone())));
+    let mut reader = BufReader::new(f);
+
+    let mut lines = reader.lines();
     while let Some(line) = lines.next() {
+        let line = try!(line.map_err(|e| Error::Io(e, path.to_path_buf())));
         let line = line.trim();
         // try to get source lines of Gemfile which usually contains:
         //   source 'https://rubygems.org'
@@ -86,15 +90,16 @@ pub fn hash(info: &GemBundleInfo,hash: &mut Digest)
                 .map(|x| x.trim_matches(|c| c == ' ' || c == ':').to_owned())
                 .collect());
             if should_skip(&groups, info) {
-                skip_group(&mut lines);
+                try!(skip_group(&mut lines, &path));
             }
         // try to match the start of a path block
         } else if let Some(cap) = re_group.captures(line) {
-            let path = &cap[1];
-            try!(process_path_block(&mut lines, path, info, &re_path, hash));
+            let path_block = &cap[1];
+            try!(process_path_block(&mut lines, path_block, info, &re_path, hash, &path));
         }
     }
 
+    hash.input(b"<--\0");
     Ok(())
 }
 
@@ -114,20 +119,30 @@ fn should_skip(groups: &ArgValue, info: &GemBundleInfo) -> bool {
 /// Skip a group block
 ///
 /// Iterates over the lines, ignoring everything until a line containing "end" is found
-fn skip_group(lines: &mut Lines) {
-    while let Some(line) = lines.next() {
-        if line.trim() == "end" { break }
-    }
-}
-
-fn process_path_block(lines: &mut Lines, path: &str,
-                      info: &GemBundleInfo, re: &Regex,
-                      hash: &mut Digest)
-                      -> Result<(), String>
+fn skip_group<B>(lines: &mut Lines<B>, filename: &Path)
+    -> Result<(), Error>
+    where B: BufRead
 {
     while let Some(line) = lines.next() {
+        let line = try!(line.map_err(|e| Error::Io(e, filename.to_path_buf())));
         if line.trim() == "end" { break }
-        if let Some(cap) = re.captures(line) {
+    }
+    Ok(())
+}
+
+fn process_path_block<B>(lines: &mut Lines<B>,
+                         path: &str,
+                         info: &GemBundleInfo,
+                         re: &Regex,
+                         hash: &mut Digest,
+                         filename: &Path)
+                         -> Result<(), Error>
+                         where B: BufRead
+{
+    while let Some(line) = lines.next() {
+        let line = try!(line.map_err(|e| Error::Io(e, filename.to_path_buf())));
+        if line.trim() == "end" { break }
+        if let Some(cap) = re.captures(&line) {
             let mut caps: Vec<String> = cap.iter()
                 .map(|c| c.unwrap_or("").to_owned())
                 .collect();
@@ -214,5 +229,66 @@ fn hash_gem_line(info: &GemBundleInfo, cap: &Vec<&str>, hash: &mut Digest)
         }
     }
 
+    hash.input(b"\0");
     Ok(())
+}
+
+fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), Error> {
+    let mut f = try!(File::open(path).map_err(|e| Error::Io(e, path.to_path_buf())));
+    let mut reader = BufReader::new(f);
+
+    let re_gem = Regex::new(r"^\s*?(?P<gem>[\w-]+?)\s*?\((?P<version>[\w\.-]+?)\)?$")
+        .expect("Invalid regex");
+
+    let re_extra = Regex::new(r"^\s*?(?P<key>[\w-]+?):\s+?(?P<value>.+?)$")
+        .expect("Invalid regex");
+
+    hash.input(b"-->\0");
+    let mut indent_size = 0;
+    for line in reader.lines() {
+        let line = try!(line.map_err(|e| Error::Io(e, path.to_path_buf())));
+
+        // check first indented line for indent size
+        if line.starts_with(" ") && indent_size == 0 {
+            indent_size = find_indent(&line);
+        }
+
+        let indent_level = get_indent_level(&line, indent_size);
+
+        if indent_level == 1 &&
+            !line.trim().starts_with("specs:")
+        {
+            if let Some(cap) = re_extra.captures(&line) {
+                hash.input(cap["key"].as_bytes());
+                hash.input(cap["value"].as_bytes());
+            }
+            continue
+        }
+
+        if indent_level == 2 {
+            if let Some(cap) = re_gem.captures(&line) {
+                hash.input(cap["gem"].as_bytes());
+                hash.input(cap["version"].as_bytes());
+                hash.input(b"\0");
+            }
+        }
+    }
+
+    hash.input(b"<--\0");
+    Ok(())
+}
+
+fn find_indent(line: &str) -> usize {
+    let mut indent = 0;
+    for c in line.chars() {
+        if c != ' ' { break }
+        indent += 1;
+    }
+    indent
+}
+
+fn get_indent_level(line: &str, indent: usize) -> usize {
+    if indent == 0 { return 0 }
+    let line_indent = find_indent(line);
+    line_indent / indent
 }

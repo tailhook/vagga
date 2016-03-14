@@ -4,7 +4,7 @@ use std::io::{Read, Write};
 
 use regex::Regex;
 
-use super::super::context::{Context};
+use super::super::context::Context;
 use super::super::packages;
 use super::generic::capture_command;
 use builder::error::StepError;
