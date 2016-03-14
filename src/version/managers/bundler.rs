@@ -110,6 +110,10 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
     let re_path = Regex::new(r"(?m)^path\s+?('.*?')\s+?do(?:\s?#.*?)?$")
         .expect("Invalid regex");
 
+    // Match the start of a source block
+    let re_path = Regex::new(r"(?m)^source\s+?('.*?')\s+?do(?:\s?#.*?)?$")
+        .expect("Invalid regex");
+
     let gemline_hasher = GemlineHasher::new(info);
 
     let path = Path::new("/work").join(&info.gemfile);
@@ -147,7 +151,11 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
         // try to match the start of a path block
         } else if let Some(cap) = re_path.captures(line) {
             let path_name = &cap[1];
-            try!(process_path_block(&gemline_hasher, hash, &mut lines, path_name, &path));
+            try!(process_block(&gemline_hasher, hash, &mut lines, path_name, &path));
+        // try to match the start of a source block
+        } else if let Some(cap) = re_path.captures(line) {
+            let source_name = &cap[1];
+            try!(process_block(&gemline_hasher, hash, &mut lines, source_name, &path));
         }
     }
 
@@ -155,20 +163,20 @@ pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
     Ok(())
 }
 
-fn process_path_block<B>(gemline_hasher: &GemlineHasher,
-                         hash: &mut Digest,
-                         lines: &mut Lines<B>,
-                         path: &str,
-                         filename: &Path)
-                         -> Result<(), Error>
-                         where B: BufRead
+fn process_block<B>(gemline_hasher: &GemlineHasher,
+                    hash: &mut Digest,
+                    lines: &mut Lines<B>,
+                    ident: &str,
+                    filename: &Path)
+                    -> Result<(), Error>
+                    where B: BufRead
 {
     while let Some(line) = lines.next() {
         let line = try!(line.map_err(|e| Error::Io(e, filename.to_path_buf())));
         if line.trim() == "end" { break }
 
         if gemline_hasher.is_gemline(&line) {
-            hash.input(path.as_bytes());
+            hash.input(ident.as_bytes());
             gemline_hasher.hash(&line, hash);
         }
     }
