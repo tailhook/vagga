@@ -47,7 +47,7 @@ impl Distribution for Alpine {
         try!(capsule::apk_run(&[
             "--root", "/vagga/root",
             "add",
-            ], &pkgs[..], None));
+            ], &pkgs[..]));
         Ok(())
     }
     fn ensure_packages(&mut self, ctx: &mut Context,
@@ -87,7 +87,7 @@ impl Distribution for Alpine {
             try!(capsule::apk_run(&[
                 "--root", "/vagga/root",
                 "add",
-                ], &to_install[..], None));
+                ], &to_install[..]));
         }
         return Ok(unsupp);
     }
@@ -137,7 +137,7 @@ fn check_version(version: &String) -> Result<(), String> {
 fn setup_base(ctx: &mut Context, version: &String)
     -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller], None));
+    try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
     try!(check_version(version));
     try_msg!(create_dir("/vagga/root/etc/apk", true),
         "Error creating apk dir: {err}");
@@ -154,7 +154,7 @@ fn setup_base(ctx: &mut Context, version: &String)
         "--initdb",
         "add",
         "alpine-base",
-        ], &[], None));
+        ], &[]));
     Ok(())
 }
 
@@ -165,7 +165,7 @@ pub fn remove(_ctx: &mut Context, pkgs: &Vec<String>)
     capsule::apk_run(&[
         "--root", "/vagga/root",
         "del",
-        ], &pkgs[..], None)
+        ], &pkgs[..])
 }
 
 fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {

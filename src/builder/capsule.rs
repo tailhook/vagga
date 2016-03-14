@@ -41,16 +41,14 @@ pub struct State {
 }
 
 // Also used in alpine
-pub fn apk_run(args: &[&str], packages: &[String], stdout: Option<RawFd>) -> Result<(), String> {
+pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
+    let stdout_fd = try!(dup(2).map_err(|e| format!("{}", e)));
     let mut cmd = Command::new("/vagga/bin/apk");
     cmd.stdin(Stdio::null())
+        .stdout(unsafe { Stdio::from_raw_fd(stdout_fd) })
         .env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
-    if let Some(stdout_fd) = stdout {
-        let fd = try!(dup(stdout_fd).map_err(|e| format!("{}", e)));
-        cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
-    }
     debug!("Running APK {:?}", cmd);
     return match cmd.status().map_err(|e| format!("Can't run apk: {}", e))
     {
@@ -61,13 +59,13 @@ pub fn apk_run(args: &[&str], packages: &[String], stdout: Option<RawFd>) -> Res
 }
 
 
-pub fn ensure_features(ctx: &mut Context, features: &[Feature], stdout: Option<RawFd>)
+pub fn ensure_features(ctx: &mut Context, features: &[Feature])
     -> Result<(), String>
 {
-    return ensure(&mut ctx.capsule, &ctx.settings, features, stdout);
+    return ensure(&mut ctx.capsule, &ctx.settings, features);
 }
 
-pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature], stdout: Option<RawFd>)
+pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
     -> Result<(), String>
 {
     if features.len() == 0 {
@@ -90,7 +88,7 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature], st
             "add",
             "--force",
             "/vagga/bin/alpine-keys.apk",
-            ], &[], stdout));
+            ], &[]));
         let mirror = settings.alpine_mirror.clone()
             .unwrap_or(choose_mirror());
         try!(File::create(&Path::new("/etc/apk/repositories"))
@@ -132,11 +130,11 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature], st
             try!(apk_run(&[
                 "--update-cache",
                 "add",
-                ], &pkg_queue[0..], stdout));
+                ], &pkg_queue[0..]));
         } else {
             try!(apk_run(&[
                 "add",
-                ], &pkg_queue[0..], stdout));
+                ], &pkg_queue[0..]));
         }
         capsule.installed_packages.extend(pkg_queue.into_iter());
     }

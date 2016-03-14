@@ -65,7 +65,7 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     if capsule_features.len() > 0 {
         let mut ctx = BuilderContext::new(&wrapper.config, options.name.clone(),
                                    cconfig, wrapper.settings.clone());
-        try!(capsule::ensure_features(&mut ctx, &capsule_features, Some(2)));
+        try!(capsule::ensure_features(&mut ctx, &capsule_features));
     }
 
     info!("Running {:?}", tar_cmd);

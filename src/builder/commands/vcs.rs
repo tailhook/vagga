@@ -86,7 +86,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 
 pub fn git_command(ctx: &mut Context, git: &GitInfo) -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::Git], None));
+    try!(capsule::ensure_features(ctx, &[capsule::Git]));
     let dest = PathBuf::from("/vagga/root").join(&git.path.rel());
     let cache_path = try!(git_cache(&git.url));
     try!(create_dir_all(&dest)
@@ -98,7 +98,7 @@ pub fn git_command(ctx: &mut Context, git: &GitInfo) -> Result<(), String>
 pub fn git_install(ctx: &mut Context, git: &GitInstallInfo)
     -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::Git], None));
+    try!(capsule::ensure_features(ctx, &[capsule::Git]));
     let cache_path = try!(git_cache(&git.url));
     let tmppath = Path::new("/vagga/root/tmp")
         .join(cache_path.file_name().unwrap());
@@ -119,7 +119,7 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
     git: &GitSource)
     -> Result<(), String>
 {
-    try!(capsule::ensure(capsule, settings, &[capsule::Git], None));
+    try!(capsule::ensure(capsule, settings, &[capsule::Git]));
     let cache_path = try!(git_cache(&git.url));
     let dest = Path::new("/vagga/sources")
         .join(cache_path.file_name().unwrap());
