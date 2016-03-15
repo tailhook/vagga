@@ -405,7 +405,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     // Ruby
     .option("GemConfig", V::Structure::new()
         .member("install_ruby", V::Scalar::new().default(true))
-        .member("gem_exe", V::Scalar::new().default("gem"))
+        .member("gem_exe", V::Scalar::new().optional())
         .member("update_gem", V::Scalar::new().default(true)))
     .option("GemInstall", V::Sequence::new(V::Scalar::new()))
     .option("GemBundle", V::Structure::new()

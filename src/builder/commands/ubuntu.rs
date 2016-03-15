@@ -249,6 +249,9 @@ impl Ubuntu {
         let php5_only = ["precise", "trusty", "vivid", "wily"];
         self.codename.as_ref().map(|cn| !php5_only.contains(&cn.as_ref())).unwrap_or(false)
     }
+    fn needs_rubygems(&self) -> bool {
+        self.codename.as_ref().map(|cn| cn == "precise").unwrap_or(false)
+    }
 
     fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
@@ -260,15 +263,17 @@ impl Ubuntu {
             packages::Python3Dev => Some(vec!()),
             packages::PipPy2 => None,
             packages::PipPy3 => None,
-            packages::Ruby => Some(vec!("ruby")),
-            packages::RubyDev => Some(vec!()),
-            packages::RubyGems => Some(vec!()),
-            packages::Bundler => None,
             packages::NodeJs if self.needs_node_legacy() => {
                 Some(vec!("nodejs", "nodejs-legacy"))
             }
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
+            packages::Ruby if self.needs_rubygems() => {
+                Some(vec!("ruby", "rubygems"))
+            }
+            packages::Ruby => Some(vec!("ruby")),
+            packages::RubyDev => Some(vec!()),
+            packages::Bundler => None,
             packages::Npm => Some(vec!()),
             packages::Php if self.has_php7() => {
                 Some(vec!("php-common", "php-cli"))
@@ -291,13 +296,12 @@ impl Ubuntu {
             packages::Python3Dev => Some(vec!("python3-dev")),
             packages::PipPy2 => None,
             packages::PipPy3 => None,
-            packages::Ruby => Some(vec!()),
-            packages::RubyDev => Some(vec!("ruby-dev")),
-            packages::RubyGems => Some(vec!()),
-            packages::Bundler => None,
             packages::NodeJs => Some(vec!()),
             packages::NodeJsDev => Some(vec!("nodejs-dev")),
             packages::Npm => Some(vec!("npm")),
+            packages::Ruby => Some(vec!()),
+            packages::RubyDev => Some(vec!("ruby-dev")),
+            packages::Bundler => None,
             packages::Php => Some(vec!()),
             packages::PhpDev if self.has_php7() => Some(vec!("php-dev")),
             packages::PhpDev => Some(vec!("php5-dev")),

@@ -13,9 +13,8 @@ use builder::commands::generic::{command, run};
 use config::builders::{GemSettings, GemBundleInfo};
 use process_util::capture_stdout;
 
-const DEFAULT_GEM_EXE: &'static str = "gem";
+const DEFAULT_GEM_EXE: &'static str = "/usr/bin/gem";
 const BIN_DIR: &'static str = "/usr/local/bin";
-const RUBY_VERSION_WITH_GEM: f32 = 1.9;
 const GEM_VERSION_WITH_NO_DOCUMENT_OPT: f32 = 2.0;
 
 
@@ -27,26 +26,6 @@ impl Default for GemSettings {
             update_gem: true,
         }
     }
-}
-
-fn ruby_version(ctx: &mut Context) -> Result<f32, String> {
-    let args = [
-        "ruby".to_owned(),
-        "--version".to_owned(),
-    ];
-
-    let ruby_ver = try!(capture_command(ctx, &args, &[])
-        .and_then(|x| String::from_utf8(x)
-            .map_err(|e| format!("Error parsing ruby version: {}", e)))
-        .map_err(|e| format!("Error getting ruby version: {}", e)));
-
-    let re = Regex::new(r#"^ruby (\d+?\.\d+?)\."#).expect("Invalid regex");
-    let version = try!(re.captures(&ruby_ver)
-        .and_then(|cap| cap.at(1))
-        .ok_or("Ruby version was not found".to_owned()));
-
-    version.parse::<f32>()
-        .map_err(|e| format!("Erro parsing ruby version: {}", e))
 }
 
 fn gem_version(ctx: &mut Context) -> Result<f32, String> {
@@ -89,8 +68,27 @@ fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
     Ok(Path::new(gem_dir.trim()).join("cache"))
 }
 
-fn scan_features(settings: &GemSettings, git_required: bool)
-    -> Vec<packages::Package>
+fn requires_git(gemfile: &Path) -> Result<bool, String> {
+    let gemfile = Path::new("/work").join(gemfile);
+
+    let re = Regex::new(
+        r#"(git .*? do)|(:(git|github|gist|bitbucket) =>)|(git_source\(.*?\))"#
+    ).expect("Invalid regex");
+
+    let gemfile_data = {
+        let mut buf = String::new();
+        try!(File::open(&gemfile)
+            .and_then(|mut f| f.read_to_string(&mut buf))
+            .map_err(|e| format!("Error reading Gemfile ({:?}): {}", &gemfile, e)));
+
+        buf
+    };
+
+    Ok(re.is_match(&gemfile_data))
+}
+
+fn scan_features(settings: &GemSettings, info: Option<&GemBundleInfo>)
+    -> Result<Vec<packages::Package>, String>
 {
     let mut res = vec!();
     res.push(packages::BuildEssential);
@@ -102,23 +100,22 @@ fn scan_features(settings: &GemSettings, git_required: bool)
 
     res.push(packages::Bundler);
 
-    if git_required {
-        res.push(packages::Git);
+    if let Some(info) = info {
+        let git_required = try!(requires_git(&info.gemfile));
+        if git_required {
+            res.push(packages::Git);
+        }
     }
 
-    res
+    Ok(res)
 }
 
 pub fn install(distro: &mut Box<Distribution>,
     ctx: &mut Context, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    let features = scan_features(&ctx.gem_settings, false);
+    let features = try!(scan_features(&ctx.gem_settings, None));
     try!(packages::ensure_packages(distro, ctx, &features));
-
-    if try!(ruby_version(ctx)) < RUBY_VERSION_WITH_GEM {
-        try!(packages::ensure_packages(distro, ctx, &[packages::RubyGems]));
-    }
 
     try!(configure(ctx));
 
@@ -144,37 +141,12 @@ pub fn install(distro: &mut Box<Distribution>,
     Ok(())
 }
 
-fn requires_git(gemfile: &Path) -> Result<bool, String> {
-    let gemfile = Path::new("/work").join(gemfile);
-
-    let re = Regex::new(
-        r#"(git .*? do)|(:(git|github|gist|bitbucket) =>)|(git_source\(.*?\))"#
-    ).expect("Invalid regex");
-
-    let gemfile_data = {
-        let mut buf = String::new();
-        try!(File::open(&gemfile)
-            .and_then(|mut f| f.read_to_string(&mut buf))
-            .map_err(|e| format!("Error reading Gemfile ({:?}): {}", &gemfile, e)));
-
-        buf
-    };
-
-    Ok(re.is_match(&gemfile_data))
-}
-
 pub fn bundle(distro: &mut Box<Distribution>,
     ctx: &mut Context, info: &GemBundleInfo)
     -> Result<(), StepError>
 {
-    let git_required = try!(requires_git(&info.gemfile));
-    let features = scan_features(&ctx.gem_settings, git_required);
+    let features = try!(scan_features(&ctx.gem_settings, Some(info)));
     try!(packages::ensure_packages(distro, ctx, &features));
-
-    let version = try!(ruby_version(ctx));
-    if version < RUBY_VERSION_WITH_GEM {
-        try!(packages::ensure_packages(distro, ctx, &[packages::RubyGems]));
-    }
 
     try!(configure(ctx));
 
@@ -196,12 +168,21 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     if ctx.gem_settings.gem_exe.is_none() &&
         ctx.gem_settings.update_gem
     {
-        let args = [
+        let mut args = vec!(
             DEFAULT_GEM_EXE.to_owned(),
             "update".to_owned(),
             "--system".to_owned(),
-            "--no-document".to_owned(),
-        ];
+        );
+
+        if try!(gem_version(ctx)) < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
+            args.extend(vec!(
+                "--no-rdoc".to_owned(),
+                "--no-ri".to_owned()
+            ).into_iter());
+        } else {
+            args.push("--no-document".to_owned());
+        }
+
         // Debian based distros doesn't allow updating gem unless this flag is set
         let env = [("REALLY_GEM_UPDATE_SYSTEM", "1")];
         try!(run_command_at_env(ctx, &args, Path::new("/work"), &env));

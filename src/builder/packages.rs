@@ -26,7 +26,6 @@ pub enum Package {
 
     Ruby,       // not build dep
     RubyDev,
-    RubyGems,
     Bundler,
 
     NodeJs,     // not build dep
