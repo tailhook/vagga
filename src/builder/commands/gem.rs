@@ -28,6 +28,19 @@ impl Default for GemSettings {
     }
 }
 
+fn no_doc_args(ctx: &mut Context) -> Result<Vec<&'static str>, String> {
+    if ctx.gem_settings.update_gem {
+        Ok(vec!("--no-document"))
+    } else {
+        let version = try!(gem_version(ctx));
+        if version < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
+            Ok(vec!("--no-rdoc", "--no-ri"))
+        } else {
+            Ok(vec!("--no-document"))
+        }
+    }
+}
+
 fn gem_version(ctx: &mut Context) -> Result<f32, String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
@@ -130,11 +143,8 @@ pub fn install(distro: &mut Box<Distribution>,
     cmd.arg("install");
     cmd.args(&["--bindir", BIN_DIR]);
 
-    if try!(gem_version(ctx)) < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
-        cmd.args(&["--no-rdoc", "--no-ri"]);
-    } else {
-        cmd.arg("--no-document");
-    }
+    let no_doc = try!(no_doc_args(ctx));
+    cmd.args(&no_doc);
 
     cmd.args(pkgs);
     try!(run(cmd));
@@ -174,11 +184,9 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
             "--system".to_owned(),
         );
 
-        if try!(gem_version(ctx)) < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
-            args.extend(vec!(
-                "--no-rdoc".to_owned(),
-                "--no-ri".to_owned()
-            ).into_iter());
+        let version = try!(gem_version(ctx));
+        if version < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
+            args.extend(vec!("--no-rdoc".to_owned(), "--no-ri".to_owned()));
         } else {
             args.push("--no-document".to_owned());
         }
@@ -204,11 +212,8 @@ pub fn setup_bundler(ctx: &mut Context) -> Result<(), String> {
     let mut cmd = try!(command(ctx, gem_exe));
     cmd.args(&["install", "bundler"]);
 
-    if try!(gem_version(ctx)) < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
-        cmd.args(&["--no-rdoc", "--no-ri"]);
-    } else {
-        cmd.arg("--no-document");
-    }
+    let no_doc = try!(no_doc_args(ctx));
+    cmd.args(&no_doc);
 
     try!(run(cmd));
 
