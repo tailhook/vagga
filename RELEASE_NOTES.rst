@@ -27,7 +27,8 @@ Vagga 0.5.0
 * Improved SIGINT handling, now Ctrl+C in interactive processes such as
   ``python`` (without arguments) works as expected
 * Add PHP/Composer support
-
+* Add support for ``arch`` parameter in ``!UbuntuRelease`` this changes hash
+  sum of all containers built using ``!UbuntuRelease``
 
 Vagga 0.4.1
 ===========
