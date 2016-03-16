@@ -27,9 +27,9 @@ impl<'a> GemlineHasher<'a> {
               (?:\s*?\#.*?)?$ # ignore comments"
         ).expect("Invalid regex");
 
-        let re_keyword = Regex::new(r"(?m),\s+?group:\s+?(.+?)(?:,\s+?\w+?:.*?)?$")
+        let re_keyword = Regex::new(r"(?m)group:\s+?(.+?)(?:,\s+?\w+?:.*?)?$")
             .expect("Invalid regex");
-        let re_arrow = Regex::new(r"(?m),\s+?:group\s+?=>\s+?(.+?)(?:,\s+?:\w+?\s+?=>\s+?.*?)?$")
+        let re_arrow = Regex::new(r"(?m):group\s+?=>\s+?(.+?)(?:,\s+?:\w+?\s+?=>\s+?.*?)?$")
             .expect("Invalid regex");
 
         GemlineHasher {
@@ -73,7 +73,7 @@ impl<'a> GemlineHasher<'a> {
 /// Tell whether the group should be skipped
 fn should_skip(groups: &str, info: &GemBundleInfo) -> bool {
     groups.split(",")
-        .map(|g| g.trim_matches(|c| [' ', ':', '[', ']'].contains(&c)))
+        .map(|g| g.trim_matches(|c| [' ', ':', '[', ']', '\'', '"'].contains(&c)))
         // need to alocate to satisfy type checker
         // &String != &str
         .fold(true, |acc, group| info.without.contains(&group.to_owned()) && acc)
