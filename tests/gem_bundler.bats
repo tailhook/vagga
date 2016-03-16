@@ -102,6 +102,13 @@ teardown() {
     [[ $link = ".roots/bundle-ubuntu-no-dev.1c640a09/root" ]]
 }
 
+@test "gem/bundler: GemBundle invalid trust_policy" {
+    run vagga _build bundle-invalid-trust-policy
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *"Value of 'GemBundle.trust_policy' must be 'LowSecurity', 'MediumSecurity' or 'HighSecurity', 'invalid' given"* ]]
+}
+
 @test "gem/bundler: GemBundle lock" {
     cd /work/tests/gem_bundler_lock
     run vagga _run bundle-lock rake --version

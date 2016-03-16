@@ -16,6 +16,7 @@ use process_util::capture_stdout;
 const DEFAULT_GEM_EXE: &'static str = "/usr/bin/gem";
 const BIN_DIR: &'static str = "/usr/local/bin";
 const GEM_VERSION_WITH_NO_DOCUMENT_OPT: f32 = 2.0;
+const VALID_TRUST_POLICIES: [&'static str; 3] = ["LowSecurity", "MediumSecurity", "HighSecurity"];
 
 
 impl Default for GemSettings {
@@ -169,6 +170,21 @@ pub fn bundle(distro: &mut Box<Distribution>,
     if !info.without.is_empty() {
         cmd.arg("--without");
         cmd.args(&info.without);
+    }
+
+    if let Some(ref trust_policy) = info.trust_policy {
+        if !VALID_TRUST_POLICIES.contains(&trust_policy.as_ref()) {
+            return return Err(From::from(format!(
+                "Value of 'GemBundle.trust_policy' must be \
+                    '{}', '{}' or '{}', '{}' given",
+                VALID_TRUST_POLICIES[0],
+                VALID_TRUST_POLICIES[1],
+                VALID_TRUST_POLICIES[2],
+                trust_policy
+            )))
+        }
+        cmd.arg("--trust-policy");
+        cmd.arg(trust_policy);
     }
 
     run(cmd)

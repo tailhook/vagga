@@ -167,6 +167,7 @@ pub struct CopyInfo {
 pub struct GemBundleInfo {
     pub gemfile: PathBuf,
     pub without: Vec<String>,
+    pub trust_policy: Option<String>,
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
@@ -410,7 +411,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("GemInstall", V::Sequence::new(V::Scalar::new()))
     .option("GemBundle", V::Structure::new()
         .member("gemfile", V::Scalar::new().default("Gemfile"))
-        .member("without", V::Sequence::new(V::Scalar::new())))
+        .member("without", V::Sequence::new(V::Scalar::new()))
+        .member("trust_policy", V::Scalar::new().optional()))
 
     // Composer
     .option("ComposerConfig", V::Structure::new()

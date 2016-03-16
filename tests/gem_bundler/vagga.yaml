@@ -56,3 +56,9 @@ containers:
     - !Ubuntu trusty
     - !GemBundle
       without: [development]
+
+  bundle-invalid-trust-policy:
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+      trust_policy: invalid
