@@ -17,7 +17,6 @@ use container::mount::bind_mount;
 use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
 use super::super::file_util::create_dir;
-use path_util::PathExt;
 
 pub use self::Feature::*;
 

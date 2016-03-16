@@ -22,7 +22,6 @@ use config::{Container};
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use file_util::{create_dir, Lock};
-use path_util::PathExt;
 use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
 use process_util::{run_and_wait};
 use super::Wrapper;

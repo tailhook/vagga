@@ -9,7 +9,6 @@ use libc::{uid_t, gid_t, c_int, c_void, timeval};
 
 use super::root::temporary_change_root;
 use file_util::{create_dir_mode, shallow_copy, set_owner_group};
-use path_util::PathExt;
 
 quick_error!{
     #[derive(Debug)]

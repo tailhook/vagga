@@ -11,7 +11,6 @@ use unshare::{Command};
 use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
-use path_util::PathExt;
 use process_util::{set_uidmap, copy_env_vars, run_and_wait, convert_status};
 
 

@@ -10,7 +10,6 @@ use signal::trap::Trap;
 
 use config::Settings;
 use container::uidmap::{Uidmap};
-use path_util::PathExt;
 use tty_util::{TtyGuard};
 
 
