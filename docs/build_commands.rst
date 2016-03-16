@@ -540,6 +540,70 @@ Note that you will have to manually `install hhvm`_ and set the ``include_path``
    may change as we gain experience with the tool.
 
 
+Ruby Installer
+==============
+
+Ruby gems can be installed either by providing a list of gems or from a
+``Gemfile`` using ``bundler``. For example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.3
+    - !GemInstall [rake]
+
+We will update ``gem`` to the latest version (unless specified not to) for
+installing gems. The ``ruby-dev`` headers are installed for the time of the
+build too and are removed when installation is finished.
+
+The following ``gem`` package specification formats are supported:
+
+* The ``package_name:version`` to install specific version **(recommended)**
+* Bare ``package_name`` (should be used only for one-off environments)
+
+.. code-block:: yaml
+    setup:
+    - !Alpine v3.3
+    - !Install [libxml2, libxslt, zlib, sqlite-libs]
+    - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev, sqlite-dev]
+    - !Env { NOKOGIRI_USE_SYSTEM_LIBRARIES: 1 }
+    - !GemInstall [rails]
+    - !Sh rails new . --skip-bundle
+
+Bundler is also available for installing gems from ``Gemfile``. For example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+
+You can also specify some options to Bundler, for example:
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+      gemfile: src/Gemfile # use this Gemfile
+      without: [development, test] # groups to exclude when installing gems
+      trust_policy: HighSecurity
+
+It is possible to avoid installing ruby if you are providing it yourself:
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.3
+    - !GemSettings
+      install_ruby: false
+      gem_exe: /usr/bin/gem
+
+
+.. warning:: Ruby support is recently added to the vagga some things
+   may change as we gain experience with the tool.
+
+
 Dependent Containers
 ====================
 
