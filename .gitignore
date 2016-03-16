@@ -20,8 +20,10 @@ todo.txt
 /target
 
 /tests/inheritance/description-pak
-/tests/composer/vendor
-/tests/composer_lock/vendor
+
+ # directories created by bundler
+/tests/gem_bundler/.bundle
+/tests/gem_bundler_lock/.bundle
 
 # emacs files
 *~

@@ -3,9 +3,9 @@ setup() {
 }
 
 teardown() {
-  cd /work/tests/gem_bundler
-  if [ -f Gemfile.lock ]; then rm Gemfile.lock; fi
-  if [ -d .bundle ]; then rm -r .bundle; fi
+    cd /work/tests/gem_bundler
+    if [ -f Gemfile.lock ]; then rm Gemfile.lock; fi
+    if [ -d .bundle ]; then rm -r .bundle; fi
 }
 
 @test "gem/bundler: alpine pkg" {
@@ -100,4 +100,14 @@ teardown() {
     [[ ! -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/rake-11.1.1 ]]
     link=$(readlink .vagga/bundle-ubuntu-no-dev)
     [[ $link = ".roots/bundle-ubuntu-no-dev.1c640a09/root" ]]
+}
+
+@test "gem/bundler: GemBundle lock" {
+    cd /work/tests/gem_bundler_lock
+    run vagga _run bundle-lock rake --version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.0" ]]
+    link=$(readlink .vagga/bundle-lock)
+    [[ $link = ".roots/bundle-lock.3d642029/root" ]]
 }
