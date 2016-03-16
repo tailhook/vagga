@@ -44,37 +44,6 @@ impl ToRelative for PathBuf {
     }
 }
 
-// Should resemble std::fs::PathExt inteface;
-pub trait PathExt {
-    fn exists(&self) -> bool;
-    fn is_dir(&self) -> bool;
-    fn is_file(&self) -> bool;
-}
-
-impl PathExt for Path {
-    fn exists(&self) -> bool {
-        metadata(self).is_ok()
-    }
-    fn is_dir(&self) -> bool {
-        metadata(self).map(|x| x.is_dir()).unwrap_or(false)
-    }
-    fn is_file(&self) -> bool {
-        metadata(self).map(|x| x.is_file()).unwrap_or(false)
-    }
-}
-
-impl PathExt for PathBuf {
-    fn exists(&self) -> bool {
-        self.as_path().exists()
-    }
-    fn is_dir(&self) -> bool {
-        self.as_path().is_dir()
-    }
-    fn is_file(&self) -> bool {
-        self.as_path().is_file()
-    }
-}
-
 // TODO(tailhook) probably get rid of this after migrating to unshare crate
 pub trait ToCString {
     fn to_cstring(&self) -> CString;

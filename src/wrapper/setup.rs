@@ -19,7 +19,7 @@ use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode, copy, safe_ensure_dir};
-use path_util::{ToRelative, PathExt};
+use path_util::ToRelative;
 use wrapper::snapshot::make_snapshot;
 
 

@@ -16,7 +16,7 @@ use config::builders::Builder as B;
 use config::builders::Source as S;
 use super::error::Error;
 use super::error::Error::{New, ContainerNotFound};
-use path_util::{PathExt, ToRelative};
+use path_util::ToRelative;
 use file_util::hash_file;
 use super::managers::composer;
 

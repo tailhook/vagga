@@ -7,7 +7,7 @@ use quire::parse_config;
 use quire::validate as V;
 
 use config::Settings;
-use path_util::{PathExt, Expand};
+use path_util::Expand;
 
 
 #[derive(PartialEq, RustcDecodable, Debug)]

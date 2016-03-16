@@ -22,7 +22,6 @@ use super::super::container::nsutil::{set_namespace};
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
 use file_util::{create_dir_mode};
-use path_util::{PathExt};
 use process_util::{set_uidmap, env_command};
 
 static MAX_INTERFACES: u32 = 2048;

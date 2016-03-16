@@ -9,7 +9,6 @@ use unshare::{Command, Stdio};
 
 use super::capsule;
 use super::context::Context;
-use path_util::PathExt;
 
 
 pub fn download_file(ctx: &mut Context, url: &str)

@@ -10,7 +10,6 @@ use super::containers;
 use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
-use path_util::PathExt;
 use super::validate::validate_config;
 
 #[derive(RustcDecodable)]
