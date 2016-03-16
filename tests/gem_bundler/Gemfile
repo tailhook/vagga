@@ -1,0 +1,5 @@
+source 'https://rubygems.org'
+
+gem 'cuba', '3.5.0'
+
+gem 'rake', '11.1.1', group: :development

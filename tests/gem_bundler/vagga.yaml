@@ -34,3 +34,25 @@ containers:
     - !GemConfig
       update_gem: false
     - !GemInstall [rake, "-v", 10.5.0]
+
+  bundle-alpine:
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+
+  bundle-alpine-no-dev:
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+      without: [development]
+
+  bundle-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !GemBundle
+
+  bundle-ubuntu-no-dev:
+    setup:
+    - !Ubuntu trusty
+    - !GemBundle
+      without: [development]
