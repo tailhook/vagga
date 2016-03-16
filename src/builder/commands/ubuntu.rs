@@ -257,30 +257,35 @@ impl Ubuntu {
         match pkg {
             packages::BuildEssential => Some(vec!()),
             packages::Https => Some(vec!()),
+            // Python
             packages::Python2 => Some(vec!("python")),
             packages::Python2Dev => Some(vec!()),
             packages::Python3 => Some(vec!("python3")),
             packages::Python3Dev => Some(vec!()),
             packages::PipPy2 => None,
             packages::PipPy3 => None,
+            // Node.js
             packages::NodeJs if self.needs_node_legacy() => {
                 Some(vec!("nodejs", "nodejs-legacy"))
             }
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
-            packages::Ruby if self.needs_rubygems() => {
-                Some(vec!("ruby", "rubygems"))
-            }
-            packages::Ruby => Some(vec!("ruby")),
-            packages::RubyDev => Some(vec!()),
-            packages::Bundler => None,
             packages::Npm => Some(vec!()),
+            // PHP
             packages::Php if self.has_php7() => {
                 Some(vec!("php-common", "php-cli"))
             }
             packages::Php => Some(vec!("php5-common", "php5-cli")),
             packages::PhpDev => Some(vec!()),
             packages::Composer => None,
+            // Ruby
+            packages::Ruby if self.needs_rubygems() => {
+                Some(vec!("ruby", "rubygems"))
+            }
+            packages::Ruby => Some(vec!("ruby")),
+            packages::RubyDev => Some(vec!()),
+            packages::Bundler => None,
+            // VCS
             packages::Git => Some(vec!()),
             packages::Mercurial => Some(vec!()),
         }
@@ -290,22 +295,27 @@ impl Ubuntu {
         match pkg {
             packages::BuildEssential => Some(vec!("build-essential")),
             packages::Https => Some(vec!("ca-certificates")),
+            // Python
             packages::Python2 => Some(vec!()),
             packages::Python2Dev => Some(vec!("python-dev")),
             packages::Python3 => Some(vec!()),
             packages::Python3Dev => Some(vec!("python3-dev")),
             packages::PipPy2 => None,
             packages::PipPy3 => None,
+            // Node.js
             packages::NodeJs => Some(vec!()),
             packages::NodeJsDev => Some(vec!("nodejs-dev")),
             packages::Npm => Some(vec!("npm")),
-            packages::Ruby => Some(vec!()),
-            packages::RubyDev => Some(vec!("ruby-dev")),
-            packages::Bundler => None,
+            // PHP
             packages::Php => Some(vec!()),
             packages::PhpDev if self.has_php7() => Some(vec!("php-dev")),
             packages::PhpDev => Some(vec!("php5-dev")),
             packages::Composer => None,
+            // Ruby
+            packages::Ruby => Some(vec!()),
+            packages::RubyDev => Some(vec!("ruby-dev")),
+            packages::Bundler => None,
+            // VCS
             packages::Git => Some(vec!("git")),
             packages::Mercurial => Some(vec!("hg")),
         }

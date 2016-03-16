@@ -48,7 +48,6 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
     let mut left = vec!();
     for i in features.into_iter() {
         match i {
-            Bundler => try!(gem::setup_bundler(ctx)),
             PipPy2 | PipPy3 => {
                 let args = vec!(
                     ctx.pip_settings.python_exe.clone()
@@ -64,6 +63,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
             Composer => try!(composer::bootstrap(ctx)),
+            Bundler => try!(gem::setup_bundler(ctx)),
             _ => {
                 left.push(i);
                 continue;

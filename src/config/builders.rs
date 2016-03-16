@@ -88,13 +88,6 @@ pub struct PipSettings {
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct GemSettings {
-    pub install_ruby: bool,
-    pub gem_exe: Option<String>,
-    pub update_gem: bool,
-}
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct NpmSettings {
     pub install_node: bool,
     pub npm_exe: String,
@@ -107,6 +100,13 @@ pub struct ComposerSettings {
     pub install_dev: bool,
     pub runtime_exe: Option<String>,
     pub include_path: Option<String>,
+}
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct GemSettings {
+    pub install_ruby: bool,
+    pub gem_exe: Option<String>,
+    pub update_gem: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -164,13 +164,6 @@ pub struct CopyInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct GemBundleInfo {
-    pub gemfile: PathBuf,
-    pub without: Vec<String>,
-    pub trust_policy: Option<String>,
-}
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct NpmDepInfo {
     pub file: PathBuf,
     pub package: bool,
@@ -191,6 +184,13 @@ pub struct ComposerDepInfo {
     pub no_plugins: bool,
     pub optimize_autoloader: bool,
     pub classmap_authoritative: bool,
+}
+
+#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
+pub struct GemBundleInfo {
+    pub gemfile: PathBuf,
+    pub without: Vec<String>,
+    pub trust_policy: Option<String>,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
@@ -403,17 +403,6 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("bundled", V::Scalar::new().default(true))
         .member("optional", V::Scalar::new().default(false)))
 
-    // Ruby
-    .option("GemConfig", V::Structure::new()
-        .member("install_ruby", V::Scalar::new().default(true))
-        .member("gem_exe", V::Scalar::new().optional())
-        .member("update_gem", V::Scalar::new().default(true)))
-    .option("GemInstall", V::Sequence::new(V::Scalar::new()))
-    .option("GemBundle", V::Structure::new()
-        .member("gemfile", V::Scalar::new().default("Gemfile"))
-        .member("without", V::Sequence::new(V::Scalar::new()))
-        .member("trust_policy", V::Scalar::new().optional()))
-
     // Composer
     .option("ComposerConfig", V::Structure::new()
         .member("install_runtime", V::Scalar::new().default(true))
@@ -431,4 +420,15 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("no_plugins", V::Scalar::new().default(false))
         .member("optimize_autoloader", V::Scalar::new().default(false))
         .member("classmap_authoritative", V::Scalar::new().default(false)))
+
+    // Ruby
+    .option("GemConfig", V::Structure::new()
+        .member("install_ruby", V::Scalar::new().default(true))
+        .member("gem_exe", V::Scalar::new().optional())
+        .member("update_gem", V::Scalar::new().default(true)))
+    .option("GemInstall", V::Sequence::new(V::Scalar::new()))
+    .option("GemBundle", V::Structure::new()
+        .member("gemfile", V::Scalar::new().default("Gemfile"))
+        .member("without", V::Sequence::new(V::Scalar::new()))
+        .member("trust_policy", V::Scalar::new().optional()))
 }
