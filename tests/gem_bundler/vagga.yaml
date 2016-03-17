@@ -1,0 +1,64 @@
+containers:
+  pkg-alpine:
+    setup:
+    - !Alpine v3.3
+    - !GemInstall [rake:11.1.1]
+
+  pkg-alpine-no-update-gem:
+    setup:
+    - !Alpine v3.3
+    - !GemConfig
+      update_gem: false
+    - !GemInstall [rake:11.1.1]
+
+  pkg-ubuntu-trusty:
+    setup:
+    - !Ubuntu trusty
+    - !GemInstall [rake:11.1.1]
+
+  pkg-ubuntu-trusty-no-update-gem:
+    setup:
+    - !Ubuntu trusty
+    - !GemConfig
+      update_gem: false
+    - !GemInstall [rake, "-v", 11.1.1]
+
+  pkg-ubuntu-precise:
+    setup:
+    - !Ubuntu precise
+    - !GemInstall [rake:10.5.0]
+
+  pkg-ubuntu-precise-no-update-gem:
+    setup:
+    - !Ubuntu precise
+    - !GemConfig
+      update_gem: false
+    - !GemInstall [rake, "-v", 10.5.0]
+
+  bundle-alpine:
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+
+  bundle-alpine-no-dev:
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+      without: [development]
+
+  bundle-ubuntu:
+    setup:
+    - !Ubuntu trusty
+    - !GemBundle
+
+  bundle-ubuntu-no-dev:
+    setup:
+    - !Ubuntu trusty
+    - !GemBundle
+      without: [development]
+
+  bundle-invalid-trust-policy:
+    setup:
+    - !Alpine v3.3
+    - !GemBundle
+      trust_policy: invalid

@@ -1246,3 +1246,80 @@ PHP/Composer Commands
         overrides the default ``include_path`` instead of appending to it;
 
    .. note:: Setting ``install_runtime`` to false still installs Composer.
+
+
+Ruby Commands
+=============
+
+.. note:: Ruby support is recently added to the vagga some things may change as
+   we gain experience with the tool.
+
+.. step:: GemInstall
+
+   Example::
+
+        setup:
+        - !Alpine v3.3
+        - !GemInstall [rake]
+
+   Install a list of ruby gems using ``gem install --bindir /usr/local/bin
+   --no-document``.
+
+   The ``--bindir`` option instructs ``gem`` to install binaries in ``/usr/local/bin``
+   so they are available in your PATH.
+
+.. step:: GemBundle
+
+   Install gems from ``Gemfile`` using ``bundle install --system --binstubs
+   /usr/local/bin``. For example::
+
+        - !GemBundle
+
+   Options correspond to the ones available to the ``bundle install`` command
+   line, so refer to `bundler documentation`_ for detailed info.
+
+   Options:
+
+   gemfile
+       (default ``Gemfile``) Use the specified gemfile instead of Gemfile.
+
+   without
+       (default ``[]``) Exclude gems that are part of the specified named group.
+
+   trust_policy
+       (default ``None``) Sets level of security when dealing with signed gems.
+       Accepts `LowSecurity`, `MediumSecurity` and `HighSecurity` as values.
+
+   .. _bundler documentation: http://bundler.io/bundle_install.html
+
+.. step:: GemConfig
+
+   The directive configures various settings of ruby commands above::
+
+      - !GemConfig
+           install_ruby: true
+           gem_exe: gem
+           update_gem: true
+       - !GemInstall [rake]
+
+   .. note:: Every time :step:`GemConfig` is specified, options are
+      **replaced** rather than *augmented*. In other words, if you start a
+      block of ruby commands with :step:`GemConfig`, all subsequent
+      commands will be executed with the same options, no matter which
+      :step:`GemConfig` settings were before.
+
+   All options:
+
+   install_ruby
+        (default ``true``) Whether to install ruby.
+
+   gem_exe
+        (default ``/usr/bin/gem``) The rubygems executable.
+
+   update_gem
+        (default ``true``) Whether to update rubygems itself.
+
+   .. note:: If you set ``install_ruby`` to false you will also have to provide
+      rubygems if needed.
+
+   .. note:: If you set ``gem_exe``, vagga will no try to update rubygems.

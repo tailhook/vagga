@@ -2,6 +2,7 @@ use std::path::Path;
 
 use super::context::Context;
 use super::commands::generic::run_command_at_env;
+use super::commands::gem;
 use super::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
@@ -22,6 +23,10 @@ pub enum Package {
     Python3Dev,
     PipPy2,
     PipPy3,
+
+    Ruby,       // not build dep
+    RubyDev,
+    Bundler,
 
     NodeJs,     // not build dep
     NodeJsDev,
@@ -58,6 +63,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                 try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
             }
             Composer => try!(composer::bootstrap(ctx)),
+            Bundler => try!(gem::setup_bundler(ctx)),
             _ => {
                 left.push(i);
                 continue;

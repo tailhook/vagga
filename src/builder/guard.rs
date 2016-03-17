@@ -3,7 +3,7 @@ use std::path::Path;
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
 use builder::error::{Error};
-use builder::commands::{npm, pip, composer};
+use builder::commands::{composer, gem, npm, pip};
 use builder::packages;
 use builder::bld::BuildCommand;
 use container::util::clean_dir;
@@ -50,17 +50,23 @@ impl<'a> Guard<'a> {
     }
 
     pub fn finish(&mut self) -> Result<(), String> {
+        // Pip
         if self.ctx.featured_packages.contains(&packages::PipPy2) ||
            self.ctx.featured_packages.contains(&packages::PipPy3)
         {
             try!(pip::freeze(&mut self.ctx));
         }
+        // Npm
         if self.ctx.featured_packages.contains(&packages::Npm) {
             try!(npm::list(&mut self.ctx));
         }
+        // Composer
         if self.ctx.featured_packages.contains(&packages::Composer) {
-            //try!(composer::list(&mut self.ctx));
             try!(composer::finish(&mut self.ctx));
+        }
+        // Gem
+        if self.ctx.featured_packages.contains(&packages::Bundler) {
+            try!(gem::list(&mut self.ctx));
         }
 
         try!(self.distro.finish(&mut self.ctx));

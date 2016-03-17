@@ -21,6 +21,7 @@ mod commands {
     pub mod generic;
     pub mod alpine;
     pub mod pip;
+    pub mod gem;
     pub mod npm;
     pub mod composer;
     pub mod vcs;

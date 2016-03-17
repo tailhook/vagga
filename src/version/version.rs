@@ -14,11 +14,10 @@ use config::read_config;
 use config::builders::{Builder, BuildInfo};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use super::error::Error;
-use super::error::Error::{New, ContainerNotFound};
 use path_util::ToRelative;
 use file_util::hash_file;
-use super::managers::composer;
+use super::error::Error::{self, New, ContainerNotFound};
+use super::managers::{bundler, composer};
 
 pub trait VersionHash {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error>;
@@ -89,6 +88,7 @@ impl VersionHash for Builder {
                     }
                 })
             }
+            &B::GemBundle(ref info) => bundler::hash(info, hash),
             &B::ComposerDependencies(ref info) => composer::hash(info, hash),
             &B::Depends(ref filename) => {
                 let path = Path::new("/work").join(filename);

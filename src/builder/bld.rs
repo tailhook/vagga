@@ -5,6 +5,7 @@ use super::commands::ubuntu;
 use super::commands::alpine;
 use super::commands::generic;
 use super::commands::pip;
+use super::commands::gem;
 use super::commands::npm;
 use super::commands::composer;
 use super::commands::vcs;
@@ -196,6 +197,19 @@ impl BuildCommand for Builder {
                 }
             }
             &B::PyFreeze(_) => unimplemented!(),
+            &B::GemConfig(ref gem_settings) => {
+                guard.ctx.gem_settings = gem_settings.clone();
+            }
+            &B::GemInstall(ref pkgs) => {
+                if build {
+                    try!(gem::install(&mut guard.distro, &mut guard.ctx, pkgs));
+                }
+            }
+            &B::GemBundle(ref info) => {
+                if build {
+                    try!(gem::bundle(&mut guard.distro, &mut guard.ctx, info));
+                }
+            }
             &B::NpmConfig(ref npm_settings) => {
                 guard.ctx.npm_settings = npm_settings.clone();
             }
