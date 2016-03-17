@@ -17,7 +17,7 @@ use config::builders::{
 use super::capsule;
 use super::packages;
 use super::timer;
-use path_util::{PathExt, ToRelative};
+use path_util::ToRelative;
 use file_util::create_dir;
 use process_util::PROXY_ENV_VARS;
 

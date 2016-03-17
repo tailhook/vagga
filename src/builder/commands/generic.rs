@@ -4,7 +4,6 @@ use unshare::{Command};
 
 use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
-use path_util::PathExt;
 use process_util::{capture_stdout, run_and_wait};
 use builder::error::StepError;
 

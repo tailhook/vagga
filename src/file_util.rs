@@ -12,7 +12,6 @@ use libc::{uid_t, gid_t, c_int};
 use shaman::digest::Digest;
 use nix::fcntl::{flock, FlockArg};
 
-use path_util::PathExt;
 
 extern "C" {
     fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;

@@ -10,7 +10,6 @@ use super::setup;
 use super::Wrapper;
 use container::util::clean_dir;
 use file_util::read_visible_entries;
-use path_util::PathExt;
 use wrapper::build::get_version_hash;
 
 

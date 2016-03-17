@@ -66,6 +66,7 @@ pub struct FileInfo {
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct UbuntuReleaseInfo {
     pub version: String,
+    pub arch: String,
     pub keep_chfn_command: bool,
 }
 
@@ -314,6 +315,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Ubuntu", V::Scalar::new())
     .option("UbuntuRelease", V::Structure::new()
         .member("version", V::Scalar::new())
+        .member("arch", V::Scalar::new().default("amd64"))
         .member("keep_chfn_command", V::Scalar::new().default(false)))
     .option("UbuntuRepo", V::Structure::new()
         .member("url", V::Scalar::new())

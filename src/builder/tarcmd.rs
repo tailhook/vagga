@@ -11,7 +11,7 @@ use super::context::Context;
 use super::download::download_file;
 use super::commands::generic::run_command_at;
 use file_util::{read_visible_entries, create_dir};
-use path_util::{ToRelative, PathExt};
+use path_util::ToRelative;
 
 
 pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,

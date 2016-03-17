@@ -8,6 +8,12 @@ setup() {
     [[ $link = ".roots/trusty.52f1f091/root" ]]
 }
 
+@test "Ubuntu i386 builds" {
+    vagga _build trusty-i386
+    link=$(readlink .vagga/trusty-i386)
+    [[ $link = ".roots/trusty-i386.a2ec035d/root" ]]
+}
+
 @test "Run echo command" {
     run vagga echo-cmd hello
     printf "%s\n" "${lines[@]}"
@@ -46,6 +52,13 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 121 ]]
     [[ $output =~ "Command test not found." ]]
+}
+
+@test "Check arch support" {
+    run vagga check-arch
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = i386 ]]
 }
 
 @test "Run trusty bc" {

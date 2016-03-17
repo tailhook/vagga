@@ -3,12 +3,32 @@ Release Notes
 =============
 
 
-Vagga 0.4.2
+Vagga 0.5.0
 ===========
 
 :Release Date: future
 
 * ``!Depends`` doesn't resolve symlinks but depends on the link itself
+* Pseudo-terminals in vagga containers now work
+* ``!Remove`` removes files when encountered (previously removed only when
+  container already built), also the command works with files (not only dirs)
+* Add ``!Shapshot`, ``!Empty``, ``!BindRO`` volume types
+* Add ``external-volumes`` setting, which allows to mount directories outside
+  of the project dir
+* Add ``minimum-vagga`` option, which hints user which version they should use
+* Implement  ``!Build``, ``!Download``, ``!Copy`` build steps
+* Add ``_init_storage_dir`` builtin command
+* Add ``vagga _clean --unused`` mode of operation which is superior
+  to ``--old``
+* Allow to customize python and nodejs versions for ``Py*`` and ``Npm*`` steps
+* Fix various bugs in networking implementation
+* Add shell autocomplete (bash included, zsh can be configured)
+* The ``.vagga/.mnt`` is now unmounted during build (fixes bugs with bad tools)
+* Improved SIGINT handling, now Ctrl+C in interactive processes such as
+  ``python`` (without arguments) works as expected
+* Add PHP/Composer support
+* Add support for ``arch`` parameter in ``!UbuntuRelease`` this changes hash
+  sum of all containers built using ``!UbuntuRelease``
 
 Vagga 0.4.1
 ===========

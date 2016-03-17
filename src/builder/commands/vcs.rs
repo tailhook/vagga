@@ -12,7 +12,6 @@ use super::super::capsule;
 use super::super::context::Context;
 use super::generic::run_command_at;
 use super::super::super::path_util::ToRelative;
-use path_util::PathExt;
 
 
 fn git_cache(url: &String) -> Result<PathBuf, String> {

@@ -4,7 +4,8 @@ use std::io::{stdout, stderr};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::exit;
-use std::thread::sleep_ms;
+use std::thread::sleep;
+use std::time::Duration;
 
 use rustc_serialize::json;
 use unshare::{Command, Stdio};
@@ -83,7 +84,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
                 exit(1);
             }
         }
-        sleep_ms(100);
+        sleep(Duration::from_millis(100));
     }
 
 
@@ -175,7 +176,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
                 exit(1);
             }
         }
-        sleep_ms(100);
+        sleep(Duration::from_millis(100));
     }
     let mut commands = vec!();
 
@@ -283,7 +284,7 @@ fn setup_guest_namespace(args: Vec<String>) {
                 exit(1);
             }
         }
-        sleep_ms(100);
+        sleep(Duration::from_millis(100));
     }
     let mut commands = vec!();
 

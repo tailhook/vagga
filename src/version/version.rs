@@ -14,7 +14,7 @@ use config::read_config;
 use config::builders::{Builder, BuildInfo};
 use config::builders::Builder as B;
 use config::builders::Source as S;
-use path_util::{PathExt, ToRelative};
+use path_util::ToRelative;
 use file_util::hash_file;
 use super::error::Error::{self, New, ContainerNotFound};
 use super::managers::{bundler, composer};

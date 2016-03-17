@@ -71,7 +71,6 @@ impl<'a> PartialOrd for Version<'a> {
         loop {
             let val = match (aiter.next(), biter.next()) {
                 (Some(Numeric(x)), Some(Numeric(y))) => x.partial_cmp(&y),
-                // git revision starts with g
                 (Some(Numeric(_)), Some(String(_))) => Some(Greater),
                 (Some(String(_)), Some(Numeric(_))) => Some(Less),
                 (Some(String(x)), Some(String(y))) => x.partial_cmp(y),
@@ -82,11 +81,12 @@ impl<'a> PartialOrd for Version<'a> {
                 => Some(Greater),
                 (None, Some(String(_))) => Some(Less),
                 (Some(String(x)), None)
+                // git revision starts with g
                 if matches!(x, "a"|"b"|"c"|"rc"|"pre"|"dev"|"dirty")
                 || x.starts_with("g")
                 => Some(Less),
                 (Some(String(_)), None) => Some(Greater),
-                (None, None) => Some(Equal),
+                (None, None) => return Some(Equal),
             };
             if val != Some(Equal) {
                 return val;
@@ -112,6 +112,12 @@ mod test {
         assert!(Version("v0.4.1-28-gfba00d7") > Version("v0.4.1"));
         assert!(Version("v0.4.1-28-gfba00d7") > Version("v0.4.1-27-gtest"));
         assert!(Version("v0.4.1-28-gfba00d7") < Version("v0.4.2"));
+    }
+
+    #[test]
+    fn test_version_cmp2() {
+        assert!(!(Version("v0.4.1-172-ge011471")
+                < Version("v0.4.1-172-ge011471")));
     }
 }
 

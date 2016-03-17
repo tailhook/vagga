@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 
-use path_util::PathExt;
-
 pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
     -> Result<PathBuf, String>
 {

@@ -63,6 +63,9 @@ Ubuntu Commands
      The verison of ubuntu to install. This must be digital ``YY.MM`` form,
      not a code name. **Required**.
 
+   arch
+     The architecture to install. Defaults to ``amd64``.
+
    keep-chfn-command
      (default ``false``) This may be set to ``true`` to enable
      ``/usr/bin/chfn`` command in the container. This often doesn't work on

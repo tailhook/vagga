@@ -5,7 +5,7 @@ setup() {
 @test "UbuntuRelease builds" {
     vagga _build vivid
     link=$(readlink .vagga/vivid)
-    [[ $link = ".roots/vivid.2725d28d/root" ]]
+    [[ $link = ".roots/vivid.15713910/root" ]]
 }
 
 @test "Run echo command in ubuntu release" {
@@ -54,7 +54,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/vivid-calc)
-    [[ $link = ".roots/vivid-calc.1b5a9608/root" ]]
+    [[ $link = ".roots/vivid-calc.1f8f39b2/root" ]]
 }
 
 @test "ubuntu_release: Run vivid bc in ubuntu derived from release" {
@@ -63,7 +63,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/vivid-derive)
-    [[ $link = ".roots/vivid-derive.1b5a9608/root" ]]
+    [[ $link = ".roots/vivid-derive.1f8f39b2/root" ]]
 }
 
 @test "Run trusty bc in ubuntu release" {
@@ -72,7 +72,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/trusty-calc)
-    [[ $link = ".roots/trusty-calc.398044f3/root" ]]
+    [[ $link = ".roots/trusty-calc.e6d8d850/root" ]]
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {
