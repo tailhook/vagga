@@ -69,7 +69,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.2.0/gems/cuba-3.5.0 ]]
     link=$(readlink .vagga/bundle-alpine)
-    [[ $link = ".roots/bundle-alpine.2c54bcf6/root" ]]
+    [[ $link = ".roots/bundle-alpine.85410e44/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle without dev" {
@@ -79,7 +79,7 @@ teardown() {
     [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.2.0/gems/cuba-3.5.0 ]]
     [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.2.0/gems/rake-11.1.1 ]]
     link=$(readlink .vagga/bundle-alpine-no-dev)
-    [[ $link = ".roots/bundle-alpine-no-dev.0095fb22/root" ]]
+    [[ $link = ".roots/bundle-alpine-no-dev.85410e44/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle" {
@@ -89,7 +89,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     [[ -d .vagga/bundle-ubuntu/usr/lib/ruby/gems/1.9.1/gems/cuba-3.5.0 ]]
     link=$(readlink .vagga/bundle-ubuntu)
-    [[ $link = ".roots/bundle-ubuntu.844a7182/root" ]]
+    [[ $link = ".roots/bundle-ubuntu.64507738/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle without dev" {
@@ -99,7 +99,7 @@ teardown() {
     [[ -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/cuba-3.5.0 ]]
     [[ ! -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/rake-11.1.1 ]]
     link=$(readlink .vagga/bundle-ubuntu-no-dev)
-    [[ $link = ".roots/bundle-ubuntu-no-dev.1c640a09/root" ]]
+    [[ $link = ".roots/bundle-ubuntu-no-dev.64507738/root" ]]
 }
 
 @test "gem/bundler: GemBundle invalid trust_policy" {
@@ -116,5 +116,5 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.0" ]]
     link=$(readlink .vagga/bundle-lock)
-    [[ $link = ".roots/bundle-lock.3d642029/root" ]]
+    [[ $link = ".roots/bundle-lock.4d9b0fda/root" ]]
 }
