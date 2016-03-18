@@ -1,0 +1,11 @@
+containers:
+  app:
+    setup:
+    - !Alpine v3.3
+    - !Install [libxml2, libxslt, zlib, sqlite-libs, nodejs]
+    - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev, sqlite-dev]
+    - !Env
+      NOKOGIRI_USE_SYSTEM_LIBRARIES: 1
+    - !GemBundle
+    environ:
+      HOME: /tmp
