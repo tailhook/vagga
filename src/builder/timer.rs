@@ -4,14 +4,13 @@ use std::path::Path;
 use std::fs::File;
 use std::fmt::{Arguments};
 
-use container::util::{get_time, Time};
-
+use time::get_time;
 
 
 pub struct TimeLog {
     file: File,
-    start: Time,
-    prev: Time,
+    start: Timespec,
+    prev: Timespec,
 }
 
 

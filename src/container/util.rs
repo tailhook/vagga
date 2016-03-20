@@ -35,13 +35,6 @@ quick_error!{
 }
 
 
-pub type Time = f64;
-
-extern "C" {
-    // <sys/time.h>
-    fn gettimeofday(time: *mut timeval, tz: *const c_void) -> c_int;
-}
-
 pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     if !dir.exists() {
         return Ok(());
@@ -89,11 +82,6 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     return Ok(());
 }
 
-pub fn get_time() -> Time {
-    let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
-    unsafe { gettimeofday(&mut tv, null()) };
-    return tv.tv_sec as f64 + 0.000001 * tv.tv_usec as f64;
-}
 
 pub fn copy_dir(old: &Path, new: &Path,
     owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
