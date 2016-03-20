@@ -2,9 +2,9 @@ use std::io::Error;
 use std::io::Write;
 use std::path::Path;
 use std::fs::File;
-use std::fmt::{Arguments};
+use std::fmt::Arguments;
 
-use time::get_time;
+use time::{Timespec, get_time};
 
 
 pub struct TimeLog {
