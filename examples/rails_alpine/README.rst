@@ -5,7 +5,10 @@ Building a Rails project
 This example will show how to create a simple Rails project using vagga.
 
 * `Creating the project structure`_
-
+* `Configuring the database from environment`_
+* `Adding some code`_
+* `Caching with memcached`_
+* `We should try Postgres too`_
 
 Creating the project structure
 ==============================
@@ -25,8 +28,14 @@ Create the ``vagga.yaml`` file and add the following to it:
       rails:
         setup:
         - !Alpine v3.3
-        - !Install [libxml2, libxslt, zlib] ❶
-        - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev] ❶
+        - !Install ❶
+          - libxml2
+          - libxslt
+          - zlib
+        - !BuildDeps ❶
+          - libxml2-dev
+          - libxslt-dev
+          - zlib-dev
         - !Env
           NOKOGIRI_USE_SYSTEM_LIBRARIES: 1 ❷
         - !GemInstall [rails] ❸
@@ -61,8 +70,17 @@ Now that we have our rails project, let's change our container to use the
       rails:
         setup:
         - !Alpine v3.3
-        - !Install [libxml2, libxslt, zlib, sqlite-libs, nodejs] ❶
-        - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev, sqlite-dev] ❶
+        - !Install
+          - libxml2
+          - libxslt
+          - zlib
+          - sqlite-libs ❶
+          - nodejs ❶
+        - !BuildDeps
+          - libxml2-dev
+          - libxslt-dev
+          - zlib-dev
+          - sqlite-dev ❶
         - !Env
           NOKOGIRI_USE_SYSTEM_LIBRARIES: 1
         - !GemBundle ❷
@@ -127,6 +145,9 @@ This will tell rails to use the same file that was configured in ``database.yml`
 
 Now if we run our project, everything should be the same.
 
+.. note:: You may need to remove "tmp/pids/server.pid", otherwise, rails will
+  complain that the server is already running.
+
 Adding some code
 ================
 
@@ -162,7 +183,7 @@ First, add ``dalli`` to our ``Gemfile``:
 
 .. code-block:: ruby
 
-    gem 'dalli', '~> 2.7'
+    gem 'dalli'
 
 Then, open ``config/environments/production.rb``, find the line containing
 ``# config.cache_store`` and edit it as follows:
@@ -254,5 +275,106 @@ Run the project with caching::
 
     $ vagga run-cached
 
-Try adding some records. Keep an eye on the terminal to see rails talking with
+Try adding some records. Keep an eye on the console to see rails talking with
 memcached.
+
+We should try Postgres too
+==========================
+
+We can test our project against a Postgres database, which is probably what we
+will use in production.
+
+First, add gem ``pg`` to our ``Gemfile``
+
+.. code-block:: ruby
+
+    gem 'pg'
+
+Then add the system dependencies for gem ``pg``
+
+.. code-block:: yaml
+
+    containers:
+      rails:
+        setup:
+        - !Alpine v3.3
+        - !Install
+          - libxml2
+          - libxslt
+          - zlib
+          - sqlite-libs
+          - libpq ❶
+          - nodejs
+        - !BuildDeps
+          - libxml2-dev
+          - libxslt-dev
+          - zlib-dev
+          - sqlite-dev
+          - postgresql-dev ❷
+        - !Env
+          NOKOGIRI_USE_SYSTEM_LIBRARIES: 1
+        - !GemBundle
+        environ:
+          HOME: /tmp
+
+* ❶ -- runtime dependency
+* ❷ -- build dependency
+
+Create the database container
+
+.. code-block:: yaml
+
+    containers:
+      # ...
+      postgres:
+        setup:
+        - !Ubuntu trusty
+        - !Install [postgresql]
+        - !EnsureDir /data
+        environ:
+          PGDATA: /data
+          PG_PORT: 5433
+          PG_DB: test
+          PG_USER: vagga
+          PG_PASSWORD: vagga
+          PG_BIN: /usr/lib/postgresql/9.3/bin
+        volumes:
+          /data: !Tmpfs
+            size: 100M
+            mode: 0o700
+
+And then add the command to run with Postgres:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      run-postgres: !Supervise
+        description: Start the rails development server using Postgres database
+        children:
+          app: !Command
+            container: rails
+            environ:
+              DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
+            run: |
+                touch /work/.dbcreation # Create lock file
+                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+                python3 manage.py migrate
+                python3 manage.py runserver
+          db: !Command
+            container: postgres
+            run: |
+                chown postgres:postgres $PGDATA;
+                su postgres -c "$PG_BIN/pg_ctl initdb";
+                su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
+                su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+                su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
+                su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
+                rm /work/.dbcreation # Release lock
+                sleep infinity
+
+Now run::
+
+    $ vagga run-postgres
+
+You will notice rails talking to postgres in the console.
