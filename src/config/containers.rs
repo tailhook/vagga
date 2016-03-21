@@ -40,7 +40,7 @@ pub struct TmpfsInfo {
 #[derive(RustcDecodable, Clone)]
 pub struct Container {
     pub setup: Vec<Builder>,
-    pub image_url: Option<String>,
+    pub image_cache_url: Option<String>,
     pub auto_clean: bool,
 
     pub uids: Vec<Range>,
@@ -85,7 +85,7 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
 pub fn container_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
     .member("setup", V::Sequence::new(builder_validator()))
-    .member("image_url", V::Scalar::new().optional())
+    .member("image_cache_url", V::Scalar::new().optional())
     .member("auto_clean", V::Scalar::new().default(false))
     .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
     .member("environ_file", V::Scalar::new().optional())

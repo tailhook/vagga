@@ -86,7 +86,7 @@ pub fn run() -> i32 {
         .expect("Container not found");  // TODO
 
     if !no_image {
-        if let Some(ref image_url_tmpl) = container.image_url {
+        if let Some(ref image_cache_url_tmpl) = container.image_cache_url {
             let hash = match ver.rsplitn(2, ".").next() {
                 Some(v) => v,
                 None => {
@@ -94,11 +94,11 @@ pub fn run() -> i32 {
                     return 122;
                 }
             };
-            let image_url = image_url_tmpl
+            let image_cache_url = image_cache_url_tmpl
                 .replace("${container_name}", &container_name)
                 .replace("${hash}", &hash);
             let res = _build_from_image(&container_name, &container,
-                                        &config, &settings, &image_url);
+                                        &config, &settings, &image_cache_url);
             // just ignore errors if we cannot build from image
             if let Ok(()) = res {
                 return 0;
@@ -122,25 +122,27 @@ pub fn run() -> i32 {
 }
 
 fn _build_from_image(container_name: &String, container: &Container,
-                     config: &Config, settings: &Settings, image_url: &String)
-                     -> Result<(), String> {
+    config: &Config, settings: &Settings, image_cache_url: &String)
+    -> Result<(), String> 
+{
     // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
     let settings = settings.clone();
     let mut ctx = Context::new(config, container_name.clone(),
                                container, settings);
 
     let tar = TarInfo {
-        url: image_url.clone(),
+        url: image_cache_url.clone(),
         sha256: None,
         path: PathBuf::from("/"),
         subdir: PathBuf::from(""),
     };
     match tar_command(&mut ctx, &tar) {
         Ok(_) => {
-            info!("Succesfully unpack image {}", image_url);
+            info!("Succesfully unpack image {}", image_cache_url);
         },
         Err(e) => {
-            return Err(format!("Error unpacking image {}: {}", image_url, e));
+            return Err(format!("Error unpacking image {}: {}",
+                image_cache_url, e));
         },
     }
 
