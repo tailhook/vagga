@@ -30,6 +30,8 @@ Vagga 0.5.0
 * Add Ruby/Bundler support
 * Add support for ``arch`` parameter in ``!UbuntuRelease`` this changes hash
   sum of all containers built using ``!UbuntuRelease``
+* The stdin redirected from ``/dev/null`` and stdout is redirected to stderr
+  during the build
 
 Vagga 0.4.1
 ===========

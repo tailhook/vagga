@@ -7,7 +7,7 @@ use unshare::{Command, Namespace};
 
 use options::build_mode::BuildMode;
 use config::Settings;
-use process_util::{capture_fd3, set_uidmap, copy_env_vars};
+use process_util::{capture_fd3, set_uidmap, copy_env_vars, squash_stdio};
 use container::uidmap::get_max_uidmap;
 
 
@@ -62,6 +62,7 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
     -> Result<String, String>
 {
     let mut cmd = Command::new("/proc/self/exe");
+    squash_stdio(&mut cmd);
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);

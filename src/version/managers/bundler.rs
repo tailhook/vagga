@@ -1,8 +1,7 @@
-use std::io::{Read, BufRead, BufReader, Lines};
+use std::io::{BufRead, BufReader};
 use std::fs::File;
 use std::path::Path;
 
-use regex::Regex;
 use shaman::digest::Digest;
 
 use config::builders::GemBundleInfo;
