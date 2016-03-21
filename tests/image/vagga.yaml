@@ -46,7 +46,7 @@ containers:
 
                 access_log /var/log/nginx/access.log;
 
-                location /images/ {
+                location /upload/images/ {
                     alias /work/images/;
 
                     client_max_body_size 1g;
@@ -56,6 +56,10 @@ containers:
 
                     create_full_put_path on;
                     dav_access group:rw all:r;
+                }
+
+                location /images/ {
+                    alias /work/images/;
                 }
             }
         }

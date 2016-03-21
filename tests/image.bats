@@ -76,7 +76,7 @@ setup() {
 
     kill -TERM "${nginx_pid}"
 
-    [[ ${access_log_output} = *"PUT /images/${image_name} HTTP/1.1\" 201"* ]]
+    [[ ${access_log_output} = *"PUT /upload/images/${image_name} HTTP/1.1\" 201"* ]]
 
     [[ ${build_status} = 0 ]]
     [[ ${build_link} = ".roots/${container_dir}/root" ]]
