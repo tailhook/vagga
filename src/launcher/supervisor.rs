@@ -80,7 +80,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            let ver = try!(build_container(settings, cont, bmode, None));
+            let ver = try!(build_container(settings, cont, bmode));
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {

@@ -16,7 +16,7 @@ pub fn pack_command(settings: &Settings, args: Vec<String>)
         Err(code) => return Ok(code),
     };
 
-    let ver = try!(build_container(settings, &opt.name, opt.build_mode, Some(2)));
+    let ver = try!(build_container(settings, &opt.name, opt.build_mode));
 
     let mut cmd: Command = Wrapper::new(Some(&ver), &settings);
     cmd.userns();

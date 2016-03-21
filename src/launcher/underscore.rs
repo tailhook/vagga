@@ -55,7 +55,7 @@ pub fn run_command(settings: &Settings, workdir: &Path,
             }
         }
     }
-    let ver = try!(build_container(settings, &container, bmode, None));
+    let ver = try!(build_container(settings, &container, bmode));
     let mut cmd: Command = Wrapper::new(Some(&ver), settings);
     cmd.workdir(workdir);
     cmd.arg("_run");
@@ -114,7 +114,7 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
             }
         }
     }
-    let ver = try!(build_container(settings, &container, bmode, None));
+    let ver = try!(build_container(settings, &container, bmode));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
         try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)

@@ -5,6 +5,11 @@ containers:
     - !Alpine v3.3
     - !Install [bc]
 
+  v33-tar:
+    setup:
+    - !Alpine v3.3
+    - !Install [gzip]
+
   v32-calc:
     setup:
     - !Alpine v3.2
@@ -52,3 +57,7 @@ commands:
     container: v30-calc
     accepts-arguments: true
     run: echo "$*" | bc
+
+  v33-tar: !Command
+    container: v33-tar
+    run: [tar]

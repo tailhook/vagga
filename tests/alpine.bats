@@ -8,6 +8,15 @@ setup() {
     [[ $link = ".roots/v31.f87ff413/root" ]]
 }
 
+@test "alpine: Check stdout" {
+    run echo $(vagga v33-tar -cz vagga.yaml | tar -zt)
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/v33-tar)
+    [[ $link = ".roots/v33-tar.bbe47b37/root" ]]
+    [[ $output = "vagga.yaml" ]]
+}
+
 @test "alpine: Check version" {
     run vagga _build alpine-check-version
     printf "%s\n" "${lines[@]}"
