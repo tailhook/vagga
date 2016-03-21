@@ -191,8 +191,12 @@ Then, open ``config/environments/production.rb``, find the line containing
 .. code-block:: ruby
 
     Rails.application.configure do
+      # ...
       config.cache_store = :mem_cache_store, ENV['CACHE_URL']
+      # ...
     end
+
+.. note:: You should only setup caching in production environment.
 
 Create a container for memcached:
 
@@ -223,12 +227,14 @@ Create the command to run with caching:
               CACHE_URL: memcached://127.0.0.1:11211 ❷
               RAILS_ENV: production ❸
               SECRET_KEY_BASE: my_secret_key ❹
+              RAILS_SERVE_STATIC_FILES: 1 ❺
             run: rails server
 
 * ❶ -- run memcached as verbose so we see can see the cache working
 * ❷ -- set the cache url
 * ❸ -- tell rails to run in production environment
 * ❹ -- production environment requires a secret key
+* ❺ -- tell rails to serve static files on production environment
 
 Now let's change some of our views to use caching:
 
@@ -271,11 +277,15 @@ Now let's change some of our views to use caching:
     </table>
     <%# ... %>
 
+Compile assets (just to have some style)::
+
+    $ vagga _run rails rake assets:precompile
+
 Run the project with caching::
 
     $ vagga run-cached
 
-Try adding some records. Keep an eye on the console to see rails talking with
+Try adding some records. Keep an eye on the console to see rails talking to
 memcached.
 
 We should try Postgres too
@@ -359,8 +369,8 @@ And then add the command to run with Postgres:
             run: |
                 touch /work/.dbcreation # Create lock file
                 while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
-                python3 manage.py migrate
-                python3 manage.py runserver
+                rake db:migrate
+                rails server
           db: !Command
             container: postgres
             run: |
