@@ -1,0 +1,16 @@
+<p id="notice"><%= notice %></p>
+
+<% cache @article do %>
+  <p>
+    <strong>Title:</strong>
+    <%= @article.title %>
+  </p>
+
+  <p>
+    <strong>Body:</strong>
+    <%= @article.body %>
+  </p>
+<% end %>
+
+<%= link_to 'Edit', edit_article_path(@article) %> |
+<%= link_to 'Back', articles_path %>

@@ -1,5 +1,5 @@
 containers:
-  app:
+  rails:
     setup:
     - !Alpine v3.3
     - !Install [libxml2, libxslt, zlib, sqlite-libs, nodejs]
@@ -9,3 +9,29 @@ containers:
     - !GemBundle
     environ:
       HOME: /tmp
+      DATABASE_URL: sqlite3:db/development.sqlite3
+
+  memcached:
+    setup:
+    - !Alpine v3.3
+    - !Install [memcached]
+
+commands:
+  run: !Command
+    container: rails
+    description: start rails development server
+    run: rails server
+
+  run-cached: !Supervise
+    description: Start the rails development server alongside memcached
+    children:
+      cache: !Command
+        container: memcached
+        run: memcached -u memcached -vv
+      app: !Command
+        container: rails
+        environ:
+          CACHE_URL: memcached://127.0.0.1:11211
+          RAILS_ENV: production
+          SECRET_KEY_BASE: my_secret_key
+        run: rails server
