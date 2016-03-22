@@ -79,6 +79,45 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
+@test "generic: The supervice --only with tags" {
+    run vagga tagged --only first_and_third
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-2]} = ":)" ]]
+
+    run vagga tagged --only first_and_second
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+
+    run vagga tagged --only third_only
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = ":)" ]]
+}
+
+@test "generic: The supervice --only mixed" {
+    run vagga tagged --only first first_and_second
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+
+    run vagga tagged --only third first_and_second
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-4]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-3]} = "world" ]]
+    [[ ${lines[${#lines[@]}-2]} = ":)" ]]
+}
+
 @test "generic: The supervise --exclude" {
     run vagga two-lines --exclude second-line
     printf "%s\n" "${lines[@]}"
@@ -87,6 +126,41 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
 
     run vagga two-lines --exclude first-line
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+}
+
+@test "generic: The supervice --exclude with tags" {
+    run vagga tagged --exclude first_and_third
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+
+    run vagga tagged --exclude first_and_second
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = ":)" ]]
+
+    run vagga tagged --exclude third_only
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+}
+
+@test "generic: The supervice --exclude mixed" {
+    run vagga tagged --exclude first first_and_second
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = ":)" ]]
+
+    run vagga tagged --exclude first_and_third third_only
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ $link = ".roots/busybox.f87ff413/root" ]]
