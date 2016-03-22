@@ -1,13 +1,12 @@
-use std::path::{Path, PathBuf};
+use std::default::Default;
+use std::path::Path;
 
 use unshare::{Command, Stdio};
 
 use builder::capsule;
-use builder::context::{Context as BuilderContext};
 use options::pack::Options;
 use wrapper::Wrapper;
 use process_util::convert_status;
-use super::build;
 use super::setup;
 
 
@@ -21,20 +20,9 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
-    let cconfig = try!(wrapper.config.containers.get(&options.name)
-        .ok_or(format!("Container {} not found", options.name)));
-    let container_ver = wrapper.root.as_ref().unwrap();
-
-    let tmppath = PathBuf::from(
-        &format!("/vagga/base/.roots/.tmp.{}", &options.name));
-    match build::prepare_tmp_root_dir(&tmppath) {
-        Ok(()) => {}
-        Err(x) => {
-            return Err(format!("Error preparing root dir: {}", x));
-        }
-    }
 
     let mut capsule_features = vec!();
+    let container_ver = wrapper.root.as_ref().unwrap();
     let root = Path::new("/vagga/base/.roots")
         .join(container_ver)
         .join("root");
@@ -59,9 +47,9 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         .arg(".");
 
     if capsule_features.len() > 0 {
-        let mut ctx = BuilderContext::new(&wrapper.config, options.name.clone(),
-                                   cconfig, wrapper.settings.clone());
-        try!(capsule::ensure_features(&mut ctx, &capsule_features));
+        let mut capsule_state = Default::default();
+        try!(capsule::ensure(
+            &mut capsule_state, &wrapper.settings, &capsule_features));
     }
 
     info!("Running {:?}", tar_cmd);
