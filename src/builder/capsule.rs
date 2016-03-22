@@ -8,14 +8,13 @@
 use std::collections::HashSet;
 use std::fs::{File};
 use std::io::{Write};
-use std::os::unix::io::FromRawFd;
 use std::path::Path;
 
-use nix::unistd::dup;
-use unshare::{Command, Stdio};
+use unshare::Command;
 
 use config::settings::Settings;
 use container::mount::bind_mount;
+use process_util::squash_stdio;
 use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
 use super::super::file_util::create_dir;
@@ -42,11 +41,9 @@ pub struct State {
 
 // Also used in alpine
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
-    let stdout_fd = try!(dup(2).map_err(|e| format!("{}", e)));
     let mut cmd = Command::new("/vagga/bin/apk");
-    cmd.stdin(Stdio::null())
-        .stdout(unsafe { Stdio::from_raw_fd(stdout_fd) })
-        .env("PATH", "/vagga/bin")
+    try!(squash_stdio(&mut cmd));
+    cmd.env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
     debug!("Running APK {:?}", cmd);
