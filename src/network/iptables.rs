@@ -52,9 +52,9 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
                 try!(_rule(pipe, ":FORWARD DROP [0:0]"));
                 try!(_rule(pipe, ":OUTPUT DROP [0:0]"));
                 try!(_rule(pipe,
-                    format!("-A INPUT -s 172.18.0.254/32 -j ACCEPT")));
+                    format!("-A INPUT -s 172.23.0.254/32 -j ACCEPT")));
                 try!(_rule(pipe,
-                    format!("-A OUTPUT -d 172.18.0.254/32 -j ACCEPT")));
+                    format!("-A OUTPUT -d 172.23.0.254/32 -j ACCEPT")));
             }
             DropSome(ref peers) => {
                 // Empty chains with ACCEPT default (except FORWARD, we expect

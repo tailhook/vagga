@@ -54,16 +54,16 @@ Running this will show what commands are going to run::
     The following commands will be run:
         sudo 'ip' 'link' 'add' 'vagga_guest' 'type' 'veth' 'peer' 'name' 'vagga'
         sudo 'ip' 'link' 'set' 'vagga_guest' 'netns' '16508'
-        sudo 'ip' 'addr' 'add' '172.18.255.1/30' 'dev' 'vagga'
+        sudo 'ip' 'addr' 'add' '172.23.255.1/30' 'dev' 'vagga'
         sudo 'sysctl' 'net.ipv4.conf.vagga.route_localnet=1'
         sudo 'mount' '--bind' '/proc/16508/ns/net' '/run/user/1000/vagga/netns'
         sudo 'mount' '--bind' '/proc/16508/ns/user' '/run/user/1000/vagga/userns'
 
     The following iptables rules will be established:
         ["-I", "INPUT", "-i", "vagga", "-d", "127.0.0.1", "-j", "ACCEPT"]
-        ["-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-i", "vagga", "-d", "172.18.255.1", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1"]
-        ["-t", "nat", "-I", "PREROUTING", "-p", "udp", "-i", "vagga", "-d", "172.18.255.1", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1"]
-        ["-t", "nat", "-A", "POSTROUTING", "-s", "172.18.255.0/30", "-j", "MASQUERADE"]
+        ["-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-i", "vagga", "-d", "172.23.255.1", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1"]
+        ["-t", "nat", "-I", "PREROUTING", "-p", "udp", "-i", "vagga", "-d", "172.23.255.1", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1"]
+        ["-t", "nat", "-A", "POSTROUTING", "-s", "172.23.255.0/30", "-j", "MASQUERADE"]
 
 Then immediatelly the commands are run, this will probably request your
 password by sudo command. The ``iptables`` commands may depend on DNS server
@@ -84,7 +84,7 @@ To destroy the created network you can run::
 
 This uses ``sudo`` too
 
-.. warning:: if you have ``172.18.0.0/16`` network attached to your machine,
+.. warning:: if you have ``172.23.0.0/16`` network attached to your machine,
    the ``_create_netns`` and ``_destroy_netns`` may break that network. We will
    allow to customize the network in future versions of vagga.
 
@@ -104,8 +104,8 @@ stops network between processes. For example here is test for normal
 connection::
 
     $ vagga run-normal &
-    $ vagga wrk http://172.18.255.2:8000 --latency
-    Running 10s test @ http://172.18.255.2:8000
+    $ vagga wrk http://172.23.255.2:8000 --latency
+    Running 10s test @ http://172.23.255.2:8000
       2 threads and 10 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
         Latency     6.07ms    1.05ms  20.21ms   94.69%
@@ -122,8 +122,8 @@ connection::
 Here is the same test with bad network connection::
 
     $ vagga run-flaky &
-    $ vagga wrk http://172.18.255.2:8000 --latency
-    Running 10s test @ http://172.18.255.2:8000
+    $ vagga wrk http://172.23.255.2:8000 --latency
+    Running 10s test @ http://172.23.255.2:8000
       2 threads and 10 connections
       Thread Stats   Avg      Stdev     Max   +/- Stdev
         Latency   241.69ms  407.98ms   1.41s    81.67%

@@ -33,6 +33,8 @@ Vagga 0.5.0
 * The stdin redirected from ``/dev/null`` and stdout is redirected to stderr
   during the build
 * You can now filter commands in supervise by tags
+* Change gateway network from ``172.18.0.0/16`` to ``172.23.0.0/16``,
+  hopefully this will have less collisions
 
 
 Vagga 0.4.1
