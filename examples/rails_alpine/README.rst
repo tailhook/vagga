@@ -119,6 +119,9 @@ Run the project::
 
 Now visit ``localhost:3000`` to see rails default page.
 
+.. note:: You may need to remove "tmp/pids/server.pid" in subsequent runs,
+  otherwise, rails will complain that the server is already running.
+
 Configuring the database from environment
 =========================================
 
@@ -143,9 +146,6 @@ And set the enviroment variable in our ``vagga.yaml``:
 This will tell rails to use the same file that was configured in ``database.yml``.
 
 Now if we run our project, everything should be the same.
-
-.. note:: You may need to remove "tmp/pids/server.pid", otherwise, rails will
-  complain that the server is already running.
 
 Adding some code
 ================
@@ -388,3 +388,39 @@ And then add the command to run with Postgres:
 Now run::
 
     $ vagga run-postgres
+
+We can also add some default records to the database, so we don't have to add
+them everytime we run our project. To do so, add the following to ``db/seeds.rb``:
+
+.. code-block:: ruby
+
+    # db/seeds.rb
+    Article.create([
+      { title: 'Article 1', body: 'Lorem ipsum dolor sit amet' },
+      { title: 'Article 2', body: 'Lorem ipsum dolor sit amet' },
+      { title: 'Article 3', body: 'Lorem ipsum dolor sit amet' }
+    ])
+
+Now change the ``run-postgres`` command to seed the database:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      run-postgres: !Supervise
+        description: Start the rails development server using Postgres database
+        children:
+          app: !Command
+            container: rails
+            environ:
+              DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
+            run: |
+                touch /work/.dbcreation # Create lock file
+                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+                rake db:migrate
+                rake db:seed
+                rails server
+          db: !Command
+            # ...
+
+Now , everytime we run ``run-postgres``, we will have our database populated.
