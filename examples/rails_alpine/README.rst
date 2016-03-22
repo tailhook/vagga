@@ -48,7 +48,9 @@ Create the ``vagga.yaml`` file and add the following to it:
   to make it easier to build, but here we are instructing it to use the
   versions provided by Alpine. Refer to `nokogiri docs`_ for details.
 * ❸ -- tell ``gem`` to install ``rails``.
-* ❹ -- ``rails`` will complain if we do not have a ``$HOME``.
+* ❹ -- The ``rails new`` command, which we are going to use shortly, will
+  complain if we do not have a ``$HOME``. After our project is created, we won't
+  need it anymore.
 
 .. _nokogiri: http://www.nokogiri.org
 .. _nokogiri docs: http://www.nokogiri.org/tutorials/installing_nokogiri.html
@@ -58,11 +60,11 @@ And now run::
     $ vagga _run rails rails new . --skip-bundle
 
 This will create a new rails project in the current directory. The ``--skip-bundle``
-flag tells rails to not run ``bundle install``, but don't worry, vagga will also
-run it for us.
+flag tells ``rails new`` to not run ``bundle install``, but don't worry, vagga
+will take care of it for us.
 
-Now that we have our rails project, let's change our container to use the
-``Gemfile`` instead of installing gems manually:
+Now that we have our rails project, let's change our container fetch dependencies
+from ``Gemfile``:
 
 .. code-block:: yaml
 
@@ -84,12 +86,10 @@ Now that we have our rails project, let's change our container to use the
         - !Env
           NOKOGIRI_USE_SYSTEM_LIBRARIES: 1
         - !GemBundle ❷
-        environ:
-          HOME: /tmp
 
 * ❶ -- we need ``sqlite`` for the development database and ``nodejs`` for the
   asset pipeline (specifically, the ``uglifier`` gem).
-* ❷ -- install dependencies from ``Gemfile`` using ``bundler``.
+* ❷ -- install dependencies from ``Gemfile`` using ``bundle install``.
 
 Before we test our project, let's add two gems into the ``Gemfile``:
 
@@ -138,7 +138,6 @@ And set the enviroment variable in our ``vagga.yaml``:
         setup:
           # ...
         environ:
-          HOME: /tmp
           DATABASE_URL: sqlite3:db/development.sqlite3
 
 This will tell rails to use the same file that was configured in ``database.yml``.
@@ -165,6 +164,8 @@ project. Edit ``config/routes.rb`` as follows:
 
 .. code-block:: ruby
 
+    # config/routes.rb
+
     Rails.application.routes.draw do
       root 'articles#index'
       resources :articles
@@ -179,10 +180,11 @@ Caching with memcached
 Many projects use `memcached <http://memcached.org/>`_ to speed up things, so
 let's try it out.
 
-First, add ``dalli`` to our ``Gemfile``:
+First, add ``dalli``, a pure ruby memcached client, to our ``Gemfile``:
 
 .. code-block:: ruby
 
+    # ...
     gem 'dalli'
 
 Then, open ``config/environments/production.rb``, find the line containing
@@ -190,6 +192,7 @@ Then, open ``config/environments/production.rb``, find the line containing
 
 .. code-block:: ruby
 
+    # config/environments/production.rb
     Rails.application.configure do
       # ...
       config.cache_store = :mem_cache_store, ENV['CACHE_URL']
@@ -228,13 +231,16 @@ Create the command to run with caching:
               RAILS_ENV: production ❸
               SECRET_KEY_BASE: my_secret_key ❹
               RAILS_SERVE_STATIC_FILES: 1 ❺
-            run: rails server
+            run: |
+                rake assets:precompile ❻
+                rails server
 
 * ❶ -- run memcached as verbose so we see can see the cache working
 * ❷ -- set the cache url
 * ❸ -- tell rails to run in production environment
 * ❹ -- production environment requires a secret key
 * ❺ -- tell rails to serve static files on production environment
+* ❻ -- precompile assets
 
 Now let's change some of our views to use caching:
 
@@ -276,10 +282,6 @@ Now let's change some of our views to use caching:
       </tbody>
     </table>
     <%# ... %>
-
-Compile assets (just to have some style)::
-
-    $ vagga _run rails rake assets:precompile
 
 Run the project with caching::
 
@@ -325,7 +327,7 @@ Then add the system dependencies for gem ``pg``
           NOKOGIRI_USE_SYSTEM_LIBRARIES: 1
         - !GemBundle
         environ:
-          HOME: /tmp
+          DATABASE_URL: sqlite3:db/development.sqlite3
 
 * ❶ -- runtime dependency
 * ❷ -- build dependency
@@ -386,5 +388,3 @@ And then add the command to run with Postgres:
 Now run::
 
     $ vagga run-postgres
-
-You will notice rails talking to postgres in the console.
