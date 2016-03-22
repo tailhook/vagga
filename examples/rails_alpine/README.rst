@@ -418,9 +418,11 @@ Now change the ``run-postgres`` command to seed the database:
                 touch /work/.dbcreation # Create lock file
                 while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
                 rake db:migrate
-                rake db:seed
+                rake db:seed ❶
                 rails server
           db: !Command
             # ...
+
+* ❶ -- ``rake db::seed`` will populate the database.
 
 Now , everytime we run ``run-postgres``, we will have our database populated.
