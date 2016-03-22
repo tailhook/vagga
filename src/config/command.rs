@@ -47,6 +47,7 @@ pub struct CommandInfo {
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
+    pub tags: Vec<String>,
 
     // Command
     pub network: Option<Network>, // Only for top-levels
@@ -103,6 +104,12 @@ impl ChildCommand {
             ChildCommand::BridgeCommand(ref info) => &info.container,
         }
     }
+    pub fn get_tags<'x>(&'x self) -> &Vec<String> {
+        match *self {
+            ChildCommand::Command(ref info) => &info.tags,
+            ChildCommand::BridgeCommand(ref info) => &info.tags,
+        }
+    }
 }
 
 fn shell_command(ast: Ast) -> Vec<Ast> {
@@ -155,6 +162,7 @@ fn command_fields<'a>(cmd: V::Structure) -> V::Structure {
     .member("banner", V::Scalar::new().optional())
     .member("banner_delay", V::Numeric::new().optional().min(0))
     .member("epilog", V::Scalar::new().optional())
+    .member("tags", V::Sequence::new(V::Scalar::new()))
 }
 
 fn subcommand_validator<'a>() -> V::Enum<'a> {

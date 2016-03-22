@@ -39,12 +39,14 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         let mut ap = ArgumentParser::new();
         ap.set_description(sup.description.as_ref().map(|x| &x[..])
             .unwrap_or("Run multiple processes simultaneously"));
-        ap.refer(&mut only).metavar("PROCESS_NAME")
+        ap.refer(&mut only).metavar("PROCESS_NAME_OR_TAG")
             .add_option(&["--only"], List, "
-                Only run specified processes");
-        ap.refer(&mut exclude).metavar("PROCESS_NAME")
+                Only run specified processes.
+                This matches both names and tags");
+        ap.refer(&mut exclude).metavar("PROCESS_NAME_OR_TAG")
             .add_option(&["--exclude"], List, "
-                Don't run specified processes");
+                Don't run specified processes.
+                This excludes both names and tags");
         build_mode(&mut ap, &mut bmode);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
@@ -63,11 +65,15 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
     let mut ports = vec!();
     let mut versions = HashMap::new();
     let filtered_children = sup.children
-        .iter().filter(|&(ref name, _)| {
+        .iter().filter(|&(ref name, ref child)| {
             if only.len() > 0 {
-                only.iter().find(|x| name == x).is_some()
+                only.iter().find(|x| {
+                    name == x || child.get_tags().iter().any(|t| t == *x)
+                }).is_some()
             } else {
-                exclude.iter().find(|x| name == x).is_none()
+                exclude.iter().find(|x| {
+                    name == x || child.get_tags().iter().any(|t| t == *x)
+                }).is_none()
             }
         });
     for (name, child) in filtered_children {

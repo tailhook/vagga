@@ -305,8 +305,13 @@ impl<'a> CompletionState<'a> {
                 States::SuperviseOptionArg(cmd_name, opt) => {
                     if let Some(&MainCommand::Supervise(ref cmd_info)) = self.commands.get(cmd_name) {
                         if opt.accept_children {
-                            if cmd_info.children.contains_key(arg) {
-                                self.supervise_chosen_children.insert(arg);
+                            for (name, child) in cmd_info.children.iter() {
+                                if name == arg {
+                                    self.supervise_chosen_children.insert(arg);
+                                }
+                                if child.get_tags().iter().any(|t| t == arg) {
+                                    self.supervise_chosen_children.insert(arg);
+                                }
                             }
                         }
                     }
@@ -445,10 +450,16 @@ impl<'a> CompletionState<'a> {
         let mut completions = Vec::new();
         if let Some(&MainCommand::Supervise(ref cmd_info)) = self.commands.get(cmd_name) {
             if opt.accept_children {
-                for child in cmd_info.children.keys() {
-                    let child_name = &child[..];
+                for (name, child) in cmd_info.children.iter() {
+                    let child_name = &name[..];
                     if !self.supervise_chosen_children.contains(child_name) {
                         completions.push(child_name);
+                    }
+                    for tag in child.get_tags().iter() {
+                        let tag = &tag[..];
+                        if !self.supervise_chosen_children.contains(tag) {
+                            completions.push(tag);
+                        }
                     }
                 }
             }
