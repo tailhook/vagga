@@ -67,6 +67,33 @@ Parameters of `!Command`
 
    The container to run command in
 
+.. opt:: tags
+
+   The list of tags for this command.
+   Tags are used for processes filtering (with ``--only`` and ``--exclude``)
+   when running any ``!Supervise`` command.
+
+   Simple example:
+
+   .. code-block:: yaml
+
+      commands:
+        run: !Supervise
+          children:
+            postgres: !Command
+              tags: [service]
+              run: ...
+            redis: !Command
+              tags: [service]
+              run: ...
+            app: !Command
+              tags: [app]
+              run: ...
+
+   .. code-block:: bash
+
+      vagga run --only service  # will start only postgres and redis processes
+
 .. opt:: run
 
    The command to run. It can be:
