@@ -1,4 +1,11 @@
 containers:
+  # test composer is available in PATH and removed after container is built
+  composer-lifecycle:
+    setup:
+    - !Alpine v3.3
+    - !ComposerInstall
+    - !Sh composer --version
+
   # php
   php-ubuntu-trusty:
     setup:

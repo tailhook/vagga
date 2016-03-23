@@ -214,7 +214,8 @@ fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
         // PHP
         packages::Php => Some(vec!(
-            "php", "php-cli", "php-openssl", "php-phar", "php-json", "php-pdo", "php-dom"
+            "php", "php-cli", "php-openssl", "php-phar",
+            "php-json", "php-pdo", "php-dom", "php-zip"
         )),
         packages::PhpDev => Some(vec!()),
         packages::Composer => None,
