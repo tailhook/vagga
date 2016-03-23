@@ -1,0 +1,20 @@
+containers:
+  laravel:
+    environ: &env
+      ENV_CONTAINER: 1
+    setup:
+    - !Alpine v3.3
+    - !Sh |
+        if [ ! -f .env ]; then
+          cp .env.example .env
+          php artisan key:generate
+        fi
+    - !Env
+      <<: *env
+    - !ComposerDependencies
+
+commands:
+  run: !Command
+    container: laravel
+    description: run the laravel development server
+    run: php artisan serve
