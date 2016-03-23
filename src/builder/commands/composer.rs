@@ -65,7 +65,7 @@ fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
         .clone()
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
     let mut cmd = try!(command(ctx, runtime));
-    cmd.arg("/tmp/composer.phar");
+    cmd.arg("/usr/local/bin/composer");
     cmd.arg("--no-interaction");
     Ok(cmd)
 }
@@ -152,12 +152,10 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
     let args = [
         runtime_exe,
         "/tmp/composer-setup.php".to_owned(),
-        "--install-dir=/tmp/".to_owned(),
+        "--install-dir=/usr/local/bin/".to_owned(),
+        "--filename=composer".to_owned(),
     ];
     try!(run_command(ctx, &args));
-
-    try_msg!(unix_fs::symlink("/vagga/root/tmp/composer.phar", "/vagga/root/usr/local/bin/composer"),
-        "Error creating symlink '/usr/local/bin/composer -> /tmp/composer.phar': {err}");
 
     if ctx.composer_settings.install_runtime {
         try!(setup_include_path(ctx));
@@ -253,7 +251,7 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
     try!(list_packages(ctx));
     try!(fs::remove_file(Path::new("/vagga/root/usr/local/bin/composer"))
-        .map_err(|e| format!("Error removing symlink '/usr/local/bin/composer': {}", e)));
+        .map_err(|e| format!("Error removing '/usr/local/bin/composer': {}", e)));
 
     Ok(())
 }

@@ -7,6 +7,17 @@ teardown() {
     if [ -f composer.lock ]; then rm composer.lock; fi
 }
 
+# test composer is available in PATH and removed after container is built
+@test "composer: lifecycle" {
+    run vagga _build composer-lifecycle
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *"Composer version"* ]]
+    [[ ! -f ".vagga/composer-lifecycle/usr/local/bin/composer" ]]
+    link=$(readlink .vagga/composer-lifecycle)
+    [[ $link = ".roots/composer-lifecycle.1de6d854/root" ]]
+}
+
 # php
 
 @test "composer: php ubuntu trusty" {

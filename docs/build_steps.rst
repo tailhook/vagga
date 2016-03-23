@@ -1151,12 +1151,12 @@ PHP/Composer Commands
    Install a list of php packages using ``composer global require --prefer-dist
    --update-no-dev``. Packages are installed in ``/usr/local/lib/composer/vendor``.
 
-   Binaries are automatically symlinked to ``/usr/local/bin`` by Composer so
+   Binaries are automatically installed to ``/usr/local/bin`` by Composer so
    they are available in your PATH.
 
-   Composer itself is located at ``/tmp/composer.phar`` and symlinked to
-   ``/usr/local/bin/composer``. After container is built, Composer is no longer
-   available.
+   Composer itself is located at ``/usr/local/bin/composer`` and available in
+   your PATH as well. After container is built, the Composer executable is no
+   longer available.
 
 .. step:: ComposerDependencies
 
