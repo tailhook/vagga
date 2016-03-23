@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
 use std::io::Write;
-use std::os::unix::fs as unix_fs;
 
 use unshare::{Command};
 use scan_dir::{self, ScanDir};
