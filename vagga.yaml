@@ -148,7 +148,7 @@ commands:
       if [ -n "$ALPINE_MIRROR" ]; then
           echo "alpine-mirror: $ALPINE_MIRROR" >> $HOME/.vagga.yaml
       fi
-      echo 'push-image-script: curl -T ${source_path} http://localhost:8000/upload/images/${container_name}.${hash}.tar.xz' >> $HOME/.vagga.yaml
+      echo 'push-image-script: curl -T ${image_path} http://localhost:8000/upload/images/${container_name}.${short_hash}.tar.xz' >> $HOME/.vagga.yaml
       if [ -n "$*" ]; then
         bats "$@"
       else

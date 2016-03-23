@@ -87,7 +87,7 @@ pub fn run() -> i32 {
 
     if !no_image {
         if let Some(ref image_cache_url_tmpl) = container.image_cache_url {
-            let hash = match ver.rsplitn(2, ".").next() {
+            let short_hash = match ver.rsplitn(2, ".").next() {
                 Some(v) => v,
                 None => {
                     error!("Incorrect container version");
@@ -96,7 +96,7 @@ pub fn run() -> i32 {
             };
             let image_cache_url = image_cache_url_tmpl
                 .replace("${container_name}", &container_name)
-                .replace("${hash}", &hash);
+                .replace("${short_hash}", &short_hash);
             let res = _build_from_image(&container_name, &container,
                                         &config, &settings, &image_cache_url);
             // just ignore errors if we cannot build from image

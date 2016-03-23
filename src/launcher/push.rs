@@ -21,7 +21,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
     };
 
     let ver = try!(build_container(settings, &opt.name, opt.build_mode));
-    let hash = match ver.rsplitn(2, ".").next() {
+    let short_hash = match ver.rsplitn(2, ".").next() {
         Some(v) => v,
         None => return Err(format!("Incorrect container version")),
     };
@@ -52,7 +52,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
     } else {
         Path::new(".roots")
     };
-    let source_path = PathBuf::from(".vagga")
+    let tmp_image_path = PathBuf::from(".vagga")
         .join(&roots)
         .join(&ver)
         .join("image.tar.xz");
@@ -62,9 +62,9 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
             upload_cmd.stdin(Stdio::null())
                 .arg("-exc")
                 .arg(push_image_script)
-                .env("source_path", source_path.to_str().unwrap())
+                .env("image_path", tmp_image_path.to_str().unwrap())
                 .env("container_name", &opt.name)
-                .env("hash", &hash);
+                .env("short_hash", &short_hash);
             info!("Running {:?}", upload_cmd);
             match upload_cmd.status() {
                 Ok(st) if !st.success() => {
@@ -77,11 +77,11 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
             }
         },
         None => {
-            return Err(format!("You should specify 'push-image-cmd' setting"));
+            return Err(format!("You should specify 'push-image-script' setting"));
         },
     }
 
-    try!(remove_file(source_path).map_err(|e| format!("{}", e)));
+    try!(remove_file(tmp_image_path).map_err(|e| format!("{}", e)));
 
     Ok(0)
 }
