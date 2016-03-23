@@ -1,4 +1,5 @@
 use std::default::Default;
+use std::io::{stderr, Write};
 use std::path::Path;
 
 use unshare::{Command, Stdio};
@@ -52,6 +53,10 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             &mut capsule_state, &wrapper.settings, &capsule_features));
     }
 
+    if let Some(_) = options.compression_type {
+        writeln!(&mut stderr(),
+            "Compressing the image... This may take a few minutes.").ok();
+    }
     info!("Running {:?}", tar_cmd);
     tar_cmd.status()
         .map(convert_status)
