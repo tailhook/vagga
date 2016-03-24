@@ -4,14 +4,15 @@ containers:
       ENV_CONTAINER: 1
     setup:
     - !Alpine v3.3
-    - !Sh |
-        if [ ! -f .env ]; then
-          cp .env.example .env
-          php artisan key:generate
-        fi
-    - !Env
-      <<: *env
+    - !Env { <<: *env }
+    - !Text
+      /work/.env: |
+          APP_ENV=local
+          APP_DEBUG=true
+          APP_KEY=SomeRandomString
+          APP_URL=http://localhost
     - !ComposerDependencies
+    - !Sh php artisan key:generate
 
 commands:
   run: !Command
