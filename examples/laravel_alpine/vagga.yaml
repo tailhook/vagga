@@ -4,6 +4,9 @@ containers:
       ENV_CONTAINER: 1
     setup:
     - !Alpine v3.3
+    - !Install
+      - php-ctype
+      - php-pdo_sqlite
     - !Env { <<: *env }
     - !Text
       /work/.env: |
