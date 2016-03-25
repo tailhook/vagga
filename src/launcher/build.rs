@@ -62,7 +62,7 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
     -> Result<String, String>
 {
     let mut cmd = Command::new("/proc/self/exe");
-    squash_stdio(&mut cmd);
+    try!(squash_stdio(&mut cmd));
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
