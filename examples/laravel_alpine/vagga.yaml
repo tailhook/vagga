@@ -2,20 +2,16 @@ containers:
   laravel:
     environ: &env
       ENV_CONTAINER: 1
+      APP_ENV: development
+      APP_DEBUG: true
+      APP_KEY: YourRandomGeneratedEncryptionKey
     setup:
     - !Alpine v3.3
     - !Install
       - php-ctype
       - php-pdo_sqlite
     - !Env { <<: *env }
-    - !Text
-      /work/.env: |
-          APP_ENV=local
-          APP_DEBUG=true
-          APP_KEY=SomeRandomString
-          APP_URL=http://localhost
     - !ComposerDependencies
-    - !Sh php artisan key:generate
 
 commands:
   run: !Command

@@ -44,7 +44,7 @@ care of that for us.
 Now there are 3 steps we need to follow:
 
 1. Install dependencies from ``composer.json``
-2. Ensure ``.env`` exists and application key is generated
+2. Setup application environment
 3. Require the right ``autoload.php``
 
 Installing from ``composer.json``
@@ -60,30 +60,25 @@ This is the easy part. Just change our container as follows:
         - !Alpine v3.3
         - !ComposerDependencies
 
-Setup ``.env`` and application key
-----------------------------------
+Setup application environment
+-----------------------------
 
 Laravel uses `dotenv`_ to load configuration into environment automatically from
-a ``.env`` file in development. So, during container building, we will create a
-minimal ``.env`` and call ``php artisan key:generate`` to generate the
-application key.
-
-Now change our container as follows:
+a ``.env`` file, but we won't use that. Instead, we will tell vagga to set the
+environment for us:
 
 .. code-block:: yaml
 
     containers:
       laravel:
+        environ: &env
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
         - !Alpine v3.3
-        - !Text
-          /work/.env: |
-              APP_ENV=local
-              APP_DEBUG=true
-              APP_KEY=SomeRandomString
-              APP_URL=http://localhost
+        - !Env { <<: *env }
         - !ComposerDependencies
-        - !Sh php artisan key:generate
 
 .. _dotenv: https://github.com/vlucas/phpdotenv
 
@@ -106,17 +101,13 @@ First, let's set an environment variable to help us out:
       laravel:
         environ: &env
           ENV_CONTAINER: 1
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
         - !Alpine v3.3
         - !Env { <<: *env }
-        - !Text
-          /work/.env: |
-              APP_ENV=local
-              APP_DEBUG=true
-              APP_KEY=SomeRandomString
-              APP_URL=http://localhost
         - !ComposerDependencies
-        - !Sh php artisan key:generate
 
 Setting this variable will help us tell whether we're running inside a container
 or not. This is particularly useful if we deploy our project to a shared server.
@@ -177,20 +168,16 @@ First, let's add two system dependencies needed by ``artisan`` and ``sqlite``:
       laravel:
         environ: &env
           ENV_CONTAINER: 1
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
         - !Alpine v3.3
+        - !Env { <<: *env }
         - !Install
           - php-ctype
           - php-pdo_sqlite
-        - !Env { <<: *env }
-        - !Text
-          /work/.env: |
-              APP_ENV=local
-              APP_DEBUG=true
-              APP_KEY=SomeRandomString
-              APP_URL=http://localhost
         - !ComposerDependencies
-        - !Sh php artisan key:generate
 
 Then, let's ensure we are sqlite as the default database. Open ``config/database.php``
 and change the line ``'default' => env('DB_CONNECTION', 'mysql'),`` as follows:
