@@ -6,7 +6,7 @@ use options::build_mode::BuildMode;
 use config::{Config, Settings};
 use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
-
+use process_util::{run_and_wait, convert_status};
 use super::supervisor;
 use super::build::{build_container};
 use super::wrap::Wrapper;
@@ -44,7 +44,7 @@ pub fn run_simple_command(settings: &Settings, cfg: &CommandInfo,
     if cfg.network.is_none() {
         cmd.userns();
     }
-    let res = cmd.run();
+    let res = run_and_wait(&mut cmd).map(convert_status);
 
     if cfg.write_mode != WriteMode::read_only {
         let mut cmd: Command = Wrapper::new(None, settings);
