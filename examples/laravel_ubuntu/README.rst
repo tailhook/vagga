@@ -23,7 +23,7 @@ Create the ``vagga.yaml`` file and add the following to it:
     containers:
       laravel:
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !ComposerInstall [laravel/installer]
 
 And then run::
@@ -57,7 +57,7 @@ This is the easy part. Just change our container as follows:
     containers:
       laravel:
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !ComposerDependencies
 
 Setup application environment
@@ -76,7 +76,7 @@ environment for us:
           APP_DEBUG: true ❷
           APP_KEY: YourRandomGeneratedEncryptionKey ❸
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !Env { <<: *env } ❹
         - !ComposerDependencies
 
@@ -110,7 +110,7 @@ First, let's set an environment variable to help us out:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !Env { <<: *env }
         - !ComposerDependencies
 
@@ -167,7 +167,7 @@ Adding some code
 
 Now that we have our project working, let's add some code to it.
 
-First, let's add two system dependencies needed by ``artisan`` and ``sqlite``:
+First, let's add ``php5-sqlite`` to our container:
 
 .. code-block:: yaml
 
@@ -179,12 +179,14 @@ First, let's add two system dependencies needed by ``artisan`` and ``sqlite``:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
+        - !UbuntuUniverse ❶
         - !Env { <<: *env }
         - !Install
-          - php-ctype
-          - php-pdo_sqlite
+          - php5-sqlite
         - !ComposerDependencies
+
+* ❶ -- package ``php5-sqlite`` is provided by Ubuntu Universe.
 
 Then, let's ensure we are sqlite as the default database. Open ``config/database.php``
 and change the line ``'default' => env('DB_CONNECTION', 'mysql'),`` as follows:
@@ -459,12 +461,12 @@ Add ``php-memcached`` to our container:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
+        - !UbuntuUniverse
         - !Env { <<: *env }
         - !Install
-          - php-ctype
-          - php-pdo_sqlite
-          - php-memcached ❶
+          - php5-sqlite
+          - php5-memcached ❶
         - !ComposerDependencies
 
 * ❶ -- memcached php extension

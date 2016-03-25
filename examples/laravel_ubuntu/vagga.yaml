@@ -6,11 +6,11 @@ containers:
       APP_DEBUG: true
       APP_KEY: YourRandomGeneratedEncryptionKey
     setup:
-    - !Alpine v3.3
+    - !Ubuntu trusty
+    - !UbuntuUniverse
     - !Install
-      - php-ctype
-      - php-pdo_sqlite
-      - php-memcached
+      - php5-sqlite
+      - php5-memcached
     - !Env { <<: *env }
     - !ComposerDependencies
 
