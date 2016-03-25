@@ -51,10 +51,10 @@ pub fn run_simple_command(settings: &Settings, cfg: &CommandInfo,
         cmd.workdir(workdir);
         cmd.userns();
         cmd.arg("_clean").arg("--transient");
-        match cmd.run() {
-            Ok(0) => {}
-            x => warn!(
-                "The `vagga _clean --transient` exited with status: {:?}", x),
+        match cmd.status() {
+            Ok(s) if s.success() => {}
+            Ok(s) => warn!("The `vagga _clean --transient` {}", s),
+            Err(e) => warn!("Failed to run `vagga _clean --transient`: {}", e),
         }
 
     }

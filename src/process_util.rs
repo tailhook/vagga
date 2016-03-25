@@ -16,7 +16,7 @@ use tty_util::{TtyGuard};
 
 
 extern {
-    fn killpg(pgrp: c_int, sig: c_int) -> c_int;
+    pub fn killpg(pgrp: c_int, sig: c_int) -> c_int;
 }
 
 
@@ -89,7 +89,6 @@ pub fn run_and_wait(cmd: &mut Command)
 
     let mut tty_guard = try!(TtyGuard::capture_tty()
         .map_err(|e| format!("Error handling tty: {}", e)));
-    // Should we make this optionally, only if stdin is a tty?
     cmd.make_group_leader(true);
 
     info!("Running {:?}", cmd);
@@ -121,10 +120,6 @@ pub fn run_and_wait(cmd: &mut Command)
                         Death(pid, status) if pid == child.pid() => {
                             return Ok(status);
                         }
-                        Death(..) => {
-                            try!(tty_guard.check().map_err(|e|
-                                format!("Error handling tty: {}", e)));
-                        }
                         Stop(pid, SIGTTIN) | Stop(pid, SIGTTOU) => {
                             if let Err(e) = tty_guard.give(pid) {
                                 // We shouldn't exit from here if we can't
@@ -137,9 +132,11 @@ pub fn run_and_wait(cmd: &mut Command)
                                     io::Error::last_os_error());
                             }
                         }
-                        Stop(..) | Continue(..) => { }
+                        Stop(..) | Continue(..) | Death(..) => { }
                     }
                 }
+                try!(tty_guard.check().map_err(|e|
+                    format!("Error handling tty: {}", e)));
             }
             _ => unreachable!(),
         }

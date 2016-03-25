@@ -1,12 +1,13 @@
 use std::collections::BTreeSet;
 use std::collections::{HashMap};
-use std::io::{stdout, stderr};
+use std::io::{self, stdout, stderr, Write};
 use std::path::Path;
 
 use time::{SteadyTime, Duration};
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGKILL};
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
+use nix::sys::signal::{SIGQUIT, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
 
 use options::build_mode::{build_mode, BuildMode};
@@ -16,11 +17,11 @@ use config::{Settings};
 use config::command::{SuperviseInfo, Networking};
 use config::command::SuperviseMode::{stop_on_failure};
 use config::command::ChildCommand::{BridgeCommand};
-
+use tty_util::{TtyGuard};
 use super::network;
 use super::build::{build_container};
 use file_util::create_dir;
-use process_util::{convert_status};
+use process_util::{convert_status, killpg};
 use super::wrap::Wrapper;
 
 
@@ -105,7 +106,13 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
     debug!("Containers {} with host neworking, {} in netns",
         containers_host_net.len(), containers_in_netns.len());
 
-    let mut trap = Trap::trap(&[SIGINT, SIGTERM, SIGCHLD]);
+    // Trap must be installed before tty_guard because TTY guard relies on
+    // SIGTTOU and SIGTTIN be masked out
+    let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
+                                SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
+    let mut tty_guard = try!(TtyGuard::capture_tty()
+        .map_err(|e| format!("Error handling tty: {}", e)));
+
     let mut children = HashMap::new();
     let mut error = false;
     for name in containers_host_net.iter() {
@@ -116,6 +123,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         cmd.userns();
         cmd.arg(&cmdname);
         cmd.arg(&name);
+        cmd.make_group_leader(true);
         match cmd.spawn() {
             Ok(child) => { children.insert(child.pid(), (name, child)); }
             Err(e) => {
@@ -181,6 +189,7 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
                     .map_err(|e| format!("Error setting netns: {}", e)));
             }
 
+            cmd.make_group_leader(true);
             match cmd.spawn() {
                 Ok(child) => { children.insert(child.pid(), (name, child)); }
                 Err(e) => {
@@ -215,21 +224,29 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         'signal_loop: for signal in trap.by_ref() {
             match signal {
                 SIGINT => {
-                    // SIGINT is usually a Ctrl+C so it's sent to whole process
-                    // group, so we don't need to do anything special
-                    println!("Received SIGINT signal. \
-                        Waiting processes to stop..");
+                    // SIGINT is usually a Ctrl+C, if we trap it here
+                    // child process hasn't controlling terminal,
+                    // so we send the signal to the child process
+                    writeln!(&mut stderr(), "Received SIGINT signal. \
+                        Waiting the processes to stop...").ok();
+                    for &(cmd, ref child) in children.values() {
+                        if unsafe { killpg(child.pid(), SIGTERM) } < 0 {
+                             error!("Error sending SIGTERM to {:?}: {}", cmd,
+                                io::Error::last_os_error());
+                        }
+                    }
                     errcode = 128+SIGINT;
                     break;
                 }
-                SIGTERM => {
+                SIGTERM|SIGQUIT => {
                     // SIGTERM is usually sent to a specific process so we
                     // forward it to children
-                    println!("Received SIGTERM signal, propagating");
+                    writeln!(&mut stderr(), "Received {} signal, \
+                        propagating", signal).ok();
                     for &(_, ref child) in children.values() {
                         child.signal(SIGTERM).ok();
                     }
-                    errcode = 128+SIGINT;
+                    errcode = 128+signal;
                     break;
                 }
                 SIGCHLD => {
@@ -250,6 +267,8 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
                             break 'signal_loop;
                         }
                     }
+                    try!(tty_guard.check().map_err(|e|
+                        format!("Error handling tty: {}", e)));
                     if children.len() == 0 {
                         break;
                     }
@@ -275,6 +294,8 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
                     for (pid, _) in reap_zombies() {
                         children.remove(&pid);
                     }
+                    try!(tty_guard.check().map_err(|e|
+                        format!("Error handling tty: {}", e)));
                     if children.len() == 0 {
                         break;
                     }

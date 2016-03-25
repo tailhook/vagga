@@ -5,7 +5,7 @@ use std::fs::File;
 use libc::{c_int, pid_t};
 use libc::{getpgrp};
 use nix::sys::ioctl::ioctl;
-use nix::unistd::{isatty, dup};
+use nix::unistd::{isatty, dup, getpid};
 
 
 mod ffi {
@@ -48,22 +48,26 @@ impl TtyGuard {
         })
     }
     pub fn capture_tty() -> Result<TtyGuard, io::Error> {
-        for i in 0..3 {
-            if isatty(i).unwrap_or(false) {
-                // after we determined which FD is a TTY there is no way
-                // to ensure that the same fd will be at the same number
-                // So we duplicate it:
-                let mut guard = TtyGuard {
-                    tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
-                    my_pgrp: unsafe { getpgrp() },
-                };
-                try!(guard.take());
-                return Ok(guard)
+        let my_pgrp = unsafe { getpgrp() };
+        if true { //my_pgrp == getpid() {
+            // only group leader, so can manage a tty
+            for i in 0..3 {
+                if isatty(i).unwrap_or(false) {
+                    // after we determined which FD is a TTY there is no way
+                    // to ensure that the same fd will be at the same number
+                    // So we duplicate it:
+                    let mut guard = TtyGuard {
+                        tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
+                        my_pgrp: unsafe { getpgrp() },
+                    };
+                    try!(guard.take());
+                    return Ok(guard)
+                }
             }
         }
         Ok(TtyGuard {
             tty: None,
-            my_pgrp: unsafe { getpgrp() },
+            my_pgrp: my_pgrp,
         })
     }
 }

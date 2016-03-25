@@ -80,7 +80,6 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    cmd.make_group_leader(true);
     set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
 
     capture_fd3(cmd)

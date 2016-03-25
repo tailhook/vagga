@@ -26,6 +26,10 @@ Vagga 0.5.0
 * The ``.vagga/.mnt`` is now unmounted during build (fixes bugs with bad tools)
 * Improved SIGINT handling, now Ctrl+C in interactive processes such as
   ``python`` (without arguments) works as expected
+* The signal messages ("Received SIGINT...") are now printed into stderr rather
+  than stdout
+* Killing vagga supervise with TERM mistakenly reported SIGINT on exit, fixed
+* Signal SIGQUIT is now correctly propagated
 * Add PHP/Composer support
 * Add Ruby/Bundler support
 * Add support for ``arch`` parameter in ``!UbuntuRelease`` this changes hash

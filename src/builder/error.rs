@@ -32,7 +32,7 @@ quick_error! {
             display("command {:?} not found in one of {:?}", name, path)
         }
         /// Error starting external command
-        CommandError(cmd: Box<unshare::Command>, err: String) {
+        CommandError(cmd: Box<unshare::Command>, err: unshare::Error) {
             display("error running {:?} {}", cmd, err)
         }
         /// Error running external command

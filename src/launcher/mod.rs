@@ -11,6 +11,7 @@ use unshare::Command;
 use options::build_mode::build_mode;
 use config::find_config;
 use config::read_settings::read_settings;
+use process_util::convert_status;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
 use super::path_util::ToRelative;
 use self::wrap::Wrapper;
@@ -196,8 +197,11 @@ pub fn run() -> i32 {
             let mut cmd: Command = Wrapper::new(None, &int_settings);
             cmd.workdir(&int_workdir);
             cmd.userns();
-            cmd.arg(cname).args(&args);
-            cmd.run()
+            cmd.arg(&cname).args(&args);
+            cmd.status()
+            .map(convert_status)
+            .map_err(|e| format!("Error running `vagga_wrapperr {}`: {}",
+                                 cname, e))
         }
         "_build" => {
             build::build_command(&int_settings, args)
