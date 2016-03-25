@@ -25,6 +25,7 @@ mod underscore;
 mod build;
 mod wrap;
 mod pack;
+mod push;
 mod version;
 mod storage;
 mod completion;
@@ -215,6 +216,9 @@ pub fn run() -> i32 {
         }
         "_pack_image" => {
             pack::pack_command(&int_settings, args)
+        }
+        "_push_image" => {
+            push::push_command(&ext_settings, &int_settings, args)
         }
         "_init_storage_dir" => {
             storage::init_dir(&ext_settings, &cfg_dir, args)

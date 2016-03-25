@@ -117,12 +117,13 @@ pub fn get_version_hash(container: &String, wrapper: &Wrapper)
     }
 }
 
-pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
+pub fn build_container(container: &String, force: bool, no_image: bool,
+    wrapper: &Wrapper)
     -> Result<String, String>
 {
     let cconfig = try!(wrapper.config.containers.get(container)
         .ok_or(format!("Container {} not found", container)));
-    let name = try!(_build_container(cconfig, container, force, wrapper));
+    let name = try!(_build_container(cconfig, container, force, no_image, wrapper));
     let destlink = Path::new("/work/.vagga").join(&container);
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
@@ -169,7 +170,7 @@ pub fn build_container(container: &String, force: bool, wrapper: &Wrapper)
 }
 
 pub fn _build_container(cconfig: &Container, container: &String,
-    force: bool, wrapper: &Wrapper)
+    force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
     let uid_map = try!(map_users(wrapper.settings,
@@ -219,6 +220,13 @@ pub fn _build_container(cconfig: &Container, container: &String,
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
     cmd.arg(&container);
+    if let Some(ref ver) = ver {
+        cmd.arg("--container-version");
+        cmd.arg(format!("{}.{}", container, &ver[..8]));
+    }
+    if force || no_image {
+        cmd.arg("--no-image-download");
+    }
     cmd.arg("--settings");
     cmd.arg(json::encode(wrapper.settings).unwrap());
     cmd.env_clear();
@@ -280,6 +288,7 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 {
     let mut name: String = "".to_string();
     let mut force: bool = false;
+    let mut no_image: bool = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -291,6 +300,9 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         ap.refer(&mut force)
             .add_option(&["--force"], StoreTrue,
                 "Force build even if container is considered up to date");
+        ap.refer(&mut no_image)
+            .add_option(&["--no-image-download"], StoreTrue,
+                "Do not download image");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -302,12 +314,12 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
 
-    build_wrapper(&name, force, wrapper)
+    build_wrapper(&name, force, no_image, wrapper)
     .map(|x| unsafe { File::from_raw_fd(3) }.write_all(x.as_bytes()).unwrap())
     .map(|_| 0)
 }
 
-pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
+pub fn build_wrapper(name: &String, force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
     let container = try!(wrapper.config.containers.get(name)
@@ -315,12 +327,12 @@ pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
     for step in container.setup.iter() {
         match step {
             &B::Container(ref name) => {
-                try!(build_wrapper(name, force, wrapper)
+                try!(build_wrapper(name, force, no_image, wrapper)
                     .map(|x| debug!("Built container with name {}", x))
                     .map(|()| 0));
             }
             &B::Build(ref binfo) => {
-                try!(build_wrapper(&binfo.container, force, wrapper)
+                try!(build_wrapper(&binfo.container, force, no_image, wrapper)
                     .map(|x| debug!("Built container with name {}", x))
                     .map(|()| 0));
             }
@@ -328,7 +340,7 @@ pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
                 match cfg.source {
                     S::Directory => {}
                     S::Container(ref name) => {
-                        try!(build_wrapper(name, force, wrapper)
+                        try!(build_wrapper(name, force, no_image, wrapper)
                             .map(|x| debug!("Built container with name {}", x))
                             .map(|()| 0));
                     }
@@ -341,7 +353,7 @@ pub fn build_wrapper(name: &String, force: bool, wrapper: &Wrapper)
         }
     }
 
-    return build_container(name, force, wrapper)
+    return build_container(name, force, no_image, wrapper)
 }
 
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
