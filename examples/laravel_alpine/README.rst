@@ -6,7 +6,7 @@ This example will show how to create a simple Laravel project using vagga.
 
 * `Creating the project structure`_
 * `Adding some code`_
-* `Caching with memcached`_
+* `Caching with redis`_
 
 
 Creating the project structure
@@ -24,7 +24,7 @@ Create the ``vagga.yaml`` file and add the following to it:
     containers:
       laravel:
         setup:
-        - !Ubuntu trusty
+        - !Alpine v3.3
         - !ComposerInstall [laravel/installer]
 
 And then run::
@@ -58,7 +58,7 @@ This is the easy part. Just change our container as follows:
     containers:
       laravel:
         setup:
-        - !Ubuntu trusty
+        - !Alpine v3.3
         - !ComposerDependencies
 
 Setup application environment
@@ -77,7 +77,7 @@ environment for us:
           APP_DEBUG: true ❷
           APP_KEY: YourRandomGeneratedEncryptionKey ❸
         setup:
-        - !Ubuntu trusty
+        - !Alpine v3.3
         - !Env { <<: *env } ❹
         - !ComposerDependencies
 
@@ -111,7 +111,7 @@ First, let's set an environment variable to help us out:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Ubuntu trusty
+        - !Alpine v3.3
         - !Env { <<: *env }
         - !ComposerDependencies
 
@@ -168,7 +168,8 @@ Adding some code
 
 Now that we have our project working, let's add some code to it.
 
-First, let's add ``php5-sqlite`` to our container:
+First, let's add a couple system dependencies needed for ``artisan`` and ``sqlite``
+to work properly with our projet:
 
 .. code-block:: yaml
 
@@ -180,14 +181,15 @@ First, let's add ``php5-sqlite`` to our container:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Ubuntu trusty
-        - !UbuntuUniverse ❶
+        - !Alpine v3.3
         - !Env { <<: *env }
         - !Install
-          - php5-sqlite
+          - php-ctype ❶
+          - php-pdo_sqlite ❶
         - !ComposerDependencies
 
-* ❶ -- package ``php5-sqlite`` is provided by Ubuntu Universe.
+* ❶ -- extension needed for ``artisan``
+* ❷ -- PDO extension for sqlite.
 
 Then, let's ensure we are sqlite as the default database. Open ``config/database.php``
 and change the line ``'default' => env('DB_CONNECTION', 'mysql'),`` as follows:
@@ -444,44 +446,44 @@ And finally create the views for our controller:
         </ul>
     @endif
 
-Caching with memcached
-======================
+Caching with redis
+==================
 
-Many projects use `memcached <http://memcached.org/>`_ to speed up things, so
-let's try it out.
+Many projects use some caching strategy to speed things up. Let's try caching
+using `redis <http://redis.io>`_.
 
-Add ``php-memcached`` to our container:
+Add ``predis/predis``, a pure php redis client, to our ``composer.json``:
 
-.. code-block:: yaml
+.. code-block:: json
 
-    containers:
-      laravel:
-        environ: &env
-          ENV_CONTAINER: 1
-          APP_ENV: development
-          APP_DEBUG: true
-          APP_KEY: YourRandomGeneratedEncryptionKey
-        setup:
-        - !Ubuntu trusty
-        - !UbuntuUniverse
-        - !Env { <<: *env }
-        - !Install
-          - php5-sqlite
-          - php5-memcached ❶
-        - !ComposerDependencies
+    "require": {
+        "php": ">=5.5.9",
+        "laravel/framework": "5.2.*",
+        "predis/predis": "~1.0"
+    },
 
-* ❶ -- memcached php extension
+By default, Composer will pick dependencies from ``composer.lock`` and just
+display a warning about the out of date lock file, meaning it won't install the
+redis client package. To solve that, simply remove the lock file::
 
-Create a container for ``memcached``:
+    $ rm composer.lock
+
+.. note:: We could have put an option in vagga to use ``composer update``
+  instead of ``composer install``, but we, as developers, are likely to forget
+  such an option active and it would end up with anyone working on the project
+  having different versions of its dependencies. Besides, you can always add a
+  build step to call ``composer update`` manually.
+
+Create a container for ``redis``:
 
 .. code-block:: yaml
 
     containers:
       # ...
-      memcached:
+      redis:
         setup:
         - !Alpine v3.3
-        - !Install [memcached]
+        - !Install [redis]
 
 Create the command to run with caching:
 
@@ -493,18 +495,18 @@ Create the command to run with caching:
         description: Start the laravel development server alongside memcached
         children:
           cache: !Command
-            container: memcached
-            run: memcached -u memcached -vv ❶
+            container: redis
+            run: redis-server --dir /tmp --dbfilename redis.rdb ❶
           app: !Command
             container: laravel
             environ: ❷
-              CACHE_DRIVER: memcached
-              MEMCACHED_HOST: 127.0.0.1
-              MEMCACHED_PORT: 11211
+              CACHE_DRIVER: redis
+              REDIS_HOST: 127.0.0.1
+              REDIS_PORT: 6379
             run: php artisan serve
 
-* ❶ -- run memcached as verbose so we see can see the cache working
-* ❷ -- set the environment for using memcached
+* ❶ -- set the redis db file to a temporary directory
+* ❷ -- set the environment for using redis
 
 Now let's change our controller to use caching:
 
@@ -601,5 +603,8 @@ Now run our project with caching::
 
     $ vagga run-cached
 
-Try to add and remove some articles and see Laravel talking to memcached on the
-console.
+To see Laravel talking to redis, open another console tab and run::
+
+    $ vagga _run redis redis-cli monitor
+
+You can now add and remove some articles to see the redis log on the console.

@@ -6,18 +6,17 @@ containers:
       APP_DEBUG: true
       APP_KEY: YourRandomGeneratedEncryptionKey
     setup:
-    - !Ubuntu trusty
-    - !UbuntuUniverse
+    - !Alpine v3.3
     - !Install
-      - php5-sqlite
-      - php5-memcached
+      - php-ctype
+      - php-pdo_sqlite
     - !Env { <<: *env }
     - !ComposerDependencies
 
-  memcached:
+  redis:
     setup:
     - !Alpine v3.3
-    - !Install [memcached]
+    - !Install [redis]
 
 commands:
   run: !Command
@@ -26,15 +25,15 @@ commands:
     run: php artisan serve
 
   run-cached: !Supervise
-    description: Start the laravel development server alongside memcached
+    description: Start the laravel development server alongside redis
     children:
       cache: !Command
-        container: memcached
-        run: memcached -u memcached -vv
+        container: redis
+        run: redis-server --dir /tmp --dbfilename redis.rdb
       app: !Command
         container: laravel
         environ:
-          CACHE_DRIVER: memcached
-          MEMCACHED_HOST: 127.0.0.1
-          MEMCACHED_PORT: 11211
+          CACHE_DRIVER: redis
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
         run: php artisan serve
