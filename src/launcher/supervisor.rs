@@ -6,7 +6,7 @@ use std::path::Path;
 use time::{SteadyTime, Duration};
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU};
 use nix::sys::signal::{SIGQUIT, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
 
