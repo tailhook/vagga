@@ -35,6 +35,8 @@ Vagga 0.5.0
 * You can now filter commands in supervise by tags
 * Change gateway network from ``172.18.0.0/16`` to ``172.23.0.0/16``,
   hopefully this will have less collisions
+* The ``TERM`` and ``*_proxy`` env vars are now propagated for supervise
+  commands in the same way as with normal commands (previously was absent)
 
 
 Vagga 0.4.1
