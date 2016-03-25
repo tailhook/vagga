@@ -41,6 +41,8 @@ Vagga 0.5.0
   hopefully this will have less collisions
 * The ``TERM`` and ``*_proxy`` env vars are now propagated for supervise
   commands in the same way as with normal commands (previously was absent)
+* Implemented shared image cache via ``_push_image`` command
+  and ``image-cache-url`` option
 
 
 Vagga 0.4.1
