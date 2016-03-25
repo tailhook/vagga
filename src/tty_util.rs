@@ -11,7 +11,8 @@ use nix::unistd::{isatty, dup};
 mod ffi {
     use libc::{c_ulong};
 
-    pub static TIOCSPGRP: c_ulong = 21520;
+    pub static TIOCSPGRP: c_ulong = 0x5410;
+    pub static TIOCGPGRP: c_ulong = 0x540F;
 }
 
 
@@ -19,28 +20,35 @@ mod ffi {
 pub struct TtyGuard {
     tty: Option<File>,
     my_pgrp: pid_t,
-    ownership: bool,
 }
 
 impl TtyGuard {
     pub fn take(&mut self) -> Result<(), io::Error> {
-        let &mut TtyGuard { ref tty, ref mut ownership, my_pgrp } = self;
+        let &mut TtyGuard { ref tty, my_pgrp, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
             try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
-            *ownership = true;
             Ok(())
         })
     }
     pub fn give(&mut self, pid: pid_t) -> Result<(), io::Error> {
-        let &mut TtyGuard { ref tty, ref mut ownership, .. } = self;
+        let &mut TtyGuard { ref tty, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
             try!(unsafe { give_tty_to(f.as_raw_fd(), pid) });
-            *ownership = false;
+            Ok(())
+        })
+    }
+    /// Check terminal and take it if it's not owned
+    pub fn check(&mut self) -> Result<(), io::Error> {
+        let &mut TtyGuard { ref tty, my_pgrp, .. } = self;
+        tty.as_ref().map_or(Ok(()), |f| {
+            if try!(unsafe { get_group(f.as_raw_fd()) }) == 0 {
+                try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+            }
             Ok(())
         })
     }
     pub fn capture_tty() -> Result<TtyGuard, io::Error> {
-        for i in 0..2 {
+        for i in 0..3 {
             if isatty(i).unwrap_or(false) {
                 // after we determined which FD is a TTY there is no way
                 // to ensure that the same fd will be at the same number
@@ -48,7 +56,6 @@ impl TtyGuard {
                 let mut guard = TtyGuard {
                     tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
                     my_pgrp: unsafe { getpgrp() },
-                    ownership: false,
                 };
                 try!(guard.take());
                 return Ok(guard)
@@ -57,16 +64,26 @@ impl TtyGuard {
         Ok(TtyGuard {
             tty: None,
             my_pgrp: unsafe { getpgrp() },
-            ownership: false,
         })
     }
 }
 
 impl Drop for TtyGuard {
     fn drop(&mut self) {
-        if self.ownership {
-            self.take().ok();
-        }
+        self.take().ok();
+    }
+}
+
+// dealing with file descriptors is always unsafe
+unsafe fn get_group(fd: c_int)
+    -> Result<pid_t, io::Error>
+{
+    let mut pgrp = 0;
+    let res = ioctl(fd, ffi::TIOCGPGRP, &mut pgrp);
+    if res == 0 {
+        Ok(pgrp)
+    } else {
+        Err(io::Error::last_os_error())
     }
 }
 

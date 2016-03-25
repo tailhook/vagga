@@ -121,6 +121,10 @@ pub fn run_and_wait(cmd: &mut Command)
                         Death(pid, status) if pid == child.pid() => {
                             return Ok(status);
                         }
+                        Death(..) => {
+                            try!(tty_guard.check().map_err(|e|
+                                format!("Error handling tty: {}", e)));
+                        }
                         Stop(pid, SIGTTIN) | Stop(pid, SIGTTOU) => {
                             if let Err(e) = tty_guard.give(pid) {
                                 // We shouldn't exit from here if we can't
@@ -133,7 +137,7 @@ pub fn run_and_wait(cmd: &mut Command)
                                     io::Error::last_os_error());
                             }
                         }
-                        Stop(..) | Continue(..) | Death(..) => {}
+                        Stop(..) | Continue(..) => { }
                     }
                 }
             }
