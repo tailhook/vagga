@@ -440,3 +440,65 @@ And finally create the views for our controller:
             @endforeach
         </ul>
     @endif
+
+Caching with memcached
+======================
+
+Many projects use `memcached <http://memcached.org/>`_ to speed up things, so
+let's try it out.
+
+Add ``php-memcached`` to our container:
+
+.. code-block:: yaml
+
+    containers:
+      laravel:
+        environ: &env
+          ENV_CONTAINER: 1
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
+        setup:
+        - !Alpine v3.3
+        - !Env { <<: *env }
+        - !Install
+          - php-ctype
+          - php-pdo_sqlite
+          - php-memcached ❶
+        - !ComposerDependencies
+
+* ❶ -- memcached php extension
+
+Create a container for ``memcached``:
+
+.. code-block:: yaml
+
+    containers:
+      # ...
+      memcached:
+        setup:
+        - !Alpine v3.3
+        - !Install [memcached]
+
+Create the command to run with caching:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      run-cached: !Supervise
+        description: Start the laravel development server alongside memcached
+        children:
+          cache: !Command
+            container: memcached
+            run: memcached -u memcached -vv ❶
+          app: !Command
+            container: laravel
+            environ: ❷
+              CACHE_DRIVER: memcached
+              MEMCACHED_HOST: 127.0.0.1
+              MEMCACHED_PORT: 11211
+            run: php artisan serve
+
+* ❶ -- run memcached as verbose so we see can see the cache working
+* ❷ -- set the environment for using memcached

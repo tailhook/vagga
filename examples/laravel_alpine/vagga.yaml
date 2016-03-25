@@ -10,11 +10,31 @@ containers:
     - !Install
       - php-ctype
       - php-pdo_sqlite
+      - php-memcached
     - !Env { <<: *env }
     - !ComposerDependencies
+
+  memcached:
+    setup:
+    - !Alpine v3.3
+    - !Install [memcached]
 
 commands:
   run: !Command
     container: laravel
     description: run the laravel development server
     run: php artisan serve
+
+  run-cached: !Supervise
+    description: Start the laravel development server alongside memcached
+    children:
+      cache: !Command
+        container: memcached
+        run: memcached -u memcached -vv
+      app: !Command
+        container: laravel
+        environ:
+          CACHE_DRIVER: memcached
+          MEMCACHED_HOST: 127.0.0.1
+          MEMCACHED_PORT: 11211
+        run: php artisan serve
