@@ -72,13 +72,18 @@ environment for us:
     containers:
       laravel:
         environ: &env
-          APP_ENV: development
-          APP_DEBUG: true
-          APP_KEY: YourRandomGeneratedEncryptionKey
+          APP_ENV: development ❶
+          APP_DEBUG: true ❷
+          APP_KEY: YourRandomGeneratedEncryptionKey ❸
         setup:
         - !Alpine v3.3
-        - !Env { <<: *env }
+        - !Env { <<: *env } ❹
         - !ComposerDependencies
+
+* ❶ -- the "environment" our application will run (development, testing, production)
+* ❷ -- enable debug mode
+* ❸ -- a random, 32 character string used by encryption service
+* ❹ -- inherit environment during build
 
 .. _dotenv: https://github.com/vlucas/phpdotenv
 
@@ -100,7 +105,7 @@ First, let's set an environment variable to help us out:
     containers:
       laravel:
         environ: &env
-          ENV_CONTAINER: 1
+          ENV_CONTAINER: 1 ❶
           APP_ENV: development
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
@@ -108,6 +113,8 @@ First, let's set an environment variable to help us out:
         - !Alpine v3.3
         - !Env { <<: *env }
         - !ComposerDependencies
+
+* ❶ -- tell our application we are running on a container
 
 Setting this variable will help us tell whether we're running inside a container
 or not. This is particularly useful if we deploy our project to a shared server.
