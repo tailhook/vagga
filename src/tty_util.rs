@@ -5,7 +5,7 @@ use std::fs::File;
 use libc::{c_int, pid_t};
 use libc::{getpgrp};
 use nix::sys::ioctl::ioctl;
-use nix::unistd::{isatty, dup, getpid};
+use nix::unistd::{isatty, dup};
 
 
 mod ffi {
@@ -49,8 +49,8 @@ impl TtyGuard {
     }
     pub fn capture_tty() -> Result<TtyGuard, io::Error> {
         let my_pgrp = unsafe { getpgrp() };
-        if true { //my_pgrp == getpid() {
-            // only group leader, so can manage a tty
+        if my_pgrp != 0 {
+            // my_pgrp can be zero if group owner is outside of the PID ns
             for i in 0..3 {
                 if isatty(i).unwrap_or(false) {
                     // after we determined which FD is a TTY there is no way
