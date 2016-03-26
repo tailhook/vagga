@@ -10,6 +10,7 @@ containers:
     - !Install
       - php-ctype
       - php-pdo_sqlite
+      - php-pdo_pgsql
     - !Env { <<: *env }
     - !ComposerDependencies
 
@@ -18,11 +19,31 @@ containers:
     - !Alpine v3.3
     - !Install [redis]
 
+  postgres:
+    setup:
+    - !Ubuntu trusty
+    - !Install [postgresql]
+    - !EnsureDir /data
+    environ:
+      PGDATA: /data
+      PG_PORT: 5433
+      PG_DB: test
+      PG_USER: vagga
+      PG_PASSWORD: vagga
+      PG_BIN: /usr/lib/postgresql/9.3/bin
+    volumes:
+      /data: !Tmpfs
+        size: 100M
+        mode: 0o700
+
 commands:
   run: !Command
     container: laravel
     description: run the laravel development server
-    run: php artisan serve
+    run: |
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan serve
 
   run-cached: !Supervise
     description: Start the laravel development server alongside redis
@@ -36,4 +57,39 @@ commands:
           CACHE_DRIVER: redis
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379
-        run: php artisan serve
+        run: |
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan serve
+
+  run-postgres: !Supervise
+    description: Start the laravel development server using Postgres database
+    children:
+      app: !Command
+        container: laravel
+        environ:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5433
+          DB_DATABASE: test
+          DB_USERNAME: vagga
+          DB_PASSWORD: vagga
+        run: |
+            touch /work/.dbcreation # Create lock file
+            while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan migrate
+            php artisan db:seed
+            php artisan serve
+      db: !Command
+        container: postgres
+        run: |
+            chown postgres:postgres $PGDATA;
+            su postgres -c "$PG_BIN/pg_ctl initdb";
+            su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
+            su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+            su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
+            su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
+            rm /work/.dbcreation # Release lock
+            sleep infinity

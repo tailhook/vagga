@@ -154,7 +154,13 @@ To test if everything is ok, let's add a command to run our project:
       run: !Command
         container: laravel
         description: run the laravel development server
-        run: php artisan serve
+        run: |
+            php artisan cache:clear ❶
+            php artisan config:clear ❶
+            php artisan serve
+
+* ❶ -- clear application cache to prevent previous runs from intefering on
+  subsequent runs.
 
 Now run::
 
@@ -172,7 +178,7 @@ First, let's use ``artisan`` to scaffold authentication::
 
     $ vagga _run php artisan make:auth
 
-This will also give us a nice layout at ``resources/views/layouts/app.blade.php``.
+This will give us a nice layout at ``resources/views/layouts/app.blade.php``.
 
 Then, add a couple system dependencies needed for ``artisan`` and ``sqlite`` to
 work properly with our project:
@@ -533,7 +539,10 @@ Create the command to run with caching:
               CACHE_DRIVER: redis
               REDIS_HOST: 127.0.0.1
               REDIS_PORT: 6379
-            run: php artisan serve
+            run: |
+                php artisan cache:clear
+                php artisan config:clear
+                php artisan serve
 
 * ❶ -- set the redis db file to a temporary directory
 * ❷ -- set the environment for using redis
@@ -638,3 +647,139 @@ To see Laravel talking to redis, open another console tab and run::
     $ vagga _run redis redis-cli monitor
 
 You can now add and remove some articles to see the redis log on the console.
+
+Let's try Postgres
+==================
+
+When deploying to production, you will certainly use a database server, so let's
+try Postgres.
+
+First, add the system dependency ``php-pdo_pgsql`` to our container:
+
+.. code-block:: yaml
+
+    containers:
+      laravel:
+        environ: &env
+          ENV_CONTAINER: 1
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
+        setup:
+        - !Alpine v3.3
+        - !Install
+          - php-ctype
+          - php-pdo_sqlite
+          - php-pdo_pgsql
+        - !Env { <<: *env }
+        - !ComposerDependencies
+
+Create a container for our database:
+
+.. code-block:: yaml
+
+    postgres:
+      setup:
+      - !Ubuntu trusty
+      - !Install [postgresql]
+      - !EnsureDir /data
+      environ:
+        PGDATA: /data
+        PG_PORT: 5433
+        PG_DB: test
+        PG_USER: vagga
+        PG_PASSWORD: vagga
+        PG_BIN: /usr/lib/postgresql/9.3/bin
+      volumes:
+        /data: !Tmpfs
+          size: 100M
+          mode: 0o700
+
+Then add a command to run our project with Postgres:
+
+.. code-block:: yaml
+
+    run-postgres: !Supervise
+      description: Start the laravel development server using Postgres database
+      children:
+        app: !Command
+          container: laravel
+          environ:
+            DB_CONNECTION: pgsql
+            DB_HOST: 127.0.0.1
+            DB_PORT: 5433
+            DB_DATABASE: test
+            DB_USERNAME: vagga
+            DB_PASSWORD: vagga
+          run: |
+              touch /work/.dbcreation # Create lock file
+              while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+              php artisan cache:clear
+              php artisan config:clear
+              php artisan migrate
+              php artisan db:seed
+              php artisan serve
+        db: !Command
+          container: postgres
+          run: |
+              chown postgres:postgres $PGDATA;
+              su postgres -c "$PG_BIN/pg_ctl initdb";
+              su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
+              su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
+              su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
+              su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
+              rm /work/.dbcreation # Release lock
+              sleep infinity
+
+Now lets create a seeder to populate our database everytime we run our project::
+
+    $ vagga _run laravel php artisan make:seeder ArticleSeeder
+
+This will create our seeder class at ``database/seeds/ArticleSeeder.php``. Open
+it and change it as follows:
+
+.. code-block:: php
+
+    <?php
+    use Illuminate\Database\Seeder;
+    use App\Article;
+
+    class ArticleSeeder extends Seeder
+    {
+        public function run()
+        {
+            $article = [
+                ['title' => 'Article 1', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 2', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 3', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 4', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 5', 'body' => 'Lorem ipsum dolor sit amet']
+            ];
+            foreach ($articles as $article) {
+                $new = new Article;
+                $new->title = $article['title'];
+                $new->body = $article['body'];
+                $new->save();
+            }
+        }
+    }
+
+Change ``database/seeds/DatabaseSeeder.php`` to include our ArticleSeeder:
+
+.. code-block:: php
+
+    <?php
+    use Illuminate\Database\Seeder;
+
+    class DatabaseSeeder extends Seeder
+    {
+        public function run()
+        {
+            $this->call(ArticleSeeder::class);
+        }
+    }
+
+
+Now run our project::
+
+    $ vagga run-postgres
