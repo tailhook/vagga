@@ -49,7 +49,7 @@ containers:
     - !Sh |
         cd /usr/local/src/work
         rm -f export.tar.gz
-        php /tmp/composer.phar install \
+        composer install \
         --no-dev --prefer-dist --optimize-autoloader
     volumes:
       /usr/local/src/work: !Snapshot
