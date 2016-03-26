@@ -168,8 +168,14 @@ Adding some code
 
 Now that we have our project working, let's add some code to it.
 
-First, let's add a couple system dependencies needed for ``artisan`` and ``sqlite``
-to work properly with our projet:
+First, let's use ``artisan`` to scaffold authentication::
+
+    $ vagga _run php artisan make:auth
+
+This will also give us a nice layout at ``resources/views/layouts/app.blade.php``.
+
+Then, add a couple system dependencies needed for ``artisan`` and ``sqlite`` to
+work properly with our project:
 
 .. code-block:: yaml
 
@@ -185,13 +191,13 @@ to work properly with our projet:
         - !Env { <<: *env }
         - !Install
           - php-ctype ❶
-          - php-pdo_sqlite ❶
+          - php-pdo_sqlite ❷
         - !ComposerDependencies
 
 * ❶ -- extension needed for ``artisan``
 * ❷ -- PDO extension for sqlite.
 
-Then, let's ensure we are sqlite as the default database. Open ``config/database.php``
+Let's ensure we are sqlite as the default database. Open ``config/database.php``
 and change the line ``'default' => env('DB_CONNECTION', 'mysql'),`` as follows:
 
 .. code-block:: php
@@ -200,7 +206,7 @@ and change the line ``'default' => env('DB_CONNECTION', 'mysql'),`` as follows:
     // ...
     'default' => env('DB_CONNECTION', 'sqlite'),
 
-Now let's create a model::
+Now create a model::
 
     $ vagga _run laravel php artisan make:model --migration Article
 
@@ -242,8 +248,11 @@ Open ``app/routes.php`` and setup routing:
 
     <?php
     Route::group(['middleware' => ['web']], function () {
+        Route::auth();
+
         Route::get('/', 'ArticleController@index');
-        Route::resource('article', 'ArticleController');
+        Route::resource('/article', 'ArticleController');
+        Route::get('/home', 'HomeController@index');
     });
 
 Create our controller::
@@ -312,11 +321,11 @@ Now change the controller to actually do something:
 
         public function update(Request $request, Article $article)
         {
-          $article->title = $request->title;
-          $article->body = $request->body;
-          $article->save();
+            $article->title = $request->title;
+            $article->body = $request->body;
+            $article->save();
 
-          return redirect('/');
+            return redirect('/');
         }
 
         public function destroy(Article $article)
@@ -326,26 +335,6 @@ Now change the controller to actually do something:
         }
     }
 
-Create a layout:
-
-.. code-block:: html
-
-    <!-- resources/views/layouts/app.blade.php -->
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Vagga tutorial</title>
-        <style>
-            body {
-                font-family: sans-serif;
-            }
-        </style>
-    </head>
-    <body>
-        @yield('content')
-    </body>
-    </html>
-
 And finally create the views for our controller:
 
 .. code-block:: html
@@ -354,8 +343,14 @@ And finally create the views for our controller:
     @extends('layouts.app')
 
     @section('content')
-        <h2>{{ $article->title }}</h2>
-        <p>{{ $article->body }}</p>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h2>{{ $article->title }}</h2>
+                <p>{{ $article->body }}</p>
+            </div>
+        </div>
+    </div>
     @endsection
 
 .. code-block:: html
@@ -364,34 +359,50 @@ And finally create the views for our controller:
     @extends('layouts.app')
 
     @section('content')
-        <h2>Article List</h2>
-        <a href="{{ url('article/create') }}">New Article</a>
-        @if (count($articles) > 0)
-        <table>
-            <thead>
-                <th>id</th>
-                <th>title</a></th>
-                <th>actions</th>
-            </thead>
-            <tbody>
-                @foreach($articles as $article)
-                <tr>
-                    <td>{{ $article->id }}</td>
-                    <td>
-                        <a href="{{ url('article/'.$article->id) }}">{{ $article->title }}</a>
-                    </td>
-                    <td>
-                        <form action="{{ url('article/'.$article->id) }}" method="post">
-                            {!! csrf_field() !!}
-                            {!! method_field('DELETE') !!}
-                            <button type="submit">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @endif
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h2>Article List</h2>
+                <a href="{{ url('article/create') }}" class="btn">
+                    <i class="fa fa-btn fa-plus"></i>New Article
+                </a>
+                @if (count($articles) > 0)
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <th>id</th>
+                        <th>title</a></th>
+                        <th>actions</th>
+                    </thead>
+                    <tbody>
+                        @foreach($articles as $article)
+                        <tr>
+                            <td>{{ $article->id }}</td>
+                            <td>{{ $article->title }}</td>
+                            <td>
+                                <a href="{{ url('article/'.$article->id) }}" class="btn btn-success">
+                                    <i class="fa fa-btn fa-eye"></i>View
+                                </a>
+                                <a href="{{ url('article/'.$article->id.'/edit') }}" class="btn btn-primary">
+                                    <i class="fa fa-btn fa-pencil"></i>Edit
+                                </a>
+                                <form action="{{ url('article/'.$article->id) }}"
+                                        method="post" style="display: inline-block">
+                                    {!! csrf_field() !!}
+                                    {!! method_field('DELETE') !!}
+                                    <button type="submit" class="btn btn-danger"
+                                            onclick="if (!window.confirm('Are you sure?')) { return false; }">
+                                        <i class="fa fa-btn fa-trash"></i>Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @endif
+            </div>
+        </div>
+    </div>
     @endsection
 
 .. code-block:: html
@@ -400,18 +411,26 @@ And finally create the views for our controller:
     @extends('layouts.app')
 
     @section('content')
-        <h2>Create Article</h2>
-        @include('common.errors')
-        <form action="{{ url('article') }}" method="post">
-            {!! csrf_field() !!}
-            <label for="id-title">Title:</label>
-            <input id="id-title" type="text" name="title" />
-            <br />
-            <label for="id-body">Title:</label>
-            <textarea id="id-body" name="body"></textarea>
-            <br />
-            <button type="submit">Save</button>
-        </form>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h2>Create Article</h2>
+                @include('common.errors')
+                <form action="{{ url('article') }}" method="post">
+                    {!! csrf_field() !!}
+                    <div class="form-group">
+                        <label for="id-title">Title:</label>
+                        <input id="id-title" class="form-control" type="text" name="title" />
+                    </div>
+                    <div class="form-group">
+                        <label for="id-body">Title:</label>
+                        <textarea id="id-body" class="form-control" name="body"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
     @endsection
 
 .. code-block:: html
@@ -420,30 +439,41 @@ And finally create the views for our controller:
     @extends('layouts.app')
 
     @section('content')
-        <h2>Edit Article</h2>
-        @include('common.errors')
-        <form action="{{ url('article/'.$article->id) }}" method="post">
-            {!! csrf_field() !!}
-            {!! method_field('PUT') !!}
-            <label for="id-title">Title:</label>
-            <input id="id-title" type="text" name="title" value="{{ $article->title }}" />
-            <br />
-            <label for="id-body">Title:</label>
-            <textarea id="id-body" name="body">{{ $article->body }}</textarea>
-            <br />
-            <button type="submit">Save</button>
-        </form>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h2>Edit Article</h2>
+                @include('common.errors')
+                <form action="{{ url('article/'.$article->id) }}" method="post">
+                    {!! csrf_field() !!}
+                    {!! method_field('PUT') !!}
+                    <div class="form-group">
+                        <label for="id-title">Title:</label>
+                        <input id="id-title" class="form-control"
+                                type="text" name="title" value="{{ $article->title }}" />
+                    </div>
+                    <div class="form-group">
+                        <label for="id-body">Title:</label>
+                        <textarea id="id-body" class="form-control" name="body">{{ $article->body }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
     @endsection
 
 .. code-block:: html
 
     <!-- resources/views/common/error.blade.php -->
     @if (count($errors) > 0)
+    <div class="alert alert-danger">
         <ul>
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
+    </div>
     @endif
 
 Caching with redis

@@ -12,6 +12,9 @@
 */
 
 Route::group(['middleware' => ['web']], function () {
+    Route::auth();
+
     Route::get('/', 'ArticleController@index');
-    Route::resource('article', 'ArticleController');
+    Route::resource('/article', 'ArticleController');
+    Route::get('/home', 'HomeController@index');
 });
