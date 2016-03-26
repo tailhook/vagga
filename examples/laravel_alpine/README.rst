@@ -783,3 +783,115 @@ Change ``database/seeds/DatabaseSeeder.php`` to include our ArticleSeeder:
 Now run our project::
 
     $ vagga run-postgres
+
+Deploying to a shared server
+============================
+
+It's still common to deploy a php application to a shared server running a LAMP
+stack (Linux, Apache, MySql and PHP), but our container in its current state
+isn't compatible with that approach. To solve this, we will create a command to
+export our project almost ready to be deployed.
+
+Before going to the command part, we will need a new container for this task:
+
+.. code-block:: yaml
+
+    containers:
+      # ...
+      exporter:
+        setup:
+        - !Alpine v3.3
+        - !EnsureDir /usr/local/src/
+        - !Copy
+          source: /work
+          path: /usr/local/src/work
+        - !ComposerInstall
+        - !Env
+          COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
+        - !Sh |
+            cd /usr/local/src/work
+            rm -f export.tar.gz
+            composer install \
+            --no-dev --prefer-dist --optimize-autoloader
+        volumes:
+          /usr/local/src/work: !Snapshot
+
+There is a lot going on in this container, but let me explain it:
+
+We start by copying our project into a directory inside the container:
+
+.. code-block:: yaml
+
+    - !EnsureDir /usr/local/src/
+    - !Copy
+      source: /work
+      path: /usr/local/src/work
+
+Then we require composer to be available:
+
+.. code-block:: yaml
+
+    - !ComposerInstall
+
+Set the environment to install dependencies in the directory we just copied our
+project into:
+
+.. code-block:: yaml
+
+    - !Env
+      COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
+
+And finnaly we ``cd`` to the referred directory, remove any ``export.tar.gz``
+(our export file) it may contain and run ``composer install`` with some flags to
+optimize dependency installation and autoloader:
+
+.. code-block:: yaml
+
+    - !Sh |
+        cd /usr/local/src/work
+        rm -f export.tar.gz
+        composer install \
+        --no-dev --prefer-dist --optimize-autoloader
+
+We also create a volume so we can freely manipulate the files in that directory:
+
+.. code-block:: yaml
+
+    volumes:
+      /usr/local/src/work: !Snapshot
+
+Now let's create the command to export our container:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      export: !Command
+        container: exporter
+        description: export project into tarball
+        run: |
+            cd /usr/local/src/work
+            rm -f .env
+            rm -f database/database.sqlite
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+            rm storage/framework/sessions/*
+            rm -rf tests
+            php artisan optimize
+            php artisan route:cache
+            php artisan vendor:publish
+            echo APP_ENV=production >> .env
+            echo APP_KEY=random >> .env
+            php artisan key:generate
+            tar -czf export.tar.gz .env *
+            cp -f export.tar.gz /work/
+
+.. note:: Take this command as a mere example, hence you are encouraged to
+  change it in order to better suit your needs.
+
+The shell in the ``export`` command will make some cleanup, remove tests (we
+don't need them in production) and create a minimal .env file with an APP_KEY
+generated. Then it will compress everything into a file called ``export.tar.gz``
+and copy it to our project directory.
