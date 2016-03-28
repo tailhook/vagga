@@ -24,6 +24,7 @@ matches = "0.1.2"
 regex = "0.1.41"
 scan_dir = "0.3.1"
 libmount = "0.1.1"
+zip = "0.1"
 
 [[bin]]
 name = "vagga"

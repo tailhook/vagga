@@ -39,6 +39,36 @@ containers:
     - !Alpine v3.1
     - !Sh env
 
+  unzip:
+    setup:
+    - !Alpine v3.3
+    - !EnsureDir /root/configs/1/config
+    - !Text
+      /root/configs/1/config/vagga.yaml: Hello there
+    - !Unzip
+      url: ./config.zip
+      path: /root/configs/1
+    - !Unzip
+      url: ./config.zip
+      path: /root/configs/2
+      subdir: .
+    - !Unzip
+      url: ./config.zip
+      path: /root/configs/3
+      subdir: config
+    - !Unzip
+      url: ./config.zip
+      path: /root/configs/4
+      subdir: config/
+
+  unzip-no-subdir:
+    setup:
+    - !Alpine v3.3
+    - !Unzip
+      url: ./config.zip
+      path: /root/configs/
+      subdir: ./config
+
   vagga:
     setup:
     - !Alpine v3.1

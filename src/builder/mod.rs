@@ -30,6 +30,7 @@ pub mod commands {
     pub mod dirs;
     pub mod packaging;
     pub mod tarcmd;
+    pub mod unzip;
 }
 pub mod capsule;
 mod packages;

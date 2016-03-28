@@ -133,6 +133,11 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
                 .default("./configure --prefix=/usr\n\
                           make\n\
                           make install\n")))
+    .option("Unzip", V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("sha256", V::Scalar::new().optional())
+        .member("path", V::Directory::new().is_absolute(true).default("/"))
+        .member("subdir", V::Directory::new().default("").is_absolute(false)))
     .option("Download", V::Structure::new()
         .member("url", V::Scalar::new())
         .member("path", V::Directory::new().is_absolute(true))
@@ -232,6 +237,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Py3Requirements" => step(cmd::pip::Py3Requirements::decode(d)),
         "Tar" => step(cmd::tarcmd::Tar::decode(d)),
         "TarInstall" => step(cmd::tarcmd::TarInstall::decode(d)),
+        "Unzip" => step(cmd::unzip::Zip::decode(d)),
         "Sh" => step(cmd::generic::Sh::decode(d)),
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
         "Env" => step(cmd::generic::Env::decode(d)),

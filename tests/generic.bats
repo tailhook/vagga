@@ -179,3 +179,39 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
     [[ $link = ".roots/vagga.f4d65ae1/root" ]]
 }
+
+@test "generic: unpack zip archive" {
+    mkdir -p config
+    cp vagga.yaml config/
+    zip -r config.zip config
+    
+    run vagga _build unzip
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/unzip)
+    [[ $link = ".roots/unzip.d605766f/root" ]]
+    [[ -f .vagga/unzip/root/configs/1/config/vagga.yaml ]]
+    [[ ! -f .vagga/unzip/root/configs/1/vagga.yaml ]]
+    [[ -f .vagga/unzip/root/configs/2/config/vagga.yaml ]]
+    [[ ! -f .vagga/unzip/root/configs/2/vagga.yaml ]]
+    [[ -f .vagga/unzip/root/configs/3/vagga.yaml ]]
+    [[ ! -d .vagga/unzip/root/configs/3/config ]]
+    [[ -f .vagga/unzip/root/configs/4/vagga.yaml ]]
+    [[ ! -d .vagga/unzip/root/configs/4/config ]]
+
+    run cmp vagga.yaml .vagga/unzip/root/configs/1/config/vagga.yaml
+    [[ $status = 0 ]]
+    run cmp vagga.yaml .vagga/unzip/root/configs/2/config/vagga.yaml
+    [[ $status = 0 ]]
+    run cmp vagga.yaml .vagga/unzip/root/configs/3/vagga.yaml
+    [[ $status = 0 ]]
+    run cmp vagga.yaml .vagga/unzip/root/configs/4/vagga.yaml
+    [[ $status = 0 ]]
+
+    run vagga _build unzip-no-subdir
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *'./config" is not found in archive'* ]]
+
+    rm -rf config/
+    rm config.zip
+}

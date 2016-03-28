@@ -52,7 +52,7 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !BuildDeps [wget, git]
-    - !Install [make, curl]
+    - !Install [make, curl, zip]
     - !Sh |
         set -ex
         cd /tmp

@@ -116,6 +116,15 @@ fn _copy(from: &Path, to: &Path) -> io::Result<()> {
     let mut writer = try!(fs::File::create(to));
     let perm = try!(reader.metadata()).permissions();
 
+    try!(copy_stream(&mut reader, &mut writer));
+
+    try!(fs::set_permissions(to, perm));
+    Ok(())
+}
+
+pub fn copy_stream(reader: &mut Read, writer: &mut Write)
+    -> io::Result<()>
+{
     // Smaller buffer on the stack
     // Because rust musl has very small stack (80k)
     // Allocating buffer on heap for each copy is too slow
@@ -129,8 +138,6 @@ fn _copy(from: &Path, to: &Path) -> io::Result<()> {
         };
         try!(writer.write_all(&buf[..len]));
     }
-
-    try!(fs::set_permissions(to, perm));
     Ok(())
 }
 
