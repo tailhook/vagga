@@ -24,7 +24,7 @@ Create the ``vagga.yaml`` file and add the following to it:
     containers:
       laravel:
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !ComposerInstall [laravel/installer]
 
 And then run::
@@ -58,7 +58,7 @@ This is the easy part. Just change our container as follows:
     containers:
       laravel:
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !ComposerDependencies
 
 Setup application environment
@@ -77,7 +77,7 @@ environment for us:
           APP_DEBUG: true ❷
           APP_KEY: YourRandomGeneratedEncryptionKey ❸
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !Env { <<: *env } ❹
         - !ComposerDependencies
 
@@ -111,7 +111,7 @@ First, let's set an environment variable to help us out:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !Env { <<: *env }
         - !ComposerDependencies
 
@@ -127,10 +127,10 @@ Now open ``bootstrap/autoload.php`` and change the line
 
     <?php
     // ...
-    if (getenv('ENV_CONTAINER') === false) {
-        require __DIR__.'/../vendor/autoload.php';
-    } else {
+    if (getenv('ENV_CONTAINER')) {
         require '/usr/local/lib/composer/vendor/autoload.php';
+    } else {
+        require __DIR__.'/../vendor/autoload.php';
     }
     // ...
 
@@ -169,19 +169,102 @@ Now run::
 And visit ``localhost:8000``. If everithing was fine, you will see Laravel
 default page saying "Laravel 5".
 
+Setup the database
+==================
+
+Every PHP project needs a database, and ours is not different, so let's create a
+container for our database:
+
+.. code-block:: yaml
+
+    containers:
+      # ...
+      mysql:
+        setup:
+        - !Alpine v3.3
+        - !Install
+          - mariadb ❶
+          - mariadb-client
+          - php-cli ❷
+        - !EnsureDir /data
+        - !EnsureDir /opt/adminer
+        - !Download ❷
+          url: https://www.adminer.org/static/download/4.2.4/adminer-4.2.4-mysql.php
+          path: /opt/adminer/adminer.php
+        - !Download ❸
+          url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
+          path: /opt/adminer/adminer.css
+        environ: &db_config ❹
+          DB_DATABASE: vagga
+          DB_USERNAME: vagga
+          DB_PASSWORD: vagga
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3307
+          DB_DATA_DIR: /data
+        volumes:
+          /data: !Tmpfs
+            size: 200M
+            mode: 0o700
+
+* ❶ -- `mariadb`_ is a drop in replacement for mysql
+* ❷ -- we need php to run `adminer`_, a small database administration tool
+* ❸ -- a better style for adminer
+* ❹ -- set an yaml anchor so we can reference it in our run command
+
+Now change our ``run`` command to start the database alongside our project:
+
+.. code-block:: yaml
+
+    commands:
+      run: !Supervise
+        description: run the laravel development server
+        children:
+          app: !Command
+            container: laravel
+            environ: *db_config
+            run: |
+                touch /work/.dbcreation # Create lock file
+                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+                php artisan cache:clear
+                php artisan config:clear
+                php artisan serve
+          db: !Command
+            container: mysql
+            run: |
+                mysql_install_db --datadir=$DB_DATA_DIR
+                mkdir /run/mysqld
+                mysqld_safe --user=root --datadir=$DB_DATA_DIR \
+                  --bind-address=$DB_HOST --port=$DB_PORT \
+                  --no-auto-restart --no-watch
+                while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done # wait for server to be ready
+                mysqladmin create $DB_DATABASE
+                mysql -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
+                mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
+                mysql -e "FLUSH PRIVILEGES;"
+                rm /work/.dbcreation # Release lock
+                php -S 127.0.0.1:8800 -t /opt/adminer
+
+.. _`mariadb`: http://mariadb.org/
+.. _`adminer`: https://www.adminer.org
+
+And run our project::
+
+    $ vagga run
+
+You can access adminer at ``localhost:8800`` to inspect (or modify) your data.
+
 Adding some code
 ================
 
-Now that we have our project working, let's add some code to it.
+Now that we have our project working and our database is ready, let's add some.
 
 First, let's use ``artisan`` to scaffold authentication::
 
-    $ vagga _run php artisan make:auth
+    $ vagga _run laravel php artisan make:auth
 
 This will give us a nice layout at ``resources/views/layouts/app.blade.php``.
 
-Then, add a couple system dependencies needed for ``artisan`` and ``sqlite`` to
-work properly with our project:
+Then, add a the php mysql module to our container
 
 .. code-block:: yaml
 
@@ -196,21 +279,8 @@ work properly with our project:
         - !Alpine v3.3
         - !Env { <<: *env }
         - !Install
-          - php-ctype ❶
-          - php-pdo_sqlite ❷
+          - php5-mysql
         - !ComposerDependencies
-
-* ❶ -- extension needed for ``artisan``
-* ❷ -- PDO extension for sqlite.
-
-Let's ensure we are sqlite as the default database. Open ``config/database.php``
-and change the line ``'default' => env('DB_CONNECTION', 'mysql'),`` as follows:
-
-.. code-block:: php
-
-    <?php
-    // ...
-    'default' => env('DB_CONNECTION', 'sqlite'),
 
 Now create a model::
 
@@ -258,6 +328,7 @@ Open ``app/routes.php`` and setup routing:
 
         Route::get('/', 'ArticleController@index');
         Route::resource('/article', 'ArticleController');
+
         Route::get('/home', 'HomeController@index');
     });
 
@@ -341,7 +412,7 @@ Now change the controller to actually do something:
         }
     }
 
-And finally create the views for our controller:
+Create the views for our controller:
 
 .. code-block:: html
 
@@ -482,44 +553,86 @@ And finally create the views for our controller:
     </div>
     @endif
 
-Caching with redis
-==================
+Change our ``run`` command to execute the migrations when we start our project:
 
-Many projects use some caching strategy to speed things up. Let's try caching
-using `redis <http://redis.io>`_.
+.. code-block:: yaml
 
-Add ``predis/predis``, a pure php redis client, to our ``composer.json``:
+  commands:
+    run: !Supervise
+      description: run the laravel development server
+      children:
+        app: !Command
+          container: laravel
+          environ: *db_config
+          run: |
+              touch /work/.dbcreation # Create lock file
+              while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+              php artisan cache:clear
+              php artisan config:clear
+              php artisan migrate
+              php artisan serve
+        db: !Command
+          # ...
 
-.. code-block:: json
+Now run our project and try adding some articles.
 
-    "require": {
-        "php": ">=5.5.9",
-        "laravel/framework": "5.2.*",
-        "predis/predis": "~1.0"
-    },
+Trying out memcached
+====================
 
-By default, Composer will pick dependencies from ``composer.lock`` and just
-display a warning about the out of date lock file, meaning it won't install the
-redis client package. To solve that, simply remove the lock file::
+Many projects use `memcached <http://memcached.org/>`_ to speed up things, so
+let's try it out.
 
-    $ rm composer.lock
+Activate Universe repository and add ``php5-memcached``, to our container:
 
-.. note:: We could have put an option in vagga to use ``composer update``
-  instead of ``composer install``, but we, as developers, are likely to forget
-  such an option active and it would end up with anyone working on the project
-  having different versions of its dependencies. Besides, you can always add a
-  build step to call ``composer update`` manually.
+.. code-block:: yaml
 
-Create a container for ``redis``:
+    containers:
+      laravel:
+        environ: &env
+          ENV_CONTAINER: 1
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
+        setup:
+        - !Ubuntu trusty
+        - !UbuntuUniverse
+        - !Env { <<: *env }
+        - !Install
+          - php5-mysql
+          - php5-memcached
+        - !ComposerDependencies
+
+Create a container for ``memcached``:
 
 .. code-block:: yaml
 
     containers:
       # ...
-      redis:
+      memcached:
         setup:
         - !Alpine v3.3
-        - !Install [redis]
+        - !Install [memcached]
+
+Add some yaml anchors on the ``run`` command so we can avoid repetition:
+
+.. code-block:: yaml
+
+    commands:
+      run: !Supervise
+        description: run the laravel development server
+        children:
+          app: !Command
+            container: laravel
+            environ: *db_config
+            run: &run_app | ❶
+                # ...
+          db: !Command
+            container: mysql
+            run: &run_db | ❷
+                # ...
+
+* ❶ -- set an anchor at the child command to run the project
+* ❷ -- set an anchor at the child command to run the database
 
 Create the command to run with caching:
 
@@ -531,21 +644,21 @@ Create the command to run with caching:
         description: Start the laravel development server alongside memcached
         children:
           cache: !Command
-            container: redis
-            run: redis-server --dir /tmp --dbfilename redis.rdb ❶
+            container: memcached
+            run: memcached -u memcached -vv ❶
           app: !Command
             container: laravel
-            environ: ❷
-              CACHE_DRIVER: redis
-              REDIS_HOST: 127.0.0.1
-              REDIS_PORT: 6379
-            run: |
-                php artisan cache:clear
-                php artisan config:clear
-                php artisan serve
+            environ:
+              <<: *db_config
+              CACHE_DRIVER: memcached
+              MEMCACHED_HOST: 127.0.0.1
+              MEMCACHED_PORT: 11211
+            run: *run_app
+          db: !Command
+            container: mysql
+            run: *run_db
 
-* ❶ -- set the redis db file to a temporary directory
-* ❷ -- set the environment for using redis
+* ❶ -- run memcached as verbose so we see can see the cache working
 
 Now let's change our controller to use caching:
 
@@ -642,11 +755,7 @@ Now run our project with caching::
 
     $ vagga run-cached
 
-To see Laravel talking to redis, open another console tab and run::
-
-    $ vagga _run redis redis-cli monitor
-
-You can now add and remove some articles to see the redis log on the console.
+Keep an eye on the console to see Laravel talking to memcached.
 
 Let's try Postgres
 ==================

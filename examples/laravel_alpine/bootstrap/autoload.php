@@ -14,10 +14,10 @@ define('LARAVEL_START', microtime(true));
 |
 */
 
-if (getenv('ENV_CONTAINER') === false) {
-    require __DIR__.'/../vendor/autoload.php';
-} else {
+if (getenv('ENV_CONTAINER')) {
     require '/usr/local/lib/composer/vendor/autoload.php';
+} else {
+    require __DIR__.'/../vendor/autoload.php';
 }
 
 /*
