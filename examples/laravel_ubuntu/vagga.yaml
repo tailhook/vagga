@@ -48,6 +48,26 @@ containers:
         size: 200M
         mode: 0o700
 
+  exporter:
+    setup:
+    - !Ubuntu trusty
+    - !Depends composer.json
+    - !Depends composer.lock
+    - !EnsureDir /usr/local/src/
+    - !Copy
+      source: /work
+      path: /usr/local/src/work
+    - !ComposerInstall
+    - !Env
+      COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
+    - !Sh |
+        cd /usr/local/src/work
+        rm -f export.tar.gz
+        composer install \
+          --no-dev --prefer-dist --optimize-autoloader
+    volumes:
+      /usr/local/src/work: !Snapshot
+
 commands:
   run: !Supervise
     description: run the laravel development server
@@ -61,6 +81,7 @@ commands:
             php artisan cache:clear
             php artisan config:clear
             php artisan migrate
+            php artisan db:seed
             php artisan serve
       db: !Command
         container: mysql
@@ -83,7 +104,7 @@ commands:
     children:
       cache: !Command
         container: memcached
-        run: memcached -u memcached -vv ❶
+        run: memcached -u memcached -vv
       app: !Command
         container: laravel
         environ:
@@ -95,3 +116,26 @@ commands:
       db: !Command
         container: mysql
         run: *run_db
+
+  export: !Command
+    container: exporter
+    description: export project into tarball
+    run: |
+        cd /usr/local/src/work
+        rm -f .env
+        rm -f database/database.sqlite
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan route:clear
+        php artisan view:clear
+        rm storage/framework/sessions/*
+        rm -rf tests
+        echo APP_ENV=production >> .env
+        echo APP_KEY=random >> .env
+        php artisan key:generate
+        php artisan optimize
+        php artisan route:cache
+        php artisan config:cache
+        php artisan vendor:publish
+        tar -czf export.tar.gz .env *
+        cp -f export.tar.gz /work/

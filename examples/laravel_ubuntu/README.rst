@@ -5,8 +5,10 @@ Building a Laravel project
 This example will show how to create a simple Laravel project using vagga.
 
 * `Creating the project structure`_
+* `Setup the database`_
 * `Adding some code`_
-* `Caching with redis`_
+* `Trying out memcached`_
+* `Deploying to a shared server`_
 
 
 Creating the project structure
@@ -206,10 +208,10 @@ container for our database:
             size: 200M
             mode: 0o700
 
-* ❶ -- `mariadb`_ is a drop in replacement for mysql
-* ❷ -- we need php to run `adminer`_, a small database administration tool
-* ❸ -- a better style for adminer
-* ❹ -- set an yaml anchor so we can reference it in our run command
+* ❶ -- `mariadb`_ is a drop in replacement for mysql.
+* ❷ -- we need php to run `adminer`_, a small database administration tool.
+* ❸ -- a better style for adminer.
+* ❹ -- set an yaml anchor so we can reference it in our run command.
 
 Now change our ``run`` command to start the database alongside our project:
 
@@ -242,7 +244,7 @@ Now change our ``run`` command to start the database alongside our project:
                 mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
                 mysql -e "FLUSH PRIVILEGES;"
                 rm /work/.dbcreation # Release lock
-                php -S 127.0.0.1:8800 -t /opt/adminer
+                php -S 127.0.0.1:8800 -t /opt/adminer # run adminer
 
 .. _`mariadb`: http://mariadb.org/
 .. _`adminer`: https://www.adminer.org
@@ -251,7 +253,9 @@ And run our project::
 
     $ vagga run
 
-You can access adminer at ``localhost:8800`` to inspect (or modify) your data.
+To access adminer, visit ``localhost:8800``, fill in the ``server`` field with
+``127.0.0.1:3307`` and the other fields with "vagga" (the username and password
+we defined).
 
 Adding some code
 ================
@@ -276,7 +280,7 @@ Then, add a the php mysql module to our container
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
         - !Env { <<: *env }
         - !Install
           - php5-mysql
@@ -287,8 +291,8 @@ Now create a model::
     $ vagga _run laravel php artisan make:model --migration Article
 
 This will create a new model at ``app/Article.php`` and its respective migration
-at ``database/migrations/2016_03_24_172211_create_articles_table.php``. Since
-migrations are timestamped, your migration will have a slightly different name.
+at ``database/migrations/2016_03_24_172211_create_articles_table.php`` (yours
+will have a slightly different name).
 
 Open the migration file and tell it to add two fields, ``title`` and ``body``,
 to the database table for our Article model:
@@ -553,7 +557,55 @@ Create the views for our controller:
     </div>
     @endif
 
-Change our ``run`` command to execute the migrations when we start our project:
+Create a seeder to prepopulate our database::
+
+    $ vagga _run laravel php artisan make:seeder ArticleSeeder
+
+This will create a seeder class at ``database/seeds/ArticleSeeder.php``. Open it
+and change it as follows:
+
+.. code-block:: php
+
+    <?php
+    use Illuminate\Database\Seeder;
+    use App\Article;
+
+    class ArticleSeeder extends Seeder
+    {
+        public function run()
+        {
+            $articles = [
+                ['title' => 'Article 1', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 2', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 3', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 4', 'body' => 'Lorem ipsum dolor sit amet'],
+                ['title' => 'Article 5', 'body' => 'Lorem ipsum dolor sit amet']
+            ];
+            foreach ($articles as $article) {
+                $new = new Article;
+                $new->title = $article['title'];
+                $new->body = $article['body'];
+                $new->save();
+            }
+        }
+    }
+
+Change ``database/seeds/DatabaseSeeder.php`` to include ``ArticleSeeder``:
+
+.. code-block:: php
+
+    <?php
+    use Illuminate\Database\Seeder;
+
+    class DatabaseSeeder extends Seeder
+    {
+        public function run()
+        {
+            $this->call(ArticleSeeder::class);
+        }
+    }
+
+Change the ``run`` command to execute the migrations and seed our database:
 
 .. code-block:: yaml
 
@@ -570,11 +622,14 @@ Change our ``run`` command to execute the migrations when we start our project:
               php artisan cache:clear
               php artisan config:clear
               php artisan migrate
+              php artisan db:seed
               php artisan serve
         db: !Command
           # ...
 
-Now run our project and try adding some articles.
+If you run our project, you will see the articles we defined in the seeder class.
+Try adding some articles, then access adminer at ``localhost:8800`` to inspect
+the database.
 
 Trying out memcached
 ====================
@@ -631,8 +686,8 @@ Add some yaml anchors on the ``run`` command so we can avoid repetition:
             run: &run_db | ❷
                 # ...
 
-* ❶ -- set an anchor at the child command to run the project
-* ❷ -- set an anchor at the child command to run the database
+* ❶ -- set an anchor at the ``app`` child command
+* ❷ -- set an anchor at the ``db`` child command
 
 Create the command to run with caching:
 
@@ -757,147 +812,11 @@ Now run our project with caching::
 
 Keep an eye on the console to see Laravel talking to memcached.
 
-Let's try Postgres
-==================
-
-When deploying to production, you will certainly use a database server, so let's
-try Postgres.
-
-First, add the system dependency ``php-pdo_pgsql`` to our container:
-
-.. code-block:: yaml
-
-    containers:
-      laravel:
-        environ: &env
-          ENV_CONTAINER: 1
-          APP_ENV: development
-          APP_DEBUG: true
-          APP_KEY: YourRandomGeneratedEncryptionKey
-        setup:
-        - !Alpine v3.3
-        - !Install
-          - php-ctype
-          - php-pdo_sqlite
-          - php-pdo_pgsql
-        - !Env { <<: *env }
-        - !ComposerDependencies
-
-Create a container for our database:
-
-.. code-block:: yaml
-
-    postgres:
-      setup:
-      - !Ubuntu trusty
-      - !Install [postgresql]
-      - !EnsureDir /data
-      environ:
-        PGDATA: /data
-        PG_PORT: 5433
-        PG_DB: test
-        PG_USER: vagga
-        PG_PASSWORD: vagga
-        PG_BIN: /usr/lib/postgresql/9.3/bin
-      volumes:
-        /data: !Tmpfs
-          size: 100M
-          mode: 0o700
-
-Then add a command to run our project with Postgres:
-
-.. code-block:: yaml
-
-    run-postgres: !Supervise
-      description: Start the laravel development server using Postgres database
-      children:
-        app: !Command
-          container: laravel
-          environ:
-            DB_CONNECTION: pgsql
-            DB_HOST: 127.0.0.1
-            DB_PORT: 5433
-            DB_DATABASE: test
-            DB_USERNAME: vagga
-            DB_PASSWORD: vagga
-          run: |
-              touch /work/.dbcreation # Create lock file
-              while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
-              php artisan cache:clear
-              php artisan config:clear
-              php artisan migrate
-              php artisan db:seed
-              php artisan serve
-        db: !Command
-          container: postgres
-          run: |
-              chown postgres:postgres $PGDATA;
-              su postgres -c "$PG_BIN/pg_ctl initdb";
-              su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
-              su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-              su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
-              su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-              rm /work/.dbcreation # Release lock
-              sleep infinity
-
-Now lets create a seeder to populate our database everytime we run our project::
-
-    $ vagga _run laravel php artisan make:seeder ArticleSeeder
-
-This will create our seeder class at ``database/seeds/ArticleSeeder.php``. Open
-it and change it as follows:
-
-.. code-block:: php
-
-    <?php
-    use Illuminate\Database\Seeder;
-    use App\Article;
-
-    class ArticleSeeder extends Seeder
-    {
-        public function run()
-        {
-            $article = [
-                ['title' => 'Article 1', 'body' => 'Lorem ipsum dolor sit amet'],
-                ['title' => 'Article 2', 'body' => 'Lorem ipsum dolor sit amet'],
-                ['title' => 'Article 3', 'body' => 'Lorem ipsum dolor sit amet'],
-                ['title' => 'Article 4', 'body' => 'Lorem ipsum dolor sit amet'],
-                ['title' => 'Article 5', 'body' => 'Lorem ipsum dolor sit amet']
-            ];
-            foreach ($articles as $article) {
-                $new = new Article;
-                $new->title = $article['title'];
-                $new->body = $article['body'];
-                $new->save();
-            }
-        }
-    }
-
-Change ``database/seeds/DatabaseSeeder.php`` to include our ArticleSeeder:
-
-.. code-block:: php
-
-    <?php
-    use Illuminate\Database\Seeder;
-
-    class DatabaseSeeder extends Seeder
-    {
-        public function run()
-        {
-            $this->call(ArticleSeeder::class);
-        }
-    }
-
-
-Now run our project::
-
-    $ vagga run-postgres
-
 Deploying to a shared server
 ============================
 
 It's still common to deploy a php application to a shared server running a LAMP
-stack (Linux, Apache, MySql and PHP), but our container in its current state
+stack (Linux, Apache, MySQL and PHP), but our container in its current state
 isn't compatible with that approach. To solve this, we will create a command to
 export our project almost ready to be deployed.
 
@@ -909,65 +828,31 @@ Before going to the command part, we will need a new container for this task:
       # ...
       exporter:
         setup:
-        - !Alpine v3.3
+        - !Ubuntu trusty
+        - !Depends composer.json ❶
+        - !Depends composer.lock ❶
         - !EnsureDir /usr/local/src/
-        - !Copy
+        - !Copy ❷
           source: /work
           path: /usr/local/src/work
-        - !ComposerInstall
+        - !ComposerInstall ❸
         - !Env
-          COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
+          COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor ❹
         - !Sh |
             cd /usr/local/src/work
             rm -f export.tar.gz
-            composer install \
-            --no-dev --prefer-dist --optimize-autoloader
+            composer install \ ❺
+              --no-dev --prefer-dist --optimize-autoloader
         volumes:
-          /usr/local/src/work: !Snapshot
+          /usr/local/src/work: !Snapshot ❻
 
-There is a lot going on in this container, but let me explain it:
-
-We start by copying our project into a directory inside the container:
-
-.. code-block:: yaml
-
-    - !EnsureDir /usr/local/src/
-    - !Copy
-      source: /work
-      path: /usr/local/src/work
-
-Then we require composer to be available:
-
-.. code-block:: yaml
-
-    - !ComposerInstall
-
-Set the environment to install dependencies in the directory we just copied our
-project into:
-
-.. code-block:: yaml
-
-    - !Env
-      COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
-
-And finnaly we ``cd`` to the referred directory, remove any ``export.tar.gz``
-(our export file) it may contain and run ``composer install`` with some flags to
-optimize dependency installation and autoloader:
-
-.. code-block:: yaml
-
-    - !Sh |
-        cd /usr/local/src/work
-        rm -f export.tar.gz
-        composer install \
-        --no-dev --prefer-dist --optimize-autoloader
-
-We also create a volume so we can freely manipulate the files in that directory:
-
-.. code-block:: yaml
-
-    volumes:
-      /usr/local/src/work: !Snapshot
+* ❶ -- rebuild the container if dependencies change.
+* ❷ -- copy our project into a directory inside the container.
+* ❸ -- require Composer to be available.
+* ❹ -- install composer dependencies into the directory we just copied.
+* ❺ -- call ``composer`` binary directly, because using ``!ComposerDependencies``
+  would make vagga try to find ``composer.json`` before starting the build.
+* ❻ -- create a volume so we can manipulate the files in the copied directory.
 
 Now let's create the command to export our container:
 
@@ -988,12 +873,13 @@ Now let's create the command to export our container:
             php artisan view:clear
             rm storage/framework/sessions/*
             rm -rf tests
-            php artisan optimize
-            php artisan route:cache
-            php artisan vendor:publish
             echo APP_ENV=production >> .env
             echo APP_KEY=random >> .env
             php artisan key:generate
+            php artisan optimize
+            php artisan route:cache
+            php artisan config:cache
+            php artisan vendor:publish
             tar -czf export.tar.gz .env *
             cp -f export.tar.gz /work/
 
@@ -1004,3 +890,15 @@ The shell in the ``export`` command will make some cleanup, remove tests (we
 don't need them in production) and create a minimal .env file with an APP_KEY
 generated. Then it will compress everything into a file called ``export.tar.gz``
 and copy it to our project directory.
+
+Since the ``export`` command is quite long, it is a good candidate to be moved
+to a separate file, for example:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      export: !Command
+        container: exporter
+        description: export project into tarball
+        run: [sh, export.sh]
