@@ -12,7 +12,7 @@
                 <div class="form-group">
                     <label for="id-title">Title:</label>
                     <input id="id-title" class="form-control"
-                            type="text" name="title" value="{{ $article->title }}" />
+                           type="text" name="title" value="{{ $article->title }}" />
                 </div>
                 <div class="form-group">
                     <label for="id-body">Title:</label>
