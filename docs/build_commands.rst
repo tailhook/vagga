@@ -562,6 +562,7 @@ The following ``gem`` package specification formats are supported:
 * Bare ``package_name`` (should be used only for one-off environments)
 
 .. code-block:: yaml
+
     setup:
     - !Alpine v3.3
     - !Install [libxml2, libxslt, zlib, sqlite-libs]
