@@ -1,6 +1,6 @@
 _vagga_completion() {
     cur="${COMP_WORDS[COMP_CWORD]}"
-    COMPREPLY=( $(vagga _compgen "${COMP_WORDS[@]:1:$((COMP_CWORD-1))}" -- ${cur}) )
+    COMPREPLY=( $(vagga _compgen "${COMP_WORDS[@]:1:$((COMP_CWORD-1))}" -- ${cur} 2>/dev/null) )
     if [[ ${COMPREPLY} == "" ]]; then
         COMPREPLY=( $(compgen -f -- ${cur}) )
     fi
