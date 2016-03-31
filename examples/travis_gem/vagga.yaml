@@ -2,9 +2,7 @@ containers:
   travis:
     setup:
     - !Ubuntu trusty
-    - !UbuntuUniverse
-    - !Install [build-essential, ruby, automake, autoconf, libtool, make, ruby-dev]
-    - !Sh "gem install travis --no-rdoc --no-ri"
+    - !GemInstall [travis]
 
 commands:
 
