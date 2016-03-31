@@ -127,12 +127,12 @@ Configuring the database from environment
 
 By default, the ``rails new`` command will setup sqlite as the project database
 and store the configuration in ``config/databse.yml``. However, we will use an
-environment variable to tell rails where is our database. To do so, first delete
+environment variable to tell rails where to find our database. To do so, delete
 the rails database file::
 
     $ rm config/database.yml
 
-And set the enviroment variable in our ``vagga.yaml``:
+And then set the enviroment variable in our ``vagga.yaml``:
 
 .. code-block:: yaml
 
@@ -154,13 +154,13 @@ Before going any further, let's add some code to our project::
 
     $ vagga _run rails rails g scaffold article title:string:index body:text
 
-Rails scaffolding will generate everything we need, and now we just have to run
-the migration::
+Rails scaffolding will generate everything we need, we just have to run the
+migrations::
 
     $ vagga _run rails rake db:migrate
 
-Now we just have to tell rails to use our articles index page as the root of our
-project. Edit ``config/routes.rb`` as follows:
+Now we need to tell rails to use our articles index page as the root of our
+project. Change ``config/routes.rb`` as follows:
 
 .. code-block:: ruby
 
@@ -172,7 +172,11 @@ project. Edit ``config/routes.rb`` as follows:
       # ...
     end
 
-If you run the project now it will show the articles list page.
+Run the project now::
+
+    $ vagga run
+
+You should see the articles list page rails generated for us.
 
 Caching with memcached
 ======================
@@ -184,22 +188,20 @@ First, add ``dalli``, a pure ruby memcached client, to our ``Gemfile``:
 
 .. code-block:: ruby
 
-    # ...
     gem 'dalli'
 
-Then, open ``config/environments/production.rb``, find the line containing
-``# config.cache_store`` and edit it as follows:
+Then, open ``config/environments/production.rb`` and add the following:
 
 .. code-block:: ruby
 
     # config/environments/production.rb
     Rails.application.configure do
       # ...
-      config.cache_store = :mem_cache_store, ENV['CACHE_URL']
+      if ENV['MEMCACHED_URL']
+          config.cache_store = :dalli_store, ENV['MEMCACHED_URL']
+      end
       # ...
     end
-
-.. note:: You should only setup caching in production environment.
 
 Create a container for memcached:
 
