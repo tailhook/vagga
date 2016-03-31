@@ -26,10 +26,24 @@ Vagga 0.5.0
 * The ``.vagga/.mnt`` is now unmounted during build (fixes bugs with bad tools)
 * Improved SIGINT handling, now Ctrl+C in interactive processes such as
   ``python`` (without arguments) works as expected
+* The signal messages ("Received SIGINT...") are now printed into stderr rather
+  than stdout
+* Killing vagga supervise with TERM mistakenly reported SIGINT on exit, fixed
+* Signal SIGQUIT is now correctly propagated
 * Add PHP/Composer support
 * Add Ruby/Bundler support
 * Add support for ``arch`` parameter in ``!UbuntuRelease`` this changes hash
   sum of all containers built using ``!UbuntuRelease``
+* The stdin redirected from ``/dev/null`` and stdout is redirected to stderr
+  during the build
+* You can now filter commands in supervise by tags
+* Change gateway network from ``172.18.0.0/16`` to ``172.23.0.0/16``,
+  hopefully this will have less collisions
+* The ``TERM`` and ``*_proxy`` env vars are now propagated for supervise
+  commands in the same way as with normal commands (previously was absent)
+* Implemented shared image cache via ``_push_image`` command
+  and ``image-cache-url`` option
+
 
 Vagga 0.4.1
 ===========

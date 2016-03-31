@@ -202,7 +202,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
     commands.push(cmd);
 
     let mut cmd = ip_cmd();
-    cmd.args(&["addr", "add", "172.18.0.254/24", "dev", "children"]);
+    cmd.args(&["addr", "add", "172.23.0.254/24", "dev", "children"]);
     commands.push(cmd);
 
     let mut cmd = ip_cmd();
@@ -213,7 +213,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
     let mut cmd = env_command("iptables");
     cmd.stdin(Stdio::null());
     cmd.args(&["-t", "nat", "-A", "POSTROUTING",
-               "-s", "172.18.0.0/24", "-j", "MASQUERADE"]);
+               "-s", "172.23.0.0/24", "-j", "MASQUERADE"]);
     commands.push(cmd);
 
     for &(sport, ref dip, dport) in ports.iter() {

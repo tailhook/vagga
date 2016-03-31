@@ -7,7 +7,7 @@ use unshare::{Command, Namespace};
 
 use options::build_mode::BuildMode;
 use config::Settings;
-use process_util::{capture_fd3, set_uidmap, copy_env_vars};
+use process_util::{capture_fd3, set_uidmap, copy_env_vars, squash_stdio};
 use container::uidmap::get_max_uidmap;
 
 
@@ -17,6 +17,8 @@ pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
     use options::build_mode::BuildMode::*;
     let ver = match mode {
         Normal => try!(build_internal(settings, name, &[])),
+        NoImage => try!(build_internal(settings, name,
+            &[String::from("--no-image-download")])),
         NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
         NoVersion => {
             let lnk = format!(".vagga/{}", name);
@@ -62,6 +64,7 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
     -> Result<String, String>
 {
     let mut cmd = Command::new("/proc/self/exe");
+    try!(squash_stdio(&mut cmd));
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
@@ -79,7 +82,6 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    cmd.make_group_leader(true);
     set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
 
     capture_fd3(cmd)

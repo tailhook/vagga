@@ -6,6 +6,7 @@ use argparse::{ArgumentParser, StoreConst};
 #[derive(Clone, Copy, Debug)]
 pub enum BuildMode {
     Normal,
+    NoImage,
     NoBuild,
     NoVersion,
 }
@@ -19,6 +20,9 @@ impl Default for BuildMode {
 pub fn build_mode<'x>(ap: &mut ArgumentParser<'x>, mode: &'x mut BuildMode)
 {
     ap.refer(mode)
+    .add_option(&["--no-image-download"], StoreConst(BuildMode::NoImage), "
+        Do not download container image from image index.
+        ")
     .add_option(&["--no-build"], StoreConst(BuildMode::NoBuild), "
         Do not build container even if it is out of date. Return error
         code 29 if it's out of date.")

@@ -16,7 +16,7 @@ use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
 use super::super::file_util::create_dir;
-use process_util::{set_uidmap, run_and_wait, convert_status};
+use process_util::{set_uidmap, run_and_wait, convert_status, copy_env_vars};
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
@@ -113,6 +113,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
     cmd.env_clear();
+    copy_env_vars(&mut cmd, &wrapper.settings);
     cmd.env("VAGGA_COMMAND", cmdname);
     cmd.env("VAGGA_SUBCOMMAND", name);
     if !bridge {

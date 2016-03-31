@@ -1,0 +1,141 @@
+containers:
+  laravel:
+    environ: &env
+      ENV_CONTAINER: 1
+      APP_ENV: development
+      APP_DEBUG: true
+      APP_KEY: YourRandomGeneratedEncryptionKey
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Env { <<: *env }
+    - !Install
+      - php5-mysql
+      - php5-memcached
+    - !ComposerDependencies
+
+  memcached:
+    setup:
+    - !Alpine v3.3
+    - !Install [memcached]
+
+  mysql:
+    setup:
+    - !Alpine v3.3
+    - !Install
+      - mariadb
+      - mariadb-client
+      - php-cli
+      - php-pdo_mysql
+    - !Remove /var/lib/mysql
+    - !EnsureDir /data
+    - !EnsureDir /opt/adminer
+    - !Download
+      url: https://www.adminer.org/static/download/4.2.4/adminer-4.2.4-mysql.php
+      path: /opt/adminer/index.php
+    - !Download
+      url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
+      path: /opt/adminer/adminer.css
+    environ: &db_config
+      DB_DATABASE: vagga
+      DB_USERNAME: vagga
+      DB_PASSWORD: vagga
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3307
+      DB_DATA_DIR: /data
+    volumes:
+      /data: !Tmpfs
+        size: 200M
+        mode: 0o700
+
+  exporter:
+    setup:
+    - !Ubuntu trusty
+    - !Depends composer.json
+    - !Depends composer.lock
+    - !EnsureDir /usr/local/src/
+    - !Copy
+      source: /work
+      path: /usr/local/src/work
+    - !ComposerInstall
+    - !Env
+      COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
+    - !Sh |
+        cd /usr/local/src/work
+        rm -f export.tar.gz
+        composer install \
+          --no-dev --prefer-dist --optimize-autoloader
+    volumes:
+      /usr/local/src/work: !Snapshot
+
+commands:
+  run: !Supervise
+    description: run the laravel development server
+    children:
+      app: !Command
+        container: laravel
+        environ: *db_config
+        run: &run_app |
+            touch /work/.dbcreation # Create lock file
+            while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan migrate
+            php artisan db:seed
+            php artisan serve
+      db: !Command
+        container: mysql
+        run: &run_db |
+            mysql_install_db --datadir=$DB_DATA_DIR
+            mkdir /run/mysqld
+            mysqld_safe --user=root --datadir=$DB_DATA_DIR \
+              --bind-address=$DB_HOST --port=$DB_PORT \
+              --no-auto-restart --no-watch
+            while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done # wait for server to be ready
+            mysqladmin create $DB_DATABASE
+            mysql -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
+            mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
+            mysql -e "FLUSH PRIVILEGES;"
+            rm /work/.dbcreation # Release lock
+            php -S 127.0.0.1:8800 -t /opt/adminer
+
+  run-cached: !Supervise
+    description: Start the laravel development server alongside memcached
+    children:
+      cache: !Command
+        container: memcached
+        run: memcached -u memcached -vv
+      app: !Command
+        container: laravel
+        environ:
+          <<: *db_config
+          CACHE_DRIVER: memcached
+          MEMCACHED_HOST: 127.0.0.1
+          MEMCACHED_PORT: 11211
+        run: *run_app
+      db: !Command
+        container: mysql
+        run: *run_db
+
+  export: !Command
+    container: exporter
+    description: export project into tarball
+    run: |
+        cd /usr/local/src/work
+        rm -f .env
+        rm -f database/database.sqlite
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan route:clear
+        php artisan view:clear
+        rm storage/framework/sessions/*
+        rm -rf tests
+        echo APP_ENV=production >> .env
+        echo APP_KEY=random >> .env
+        php artisan key:generate
+        php artisan optimize
+        php artisan route:cache
+        php artisan config:cache
+        php artisan vendor:publish
+        tar -czf export.tar.gz .env *
+        cp -f export.tar.gz /work/

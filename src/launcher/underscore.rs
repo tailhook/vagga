@@ -8,6 +8,7 @@ use unshare::{Command, Namespace};
 use options::build_mode::{build_mode, BuildMode};
 use config::{Settings};
 use container::nsutil::{set_namespace};
+use process_util::{run_and_wait, convert_status};
 
 use super::network;
 use super::build::{build_container};
@@ -61,17 +62,17 @@ pub fn run_command(settings: &Settings, workdir: &Path,
     cmd.arg("_run");
     cmd.args(&args[1..]);
     cmd.userns();
-    let res = cmd.run();
+    let res = run_and_wait(&mut cmd).map(convert_status);
 
     if copy {
         let mut cmd: Command = Wrapper::new(None, settings);
         cmd.workdir(workdir);
         cmd.userns();
         cmd.arg("_clean").arg("--transient");
-        match cmd.run() {
-            Ok(0) => {}
-            x => warn!(
-                "The `vagga _clean --transient` exited with status: {:?}", x),
+        match cmd.status() {
+            Ok(s) if s.success() => {}
+            Ok(s) => warn!("The `vagga _clean --transient` {}", s),
+            Err(e) => warn!("Failed to run `vagga _clean --transient`: {}", e),
         }
 
     }
@@ -125,5 +126,5 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
     cmd.arg(cname);
     cmd.arg(container.clone());
     cmd.args(&cmdargs);
-    cmd.run()
+    run_and_wait(&mut cmd).map(convert_status)
 }

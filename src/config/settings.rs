@@ -12,6 +12,7 @@ pub struct Settings {
     pub alpine_mirror: Option<String>,
     pub uid_map: Option<(Vec<(uid_t, uid_t, uid_t)>,
                          Vec<(gid_t, gid_t, gid_t)>)>,
+    pub push_image_script: Option<String>,
 }
 
 impl FromStr for Settings {

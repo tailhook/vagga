@@ -1,8 +1,10 @@
 use std::env;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
+use std::os::unix::io::FromRawFd;
 
 use libc::{getuid, c_int};
+use nix;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
 use nix::sys::signal::{SIGQUIT};
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
@@ -14,7 +16,7 @@ use tty_util::{TtyGuard};
 
 
 extern {
-    fn killpg(pgrp: c_int, sig: c_int) -> c_int;
+    pub fn killpg(pgrp: c_int, sig: c_int) -> c_int;
 }
 
 
@@ -24,6 +26,14 @@ pub static DEFAULT_PATH: &'static str =
 pub static PROXY_ENV_VARS: [&'static str; 5] =
     [ "http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy" ];
 
+
+pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
+    let fd = try!(nix::unistd::dup(2)
+        .map_err(|e| format!("Can't duplicate fd 2: {}", e)));
+    cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
+    cmd.stdin(Stdio::null());
+    Ok(())
+}
 
 pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     cmd.stdout(Stdio::piped());
@@ -79,7 +89,6 @@ pub fn run_and_wait(cmd: &mut Command)
 
     let mut tty_guard = try!(TtyGuard::capture_tty()
         .map_err(|e| format!("Error handling tty: {}", e)));
-    // Should we make this optionally, only if stdin is a tty?
     cmd.make_group_leader(true);
 
     info!("Running {:?}", cmd);
@@ -123,9 +132,11 @@ pub fn run_and_wait(cmd: &mut Command)
                                     io::Error::last_os_error());
                             }
                         }
-                        Stop(..) | Continue(..) | Death(..) => {}
+                        Stop(..) | Continue(..) | Death(..) => { }
                     }
                 }
+                try!(tty_guard.check().map_err(|e|
+                    format!("Error handling tty: {}", e)));
             }
             _ => unreachable!(),
         }

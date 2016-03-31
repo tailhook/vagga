@@ -6,7 +6,7 @@ use options::build_mode::BuildMode;
 use config::{Config, Settings};
 use config::command::MainCommand;
 use config::command::{CommandInfo, Networking, WriteMode};
-
+use process_util::{run_and_wait, convert_status};
 use super::supervisor;
 use super::build::{build_container};
 use super::wrap::Wrapper;
@@ -44,17 +44,17 @@ pub fn run_simple_command(settings: &Settings, cfg: &CommandInfo,
     if cfg.network.is_none() {
         cmd.userns();
     }
-    let res = cmd.run();
+    let res = run_and_wait(&mut cmd).map(convert_status);
 
     if cfg.write_mode != WriteMode::read_only {
         let mut cmd: Command = Wrapper::new(None, settings);
         cmd.workdir(workdir);
         cmd.userns();
         cmd.arg("_clean").arg("--transient");
-        match cmd.run() {
-            Ok(0) => {}
-            x => warn!(
-                "The `vagga _clean --transient` exited with status: {:?}", x),
+        match cmd.status() {
+            Ok(s) if s.success() => {}
+            Ok(s) => warn!("The `vagga _clean --transient` {}", s),
+            Err(e) => warn!("Failed to run `vagga _clean --transient`: {}", e),
         }
 
     }

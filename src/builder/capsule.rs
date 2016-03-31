@@ -10,10 +10,11 @@ use std::fs::{File};
 use std::io::{Write};
 use std::path::Path;
 
-use unshare::{Command, Stdio};
+use unshare::Command;
 
 use config::settings::Settings;
 use container::mount::bind_mount;
+use process_util::squash_stdio;
 use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
 use super::super::file_util::create_dir;
@@ -24,6 +25,9 @@ pub use self::Feature::*;
 #[derive(Clone, Copy)]
 pub enum Feature {
     Https,
+    Gzip,
+    Bzip2,
+    Xz,
     AlpineInstaller,
     Git,
 }
@@ -38,8 +42,8 @@ pub struct State {
 // Also used in alpine
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     let mut cmd = Command::new("/vagga/bin/apk");
-    cmd.stdin(Stdio::null())
-        .env("PATH", "/vagga/bin")
+    try!(squash_stdio(&mut cmd));
+    cmd.env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
     debug!("Running APK {:?}", cmd);
@@ -97,6 +101,15 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
             Https => {
                 pkg_queue.push("wget".to_string());
                 pkg_queue.push("ca-certificates".to_string());
+            }
+            Gzip => {
+                pkg_queue.push("gzip".to_string());
+            }
+            Bzip2 => {
+                pkg_queue.push("bzip2".to_string());
+            }
+            Xz => {
+                pkg_queue.push("xz".to_string());
             }
             Git => {
                 pkg_queue.push("git".to_string());

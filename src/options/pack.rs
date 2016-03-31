@@ -3,11 +3,13 @@ use std::path::PathBuf;
 
 use argparse::{ArgumentParser, Store, ParseOption};
 use super::build_mode::{build_mode, BuildMode};
+use super::compression_type::{compression_type, CompressionType};
 
 
 pub struct Options {
     pub name: String,
     pub file: Option<PathBuf>,
+    pub compression_type: Option<CompressionType>,
     pub build_mode: BuildMode,
 }
 
@@ -16,7 +18,8 @@ impl Options {
         let mut opt = Options {
             name: "".to_string(),
             file: None,
-            build_mode: BuildMode::Normal,
+            compression_type: None,
+            build_mode: BuildMode::NoImage,
         };
         {
             let mut ap = ArgumentParser::new();
@@ -32,6 +35,7 @@ impl Options {
             ap.refer(&mut opt.file)
                 .add_option(&["-f", "--file"], ParseOption,
                     "File to store tar archive at");
+            compression_type(&mut ap, &mut opt.compression_type);
             build_mode(&mut ap, &mut opt.build_mode);
             match ap.parse(args.clone(), &mut stdout(), &mut stderr()) {
                 Ok(()) => {}

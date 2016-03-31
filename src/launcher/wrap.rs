@@ -5,7 +5,7 @@ use std::os::unix::ffi::OsStrExt;
 use unshare::{Command, Namespace};
 
 use config::Settings;
-use process_util::{convert_status, set_uidmap, copy_env_vars};
+use process_util::{set_uidmap, copy_env_vars};
 use container::uidmap::get_max_uidmap;
 
 
@@ -13,7 +13,6 @@ pub trait Wrapper {
     fn new(root: Option<&str>, settings: &Settings) -> Self;
     fn workdir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self;
     fn userns(&mut self) -> &mut Self;
-    fn run(self) -> Result<i32, String>;
 }
 
 impl Wrapper for Command {
@@ -25,7 +24,6 @@ impl Wrapper for Command {
             cmd.arg(root);
         };
 
-        cmd.make_group_leader(true);
         cmd.env_clear();
 
         // Unfortunately OSString does not have starts_with yet
@@ -68,11 +66,5 @@ impl Wrapper for Command {
     fn userns(&mut self) -> &mut Self {
         set_uidmap(self, &get_max_uidmap().unwrap(), true);
         self
-    }
-    fn run(mut self) -> Result<i32, String> {
-        match self.status() {
-            Ok(x) => Ok(convert_status(x)),
-            Err(e) => Err(format!("Error running {:?}: {}", self, e)),
-        }
     }
 }

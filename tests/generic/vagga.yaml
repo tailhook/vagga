@@ -69,6 +69,29 @@ commands:
           echo hello
           sleep 0.1
 
+  tagged: !Supervise
+    children:
+      first: !Command
+        container: busybox
+        tags: [first_and_second, first_and_third]
+        run: |
+          echo hello
+          sleep 0.2
+      second: !Command
+        container: busybox
+        tags: [first_and_second]
+        run: |
+          sleep 0.05
+          echo world
+          sleep 0.15
+      third: !Command
+        container: busybox
+        tags: [first_and_third, third_only]
+        run: |
+          sleep 0.1
+          echo ":)"
+          sleep 0.1
+
   one-kills-another: !Supervise
     children:
       dying: !Command

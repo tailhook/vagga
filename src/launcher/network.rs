@@ -105,10 +105,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     -> Result<i32, String>
 {
     let interface_name = "vagga".to_string();
-    let network = "172.18.255.0/30".to_string();
-    let host_ip_net = "172.18.255.1/30".to_string();
-    let host_ip = "172.18.255.1".to_string();
-    let guest_ip = "172.18.255.2/30".to_string();
+    let network = "172.23.255.0/30".to_string();
+    let host_ip_net = "172.23.255.1/30".to_string();
+    let host_ip = "172.23.255.1".to_string();
+    let guest_ip = "172.23.255.2/30".to_string();
     let mut dry_run = false;
     let mut iptables = true;
     {
@@ -354,8 +354,8 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     -> Result<i32, String>
 {
     let interface_name = "vagga".to_string();
-    let network = "172.18.255.0/30".to_string();
-    let host_ip = "172.18.255.1".to_string();
+    let network = "172.23.255.0/30".to_string();
+    let host_ip = "172.23.255.1".to_string();
     let mut dry_run = false;
     let mut iptables = true;
     {
@@ -542,8 +542,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
 
     let eif = format!("ch{}", index);
     let iif = format!("ch{}c", index);
-    let eip = format!("172.18.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
-    let iip = format!("172.18.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
+    let eip = format!("172.23.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
+    let iip = format!("172.23.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
 
     try!(File::create(link_to)
         .map_err(|e| format!("Can't create namespace file {:?}: {}",
@@ -649,7 +649,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     cmd.args(&["guest", "--interface", &iif[..],
                         "--ip", &ip[..],
                         "--hostname", hostname,
-                        "--gateway-ip", "172.18.0.254"]);
+                        "--gateway-ip", "172.23.0.254"]);
     cmd.unshare([Namespace::Net, Namespace::Uts].iter().cloned());
     // we never need proxy env vars here
     cmd.env("TERM".to_string(),

@@ -17,13 +17,15 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "-V --version -E --env --environ -e --use-env \
---ignore-owner-check --no-build --no-version-check" ]]
+--ignore-owner-check --no-image-download --no-build \
+--no-version-check" ]]
 
     run vagga _compgen -- --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--version --env --environ --use-env --ignore-owner-check \
---no-build --no-version-check" ]]
+    [[ ${lines[@]} = "--version --env --environ --use-env \
+--ignore-owner-check --no-image-download --no-build \
+--no-version-check" ]]
 
     run vagga _compgen -- y
     printf "%s\n" "${lines[@]}"
@@ -54,13 +56,14 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "-V --version -E --env --environ -e --use-env \
---ignore-owner-check --no-version-check" ]]
+--ignore-owner-check --no-image-download --no-version-check" ]]
 
     run vagga _compgen -E test=123 -- -
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "-V --version -E --env --environ -e --use-env \
---ignore-owner-check --no-build --no-version-check" ]]
+--ignore-owner-check --no-image-download --no-build \
+--no-version-check" ]]
 
     run vagga _compgen -E test=123 -- d
     printf "%s\n" "${lines[@]}"
@@ -82,12 +85,14 @@ setup() {
     run vagga _compgen dont_care --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--only --exclude --no-build --no-version-check" ]]
+    [[ ${lines[@]} = "--only --exclude --no-image-download \
+--no-build --no-version-check" ]]
 
     run vagga _compgen --no-version-check -E HOME=/work dont_care --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--only --exclude --no-build --no-version-check" ]]
+    [[ ${lines[@]} = "--only --exclude --no-image-download \
+--no-build --no-version-check" ]]
 
     run vagga _compgen dont_care -- --o
     printf "%s\n" "${lines[@]}"
@@ -97,7 +102,8 @@ setup() {
     run vagga _compgen dont_care --no-build --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--only --exclude --no-version-check" ]]
+    [[ ${lines[@]} = "--only --exclude --no-image-download \
+--no-version-check" ]]
 
     run vagga _compgen dont_care --only --
     printf "%s\n" "${lines[@]}"
@@ -117,20 +123,22 @@ setup() {
     run vagga _compgen dont_care --only yes -- -
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--exclude --no-build --no-version-check" ]]
+    [[ ${lines[@]} = "--exclude --no-image-download --no-build \
+--no-version-check" ]]
 
     run vagga _compgen dont_care --only yes --no-version-check -- -
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--exclude --no-build" ]]
+    [[ ${lines[@]} = "--exclude --no-image-download --no-build" ]]
 }
 
 @test "completion: builtin" {
     run vagga _compgen -- _
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "_build _build_shell _clean _create_netns _destroy_netns \
-_init_storage_dir _list _pack_image _run _run_in_netns _version_hash" ]]
+    [[ ${lines[@]} = "_build _build_shell _clean _create_netns \
+_destroy_netns _init_storage_dir _list _pack_image _push_image _run \
+_run_in_netns _version_hash" ]]
 
     run vagga _compgen -- _r
     printf "%s\n" "${lines[@]}"
@@ -170,12 +178,14 @@ _init_storage_dir _list _pack_image _run _run_in_netns _version_hash" ]]
     run vagga _compgen _run -- -
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "-W --writable --no-build --no-version-check" ]]
+    [[ ${lines[@]} = "-W --writable --no-image-download --no-build \
+--no-version-check" ]]
 
     run vagga _compgen _run -- --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "--writable --no-build --no-version-check" ]]
+    [[ ${lines[@]} = "--writable --no-image-download --no-build \
+--no-version-check" ]]
 
     run vagga _compgen _run -- u
     printf "%s\n" "${lines[@]}"
