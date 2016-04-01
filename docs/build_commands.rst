@@ -567,7 +567,9 @@ The following ``gem`` package specification formats are supported:
     - !Alpine v3.3
     - !Install [libxml2, libxslt, zlib, sqlite-libs]
     - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev, sqlite-dev]
-    - !Env { NOKOGIRI_USE_SYSTEM_LIBRARIES: 1 }
+    - !Env
+      NOKOGIRI_USE_SYSTEM_LIBRARIES: 1
+      HOME: /tmp
     - !GemInstall [rails]
     - !Sh rails new . --skip-bundle
 
