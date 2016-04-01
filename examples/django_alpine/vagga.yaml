@@ -55,6 +55,12 @@ commands:
     description: Start the django development server
     container: django
     run: python3 manage.py runserver
+  manage.py: !Command
+    description: Shortcut to manage.py
+    container: django
+    run:
+    - python3
+    - manage.py
   run-cached: !Supervise
     description: Start the django development server alongside memcached
     children:
