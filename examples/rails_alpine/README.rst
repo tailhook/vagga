@@ -425,6 +425,6 @@ Now change the ``run-postgres`` command to seed the database:
           db: !Command
             # ...
 
-* ❶ -- ``rake db::seed`` will populate the database.
+* ❶ -- populate the database.
 
 Now , everytime we run ``run-postgres``, we will have our database populated.
