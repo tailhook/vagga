@@ -229,7 +229,7 @@ Create the command to run with caching:
           app: !Command
             container: rails
             environ:
-              CACHE_URL: memcached://127.0.0.1:11211 ❷
+              MEMCACHED_URL: memcached://127.0.0.1:11211 ❷
               RAILS_ENV: production ❸
               SECRET_KEY_BASE: my_secret_key ❹
               RAILS_SERVE_STATIC_FILES: 1 ❺

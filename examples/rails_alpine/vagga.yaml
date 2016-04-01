@@ -32,8 +32,6 @@ containers:
     - !Ubuntu trusty
     - !Install [postgresql]
     - !EnsureDir /data
-    # uncomment the line below to make postgres data persistent
-    # - !EnsureDir /work/.db/data
     environ:
       PGDATA: /data
       PG_PORT: 5433
@@ -45,8 +43,6 @@ containers:
       /data: !Tmpfs
         size: 100M
         mode: 0o700
-      # replace the volume above with the one below to make postgres data persistent
-      # /data: !BindRW /work/.db/data
 
 commands:
   run: !Command
@@ -63,10 +59,13 @@ commands:
       app: !Command
         container: rails
         environ:
-          CACHE_URL: memcached://127.0.0.1:11211
+          MEMCACHED_URL: memcached://127.0.0.1:11211
           RAILS_ENV: production
           SECRET_KEY_BASE: my_secret_key
-        run: rails server
+          RAILS_SERVE_STATIC_FILES: 1
+        run: |
+            rake assets:precompile
+            rails server
 
   run-postgres: !Supervise
     description: Start the rails development server using Postgres database
@@ -79,6 +78,7 @@ commands:
             touch /work/.dbcreation # Create lock file
             while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
             rake db:migrate
+            rake db:seed
             rails server
       db: !Command
         container: postgres
