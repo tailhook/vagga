@@ -69,6 +69,12 @@ containers:
       /usr/local/src/work: !Snapshot
 
 commands:
+  artisan: !Command
+    description: Shortcut for running php artisan
+    container: laravel
+    run:
+    - php
+    - artisan
   run: !Supervise
     description: run the laravel development server
     children:
