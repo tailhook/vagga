@@ -92,7 +92,7 @@ Parameters of `!Command`
 
    .. code-block:: bash
 
-      vagga run --only service  # will start only postgres and redis processes
+      $ vagga run --only service  # will start only postgres and redis processes
 
 .. opt:: run
 
@@ -158,7 +158,9 @@ Parameters of `!Command`
    **(experimental)** This option allows to map the ``user-id`` as seen by
    command itself to some other user id inside container namespace (the
    namespace which is used to build container). To make things a little less
-   confusing, the following two configuration lines::
+   confusing, the following two configuration lines:
+
+   .. code-block:: yaml
 
        user-id: 1
        external-user-id: 0

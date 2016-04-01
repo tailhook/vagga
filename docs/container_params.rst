@@ -50,7 +50,9 @@ Container Parameters
 
     The mapping of mount points to the definition of volume. Allows to mount
     some additional filesystems inside the container. See :ref:`volumes` for more
-    info. Default is::
+    info. Default is:
+
+    .. code-block:: yaml
 
         volumes:
             /tmp: !Tmpfs { size: 100Mi, mode: 0o1777 }

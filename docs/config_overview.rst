@@ -24,7 +24,7 @@ There is also additional top-level option:
    want to communicate the version number to a team. Versions from testing
    work as well. To see your current version use::
 
-        vagga --version
+        $ vagga --version
 
 
 .. _containers:
@@ -36,11 +36,11 @@ Example of one container defined:
 
 .. code-block:: yaml
 
-  containers:
-    sphinx:
-      setup:
-      - !Ubuntu trusty
-      - !Install [python-sphinx, make]
+   containers:
+     sphinx:
+       setup:
+       - !Ubuntu trusty
+       - !Install [python-sphinx, make]
 
 The YAML above defines a container named ``sphinx``, which is built with two
 steps: download and unpack ubuntu ``trusty`` base image, and install install
@@ -65,7 +65,7 @@ The YAML above defines a command named ``build-docs``, which is run in
 container named ``sphinx``, that is run in ``docs/`` sub dir of project, and
 will run command ``make`` in container. So running::
 
-    > vagga build-docs html
+    $ vagga build-docs html
 
 Builds html docs using sphinx inside a container.
 

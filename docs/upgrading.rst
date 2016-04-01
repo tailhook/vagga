@@ -11,10 +11,10 @@ The pip cache in this release is namespaced over distro and version. So old
 cache will be inactive now. And should be removed manually by cleaning
 ``.vagga/.cache/pip-cache`` directory. You may do that at any time
 
-See `Release Notes`_ and `Github`_ for all changes.
+See `Release Notes`_ and `Github <github_v0.4.1_>`_ for all changes.
 
 .. _`Release Notes`: https://github.com/tailhook/vagga/blob/master/RELEASE_NOTES.rst
-.. _`Github`: https://github.com/tailhook/vagga/compare/v0.4.0...v0.4.1
+.. _`github_v0.4.1`: https://github.com/tailhook/vagga/compare/v0.4.0...v0.4.1
 
 
 Upgrading 0.3.x -> 0.4.x
@@ -30,10 +30,10 @@ semantics of configuration. The most important changes:
   commands with default value of ``2``. This means that processes will shut
   down unconditionally two seconds after ``Ctrl+C``.
 
-See `Release Notes`_ and `Github`_ for all changes.
+See `Release Notes`_ and `Github <github_v0.4.0_>`_ for all changes.
 
 .. _`Release Notes`: https://github.com/tailhook/vagga/blob/master/RELEASE_NOTES.rst
-.. _`Github`: https://github.com/tailhook/vagga/compare/v0.3.0...v0.4.0
+.. _`github_v0.4.0`: https://github.com/tailhook/vagga/compare/v0.3.0...v0.4.0
 
 
 Upgrading 0.2.x -> 0.3.x

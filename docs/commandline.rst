@@ -36,7 +36,7 @@ vagga _build CONTAINER
 
   More useful in the form::
 
-      vagga _build --force container_name
+      $ vagga _build --force container_name
 
   To rebuid container that has previously been built.
 
@@ -46,11 +46,11 @@ vagga _clean
   The following command removes containers that are not used by current vagga
   config (considering the state of all files that ``vagga.yaml`` depends on)::
 
-      vagga _clean --unused
+      $ vagga _clean --unused
 
   There is a faster option for removing unused containers::
 
-      vagga _clean --old
+      $ vagga _clean --old
 
   This is different because it only looks at symlinks in ``.vagga/*``. So may
   be wrong (if you changed ``vagga.yaml`` and did not run the command(s)). It's

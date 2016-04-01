@@ -39,7 +39,9 @@ following in ``vagga.yaml``:
 * ❻ -- run command in container "flask"
 * ❼ -- the command-line is "python3"
 
-To run command just run ``vagga command_name``::
+To run command just run ``vagga command_name``:
+
+.. code-block:: bash
 
     $ vagga py3
     [ .. snipped container build log .. ]
@@ -50,7 +52,9 @@ To run command just run ``vagga command_name``::
     >>>
 
 This is just a lazy example. Once your project starts to mature you want to
-use some specific version of flask and some other dependencies::
+use some specific version of flask and some other dependencies:
+
+.. code-block:: yaml
 
     containers:
       flask:
@@ -66,7 +70,9 @@ use some specific version of flask and some other dependencies::
 
 And if another developer does ``git pull`` and gets this config, running
 ``vagga py3`` next time will rebuild container and run command in the new
-environment without any additional effort::
+environment without any additional effort:
+
+.. code-block:: bash
 
     $ vagga py3
     [ .. snipped container build log .. ]
@@ -80,7 +86,9 @@ environment without any additional effort::
    package works well. Vagga also uses smart caching of packages to make
    rebuilds fast.
 
-You probably want to move python dependencies into ``requirements.txt``::
+You probably want to move python dependencies into ``requirements.txt``:
+
+.. code-block:: yaml
 
     containers:
       flask:

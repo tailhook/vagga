@@ -1,3 +1,5 @@
+.. highlight:: bash
+
 .. default-domain:: vagga
 
 ===========

@@ -28,6 +28,7 @@ designed to run as PID 1 (which are all applications except supervisors), do
 not run well. Vagga fixes that by not running process as PID 1.
 
 .. admonition:: Outdated
+   :class: admonition danger
 
    The following text is outdated. Vagga doesn't support any pid modes since
    version 0.2.0. This may be fixed in future. We consider this as mostly

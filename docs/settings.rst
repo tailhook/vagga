@@ -54,15 +54,19 @@ Supported settings:
 
    .. note:: The directories must exist even if unused in any ``vagga.yaml``.
 
-   For example, here is how you might export home::
+   For example, here is how you might export home:
 
-        external-volumes:
-            home: /home/user
+   .. code-block:: yaml
+
+      external-volumes:
+        home: /home/user
 
    Then in `vagga.yaml` you use it as follows (prepend with `/volumes`):
 
-        volumes:
-            /root: !BindRW /volumes/home
+   .. code-block:: yaml
+
+      volumes:
+        /root: !BindRW /volumes/home
 
    See :ref:`volumes` for more info about defining mount points.
 
@@ -85,7 +89,7 @@ All project-local settings are also allowed here.
 Project-Local Settings
 ======================
 
-Project-local settings may be in the project dir in::
+Project-local settings may be in the project dir in:
 
  * ``.vagga.settings.yaml``
  * ``.vagga/settings.yaml``

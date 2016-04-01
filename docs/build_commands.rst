@@ -202,7 +202,7 @@ containers. Use ``!CacheDirs`` for that:
 
 .. code-block:: yaml
 
-   setup
+   setup:
    # ...
    - !CacheDirs { "/var/cache/apt": "apt-cache" }
 
@@ -701,7 +701,7 @@ Few comments:
    ``vagga.yaml`` file. It may change in future.
 
 The ``!SubConfig`` command may be used to include some commands from another
-file without building container. Just omit ``generator`` command:
+file without building container. Just omit ``source`` command:
 
 .. code-block:: yaml
 

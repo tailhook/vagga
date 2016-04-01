@@ -1,3 +1,5 @@
+.. highlight:: bash
+
 .. _network_testing:
 
 ===============
@@ -44,7 +46,7 @@ Setup
 Unfortunately we can't setup network in fully non-privileged way. So you need
 to do some preliminary setup. To setup a bridge run::
 
-    vagga _create_netns
+    $ vagga _create_netns
 
 Running this will show what commands are going to run::
 
@@ -76,11 +78,11 @@ settings in your ``resolv.conf``.
 You may see the commands that will be run without running them with
 ``--dry-run`` option::
 
-    vagga _create_netns --dry-run
+    $ vagga _create_netns --dry-run
 
 To destroy the created network you can run::
 
-    vagga _destroy_netns
+    $ vagga _destroy_netns
 
 This uses ``sudo`` too
 

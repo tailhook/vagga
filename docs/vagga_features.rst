@@ -20,38 +20,46 @@ virtual machines, dependencies, paths whatever. You just need to know what you
 can do with it.
 
 Consider we have an imaginary web application. Let's see what we can
-do::
+do:
 
-    > git clone git@git.git:somewebapp.git somewebapp
-    > cd somewebapp
-    > vagga
+.. code-block:: bash
+
+    $ git clone git@git.git:somewebapp.git somewebapp
+    $ cd somewebapp
+    $ vagga
     Available commands:
         build-js    build javascript files needed to run application
         serve       serve a program on a localhost
 
 Ok, now we know that we probably expected to build javascipt files and that we
-can run a server. We now just do::
+can run a server. We now just do:
 
-    > vagga build-js
+.. code-block:: bash
+
+    $ vagga build-js
     # container created, dependencies populated, javascripts are built
-    > vagga serve
+    $ vagga serve
     Now you can go to http://localhost:8000 to see site in action
 
-Compare that to vagrant::
+Compare that to vagrant:
 
-    > vagrant up
+.. code-block:: bash
+
+    $ vagrant up
     # some machine(s) created
-    > vagrant ssh
+    $ vagrant ssh
     # now you are in new shell. What to do?
-    > make
+    $ make
     # ok probably something is built (if project uses make), what now?
-    > less README
+    $ less README
     # long reading follows
 
-Or compare that to docker::
+Or compare that to docker:
 
-    > docker pull someuser/somewebapp
-    > docker run --rm --it someuser/somewebapp
+.. code-block:: bash
+
+    $ docker pull someuser/somewebapp
+    $ docker run --rm --it someuser/somewebapp
     # if you are lucky something is run, but how to build it?
     # let's see the README
 
@@ -126,14 +134,14 @@ commands he needs.
 
 How is it done in vagrant?
 
-::
+.. code-block:: bash
 
-    > vagrant up
+    $ vagrant up
     # two containers are up at this point
-    > vagrant ssh build -- make
+    $ vagrant ssh build -- make
     # built, now we don't want to waste memory for build virtual machine
-    > vagrant halt build
-    > vagrant ssh serve -- python manage.py runserver
+    $ vagrant halt build
+    $ vagrant ssh serve -- python manage.py runserver
 
 
 Project With Examples
@@ -142,33 +150,35 @@ Project With Examples
 Many open-source projects and many proprietary libraries have some examples.
 Often samples have additional dependencies. If you developing a markdown parser
 library, you might have a tiny example web application using flask that
-converts markdown to html on the fly::
+converts markdown to html on the fly:
 
-    > vagga
+.. code-block:: bash
+
+    $ vagga
     Available commands:
         md2html         convert markdown to html without installation
         tests           run tests
         example-web     run live demo (flask app)
         example-plugin  example of plugin for markdown parser
-    > vagga example-web
+    $ vagga example-web
     Now go to http://localhost:8000 to see the demo
 
 How would you achieve the same with vagrant?
 
-::
+.. code-block:: bash
 
-    > ls -R examples
+    $ ls -R examples
     examples/web:
     Vagrantfile README flask-app.py
 
     examples/plugin:
     Vagrantfile README main.py plugin.py
 
-    > cd examples/web
-    > vagrant up && vagrant ssh -- python main.py --help
-    > vagrant ssh -- python main.py --port 8000
+    $ cd examples/web
+    $ vagrant up && vagrant ssh -- python main.py --help
+    $ vagrant ssh -- python main.py --port 8000
     # ok got it, let's stop it
-    > vagrant halt && vagrant destroy
+    $ vagrant halt && vagrant destroy
 
 I.e. a ``Vagrantfile`` per example. Then user must keep track of what
 containers he have done ``vagrant up`` in, and do not forget to shutdown and
@@ -184,14 +194,16 @@ Docker case is very similar to Vagrant one.
 Container Versioning and Rebuilding
 ===================================
 
-What if the project dependencies are changed by upstream? No problem::
+What if the project dependencies are changed by upstream? No problem:
 
-    > git pull
-    > vagga serve
+.. code-block:: bash
+
+    $ git pull
+    $ vagga serve
     # vagga notes that dependencies changed, and rebuilds container
-    > git checkout stable
+    $ git checkout stable
     # moving to stable branch, to fix some critical bug
-    > vagga serve
+    $ vagga serve
     # vagga uses old container that is probably still around
 
 Vagga hashes dependencies, and if the hash changed creates new container.
@@ -204,50 +216,54 @@ commit or switch to another branch.
    trigger rebuild too (unless it's non-significant change, like whitespace
    change or swapping lines).
 
-How you do this with Vagrant::
+How you do this with Vagrant:
 
-    > git pull
-    > vagrant ssh -- python manage.py runserver
+.. code-block:: bash
+
+    $ git pull
+    $ vagrant ssh -- python manage.py runserver
     ImportError
-    > vagrant reload
-    > vagrant ssh -- python manage.py runserver
+    $ vagrant reload
+    $ vagrant ssh -- python manage.py runserver
     ImportError
-    > vagrant reload --provision
+    $ vagrant reload --provision
     #  If you are lucky and your provision script is good, dependency installed
-    > vagrant ssh -- python manage.py runserver
+    $ vagrant ssh -- python manage.py runserver
     # Ok it works
-    > git checkout stable
-    > vagrant ssh -- python manage.py runserver
+    $ git checkout stable
+    $ vagrant ssh -- python manage.py runserver
     # Wow, we still running dependencies from "master", since we added
     # a dependency it works for now, but may crash when deploying
-    > vagrant restart --provision
+    $ vagrant restart --provision
     # We used ``pip install requirements.txt`` in provision
     # and it doesn't delete dependencies
-    > vagrant halt
-    > vagrant destroy
-    > vagrant up
+    $ vagrant halt
+    $ vagrant destroy
+    $ vagrant up
     # let's wait ... it sooo long.
-    > vagrant ssh -- python manage.py runserver
+    $ vagrant ssh -- python manage.py runserver
     # now we are safe
-    > git checkout master
+    $ git checkout master
     # Oh no, need to rebuild container again?!?!
 
-Using Docker? Let's see::
+Using Docker? Let's see:
 
-    > git pull
-    > docker run --rm -it me/somewebapp python manage.py runserver
+.. code-block:: bash
+
+    $ git pull
+    $ docker run --rm -it me/somewebapp python manage.py runserver
     ImportError
-    > docker tag me/somewebapp:latest me/somewebapp:old
-    > docker build -t me/somewebapp .
-    > docker run --rm -it me/somewebapp python manage.py runserver
+    $ docker tag me/somewebapp:latest me/somewebapp:old
+    $ docker build -t me/somewebapp .
+    $ docker run --rm -it me/somewebapp python manage.py runserver
     # Oh, that was simple
-    > git checkout stable
-    > docker run --rm -it me/somewebapp python manage.py runserver
+    $ git checkout stable
+    $ docker run --rm -it me/somewebapp python manage.py runserver
     # Oh, crap, I forgot to downgrade container
     # We were smart to tag old one, so don't need to rebuild:
-    > docker run --rm -it me/somewebapp:old python manage.py runserver
+    $ docker run --rm -it me/somewebapp:old python manage.py runserver
     # Let's also rebuild dependencies
-    > ./build.sh
+    $ ./build.sh
     Running: docker run --rm me/somewebapp_build python manage.py runserver
     # Oh crap, we have hard-coded container name in build script?!?!
 
@@ -265,7 +281,9 @@ process in a shell.
 
 When running in production one usually need also a cache and a webserver. And
 developers are very lazy to run those components on development system, just
-because it's complex to manage. E.g. if you have a startup script like this::
+because it's complex to manage. E.g. if you have a startup script like this:
+
+.. code-block:: bash
 
     #!/bin/sh
     redis-server ./config/redis.conf &
@@ -306,9 +324,11 @@ Vagga's way:
           container: python
           run: "python manage.py celery worker"
 
-Now just run::
+Now just run:
 
-    > vagga run_full_app
+.. code-block:: bash
+
+    $ vagga run_full_app
     # two python processes and a redis started here
 
 It not only allows you to start processes in multiple containers, it also
