@@ -8,6 +8,7 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
+   what_is_vagga
    examples/tutorials/django
    examples/tutorials/laravel
    examples/tutorials/rails
