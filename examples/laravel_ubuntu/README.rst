@@ -223,16 +223,29 @@ Adding some code
 
 Now that we have our project working and our database is ready, let's add some.
 
+.. note:: Let's add a shortcut command for running artisan
+
+   .. code-block:: yaml
+
+      commands:
+        # ...
+        artisan: !Command
+          description: Shortcut for running php artisan
+          container: laravel
+          run:
+          - php
+          - artisan
+
 First, we need a layout. Fortunately, Laravel can give us one, we just have to
 scaffold authentication::
 
-    $ vagga _run laravel php artisan make:auth
+    $ vagga artisan make:auth
 
 This will give us a nice layout at ``resources/views/layouts/app.blade.php``.
 
 Now create a model::
 
-    $ vagga _run laravel php artisan make:model --migration Article
+    $ vagga artisan make:model --migration Article
 
 This will create a new model at ``app/Article.php`` and its respective migration
 at ``database/migrations/2016_03_24_172211_create_articles_table.php`` (yours
@@ -280,7 +293,7 @@ Open ``app/routes.php`` and setup routing:
 
 Create our controller::
 
-    $ vagga _run laravel php artisan make:controller --resource ArticleController
+    $ vagga artisan make:controller --resource ArticleController
 
 This will create a controller at ``app/Http/Controllers/ArticleController.php``
 populated with some CRUD method stubs.
@@ -501,7 +514,7 @@ Create the views for our controller:
 
 Create a seeder to prepopulate our database::
 
-    $ vagga _run laravel php artisan make:seeder ArticleSeeder
+    $ vagga artisan make:seeder ArticleSeeder
 
 This will create a seeder class at ``database/seeds/ArticleSeeder.php``. Open it
 and change it as follows:
