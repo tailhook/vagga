@@ -95,7 +95,7 @@ You will notice the new ``requirements.txt`` file holding a content similar to::
 
     Django==1.9.2
 
-ANd now let's run our project. Edit ``vagga.yaml`` to add the ``run`` command:
+And now let's run our project. Edit ``vagga.yaml`` to add the ``run`` command:
 
 .. code-block:: yaml
 
@@ -170,11 +170,28 @@ Now let's change our project's settings by editing ``MyProject/settings.py``:
         'default': dj_database_url.config()
     }
 
+Let's another shortcut command for ``manage.py``:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      manage.py: !Command
+        description: Shortcut to manage.py
+        container: django
+        run:
+        - python3
+        - manage.py
+
+.. note:: This command accept arguments by default, so
+   instead of writing it long ``vagga _run django python3 manage.py runserver``
+   we will be able to shorten it to ``vagga manage.py runserver``
+
 To see if it worked, let's run the migrations from the default Django apps and
 create a superuser::
 
-    $ vagga _run django python3 manage.py migrate
-    $ vagga _run django python3 manage.py createsuperuser
+    $ vagga manage.py migrate
+    $ vagga manage.py createsuperuser
 
 After creating the superuser, run our project::
 
@@ -189,7 +206,7 @@ Before going any further, let's add a simple app to our project.
 
 First, start an app called 'blog'::
 
-    $ vagga _run django python3 manage.py startapp blog
+    $ vagga manage.py startapp blog
 
 Add it to ``INSTALLED_APPS``:
 
@@ -228,8 +245,8 @@ Create the admin for our model:
 
 Create and run the migration::
 
-    $ vagga _run django python3 manage.py makemigrations
-    $ vagga _run django python3 manage.py migrate
+    $ vagga manage.py makemigrations
+    $ vagga manage.py migrate
 
 Run our project::
 
@@ -497,7 +514,7 @@ Add the runtime dependencies of ``psycopg2``:
 Before running our project, we need a way to automatically create our superuser.
 We can crate a migration to do this. First, create an app called ``common``::
 
-    $ vagga _run django python3 manage.py startapp common
+    $ vagga manage.py startapp common
 
 Add it to ``INSTALLED_APPS``:
 
@@ -511,7 +528,7 @@ Add it to ``INSTALLED_APPS``:
 
 Create the migration for adding the admin user::
 
-    $ vagga _run django python3 manage.py makemigrations -n create_superuser --empty common
+    $ vagga manage.py makemigrations -n create_superuser --empty common
 
 Change the migration to add our admin user:
 
