@@ -27,7 +27,7 @@ Vagga 0.5.0
 * Improved SIGINT handling, now Ctrl+C in interactive processes such as
   ``python`` (without arguments) works as expected
 * The signal messages ("Received SIGINT...") are now printed into stderr rather
-  than stdout
+  than stdout (for ``!Supervise`` type of commands)
 * Killing vagga supervise with TERM mistakenly reported SIGINT on exit, fixed
 * Signal SIGQUIT is now correctly propagated
 * Add PHP/Composer support

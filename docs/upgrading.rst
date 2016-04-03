@@ -3,6 +3,48 @@ Upgrading
 =========
 
 
+Upgrading 0.4.1 -> 0.5.0
+========================
+
+This release doesn't introduce any severe incompatibilities. Except in the
+networking support:
+
+* Change gateway network from ``172.18.0.0/16`` to ``172.23.0.0/16``,
+  hopefully this will have less collisions
+
+The following are minor changes during the container build:
+
+* The stdin redirected from ``/dev/null`` and stdout is redirected to stderr
+  during the build. If you really need asking a user (which is an antipattern)
+  you may open a ``/dev/tty``.
+* The ``.vagga/.mnt`` is now unmounted during build (fixes bugs with bad tools)
+* ``!Depends`` doesn't resolve symlinks but depends on the link itself
+* ``!Remove`` removes files when encountered (previously removed only when
+  container already built), also the command works with files (not only dirs)
+
+The following are bugfixes in container runtime:
+
+* The ``TERM`` and ``*_proxy`` env vars are now propagated for supervise
+  commands in the same way as with normal commands (previously was absent)
+* Pseudo-terminals in vagga containers now work
+* Improved SIGINT handling, now Ctrl+C in interactive processes such as
+  ``python`` (without arguments) works as expected
+* The signal messages ("Received SIGINT...") are now printed into stderr rather
+  than stdout (for ``!Supervise`` type of commands)
+* Killing vagga supervise with TERM mistakenly reported SIGINT on exit, fixed
+
+And the following changes the hash of containers (this should not cause a
+headache, just will trigger a container rebuild):
+
+* Add support for ``arch`` parameter in ``!UbuntuRelease`` this changes hash
+  sum of all containers built using ``!UbuntuRelease``
+
+
+See `Release Notes`_ and `Github <github_v0.5.0_>`_ for all changes.
+
+.. _`github_v0.5.0`: https://github.com/tailhook/vagga/compare/v0.4.1...v0.5.0
+
+
 Upgrading 0.4.0 -> 0.4.1
 ========================
 
@@ -13,7 +55,6 @@ cache will be inactive now. And should be removed manually by cleaning
 
 See `Release Notes`_ and `Github <github_v0.4.1_>`_ for all changes.
 
-.. _`Release Notes`: https://github.com/tailhook/vagga/blob/master/RELEASE_NOTES.rst
 .. _`github_v0.4.1`: https://github.com/tailhook/vagga/compare/v0.4.0...v0.4.1
 
 
