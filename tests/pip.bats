@@ -99,7 +99,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-ubuntu)
-    [[ $link = ".roots/py3req-https-ubuntu.12ce2f11/root" ]]
+    [[ $link = ".roots/py3req-https-ubuntu.6b2b8d4b/root" ]]
 }
 
 @test "py3: alpine req-https.txt" {
@@ -107,7 +107,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-alpine)
-    [[ $link = ".roots/py3req-https-alpine.356eb50e/root" ]]
+    [[ $link = ".roots/py3req-https-alpine.04976852/root" ]]
 }
 
 @test "py3: container inheritance" {
