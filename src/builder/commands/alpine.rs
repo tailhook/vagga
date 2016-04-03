@@ -193,7 +193,7 @@ fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
         packages::Bundler => None,
         // VCS
         packages::Git => Some(vec!("git")),
-        packages::Mercurial => Some(vec!("hg")),
+        packages::Mercurial => Some(vec!("mercurial")),
     }
 }
 

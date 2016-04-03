@@ -318,7 +318,7 @@ impl Ubuntu {
             packages::Bundler => None,
             // VCS
             packages::Git => Some(vec!("git")),
-            packages::Mercurial => Some(vec!("hg")),
+            packages::Mercurial => Some(vec!("mercurial")),
         }
     }
 }
