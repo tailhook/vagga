@@ -14,11 +14,11 @@ There is also additional top-level option:
    (default is no limit) Defines minimum version to run the configuration file.
    If you put::
 
-        minimum-vagga: v0.4.2
+        minimum-vagga: v0.5.0
 
    Into ``vagga.yaml`` other users will see the following error::
 
-        Please upgrade vagga to at least "v0.4.2"
+        Please upgrade vagga to at least "v0.5.0"
 
    This is definitely optional, but useful if you start using new features, and
    want to communicate the version number to a team. Versions from testing
