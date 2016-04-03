@@ -90,3 +90,18 @@ Container Parameters
     most containers it's a bad idea because it doesn't allow to switch between
     branches using source-control quickly. Better use ``vagga _clean --old``
     if possible.
+
+.. opt:: image-cache-url
+
+   If there is no locally cached image and it is going to be built, first check
+   for the cached image in the specified URL.
+
+   Example::
+
+        image-cache-url: http://example.org/${container_name}.${short_hash}.tar.xz
+
+   To find out how to upload an image see :opt:`push-image-cmd`.
+
+   .. warning:: The url must contain at least `${short_hash}` substitution,
+      or otherwise it will ruin the vagga's container versioning.
+

@@ -82,6 +82,39 @@ Supported settings:
          config. You may specify the volume in :opt:`site-settings` if you
          care about security (and you should).
 
+.. opt:: push-image-script
+
+   A script to use for uploading a container image when you run
+   `vagga _push_image`.
+
+   To push image using webdav::
+
+       push-image-script: "curl -T ${image_path} \
+           http://example.org/${container_name}.${short_hash}.tar.xz"
+
+   To push image using `scp` utility (SFTP protocol)::
+
+       push-image-script: "scp ${image_path} \
+          user@example.org:/target/path/${container_name}.${short_hash}.tar.xz"
+
+   The FTP(s) (for exxample, using `lftp` utility) or S3 (using `s3cmd`) are
+   also valid choices.
+
+   .. note:: This is that rare case where command is run by vagga in your host
+      filesystem. This allows you to use your credentials in home directory,
+      and ssh-agent's socket. But also this means that utility to upload
+      images must be installed in host system.
+
+   Variables:
+
+   container_name
+       The name of the container as declared in `vagga.yaml`
+
+   short_hash
+       The short hash of container setup. This is the same hash that is used
+       to detect whether container configuration changed and is needed to
+       be rebuilt. And the same hash used in directory name `.vagga/.roots`.
+
 
 All project-local settings are also allowed here.
 

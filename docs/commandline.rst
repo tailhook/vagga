@@ -82,6 +82,23 @@ vagga _init_storage_dir
   This is created for buildbots which tend to clean ``.vagga`` directory on
   every build (like gitlab-ci) or just very often.
 
+vagga _pack_image IMAGE_NAME
+  Pack image into the tar archive, optionally compressing and output it into
+  stdout (use shell redirection ``> file.tar`` to store it into the file).
+
+  It's very similar to ``tar -cC .vagga/IMAGE_NAME/root`` except it deals with
+  file owners and permissions correctly. And similar to running
+  ``vagga _run IMAGE_NAME tar -c /`` except it ignores mounted file systems.
+
+.. _vagga_push_image:
+
+vagga _push_image IMAGE_NAME
+  Push container image ``IMAGE_NAME`` into the image cache.
+
+  Actually it boils down to packing an image into tar (``vagga _pack_image``)
+  and running :opt:`push-image-script`, see the documentation of the setting
+  to find out how to configure image cache.
+
 
 Normal Commands
 ===============
