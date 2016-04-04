@@ -28,7 +28,7 @@ impl TimeLog {
             start: tm,
             prev: tm,
         };
-        try!(res.mark(format_args!("Start {:7.3}", time_as_f64(tm))));
+        try!(res.mark(format_args!("Start {}", time_as_f64(tm))));
         Ok(res)
     }
     pub fn mark(&mut self, args: Arguments) -> Result<(), Error> {
