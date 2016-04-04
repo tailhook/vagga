@@ -2,10 +2,9 @@ use std::io;
 use std::fs::{read_dir, remove_file, remove_dir};
 use std::fs::{symlink_metadata, read_link, hard_link};
 use std::os::unix::fs::{symlink, MetadataExt};
-use std::ptr::null;
 use std::path::{Path, PathBuf};
 
-use libc::{uid_t, gid_t, c_int, c_void, timeval};
+use libc::{uid_t, gid_t};
 
 use super::root::temporary_change_root;
 use file_util::{create_dir_mode, shallow_copy, set_owner_group};
@@ -32,14 +31,6 @@ quick_error!{
             display("Can't create symlink {:?}: {}", path, err)
         }
     }
-}
-
-
-pub type Time = f64;
-
-extern "C" {
-    // <sys/time.h>
-    fn gettimeofday(time: *mut timeval, tz: *const c_void) -> c_int;
 }
 
 pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
@@ -87,12 +78,6 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
             "Can't remove dir {dir:?}: {err}", dir=dir);
     }
     return Ok(());
-}
-
-pub fn get_time() -> Time {
-    let mut tv = timeval { tv_sec: 0, tv_usec: 0 };
-    unsafe { gettimeofday(&mut tv, null()) };
-    return tv.tv_sec as f64 + 0.000001 * tv.tv_usec as f64;
 }
 
 pub fn copy_dir(old: &Path, new: &Path,
