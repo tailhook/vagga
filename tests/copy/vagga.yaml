@@ -11,6 +11,12 @@ containers:
     - !Copy
       source: /work/file
       path: /var/file
+  nonexistent-copy:
+    setup:
+    - !Alpine v3.2
+    - !Copy
+      source: /work/something
+      path: /var/somewhere
 
 commands:
 

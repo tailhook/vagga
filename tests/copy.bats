@@ -25,3 +25,8 @@ setup() {
     [[ $link = ".roots/file-copy.3cf34a1f/root" ]]
 }
 
+@test "copy: clean _unused (non-existent)" {
+    run vagga _clean --unused
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+}
