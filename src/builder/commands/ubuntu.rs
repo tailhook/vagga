@@ -397,7 +397,7 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
                 url_base=url_base, kind=kind, arch=arch, release=version)
         },
     };
-    let filename = try!(download_file(ctx, &url[0..]));
+    let filename = try!(download_file(ctx, &url[0..], None));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev")]));
 

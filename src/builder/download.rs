@@ -1,5 +1,5 @@
 use std::fs::{remove_file, rename, create_dir_all, set_permissions};
-use std::fs::{Permissions};
+use std::fs::{File, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -9,23 +9,30 @@ use unshare::{Command, Stdio};
 
 use super::capsule;
 use super::context::Context;
+use file_util::check_stream_hashsum;
 
 
-pub fn download_file(ctx: &mut Context, url: &str)
+pub fn download_file(ctx: &mut Context, url: &str, sha256: Option<String>)
     -> Result<PathBuf, String>
 {
     let https = url.starts_with("https:");
     if https {
         try!(capsule::ensure_features(ctx, &[capsule::Https]));
     }
-    let mut hash = Sha256::new();
-    hash.input_str(url);
     let urlpath = Path::new(url);
+    let hash = match sha256 {
+        Some(ref sha256) => sha256[..8].to_string(),
+        None => {
+            let mut hash = Sha256::new();
+            hash.input_str(url);
+            hash.result_str()[..8].to_string()
+        },
+    };
     let name = match urlpath.file_name().and_then(|x| x.to_str()) {
         Some(name) => name,
         None => "file.bin",
     };
-    let name = hash.result_str()[..8].to_string() + "-" + name;
+    let name = hash[..8].to_string() + "-" + name;
     let dir = Path::new("/vagga/cache/downloads");
     if !dir.exists() {
         try!(create_dir_all(&dir)
@@ -52,6 +59,15 @@ pub fn download_file(ctx: &mut Context, url: &str)
     debug!("Running: {:?}", cmd);
     match cmd.status() {
         Ok(st) if st.success() => {
+            if let Some(ref sha256) = sha256 {
+                let mut tmpfile = try_msg!(File::open(&tmpfilename),
+                                        "Cannot open archive: {err}");
+                if let Err(e) = check_stream_hashsum(&mut tmpfile, sha256) {
+                    remove_file(&filename)
+                        .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
+                    return Err(e);
+                }
+            }
             try!(rename(&tmpfilename, &filename)
                 .map_err(|e| format!("Error moving file: {}", e)));
             Ok(filename)
@@ -67,4 +83,25 @@ pub fn download_file(ctx: &mut Context, url: &str)
             Err(format!("Error starting wget: {}", x))
         }
     }
+}
+
+pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
+    url: &str, sha256: Option<String>)
+    -> Result<PathBuf, String>
+{
+    let filename = if url.starts_with(".") {
+        let filename = PathBuf::from("/work").join(url);
+        if let Some(ref sha256) = sha256 {
+            let mut file = try_msg!(File::open(&filename),
+                "Cannot open file: {err}");
+            try!(check_stream_hashsum(&mut file, sha256)
+                .map_err(|e| format!(
+                    "Error when checking hashsum for file {:?}: {}", &filename, e)));
+        }
+        filename
+    } else {
+        try!(download_file(ctx, url, sha256))
+    };
+
+    Ok(filename)
 }

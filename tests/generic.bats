@@ -181,37 +181,49 @@ setup() {
 }
 
 @test "generic: unpack zip archive" {
-    mkdir -p config
-    cp vagga.yaml config/
-    zip -r config.zip config
-    
-    run vagga _build unzip
-    printf "%s\n" "${lines[@]}"
-    link=$(readlink .vagga/unzip)
-    [[ $link = ".roots/unzip.d605766f/root" ]]
-    [[ -f .vagga/unzip/root/configs/1/config/vagga.yaml ]]
-    [[ ! -f .vagga/unzip/root/configs/1/vagga.yaml ]]
-    [[ -f .vagga/unzip/root/configs/2/config/vagga.yaml ]]
-    [[ ! -f .vagga/unzip/root/configs/2/vagga.yaml ]]
-    [[ -f .vagga/unzip/root/configs/3/vagga.yaml ]]
-    [[ ! -d .vagga/unzip/root/configs/3/config ]]
-    [[ -f .vagga/unzip/root/configs/4/vagga.yaml ]]
-    [[ ! -d .vagga/unzip/root/configs/4/config ]]
+    curl -o test-file.zip http://files.zerogw.com/test-files/test-file.zip
+    hash=($(sha256sum test-file.zip))
 
-    run cmp vagga.yaml .vagga/unzip/root/configs/1/config/vagga.yaml
-    [[ $status = 0 ]]
-    run cmp vagga.yaml .vagga/unzip/root/configs/2/config/vagga.yaml
-    [[ $status = 0 ]]
-    run cmp vagga.yaml .vagga/unzip/root/configs/3/vagga.yaml
-    [[ $status = 0 ]]
-    run cmp vagga.yaml .vagga/unzip/root/configs/4/vagga.yaml
-    [[ $status = 0 ]]
+    cached_file="../../tmp/cache/downloads/${hash:0:8}-test-file.zip"
+    rm -f $cached_file
+    
+    run vagga _build unzip-local
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/unzip-local)
+    [[ $link = ".roots/unzip-local.24255fd9/root" ]]
+    [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) = "2" ]]
+    [[ $(cat .vagga/unzip-local/root/test/2/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/2/dir/file2.txt) = "2" ]]
+    [[ $(cat .vagga/unzip-local/root/test/3/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/3/dir/file2.txt) = "2" ]]
+    [[ $(cat .vagga/unzip-local/root/test/4/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/4/file2.txt) = "2" ]]
+    [[ ! -d .vagga/unzip-local/root/configs/4/dir ]]
+    [[ $(cat .vagga/unzip-local/root/test/5/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/5/file2.txt) = "2" ]]
+    [[ ! -d .vagga/unzip-local/root/configs/5/dir ]]
+    [[ ! -f $cached_file ]]
+
+    run vagga _build unzip-downloaded
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/unzip-downloaded)
+    [[ $link = ".roots/unzip-downloaded.267da19f/root" ]]
+    [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
+    [[ -f $cached_file ]]
 
     run vagga _build unzip-no-subdir
     printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
-    [[ $output = *'./config" is not found in archive'* ]]
+    [[ $output = *'./dir" is not found in archive'* ]]
+    [[ -f test-file.zip ]]
 
-    rm -rf config/
-    rm config.zip
+    run vagga _build unzip-mismatch-hashsum
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *"Hashsum mismatch: expected 12345678 but was ${hash}"* ]]
+    [[ -f test-file.zip ]]
+
+    rm test-file.zip
 }

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
 use builder::context::Context;
-use builder::download::download_file;
+use builder::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use file_util::{copy_stream, create_dir};
 use path_util::ToRelative;
@@ -20,15 +20,16 @@ pub struct Zip {
 }
 
 
-pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path, subdir: &Path)
+pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
+    subdir: &Path)
     -> Result<(), String>
 {
     let file = try_msg!(File::open(src),
         "Cannot open archive: {err}");
+
     let mut zip = try_msg!(ZipArchive::new(file),
         "Error when unpacking zip archive: {err}");
 
-    // TODO check sha256 sum
     let no_subdir = &subdir == &Path::new("") || &subdir == &Path::new(".");
     let mut found_subdir = no_subdir;
     for i in 0..zip.len() {
@@ -84,14 +85,10 @@ impl BuildStep for Zip {
             info!("Unzipping file: {}", self.url);
 
             let fpath = PathBuf::from("/vagga/root").join(self.path.rel());
-            let filename = if self.url.starts_with(".") {
-                PathBuf::from("/work").join(&self.url)
-            } else {
-                try!(download_file(&mut guard.ctx, &self.url))
-            };
+            let filename = try!(maybe_download_and_check_hashsum(
+                &mut guard.ctx, &self.url, self.sha256.clone()));
 
-            try!(unzip_file(
-                &mut guard.ctx, &filename, &fpath, &self.subdir));
+            try!(unzip_file(&mut guard.ctx, &filename, &fpath, &self.subdir));
         }
         Ok(())
     }

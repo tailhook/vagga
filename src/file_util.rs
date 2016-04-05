@@ -11,6 +11,8 @@ use nix;
 use libc::{uid_t, gid_t, c_int};
 use nix::fcntl::{flock, FlockArg};
 
+use digest::Digest;
+
 
 extern "C" {
     fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;
@@ -163,6 +165,20 @@ impl Drop for Lock {
     }
 }
 
+pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String) -> Result<(), String>
+{
+    use shaman::digest::Digest as ShamanDigest;
+
+    let mut hash = Digest::new();
+    try_msg!(hash.stream(&mut reader),
+        "Error when calculating hashsum: {err}");
+    let hash_str = hash.unwrap().result_str();
+    if !hash_str.starts_with(sha256) {
+        return Err(format!("Hashsum mismatch: expected {} but was {}",
+            sha256, hash_str));
+    }
+    Ok(())
+}
 
 pub fn force_symlink(target: &Path, linkpath: &Path)
     -> Result<(), io::Error>
