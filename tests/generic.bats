@@ -188,7 +188,6 @@ setup() {
 }
 
 @test "generic: unpack local tar" {
-    skip "This test fails on buildbot"
     run vagga vagga --version
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
