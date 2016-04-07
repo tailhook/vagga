@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use unshare;
 use regex;
 use scan_dir;
+use libmount;
 
 use config::builders::Builder;
 use builder::packages::Package;
@@ -69,6 +70,10 @@ quick_error! {
         Compat(message: String) {
             from()
             display("{}", message)
+        }
+        MountError(err: libmount::Error) {
+            from()
+            display("{}", err)
         }
     }
 }

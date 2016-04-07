@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
 
-use container::mount::{bind_mount};
+use libmount::BindMount;
+
 use container::util::clean_dir;
 use config::Config;
 use config::Container;
@@ -123,7 +124,8 @@ impl<'a> Context<'a> {
             try_msg!(create_dir(&path, true),
                  "Error creating cache dir: {err}");
             try!(clean_dir(&path, false));
-            try!(bind_mount(&cache_dir, &path));
+            try_msg!(BindMount::new(&cache_dir, &path).mount(),
+                "mount cache dir: {err}");
             self.mounted.push(path);
         }
         return Ok(());

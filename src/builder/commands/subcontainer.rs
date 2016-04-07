@@ -1,12 +1,14 @@
 use std::path::Path;
 
+use libmount::BindMount;
+
 use config::read_config;
 use config::{Container, Config};
 use config::builders::{BuildInfo, SubConfigInfo};
 use builder::guard::Guard;
 use builder::error::StepError;
 use version::short_version;
-use container::mount::{bind_mount, remount_ro};
+use container::mount::{remount_ro};
 use container::util::{copy_dir};
 use file_util::{create_dir};
 use path_util::ToRelative;
@@ -38,7 +40,7 @@ pub fn build(binfo: &BuildInfo, guard: &mut Guard, build: bool)
                 .join(dest_rel.rel());
             try_msg!(create_dir(&dest, false),
                 "Error creating destination dir: {err}");
-            try!(bind_mount(&path, &dest));
+            try!(BindMount::new(&path, &dest).mount());
             try!(remount_ro(&dest));
             guard.ctx.mounted.push(dest);
         }

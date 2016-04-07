@@ -10,6 +10,7 @@ extern crate argparse;
 extern crate quire;
 extern crate time;
 extern crate unshare;
+extern crate libmount;
 extern crate signal;
 extern crate regex;
 extern crate scan_dir;

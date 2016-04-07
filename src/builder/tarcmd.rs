@@ -3,8 +3,9 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use unshare::{Command, Stdio};
+use libmount::BindMount;
 
-use container::mount::{bind_mount, unmount};
+use container::mount::{unmount};
 use config::builders::TarInfo;
 use config::builders::TarInstallInfo;
 use super::context::Context;
@@ -65,7 +66,8 @@ pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
         if !fpath.exists() {
             try_msg!(create_dir(&fpath, true), "Error making dir: {err}");
         }
-        try!(bind_mount(&fpath, &tmpsub));
+        try_msg!(BindMount::new(&fpath, &tmpsub).mount(),
+            "temporary tar mount: {err}");
         let res = if tar.subdir.as_path() == Path::new("") {
             unpack_file(ctx, &filename, &tmppath, &[], &[])
         } else {

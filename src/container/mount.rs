@@ -9,6 +9,7 @@ use std::ptr::null;
 use std::str::FromStr;
 
 use libc::{c_ulong, c_int};
+use libmount::BindMount;
 
 use super::super::path_util::{ToCString, ToRelative};
 use super::tools::NextValue;
@@ -187,22 +188,6 @@ pub fn mount_private(target: &Path) -> Result<(), String> {
     }
 }
 
-pub fn bind_mount(source: &Path, target: &Path) -> Result<(), String> {
-    let c_source = source.to_cstring();
-    let c_target = target.to_cstring();
-    debug!("Bind mount {:?} -> {:?}", source, target);
-    let rc = unsafe {
-        mount(c_source.as_bytes().as_ptr(), c_target.as_bytes().as_ptr(),
-        null(), MS_BIND|MS_REC, null()) };
-    if rc == 0 {
-        return Ok(());
-    } else {
-        let err = IoError::last_os_error();
-        return Err(format!("Can't mount bind {:?} to {:?}: {}",
-            source, target, err));
-    }
-}
-
 pub fn mount_proc(target: &Path) -> Result<(), String>
 {
     let c_target = target.to_cstring();
@@ -283,14 +268,17 @@ pub fn unmount(target: &Path) -> Result<(), String> {
 
 pub fn mount_system_dirs() -> Result<(), String> {
     try!(mount_dev(&Path::new("/vagga/root/dev")));
-    try!(bind_mount(&Path::new("/sys"), &Path::new("/vagga/root/sys")));
+    try!(BindMount::new("/sys", "/vagga/root/sys").mount()
+        .map_err(|e| e.to_string()));
     try!(mount_proc(&Path::new("/vagga/root/proc")));
-    try!(bind_mount(&Path::new("/work"), &Path::new("/vagga/root/work")));
+    try!(BindMount::new("/work", "/vagga/root/work").mount()
+        .map_err(|e| e.to_string()));
     return Ok(());
 }
 
 pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
-    try!(bind_mount(&Path::new("/dev"), &dev_dir));
+    try!(BindMount::new("/dev", &dev_dir).mount()
+        .map_err(|e| e.to_string()));
 
     let pts_dir = dev_dir.join("pts");
     try!(mount_pseudo(&pts_dir, "devpts", "newinstance"));
@@ -308,7 +296,8 @@ pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
         }
         Err(ref e) if e.kind() == ErrorKind::InvalidInput => {
             // It's just a device. Let's try bind mount
-            try!(bind_mount(&pts_dir.join("ptmx"), &ptmx_path));
+            try!(BindMount::new(pts_dir.join("ptmx"), &ptmx_path).mount()
+                .map_err(|e| e.to_string()));
         }
         Err(e) => {
             warn!("Can't stat /dev/ptmx: {}. \

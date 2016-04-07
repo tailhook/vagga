@@ -14,9 +14,10 @@ use std::os::unix::io::FromRawFd;
 use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
 use unshare::{Command, Namespace, ExitStatus};
+use libmount::BindMount;
 
 use container::util::clean_dir;
-use container::mount::{bind_mount, unmount};
+use container::mount::{unmount};
 use container::uidmap::{map_users};
 use config::{Container};
 use config::builders::Builder as B;
@@ -41,12 +42,14 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     let tgtbase = Path::new("/vagga/container");
     try_msg!(create_dir(&tgtbase, false),
          "Error creating directory: {err}");
-    try!(bind_mount(path, &tgtbase));
+    try_msg!(BindMount::new(path, &tgtbase).mount(),
+        "mount container: {err}");
 
     let tgtroot = Path::new("/vagga/root");
     try_msg!(create_dir(&tgtroot, false),
          "Error creating directory: {err}");
-    try!(bind_mount(&rootdir, &tgtroot));
+    try_msg!(BindMount::new(&rootdir, &tgtroot).mount(),
+        "mount container root: {err}");
 
     try_msg!(create_dir(&tgtroot.join("dev"), false),
          "Error creating directory: {err}");

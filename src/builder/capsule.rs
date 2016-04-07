@@ -11,9 +11,9 @@ use std::io::{Write};
 use std::path::Path;
 
 use unshare::Command;
+use libmount::BindMount;
 
 use config::settings::Settings;
-use container::mount::bind_mount;
 use process_util::squash_stdio;
 use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
@@ -77,7 +77,8 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
         let path = Path::new("/etc/apk/cache");
         try_msg!(create_dir(&path, true),
              "Error creating cache dir: {err}");
-        try!(bind_mount(&cache_dir, &path));
+        try!(BindMount::new(&cache_dir, &path).mount()
+             .map_err(|e| e.to_string()));
 
         try!(apk_run(&[
             "--allow-untrusted",

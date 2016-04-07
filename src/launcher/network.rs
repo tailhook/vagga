@@ -14,10 +14,10 @@ use libc::{geteuid};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
+use libmount::BindMount;
 
 use container::uidmap::get_max_uidmap;
 use super::super::config::Config;
-use super::super::container::mount::{bind_mount};
 use super::super::container::nsutil::{set_namespace};
 use shaman::sha2::Sha256;
 use shaman::digest::Digest;
@@ -592,8 +592,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", child.pid())[..]]);
-    let res = bind_mount(
-        &Path::new(&format!("/proc/{}/ns/net", child.pid())), link_to)
+    let res = BindMount::new(format!("/proc/{}/ns/net", child.pid()), link_to)
+        .mount().map_err(|e| e.to_string())
         .and(_run_command(cmd));
     match child.wait() {
         Ok(status) if status.success() => {}
@@ -670,8 +670,9 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", pid)[..]]);
-    let res = bind_mount(&Path::new(&format!("/proc/{}/ns/net", pid)), link_net)
-        .and(bind_mount(&Path::new(&format!("/proc/{}/ns/uts", pid)), link_uts))
+    let res = BindMount::new(format!("/proc/{}/ns/net", pid), link_net).mount()
+        .and(BindMount::new(format!("/proc/{}/ns/uts", pid), link_uts).mount())
+        .map_err(|e| e.to_string())
         .and(_run_command(cmd));
 
     match child.wait() {
