@@ -23,3 +23,4 @@ To find out commands you may run bare ``vagga``::
    environment
    settings
    errors
+   overlayfs
