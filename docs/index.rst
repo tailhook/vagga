@@ -42,6 +42,7 @@ Links
   discuss how to run network tolerance tests
 
 * `Container-only Linux Distribution <https://medium.com/p/container-only-linux-distribution-ff0497933c33>`_
+* `Containerized PHP Development Environments with Vagga <http://www.sitepoint.com/containerized-php-development-environments-with-vagga/>`_
 
 Documentation Contents
 ======================
