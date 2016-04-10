@@ -10,7 +10,7 @@ use rustc_serialize::json::{self, Json};
 use regex::Regex;
 use scan_dir::ScanDir;
 
-use config::{Config, Container};
+use config::{Config, Container, Step};
 use config::read_config;
 use config::builders::{Builder, BuildInfo};
 use config::builders::Builder as B;
@@ -38,6 +38,12 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
             hash.input(b"\0");
         }
         hash.input(b"<--\0");
+    }
+}
+
+impl VersionHash for Step {
+    fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
+        self.0.hash(cfg, hash)
     }
 }
 
@@ -220,7 +226,7 @@ impl VersionHash for Builder {
     }
 }
 
-fn all(setup: &[Builder], cfg: &Config)
+fn all(setup: &[Step], cfg: &Config)
     -> Result<Sha256, (String, Error)>
 {
     debug!("Versioning items: {}", setup.len());

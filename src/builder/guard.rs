@@ -31,7 +31,7 @@ impl<'a> Guard<'a> {
         for b in self.ctx.container_config.setup.iter() {
             debug!("Building step: {:?}", b);
             try!(b.build(self, true)
-                .map_err(|e| Error::Step(b.clone(), e)));
+                .map_err(|e| Error::Step(b.0.clone(), e)));
         }
 
         try!(self.finish());

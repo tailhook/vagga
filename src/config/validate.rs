@@ -1,10 +1,11 @@
 use super::Config;
 use super::containers::Container;
 use config::builders::Source as S;
+use config::Step;
 
 fn find_name(name: &str, cont: &Container, cfg: &Config) -> Result<(), String>
 {
-    for step in &cont.setup {
+    for &Step(ref step) in &cont.setup {
         use config::builders::Builder::*;
         match step {
             &Container(ref subname) => {

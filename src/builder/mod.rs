@@ -4,7 +4,7 @@ use std::process::exit;
 use rand;
 
 use config::read_config;
-use config::{Config, Container, Settings};
+use config::{Config, Container, Settings, Step};
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use config::builders::TarInfo;
@@ -123,7 +123,7 @@ pub fn run() -> i32 {
 
 fn _build_from_image(container_name: &String, container: &Container,
     config: &Config, settings: &Settings, image_cache_url: &String)
-    -> Result<(), String> 
+    -> Result<(), String>
 {
     // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
     let settings = settings.clone();
@@ -162,7 +162,7 @@ fn _fetch_sources(container: &Container, settings: &Settings)
 {
     let mut caps = Default::default();
 
-    for b in container.setup.iter() {
+    for &Step(ref b) in container.setup.iter() {
         match b {
             &B::SubConfig(ref config) => {
                 if let S::Git(ref git) = config.source {

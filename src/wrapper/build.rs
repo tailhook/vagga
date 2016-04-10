@@ -19,7 +19,7 @@ use libmount::BindMount;
 use container::util::clean_dir;
 use container::mount::{unmount};
 use container::uidmap::{map_users};
-use config::{Container};
+use config::{Container, Step};
 use config::builders::Builder as B;
 use config::builders::Source as S;
 use file_util::{create_dir, Lock};
@@ -327,7 +327,7 @@ pub fn build_wrapper(name: &String, force: bool, no_image: bool, wrapper: &Wrapp
 {
     let container = try!(wrapper.config.containers.get(name)
         .ok_or(format!("Container {:?} not found", name)));
-    for step in container.setup.iter() {
+    for &Step(ref step) in container.setup.iter() {
         match step {
             &B::Container(ref name) => {
                 try!(build_wrapper(name, force, no_image, wrapper)

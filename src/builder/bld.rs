@@ -1,3 +1,4 @@
+use config::Step;
 use config::builders::Builder;
 use config::builders::Builder as B;
 use container::util::{clean_dir};
@@ -23,6 +24,14 @@ use builder::error::StepError;
 
 pub trait BuildCommand {
     fn build(&self, ctx: &mut Guard, build: bool) -> Result<(), StepError>;
+}
+
+impl BuildCommand for Step {
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        self.0.build(guard, build)
+    }
 }
 
 impl BuildCommand for Builder {
