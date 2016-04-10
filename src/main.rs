@@ -27,6 +27,7 @@ mod path_util;
 mod process_util;
 mod tty_util;
 mod options;
+mod build_step;
 
 // Commands
 mod launcher;

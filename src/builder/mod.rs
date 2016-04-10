@@ -4,15 +4,13 @@ use std::process::exit;
 use rand;
 
 use config::read_config;
-use config::{Config, Container, Settings, Step};
-use config::builders::Builder as B;
-use config::builders::Source as S;
+use config::{Config, Container, Settings};
 use config::builders::TarInfo;
 use argparse::{ArgumentParser, Store, StoreTrue};
 use self::context::{Context};
-use self::bld::{BuildCommand};
 use self::tarcmd::tar_command;
 use self::guard::Guard;
+pub use self::bld::BuildCommand;
 
 pub mod context;
 mod bld;
@@ -157,24 +155,10 @@ fn _build(container_name: &String, container: &Container,
     .map_err(|e| e.to_string())
 }
 
-fn _fetch_sources(container: &Container, settings: &Settings)
+fn _fetch_sources(_container: &Container, _settings: &Settings)
     -> Result<(), String>
 {
-    let mut caps = Default::default();
-
-    for &Step(ref b) in container.setup.iter() {
-        match b {
-            &B::SubConfig(ref config) => {
-                if let S::Git(ref git) = config.source {
-                    try!(commands::vcs::fetch_git_source(
-                        &mut caps, settings, git));
-                }
-            }
-            _ => {}
-        }
-    }
-
-    Ok(())
+    unimplemented!();
 }
 
 pub fn main() {

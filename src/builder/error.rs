@@ -1,4 +1,5 @@
 use std::io;
+use std::rc::Rc;
 use std::path::PathBuf;
 
 use unshare;
@@ -6,7 +7,7 @@ use regex;
 use scan_dir;
 use libmount;
 
-use config::builders::Builder;
+use build_step::BuildStep;
 use builder::packages::Package;
 
 
@@ -25,7 +26,7 @@ quick_error! {
             display("this step requires some linux distribution to be active")
         }
         // Should substep include container name? or is it obvours?
-        SubStep(step: Box<Builder>, err: Box<StepError>) {
+        SubStep(step: Rc<BuildStep>, err: Box<StepError>) {
             display("sub-step {:?} failed: {}", step, err)
         }
         /// Trying to run command failed because command is not found
@@ -81,7 +82,7 @@ quick_error! {
 quick_error! {
     #[derive(Debug)]
     pub enum Error {
-        Step(step: Builder, err: StepError) {
+        Step(step: Rc<BuildStep>, err: StepError) {
             display("step {:?} failed: {}", step, err)
         }
         /// Compatibility error wrapper, should be removed in future

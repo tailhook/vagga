@@ -68,7 +68,7 @@ pub fn clone(name: &String, guard: &mut Guard, build: bool)
         .expect("Subcontainer not found");  // TODO
     for b in cont.setup.iter() {
         try!(b.build(guard, false)
-            .map_err(|e| E::SubStep(Box::new(b.0.clone()), Box::new(e))));
+            .map_err(|e| E::SubStep(b.0.clone(), Box::new(e))));
     }
     if build {
         try!(real_build(name, cont, guard));
@@ -107,7 +107,7 @@ pub fn subconfig(cfg: &SubConfigInfo, guard: &mut Guard, build: bool)
         .expect("Subcontainer not found");  // TODO
     for b in cont.setup.iter() {
         try!(b.build(guard, build)
-            .map_err(|e| E::SubStep(Box::new(b.0.clone()), Box::new(e))));
+            .map_err(|e| E::SubStep(b.0.clone(), Box::new(e))));
     }
     Ok(())
 }

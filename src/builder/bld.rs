@@ -1,6 +1,7 @@
 use config::Step;
 use config::builders::Builder;
 use config::builders::Builder as B;
+use config::builders::Source as S;
 use container::util::{clean_dir};
 use super::commands::ubuntu;
 use super::commands::alpine;
@@ -20,6 +21,8 @@ use super::tarcmd;
 use builder::distrib::{DistroBox};
 use builder::guard::Guard;
 use builder::error::StepError;
+
+use build_step::BuildStep;
 
 
 pub trait BuildCommand {
@@ -259,5 +262,32 @@ impl BuildCommand for Builder {
                 .map_err(|e| format!("Can't write timelog: {}", e)));
         }
         Ok(())
+    }
+}
+
+impl BuildStep for Step {
+    fn is_dependent_on(&self) -> Option<&str> {
+        self.0.is_dependent_on()
+    }
+}
+
+impl BuildStep for Builder {
+    fn is_dependent_on(&self) -> Option<&str> {
+        match self {
+            &B::Container(ref name) => {
+                Some(name)
+            }
+            &B::Build(ref binfo) => {
+                Some(&binfo.container)
+            }
+            &B::SubConfig(ref cfg) => {
+                match cfg.source {
+                    S::Directory => None,
+                    S::Container(ref name) => Some(name),
+                    S::Git(ref _git) => None,
+                }
+            }
+            _ => None,
+        }
     }
 }

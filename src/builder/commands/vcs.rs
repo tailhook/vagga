@@ -115,6 +115,7 @@ pub fn git_install(ctx: &mut Context, git: &GitInstallInfo)
         &workdir);
 }
 
+#[allow(unused)]
 pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
     git: &GitSource)
     -> Result<(), String>

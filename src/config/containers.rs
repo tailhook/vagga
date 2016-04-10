@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::default::Default;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -8,9 +9,10 @@ use rustc_serialize::{Decodable, Decoder};
 
 use super::builders::{Builder, builder_validator};
 use super::Range;
+use build_step::BuildStep;
 
 #[derive(Clone, Debug)]
-pub struct Step(pub Builder);
+pub struct Step(pub Rc<BuildStep>);
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SnapshotInfo {
@@ -110,6 +112,6 @@ pub fn container_validator<'a>() -> V::Structure<'a> {
 
 impl Decodable for Step {
     fn decode<D: Decoder>(d: &mut D) -> Result<Step, D::Error> {
-        Ok(Step(try!(Decodable::decode(d))))
+        Ok(Step(Rc::new(try!(Builder::decode(d)))))
     }
 }
