@@ -92,6 +92,7 @@ pub fn run() -> i32 {
 
     let result = match &cmd[..] {
         "_build_shell" => Ok(debug::run_interactive_build_shell(&wrapper)),
+        "_check_overlayfs_support" => Ok(debug::check_overlayfs(&wrapper)),
         "_build" => build::build_container_cmd(&wrapper, args),
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
         "_run" => run::run_command_cmd(&wrapper, args, true),

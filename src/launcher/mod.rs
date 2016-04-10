@@ -194,14 +194,15 @@ pub fn run() -> i32 {
         "_list" => {
             list::print_list(&config, args)
         }
-        "_build_shell" | "_clean" | "_version_hash" => {
+        "_build_shell" | "_clean" | "_version_hash" |
+        "_check_overlayfs_support" => {
             let mut cmd: Command = Wrapper::new(None, &int_settings);
             cmd.workdir(&int_workdir);
             cmd.userns();
             cmd.arg(&cname).args(&args);
             cmd.status()
             .map(convert_status)
-            .map_err(|e| format!("Error running `vagga_wrapperr {}`: {}",
+            .map_err(|e| format!("Error running `vagga_wrapper {}`: {}",
                                  cname, e))
         }
         "_build" => {
