@@ -14,10 +14,11 @@ The Plan
 1. Make of use of overlayfs in :volume:`Snapshot` volume. This will be enabled
    by a volume-level setting initially. In perspective the setting will be
    default on systems that support it.
-2. Use overlayfs for :step:`Container` step. This will be enabled by a
+2. Use overlayfs for ``_run --writable`` and transient copies
+3. Use overlayfs for :step:`Container` step. This will be enabled by a
    container-level setting. Which, presumably, will always be disabled by
    default.
-3. Add ``vagga _build container --cache-each-step`` to ease debugging of
+4. Add ``vagga _build container --cache-each-step`` to ease debugging of
    container builds (actually to be able to continue failing build from any
    failed step)
 
