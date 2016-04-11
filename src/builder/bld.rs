@@ -105,14 +105,6 @@ impl BuildCommand for Builder {
                 }
             }
             &B::UbuntuUniverse => {
-                let ref mut ctx = guard.ctx;
-                try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
-                    try!(u.enable_universe());
-                    if build {
-                        try!(u.add_universe(ctx));
-                    }
-                    Ok(())
-                }));
             }
             &B::Sh(ref text) => {
                 if build {

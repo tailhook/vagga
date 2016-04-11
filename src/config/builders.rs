@@ -409,6 +409,8 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
 {
     match options[index] {
         "Alpine" => step(cmd::alpine::Alpine::decode(d)),
+        "Ubuntu" => step(cmd::ubuntu::Ubuntu::decode(d)),
+        "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
         "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
         "Py2Install" => step(cmd::pip::Py2Install::decode(d)),

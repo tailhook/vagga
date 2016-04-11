@@ -13,12 +13,21 @@ use super::super::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};
 use shaman::sha2::Sha256;
-use shaman::digest::Digest;
+use shaman::digest::Digest as ShamanDigest;
 use builder::distrib::{Distribution, Named, DistroBox};
-use builder::guard::Guard;
-use builder::error::StepError;
 use unshare::Stdio;
 use file_util::copy;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+// Build Steps
+#[derive(Debug)]
+pub struct Ubuntu(String);
+tuple_struct_decode!(Ubuntu);
+
+#[derive(Debug, RustcDecodable)]
+pub struct UbuntuUniverse;
+
 
 #[derive(Debug)]
 pub enum Version {
@@ -27,7 +36,7 @@ pub enum Version {
 }
 
 #[derive(Debug)]
-pub struct Ubuntu {
+pub struct Distro {
     version: Version,
     codename: Option<String>,
     arch: String,
@@ -36,11 +45,11 @@ pub struct Ubuntu {
     clobber_chfn: bool,
 }
 
-impl Named for Ubuntu {
+impl Named for Distro {
     fn static_name() -> &'static str { "ubuntu" }
 }
 
-impl Distribution for Ubuntu {
+impl Distribution for Distro {
     fn name(&self) -> &'static str { "Ubuntu" }
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         try!(fetch_ubuntu_core(ctx, &self.version, self.arch.clone()));
@@ -148,7 +157,7 @@ impl Distribution for Ubuntu {
     }
 }
 
-impl Ubuntu {
+impl Distro {
     pub fn enable_universe(&mut self) -> Result<(), StepError> {
         self.has_universe = true;
         self.apt_update = true;
@@ -455,7 +464,7 @@ pub fn clobber_chfn() -> Result<(), String> {
 pub fn configure(guard: &mut Guard, info: &UbuntuRelease)
     -> Result<(), StepError>
 {
-    try!(guard.distro.set(Ubuntu {
+    try!(guard.distro.set(Distro {
         version: Version::Release { version: info.version.clone() },
         arch: info.arch.clone(),
         codename: None, // unknown yet
@@ -486,7 +495,7 @@ fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
 pub fn configure_simple(guard: &mut Guard, codename: &str)
     -> Result<(), StepError>
 {
-    try!(guard.distro.set(Ubuntu {
+    try!(guard.distro.set(Distro {
         version: Version::Daily { codename: codename.to_string() },
         arch: "amd64".to_string(),
         codename: Some(codename.to_string()),
@@ -495,4 +504,49 @@ pub fn configure_simple(guard: &mut Guard, codename: &str)
         has_universe: false,
     }));
     configure_common(&mut guard.ctx)
+}
+
+impl BuildStep for Ubuntu {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("Ubuntu", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure_simple(guard, &self.0));
+        if build {
+            try!(guard.distro.bootstrap(&mut guard.ctx));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for UbuntuUniverse {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.item("UbuntuUniverse");
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        let ref mut ctx = guard.ctx;
+        guard.distro.specific(|u: &mut Distro| {
+            try!(u.enable_universe());
+            if build {
+                try!(u.add_universe(ctx));
+            }
+            Ok(())
+        })
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }
