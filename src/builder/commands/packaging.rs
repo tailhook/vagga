@@ -6,6 +6,10 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 pub struct Install(Vec<String>);
 tuple_struct_decode!(Install);
 
+#[derive(Debug)]
+pub struct BuildDeps(Vec<String>);
+tuple_struct_decode!(BuildDeps);
+
 impl BuildStep for Install {
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
@@ -30,16 +34,27 @@ impl BuildStep for Install {
     }
 }
 
-pub fn build_deps(pkgs: &Vec<String>, guard: &mut Guard, build: bool)
-    -> Result<(), StepError>
-{
-    for i in pkgs.iter() {
-        if !guard.ctx.packages.contains(i) {
-            guard.ctx.build_deps.insert(i.clone());
+impl BuildStep for BuildDeps {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("BuildDeps", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        for i in self.0.iter() {
+            if !guard.ctx.packages.contains(i) {
+                guard.ctx.build_deps.insert(i.clone());
+            }
         }
+        if build {
+            try!(guard.distro.install(&mut guard.ctx, &self.0));
+        }
+        Ok(())
     }
-    if build {
-        try!(guard.distro.install(&mut guard.ctx, pkgs));
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
     }
-    Ok(())
 }

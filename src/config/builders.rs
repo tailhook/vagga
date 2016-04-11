@@ -412,6 +412,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Ubuntu" => step(cmd::ubuntu::Ubuntu::decode(d)),
         "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
+        "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
         "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
         "Py2Install" => step(cmd::pip::Py2Install::decode(d)),
         "Py2Requirements" => step(cmd::pip::Py2Requirements::decode(d)),
