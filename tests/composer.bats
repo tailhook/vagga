@@ -110,6 +110,15 @@ teardown() {
     [[ $link = ".roots/php-composer-deps-lock.87bb24b6/root" ]]
 }
 
+@test "composer: keep composer after build" {
+    run vagga _build php-keep-composer
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ -f .vagga/php-keep-composer/usr/local/bin/composer ]]
+    link=$(readlink .vagga/php-keep-composer)
+    [[ $link = ".roots/php-keep-composer.6a878696/root" ]]
+}
+
 # hhvm
 
 @test "composer: hhvm ubuntu trusty" {

@@ -34,6 +34,7 @@ impl Default for ComposerSettings {
             install_dev: false,
             runtime_exe: None,
             include_path: None,
+            keep_composer: false,
         }
     }
 }
@@ -249,8 +250,10 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
 
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
     try!(list_packages(ctx));
-    try!(fs::remove_file(Path::new("/vagga/root/usr/local/bin/composer"))
-        .map_err(|e| format!("Error removing '/usr/local/bin/composer': {}", e)));
+    if !ctx.composer_settings.keep_composer {
+        try!(fs::remove_file(Path::new("/vagga/root/usr/local/bin/composer"))
+            .map_err(|e| format!("Error removing '/usr/local/bin/composer': {}", e)));
+    }
 
     Ok(())
 }

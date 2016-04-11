@@ -55,6 +55,13 @@ containers:
     - !ComposerDependencies
       prefer: wrong
 
+  php-keep-composer:
+    setup:
+    - !Alpine v3.3
+    - !ComposerConfig
+      keep_composer: true
+    - !ComposerInstall
+
   # hhvm
   hhvm-base:
     setup:
