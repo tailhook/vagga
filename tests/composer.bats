@@ -121,7 +121,8 @@ teardown() {
 
 # hhvm
 
-@test "composer: hhvm ubuntu trusty" {
+@test "composer: hhvm ubuntu trusty (skipped)" {
+    skip
     run vagga _run hhvm-ubuntu-trusty laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
