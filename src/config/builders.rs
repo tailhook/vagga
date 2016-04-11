@@ -125,30 +125,6 @@ pub struct UbuntuRepo {
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct PipConfig {
-    pub find_links: Vec<String>,
-    pub index_urls: Vec<String>,
-    pub trusted_hosts: Vec<String>,
-    pub dependencies: bool,
-    pub cache_wheels: bool,
-    pub install_python: bool,
-    pub python_exe: Option<String>,
-}
-
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct Py2Install(Vec<String>);
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct Py2Requirements(PathBuf);
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct Py3Install(Vec<String>);
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct Py3Requirements(PathBuf);
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct NpmConfig {
     pub install_node: bool,
     pub npm_exe: String,
@@ -423,9 +399,25 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
 }
 
 fn step<T: BuildStep + 'static, E>(val: Result<T, E>)
-    -> Result<Rc<BuildStep>, E>
+    -> Result<Step, E>
 {
-    val.map(|x| Rc::new(x) as Rc<BuildStep>)
+    val.map(|x| Step(Rc::new(x) as Rc<BuildStep>))
+}
+
+fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
+    -> Result<Step, D::Error>
+{
+    match options[index] {
+        "Alpine" => step(cmd::alpine::Alpine::decode(d)),
+        "Install" => step(cmd::packaging::Install::decode(d)),
+        "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
+        "Py2Install" => step(cmd::pip::Py2Install::decode(d)),
+        "Py2Requirements" => step(cmd::pip::Py2Requirements::decode(d)),
+        "Py3Install" => step(cmd::pip::Py3Install::decode(d)),
+        "Py3Requirements" => step(cmd::pip::Py3Requirements::decode(d)),
+        step_name => panic!("Step {} is not yet implemented",
+                            step_name),
+    }
 }
 
 impl Decodable for Step {
@@ -435,15 +427,10 @@ impl Decodable for Step {
         let val = builder_validator();
         let options = val.options.iter().map(|&(ref x, _)| &x[..])
             .collect::<Vec<_>>();
-        Ok(Step(try!(d.read_enum("BuildStep", |d| {
+        Ok(try!(d.read_enum("BuildStep", |d| {
             d.read_enum_variant(&options, |d, index| {
-                match options[index] {
-                    "Alpine" => step(cmd::alpine::Alpine::decode(d)),
-                    "Install" => step(cmd::packaging::Install::decode(d)),
-                    step_name => panic!("Step {} is not yet implemented",
-                                        step_name),
-                }
+                decode_step(&options, index, d)
             })
-        }))))
+        })))
     }
 }

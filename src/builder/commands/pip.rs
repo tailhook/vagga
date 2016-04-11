@@ -1,13 +1,42 @@
 use std::fs::File;
 use std::io::{BufReader, BufRead};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command_at_env, capture_command};
 use builder::distrib::Distribution;
-use config::builders::PipConfig;
 use file_util::create_dir;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+#[derive(RustcDecodable, Debug, Clone)]
+pub struct PipConfig {
+    pub find_links: Vec<String>,
+    pub index_urls: Vec<String>,
+    pub trusted_hosts: Vec<String>,
+    pub dependencies: bool,
+    pub cache_wheels: bool,
+    pub install_python: bool,
+    pub python_exe: Option<String>,
+}
+
+
+#[derive(Debug)]
+pub struct Py2Install(Vec<String>);
+tuple_struct_decode!(Py2Install);
+
+#[derive(Debug)]
+pub struct Py2Requirements(PathBuf);
+tuple_struct_decode!(Py2Requirements);
+
+#[derive(Debug)]
+pub struct Py3Install(Vec<String>);
+tuple_struct_decode!(Py3Install);
+
+#[derive(Debug)]
+pub struct Py3Requirements(PathBuf);
+tuple_struct_decode!(Py3Requirements);
 
 
 impl Default for PipConfig {
@@ -179,4 +208,132 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
             }));
     }
     Ok(())
+}
+
+impl BuildStep for PipConfig {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("find_links", &self.find_links);
+        hash.sequence("index_urls", &self.index_urls);
+        hash.sequence("trusted_hosts", &self.trusted_hosts);
+        hash.bool("dependencies", self.dependencies);
+        hash.bool("cache_wheels", self.cache_wheels);
+        hash.bool("install_python", self.install_python);
+        hash.opt_field("python_exe", &self.python_exe);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        guard.ctx.pip_settings = self.clone();
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for Py2Install {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("Py2Install", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.ctx));
+        if build {
+            try!(pip_install(&mut guard.distro, &mut guard.ctx, 2, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for Py3Install {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("Py3Install", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.ctx));
+        if build {
+            try!(pip_install(&mut guard.distro, &mut guard.ctx, 3, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
+    let path = Path::new("/work").join(fname);
+    let err = |e| VersionError::Io(e, path.clone());
+    File::open(&path)
+    .and_then(|f| {
+            let f = BufReader::new(f);
+            for line in f.lines() {
+                let line = try!(line);
+                let chunk = line[..].trim();
+                // Ignore empty lines and comments
+                if chunk.len() == 0 || chunk.starts_with("#") {
+                    continue;
+                }
+                // Should we also ignore the order?
+                hash.item(chunk);
+            }
+            Ok(())
+    }).map_err(err)
+}
+
+impl BuildStep for Py2Requirements {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        version_req(hash, &self.0)
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.ctx));
+        if build {
+            try!(pip_requirements(&mut guard.distro,
+                &mut guard.ctx, 2, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for Py3Requirements {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        version_req(hash, &self.0)
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.ctx));
+        if build {
+            try!(pip_requirements(&mut guard.distro,
+                &mut guard.ctx, 3, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

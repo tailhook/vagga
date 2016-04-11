@@ -47,11 +47,31 @@ impl Digest {
     pub fn unwrap(self) -> sha2::Sha256 {
         return self.0
     }
+    pub fn item<V: AsRef<[u8]>>(&mut self, value: V) {
+        self.0.input(value.as_ref());
+        self.0.input(b"\0");
+    }
     pub fn field<K: AsRef<[u8]>, V: AsRef<[u8]>>(&mut self, key: K, value: V) {
         self.0.input(key.as_ref());
         self.0.input(b"\0");
         self.0.input(value.as_ref());
         self.0.input(b"\0");
+    }
+    pub fn opt_field<K: AsRef<[u8]>, V: AsRef<[u8]>>(&mut self,
+        key: K, value: &Option<V>)
+    {
+        if let Some(ref val) = *value {
+            self.0.input(key.as_ref());
+            self.0.input(b"\0");
+            self.0.input(val.as_ref());
+            self.0.input(b"\0");
+        }
+    }
+    pub fn bool<K: AsRef<[u8]>>(&mut self, key: K, value: bool)
+    {
+        self.0.input(key.as_ref());
+        self.0.input(b"\0");
+        self.0.input(if value { b"0" } else { b"1" });
     }
     pub fn sequence<K, T>(&mut self, key: K, seq: &[T])
         where K: AsRef<[u8]>, T: AsRef<[u8]>

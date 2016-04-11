@@ -11,7 +11,7 @@ use config::Container;
 use config::Settings;
 use config::builders::ComposerConfig;
 use config::builders::GemConfig;
-use config::builders::PipConfig;
+use builder::commands::pip::PipConfig;
 use config::builders::NpmConfig;
 use super::capsule;
 use super::packages;

@@ -180,34 +180,6 @@ impl BuildCommand for Builder {
             &B::PipConfig(ref pip_settings) => {
                 guard.ctx.pip_settings = pip_settings.clone();
             }
-            &B::Py2Install(ref pkgs) => {
-                try!(pip::configure(&mut guard.ctx));
-                if build {
-                    try!(pip::pip_install(&mut guard.distro, &mut guard.ctx,
-                        2, pkgs));
-                }
-            }
-            &B::Py3Install(ref pkgs) => {
-                try!(pip::configure(&mut guard.ctx));
-                if build {
-                    try!(pip::pip_install(&mut guard.distro, &mut guard.ctx,
-                        3, pkgs));
-                }
-            }
-            &B::Py2Requirements(ref fname) => {
-                try!(pip::configure(&mut guard.ctx));
-                if build {
-                    try!(pip::pip_requirements(&mut guard.distro,
-                        &mut guard.ctx, 2, fname));
-                }
-            }
-            &B::Py3Requirements(ref fname) => {
-                try!(pip::configure(&mut guard.ctx));
-                if build {
-                    try!(pip::pip_requirements(&mut guard.distro,
-                        &mut guard.ctx, 3, fname));
-                }
-            }
             &B::PyFreeze(_) => unimplemented!(),
             &B::GemConfig(ref gem_settings) => {
                 guard.ctx.gem_settings = gem_settings.clone();
