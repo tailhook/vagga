@@ -5,7 +5,7 @@ use rustc_serialize::json::Json;
 use shaman::digest::Digest;
 
 use version::error::Error;
-use config::builders::ComposerDepInfo;
+use config::builders::ComposerDependencies;
 
 const LOCKFILE_RELEVANT_KEYS: &'static [&'static str] = &[
     "name",
@@ -17,7 +17,9 @@ const LOCKFILE_RELEVANT_KEYS: &'static [&'static str] = &[
 ];
 
 
-pub fn hash(info: &ComposerDepInfo, hash: &mut Digest) -> Result<(), Error> {
+pub fn hash(info: &ComposerDependencies, hash: &mut Digest)
+    -> Result<(), Error>
+{
     let base_path: PathBuf = {
         let path = Path::new("/work");
         if let Some(ref working_dir) = info.working_dir {

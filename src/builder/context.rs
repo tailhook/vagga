@@ -9,12 +9,10 @@ use container::util::clean_dir;
 use config::Config;
 use config::Container;
 use config::Settings;
-use config::builders::{
-    ComposerSettings,
-    GemSettings,
-    PipSettings,
-    NpmSettings
-};
+use config::builders::ComposerConfig;
+use config::builders::GemConfig;
+use config::builders::PipConfig;
+use config::builders::NpmConfig;
 use super::capsule;
 use super::packages;
 use super::timer;
@@ -42,10 +40,10 @@ pub struct Context<'a> {
     pub binary_ident: String,
 
     pub settings: Settings,
-    pub pip_settings: PipSettings,
-    pub gem_settings: GemSettings,
-    pub npm_settings: NpmSettings,
-    pub composer_settings: ComposerSettings,
+    pub pip_settings: PipConfig,
+    pub gem_settings: GemConfig,
+    pub npm_settings: NpmConfig,
+    pub composer_settings: ComposerConfig,
     pub capsule: capsule::State,
     pub packages: BTreeSet<String>,
     pub build_deps: BTreeSet<String>,

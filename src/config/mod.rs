@@ -1,5 +1,5 @@
 pub use self::settings::Settings;
-pub use self::containers::{Container, Step};
+pub use self::containers::{Container};
 pub use self::range::Range;
 pub use self::config::{Config, read_config, find_config};
 

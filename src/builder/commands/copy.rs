@@ -7,13 +7,13 @@ use scan_dir::{ScanDir};
 
 use file_util::{create_dir_mode, shallow_copy};
 use path_util::ToRelative;
-use config::builders::CopyInfo;
+use config::builders::Copy;
 use builder::guard::Guard;
 use builder::error::StepError;
 use builder::error::StepError as E;
 
 
-pub fn copy(cinfo: &CopyInfo, _guard: &mut Guard)
+pub fn copy(cinfo: &Copy, _guard: &mut Guard)
     -> Result<(), StepError>
 {
     let ref src = cinfo.source;

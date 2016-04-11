@@ -4,26 +4,23 @@ use std::fs::{File, symlink_metadata};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
-use shaman::sha2::Sha256;
-use shaman::digest::Digest;
 use rustc_serialize::json::{self, Json};
 use regex::Regex;
 use scan_dir::ScanDir;
+use shaman::sha2::Sha256;
+use shaman::digest::Digest as ShamanDigest;
 
-use config::{Config, Container, Step};
+use config::{Config, Container};
 use config::read_config;
-use config::builders::{Builder, BuildInfo};
-use config::builders::Builder as B;
+use config::builders::{Build};
 use config::builders::Source as S;
 use path_util::ToRelative;
 use file_util::hash_file;
 use super::error::Error::{self, New, ContainerNotFound};
 use super::managers::{bundler, composer};
+use build_step::{Step, BuildStep, Digest};
 
-pub trait VersionHash {
-    fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error>;
-}
-
+/*
 fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
     let deps = data.find(key);
     if let Some(&Json::Object(ref ob)) = deps {
@@ -40,13 +37,6 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
         hash.input(b"<--\0");
     }
 }
-
-impl VersionHash for Step {
-    fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
-        self.0.hash(cfg, hash)
-    }
-}
-
 impl VersionHash for Builder {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
         match self {
@@ -225,32 +215,33 @@ impl VersionHash for Builder {
         }
     }
 }
+*/
 
 fn all(setup: &[Step], cfg: &Config)
     -> Result<Sha256, (String, Error)>
 {
     debug!("Versioning items: {}", setup.len());
 
-    let mut hash = Sha256::new();
+    let mut hash = Digest::new();
 
     let mut buf = Vec::with_capacity(1000);
     File::open(&Path::new("/proc/self/uid_map"))
                .and_then(|mut f| f.read_to_end(&mut buf))
                .ok().expect("Can't read uid_map");
-    hash.input(&buf);
+    hash.field("uid_map", &buf);
 
     let mut buf = Vec::with_capacity(1000);
     File::open(&Path::new("/proc/self/gid_map"))
                .and_then(|mut f| f.read_to_end(&mut buf))
                .ok().expect("Can't read gid_map");
-    hash.input(&buf);
+    hash.field("gid_map", &buf);
 
     for b in setup.iter() {
         debug!("Versioning setup: {:?}", b);
         try!(b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e)));
     }
 
-    Ok(hash)
+    Ok(hash.unwrap())
 }
 
 pub fn short_version(container: &Container, cfg: &Config)

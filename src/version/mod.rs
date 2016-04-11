@@ -9,7 +9,6 @@ use argparse::{ArgumentParser, Store};
 
 use config::read_config;
 use config::Settings;
-pub use self::version::VersionHash;
 
 
 mod version;

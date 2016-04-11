@@ -5,18 +5,18 @@ use rand;
 
 use config::read_config;
 use config::{Config, Container, Settings};
-use config::builders::TarInfo;
+use config::builders::Tar;
 use argparse::{ArgumentParser, Store, StoreTrue};
 use self::context::{Context};
 use self::tarcmd::tar_command;
-use self::guard::Guard;
-pub use self::bld::BuildCommand;
+use build_step::BuildStep;
+pub use self::guard::Guard;
+pub use self::error::StepError;
 
 pub mod context;
-mod bld;
 mod download;
 mod tarcmd;
-mod commands {
+pub mod commands {
     pub mod ubuntu;
     pub mod generic;
     pub mod alpine;
@@ -128,7 +128,7 @@ fn _build_from_image(container_name: &String, container: &Container,
     let mut ctx = Context::new(config, container_name.clone(),
                                container, settings);
 
-    let tar = TarInfo {
+    let tar = Tar {
         url: image_cache_url.clone(),
         sha256: None,
         path: PathBuf::from("/"),

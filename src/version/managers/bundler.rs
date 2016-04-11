@@ -4,10 +4,10 @@ use std::path::Path;
 
 use shaman::digest::Digest;
 
-use config::builders::GemBundleInfo;
+use config::builders::GemBundle;
 use version::error::Error;
 
-pub fn hash(info: &GemBundleInfo, hash: &mut Digest)
+pub fn hash(info: &GemBundle, hash: &mut Digest)
     -> Result<(), Error>
 {
     let path = Path::new("/work").join(&info.gemfile);

@@ -6,8 +6,8 @@ use unshare::{Command, Stdio};
 use libmount::BindMount;
 
 use container::mount::{unmount};
-use config::builders::TarInfo;
-use config::builders::TarInstallInfo;
+use config::builders::Tar;
+use config::builders::TarInstall;
 use super::context::Context;
 use super::download::download_file;
 use super::commands::generic::run_command_at;
@@ -47,7 +47,7 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     }
 }
 
-pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
+pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
     let filename = if tar.url.starts_with(".") {
@@ -80,7 +80,7 @@ pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
     Ok(())
 }
 
-pub fn tar_install(ctx: &mut Context, tar: &TarInstallInfo)
+pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
     let filename = if tar.url.starts_with(".") {

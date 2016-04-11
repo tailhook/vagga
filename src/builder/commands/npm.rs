@@ -10,18 +10,18 @@ use super::super::packages;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use config::builders::{NpmSettings, NpmDepInfo};
+use config::builders::{NpmConfig, NpmDependencies};
 
-impl Default for NpmSettings {
-    fn default() -> NpmSettings {
-        NpmSettings {
+impl Default for NpmConfig {
+    fn default() -> NpmConfig {
+        NpmConfig {
             install_node: true,
             npm_exe: "npm".to_string(),
         }
     }
 }
 
-fn scan_features(settings: &NpmSettings, pkgs: &Vec<String>)
+fn scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     -> Vec<packages::Package>
 {
     let mut res = vec!();
@@ -103,7 +103,7 @@ fn scan_dic(json: &Json, key: &str,
 }
 
 pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
-    info: &NpmDepInfo)
+    info: &NpmDependencies)
     -> Result<(), StepError>
 {
     try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),

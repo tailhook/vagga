@@ -1,3 +1,5 @@
+#[allow(unused)]
+
 use std::env;
 
 extern crate shaman;

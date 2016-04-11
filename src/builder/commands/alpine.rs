@@ -6,14 +6,13 @@ use unshare::{Command, Stdio};
 use rand::{thread_rng, Rng};
 use regex::Regex;
 
-use builder::guard::Guard;
 use super::super::super::file_util::create_dir;
 use super::super::context::{Context};
 use super::super::capsule;
 use super::super::packages;
 use process_util::capture_stdout;
 use builder::distrib::{Distribution, Named, DistroBox};
-use builder::error::StepError;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 pub static LATEST_VERSION: &'static str = "v3.3";
@@ -21,17 +20,23 @@ static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 
+// Build Steps
 #[derive(Debug)]
-pub struct Alpine {
+pub struct Alpine(String);
+tuple_struct_decode!(Alpine);
+
+// Distro
+#[derive(Debug)]
+pub struct Distro {
     pub version: String,
     pub base_setup: bool,
 }
 
-impl Named for Alpine {
+impl Named for Distro {
     fn static_name() -> &'static str { "alpine" }
 }
 
-impl Distribution for Alpine {
+impl Distribution for Distro {
     fn name(&self) -> &'static str { "Alpine" }
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         if !self.base_setup {
@@ -233,7 +238,7 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: &str)
     -> Result<(), StepError>
 {
-    try!(distro.set(Alpine {
+    try!(distro.set(Distro {
         version: ver.to_string(),
         base_setup: false,
     }));
@@ -249,12 +254,23 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
     Ok(())
 }
 
-pub fn setup(version: &String, guard: &mut Guard, build: bool)
-    -> Result<(), StepError>
-{
-    try!(configure(&mut guard.distro, &mut guard.ctx, version));
-    if build {
-        try!(guard.distro.bootstrap(&mut guard.ctx));
+impl BuildStep for Alpine {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("Alpine", &self.0);
+        Ok(())
     }
-    Ok(())
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.distro, &mut guard.ctx, &self.0));
+        if build {
+            try!(guard.distro.bootstrap(&mut guard.ctx));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

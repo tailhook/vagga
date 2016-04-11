@@ -6,13 +6,13 @@ use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command_at_env, capture_command};
 use builder::distrib::Distribution;
-use config::builders::PipSettings;
+use config::builders::PipConfig;
 use file_util::create_dir;
 
 
-impl Default for PipSettings {
-    fn default() -> PipSettings {
-        PipSettings {
+impl Default for PipConfig {
+    fn default() -> PipConfig {
+        PipConfig {
             find_links: Vec::new(),
             index_urls: Vec::new(),
             trusted_hosts: Vec::new(),
@@ -25,7 +25,7 @@ impl Default for PipSettings {
 }
 
 
-pub fn scan_features(settings: &PipSettings, ver: u8, pkgs: &Vec<String>)
+pub fn scan_features(settings: &PipConfig, ver: u8, pkgs: &Vec<String>)
     -> Vec<packages::Package>
 {
     let mut res = vec!();

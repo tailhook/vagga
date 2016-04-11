@@ -4,7 +4,7 @@ use libmount::BindMount;
 
 use config::read_config;
 use config::{Container, Config};
-use config::builders::{BuildInfo, SubConfigInfo};
+use config::builders::{Build, SubConfig};
 use builder::guard::Guard;
 use builder::error::StepError;
 use version::short_version;
@@ -12,13 +12,13 @@ use container::mount::{remount_ro};
 use container::util::{copy_dir};
 use file_util::{create_dir};
 use path_util::ToRelative;
-use builder::bld::BuildCommand;
+use build_step::BuildStep;
 
 use builder::error::StepError as E;
 use config::builders::Source as S;
 
 
-pub fn build(binfo: &BuildInfo, guard: &mut Guard, build: bool)
+pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
 {
     let ref name = binfo.container;
@@ -76,7 +76,7 @@ pub fn clone(name: &String, guard: &mut Guard, build: bool)
     Ok(())
 }
 
-fn find_config(cfg: &SubConfigInfo, guard: &mut Guard)
+fn find_config(cfg: &SubConfig, guard: &mut Guard)
     -> Result<Config, StepError>
 {
     let path = match cfg.source {
@@ -99,7 +99,7 @@ fn find_config(cfg: &SubConfigInfo, guard: &mut Guard)
     Ok(try!(read_config(&path)))
 }
 
-pub fn subconfig(cfg: &SubConfigInfo, guard: &mut Guard, build: bool)
+pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
 {
     let subcfg = try!(find_config(cfg, guard));

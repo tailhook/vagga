@@ -1,9 +1,56 @@
+use std::rc::Rc;
 use std::path::PathBuf;
 use std::default::Default;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
 use libc::{uid_t, gid_t};
+use rustc_serialize::{Decodable, Decoder};
+use builder::commands as cmd;
+
+use build_step::{Step, BuildStep};
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Sh(String);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Cmd(Vec<String>);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Env(BTreeMap<String, String>);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Depends(PathBuf);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Text(BTreeMap<PathBuf, String>);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Remove(PathBuf);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct EnsureDir(PathBuf);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct EmptyDir(PathBuf);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct CacheDirs(BTreeMap<PathBuf, String>);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct BuildDeps(Vec<String>);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Container(String);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct Ubuntu(String);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct UbuntuPPA(String);
+
+#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+pub struct GemInstall(Vec<String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct DebianRepo {
@@ -13,7 +60,7 @@ pub struct DebianRepo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct AptKey {
+pub struct AptTrust {
     pub server: Option<String>,
     pub keys: Vec<String>,
 }
@@ -25,7 +72,7 @@ pub struct PacmanRepo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct TarInfo {
+pub struct Tar {
     pub url: String,
     pub sha256: Option<String>,
     pub path: PathBuf,
@@ -33,7 +80,7 @@ pub struct TarInfo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct TarInstallInfo {
+pub struct TarInstall {
     pub url: String,
     pub sha256: Option<String>,
     pub subdir: Option<PathBuf>,
@@ -41,7 +88,7 @@ pub struct TarInstallInfo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct GitInfo {
+pub struct Git {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
@@ -49,7 +96,7 @@ pub struct GitInfo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct GitInstallInfo {
+pub struct GitInstall {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
@@ -64,21 +111,21 @@ pub struct FileInfo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct UbuntuReleaseInfo {
+pub struct UbuntuRelease {
     pub version: String,
     pub arch: String,
     pub keep_chfn_command: bool,
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct UbuntuRepoInfo {
+pub struct UbuntuRepo {
     pub url: String,
     pub suite: String,
     pub components: Vec<String>,
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct PipSettings {
+pub struct PipConfig {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
     pub trusted_hosts: Vec<String>,
@@ -88,23 +135,41 @@ pub struct PipSettings {
     pub python_exe: Option<String>,
 }
 
+
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct NpmSettings {
+pub struct Py2Install(Vec<String>);
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct Py2Requirements(PathBuf);
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct Py3Install(Vec<String>);
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct Py3Requirements(PathBuf);
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct NpmConfig {
     pub install_node: bool,
     pub npm_exe: String,
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct ComposerSettings {
+pub struct NpmInstall(Vec<String>);
+
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct ComposerConfig {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
     pub install_runtime: bool,
     pub install_dev: bool,
     pub runtime_exe: Option<String>,
     pub include_path: Option<String>,
 }
+#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
+pub struct ComposerInstall(Vec<String>);
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct GemSettings {
+pub struct GemConfig {
     pub install_ruby: bool,
     pub gem_exe: Option<String>,
     pub update_gem: bool,
@@ -125,7 +190,7 @@ pub enum Source {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct SubConfigInfo {
+pub struct SubConfig {
     pub source: Source,
     pub path: PathBuf,
     pub container: String,
@@ -134,7 +199,7 @@ pub struct SubConfigInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct BuildInfo {
+pub struct Build {
     pub container: String,
     pub source: PathBuf,
     pub path: Option<PathBuf>,
@@ -142,21 +207,21 @@ pub struct BuildInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct PyFreezeInfo {
+pub struct PyFreeze {
     pub freeze_file: PathBuf,
     pub requirements: Option<PathBuf>,
     pub packages: Vec<String>,
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct DownloadInfo {
+pub struct Download {
     pub url: String,
     pub path: PathBuf,
     pub mode: u32,
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct CopyInfo {
+pub struct Copy {
     pub source: PathBuf,
     pub path: PathBuf,
     pub owner_uid: Option<uid_t>,
@@ -165,7 +230,7 @@ pub struct CopyInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct NpmDepInfo {
+pub struct NpmDependencies {
     pub file: PathBuf,
     pub package: bool,
     pub dev: bool,
@@ -175,7 +240,7 @@ pub struct NpmDepInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct ComposerDepInfo {
+pub struct ComposerDependencies {
     pub working_dir: Option<String>,
     pub dev: bool,
     pub prefer: Option<String>,
@@ -188,88 +253,10 @@ pub struct ComposerDepInfo {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct GemBundleInfo {
+pub struct GemBundle {
     pub gemfile: PathBuf,
     pub without: Vec<String>,
     pub trust_policy: Option<String>,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
-pub enum Builder {
-    // -- Generic --
-    Sh(String),
-    Cmd(Vec<String>),
-    Env(BTreeMap<String, String>),
-    Depends(PathBuf),
-    Tar(TarInfo),
-    TarInstall(TarInstallInfo),
-    Git(GitInfo),
-    GitInstall(GitInstallInfo),
-    Download(DownloadInfo),
-    Text(BTreeMap<PathBuf, String>),
-    Copy(CopyInfo),
-    Remove(PathBuf),
-    EnsureDir(PathBuf),
-    EmptyDir(PathBuf),
-    CacheDirs(BTreeMap<PathBuf, String>),
-    //Busybox,
-
-    // -- Generic --
-    Install(Vec<String>),
-    BuildDeps(Vec<String>),
-    Container(String),
-    SubConfig(SubConfigInfo),
-    Build(BuildInfo),
-
-    // -- Ubuntu --
-    Ubuntu(String),
-    UbuntuRelease(UbuntuReleaseInfo),
-    UbuntuRepo(UbuntuRepoInfo),
-    UbuntuUniverse,
-    UbuntuPPA(String),
-
-    // -- Ubuntu/Debian --
-    //AddDebianRepo(DebianRepo),
-    AptTrust(AptKey),
-
-    // -- Arch --
-    //ArchBase,
-    //PacmanInstall(Vec<String>),
-    //PacmanRemove(Vec<String>),
-    //PacmanBuild(Path),
-    //AddPacmanRepo(PacmanRepo),
-
-    // -- Alpine --
-    Alpine(String),
-    //AlpineRemove(Vec<String>),
-
-    // -- Docker --
-    //DockerImage(String),
-    //DockerPrivate(String),
-    //Dockerfile(Path),
-
-    // -- Ruby --
-    GemConfig(GemSettings),
-    GemInstall(Vec<String>),
-    GemBundle(GemBundleInfo),
-
-    // -- Node --
-    NpmConfig(NpmSettings),
-    NpmInstall(Vec<String>),
-    NpmDependencies(NpmDepInfo),
-
-    // -- Python --
-    PipConfig(PipSettings),
-    Py2Install(Vec<String>),
-    Py2Requirements(PathBuf),
-    Py3Install(Vec<String>),
-    Py3Requirements(PathBuf),
-    PyFreeze(PyFreezeInfo),
-
-    // -- PHP --
-    ComposerConfig(ComposerSettings),
-    ComposerInstall(Vec<String>),
-    ComposerDependencies(ComposerDepInfo),
 }
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
@@ -433,4 +420,30 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("gemfile", V::Scalar::new().default("Gemfile"))
         .member("without", V::Sequence::new(V::Scalar::new()))
         .member("trust_policy", V::Scalar::new().optional()))
+}
+
+fn step<T: BuildStep + 'static, E>(val: Result<T, E>)
+    -> Result<Rc<BuildStep>, E>
+{
+    val.map(|x| Rc::new(x) as Rc<BuildStep>)
+}
+
+impl Decodable for Step {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Step, D::Error> {
+        // TODO(tailhook) this is just too slow
+        //                move it to lazy_static
+        let val = builder_validator();
+        let options = val.options.iter().map(|&(ref x, _)| &x[..])
+            .collect::<Vec<_>>();
+        Ok(Step(try!(d.read_enum("BuildStep", |d| {
+            d.read_enum_variant(&options, |d, index| {
+                match options[index] {
+                    "Alpine" => step(cmd::alpine::Alpine::decode(d)),
+                    "Install" => step(cmd::packaging::Install::decode(d)),
+                    step_name => panic!("Step {} is not yet implemented",
+                                        step_name),
+                }
+            })
+        }))))
+    }
 }

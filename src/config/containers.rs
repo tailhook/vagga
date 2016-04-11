@@ -7,12 +7,9 @@ use quire::validate as V;
 use libc::{uid_t, gid_t};
 use rustc_serialize::{Decodable, Decoder};
 
-use super::builders::{Builder, builder_validator};
+use super::builders::{builder_validator};
 use super::Range;
-use build_step::BuildStep;
-
-#[derive(Clone, Debug)]
-pub struct Step(pub Rc<BuildStep>);
+use build_step::{BuildStep, Step};
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SnapshotInfo {
@@ -108,10 +105,4 @@ pub fn container_validator<'a>() -> V::Structure<'a> {
     .member("volumes", V::Mapping::new(
         V::Directory::new().is_absolute(true),
         volume_validator()))
-}
-
-impl Decodable for Step {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Step, D::Error> {
-        Ok(Step(Rc::new(try!(Builder::decode(d)))))
-    }
 }

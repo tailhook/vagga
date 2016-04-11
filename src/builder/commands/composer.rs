@@ -13,7 +13,7 @@ use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
 use builder::download;
-use config::builders::{ComposerSettings, ComposerDepInfo};
+use config::builders::{ComposerConfig, ComposerDependencies};
 use process_util::capture_stdout;
 use file_util;
 
@@ -27,9 +27,9 @@ const COMPOSER_BIN_DIR: &'static str = "/usr/local/bin";
 const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
 
 
-impl Default for ComposerSettings {
+impl Default for ComposerConfig {
     fn default() -> Self {
-        ComposerSettings {
+        ComposerConfig {
             install_runtime: true,
             install_dev: false,
             runtime_exe: None,
@@ -38,7 +38,7 @@ impl Default for ComposerSettings {
     }
 }
 
-fn scan_features(settings: &ComposerSettings)
+fn scan_features(settings: &ComposerConfig)
     -> Vec<packages::Package>
 {
     let mut res = vec!();
@@ -88,7 +88,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 pub fn composer_dependencies(distro: &mut Box<Distribution>,
-    ctx: &mut Context, info: &ComposerDepInfo)
+    ctx: &mut Context, info: &ComposerDependencies)
     -> Result<(), StepError>
 {
     let features = scan_features(&ctx.composer_settings);

@@ -19,11 +19,12 @@ use libmount::BindMount;
 use container::util::clean_dir;
 use container::mount::{unmount};
 use container::uidmap::{map_users};
-use config::{Container, Step};
+use config::{Container};
 use file_util::{create_dir, Lock};
 use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
 use super::Wrapper;
 use super::setup;
+use build_step::Step;
 
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {

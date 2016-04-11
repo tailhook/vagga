@@ -2,14 +2,14 @@ use std::path::{PathBuf};
 use std::fs::{set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 
-use config::builders::DownloadInfo;
+use config::builders::Download;
 use file_util::copy;
 use path_util::ToRelative;
 use builder::context::Context;
 use builder::download::download_file;
 
 
-pub fn download(ctx: &mut Context, dlinfo: &DownloadInfo) -> Result<(), String>
+pub fn download(ctx: &mut Context, dlinfo: &Download) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root").join(dlinfo.path.rel());
     let filename = if dlinfo.url.starts_with(".") {

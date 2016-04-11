@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::{AsRawFd, FromRawFd};
 
-use config::builders::{UbuntuRepoInfo, UbuntuReleaseInfo, AptKey};
+use config::builders::{UbuntuRepo, UbuntuRelease, AptTrust};
 use container::util::clean_dir;
 use super::super::context::{Context};
 use super::super::download::download_file;
@@ -154,7 +154,7 @@ impl Ubuntu {
         self.apt_update = true;
         Ok(())
     }
-    pub fn add_debian_repo(&mut self, _: &mut Context, repo: &UbuntuRepoInfo)
+    pub fn add_debian_repo(&mut self, _: &mut Context, repo: &UbuntuRepo)
         -> Result<(), String>
     {
         self.apt_update = true;
@@ -188,14 +188,14 @@ impl Ubuntu {
     {
         try!(self.ensure_codename(ctx));
         let suite = self.codename.as_ref().unwrap().to_string();
-        try!(self.add_debian_repo(ctx, &UbuntuRepoInfo {
+        try!(self.add_debian_repo(ctx, &UbuntuRepo {
             url: format!("http://ppa.launchpad.net/{}/ubuntu", name),
             suite: suite,
             components: vec!["main".to_string()],
         }));
         Ok(())
     }
-    pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptKey)
+    pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptTrust)
         -> Result<(), StepError>
     {
         let mut cmd = try!(command(ctx, "apt-key"));
@@ -452,7 +452,7 @@ pub fn clobber_chfn() -> Result<(), String> {
     Ok(())
 }
 
-pub fn configure(guard: &mut Guard, info: &UbuntuReleaseInfo)
+pub fn configure(guard: &mut Guard, info: &UbuntuRelease)
     -> Result<(), StepError>
 {
     try!(guard.distro.set(Ubuntu {

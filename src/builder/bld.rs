@@ -1,6 +1,4 @@
 use config::Step;
-use config::builders::Builder;
-use config::builders::Builder as B;
 use config::builders::Source as S;
 use container::util::{clean_dir};
 use super::commands::ubuntu;
@@ -33,10 +31,12 @@ impl BuildCommand for Step {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        self.0.build(guard, build)
+        //self.0.build(guard, build)
+        unimplemented!();
     }
 }
 
+/*
 impl BuildCommand for Builder {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
@@ -175,7 +175,7 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Alpine(ref version) => {
-                try!(alpine::setup(version, guard, build))
+                try!()
             }
             &B::PipConfig(ref pip_settings) => {
                 guard.ctx.pip_settings = pip_settings.clone();
@@ -264,13 +264,9 @@ impl BuildCommand for Builder {
         Ok(())
     }
 }
+*/
 
-impl BuildStep for Step {
-    fn is_dependent_on(&self) -> Option<&str> {
-        self.0.is_dependent_on()
-    }
-}
-
+/*
 impl BuildStep for Builder {
     fn is_dependent_on(&self) -> Option<&str> {
         match self {
@@ -291,3 +287,4 @@ impl BuildStep for Builder {
         }
     }
 }
+*/

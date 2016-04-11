@@ -10,7 +10,7 @@ use super::generic::{capture_command, run_command_at_env};
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use config::builders::{GemSettings, GemBundleInfo};
+use config::builders::{GemConfig, GemBundle};
 use process_util::capture_stdout;
 
 const DEFAULT_GEM_EXE: &'static str = "/usr/bin/gem";
@@ -19,9 +19,9 @@ const GEM_VERSION_WITH_NO_DOCUMENT_OPT: f32 = 2.0;
 const VALID_TRUST_POLICIES: [&'static str; 3] = ["LowSecurity", "MediumSecurity", "HighSecurity"];
 
 
-impl Default for GemSettings {
+impl Default for GemConfig {
     fn default() -> Self {
-        GemSettings {
+        GemConfig {
             install_ruby: true,
             gem_exe: None,
             update_gem: true,
@@ -101,7 +101,7 @@ fn requires_git(gemfile: &Path) -> Result<bool, String> {
     Ok(re.is_match(&gemfile_data))
 }
 
-fn scan_features(settings: &GemSettings, info: Option<&GemBundleInfo>)
+fn scan_features(settings: &GemConfig, info: Option<&GemBundle>)
     -> Result<Vec<packages::Package>, String>
 {
     let mut res = vec!();
@@ -153,7 +153,7 @@ pub fn install(distro: &mut Box<Distribution>,
 }
 
 pub fn bundle(distro: &mut Box<Distribution>,
-    ctx: &mut Context, info: &GemBundleInfo)
+    ctx: &mut Context, info: &GemBundle)
     -> Result<(), StepError>
 {
     let features = try!(scan_features(&ctx.gem_settings, Some(info)));

@@ -5,7 +5,7 @@ use unshare::{Command};
 use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
 use process_util::{capture_stdout};
-use builder::error::StepError;
+use build_step::StepError;
 
 
 fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
