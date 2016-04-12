@@ -157,34 +157,6 @@ impl Drop for Lock {
     }
 }
 
-pub fn hash_file(path: &Path, dig: &mut Digest,
-    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
-    -> Result<(), io::Error>
-{
-    // TODO(tailhook) include permissions and ownership into the equation
-    let stat = try!(fs::symlink_metadata(path));
-    dig.input(path.as_os_str().as_bytes());
-    dig.input(b"\0");
-    dig.input(format!("mode:{:o}\0", stat.permissions().mode()).as_bytes());
-    dig.input(format!("uid:{}\0", owner_uid.unwrap_or(stat.uid())).as_bytes());
-    dig.input(format!("gid:{}\0", owner_gid.unwrap_or(stat.gid())).as_bytes());
-    if stat.file_type().is_symlink() {
-        let data = try!(fs::read_link(path));
-        dig.input(data.as_os_str().as_bytes());
-    } else if stat.file_type().is_file() {
-        let mut file = try!(fs::File::open(&path));
-        loop {
-            let mut chunk = [0u8; 8*1024];
-            let bytes = match file.read(&mut chunk[..]) {
-                Ok(0) => break,
-                Ok(bytes) => bytes,
-                Err(e) => return Err(e),
-            };
-            dig.input(&chunk[..bytes]);
-        }
-    }
-    Ok(())
-}
 
 pub fn force_symlink(target: &Path, linkpath: &Path)
     -> Result<(), io::Error>

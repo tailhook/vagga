@@ -121,8 +121,6 @@ impl BuildCommand for Builder {
                     try!(guard.ctx.add_cache_dir(k, v.clone()));
                 }
             }
-            &B::Depends(_) => {
-            }
             &B::Git(ref git) => {
                 if build {
                     try!(vcs::git_command(&mut guard.ctx, git));

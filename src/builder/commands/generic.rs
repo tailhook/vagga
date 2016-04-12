@@ -16,6 +16,10 @@ tuple_struct_decode!(Sh);
 pub struct Cmd(Vec<String>);
 tuple_struct_decode!(Cmd);
 
+#[derive(Debug)]
+pub struct Depends(PathBuf);
+tuple_struct_decode!(Depends);
+
 
 fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
     -> Result<PathBuf, StepError>
@@ -159,6 +163,24 @@ impl BuildStep for Sh {
                   "-exc".to_string(),
                   self.0.to_string()]));
         }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for Depends {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        let path = Path::new("/work").join(&self.0);
+        hash.file(&path, None, None);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {

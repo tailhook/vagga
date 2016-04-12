@@ -13,7 +13,6 @@ use shaman::digest::Digest as ShamanDigest;
 use config::{Config, Container};
 use config::read_config;
 use path_util::ToRelative;
-use file_util::hash_file;
 use super::error::Error::{self, New, ContainerNotFound};
 use super::managers::{bundler, composer};
 use build_step::{Step, BuildStep, Digest};
@@ -85,11 +84,6 @@ impl VersionHash for Builder {
             }
             &B::GemBundle(ref info) => bundler::hash(info, hash),
             &B::ComposerDependencies(ref info) => composer::hash(info, hash),
-            &B::Depends(ref filename) => {
-                let path = Path::new("/work").join(filename);
-                hash_file(&path, hash, None, None)
-                    .map_err(|e| Error::Io(e, path.clone()))
-            }
             &B::CacheDirs(ref map) => {
                 for (k, v) in map.iter() {
                     hash.input(k.as_os_str().as_bytes());

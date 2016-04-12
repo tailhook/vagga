@@ -14,9 +14,6 @@ use build_step::{Step, BuildStep};
 pub struct Env(BTreeMap<String, String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Depends(PathBuf);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct Text(BTreeMap<PathBuf, String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -361,6 +358,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "TarInstall" => step(cmd::tarcmd::TarInstall::decode(d)),
         "Sh" => step(cmd::generic::Sh::decode(d)),
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
+        "Depends" => step(cmd::generic::Depends::decode(d)),
         "Container" => step(cmd::subcontainer::Container::decode(d)),
         "Build" => step(cmd::subcontainer::Build::decode(d)),
         "SubConfig" => step(cmd::subcontainer::SubConfig::decode(d)),
