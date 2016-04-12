@@ -11,12 +11,6 @@ use builder::commands as cmd;
 use build_step::{Step, BuildStep};
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Sh(String);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Cmd(Vec<String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct Env(BTreeMap<String, String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -36,15 +30,6 @@ pub struct EmptyDir(PathBuf);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct CacheDirs(BTreeMap<PathBuf, String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct BuildDeps(Vec<String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Container(String);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Ubuntu(String);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct UbuntuPPA(String);
@@ -135,36 +120,6 @@ pub struct GemConfig {
     pub update_gem: bool,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct GitSource {
-    pub url: String,
-    pub revision: Option<String>,
-    pub branch: Option<String>,
-}
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub enum Source {
-    Git(GitSource),
-    Container(String),
-    Directory,
-}
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct SubConfig {
-    pub source: Source,
-    pub path: PathBuf,
-    pub container: String,
-    pub cache: Option<bool>,
-    pub change_dir: Option<bool>,
-}
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct Build {
-    pub container: String,
-    pub source: PathBuf,
-    pub path: Option<PathBuf>,
-    pub temporary_mount: Option<PathBuf>,
-}
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct PyFreeze {
@@ -406,6 +361,9 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "TarInstall" => step(cmd::tarcmd::TarInstall::decode(d)),
         "Sh" => step(cmd::generic::Sh::decode(d)),
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
+        "Container" => step(cmd::subcontainer::Container::decode(d)),
+        "Build" => step(cmd::subcontainer::Build::decode(d)),
+        "SubConfig" => step(cmd::subcontainer::SubConfig::decode(d)),
         step_name => panic!("Step {} is not yet implemented",
                             step_name),
     }

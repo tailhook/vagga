@@ -12,8 +12,6 @@ use shaman::digest::Digest as ShamanDigest;
 
 use config::{Config, Container};
 use config::read_config;
-use config::builders::{Build};
-use config::builders::Source as S;
 use path_util::ToRelative;
 use file_util::hash_file;
 use super::error::Error::{self, New, ContainerNotFound};
@@ -91,45 +89,6 @@ impl VersionHash for Builder {
                 let path = Path::new("/work").join(filename);
                 hash_file(&path, hash, None, None)
                     .map_err(|e| Error::Io(e, path.clone()))
-            }
-            &B::Container(ref container) |
-            &B::Build(BuildInfo { ref container, .. })=> {
-                let cont = try!(cfg.containers.get(container)
-                    .ok_or(ContainerNotFound(container.to_string())));
-                for b in cont.setup.iter() {
-                    debug!("Versioning setup: {:?}", b);
-                    try!(b.hash(cfg, hash));
-                }
-                Ok(())
-            }
-            &B::SubConfig(ref sconfig) => {
-                let path = match sconfig.source {
-                    S::Container(ref container) => {
-                        let cinfo = try!(cfg.containers.get(container)
-                            .ok_or(ContainerNotFound(container.clone())));
-                        let version = try!(short_version(&cinfo, cfg));
-                        Path::new("/vagga/base/.roots")
-                            .join(format!("{}.{}", container, version))
-                            .join("root").join(&sconfig.path)
-                    }
-                    S::Git(ref _git) => {
-                        unimplemented!();
-                    }
-                    S::Directory => {
-                        Path::new("/work").join(&sconfig.path)
-                    }
-                };
-                if !path.exists() {
-                    return Err(New);
-                }
-                let subcfg = try!(read_config(&path));
-                let cont = try!(subcfg.containers.get(&sconfig.container)
-                    .ok_or(ContainerNotFound(sconfig.container.to_string())));
-                for b in cont.setup.iter() {
-                    debug!("Versioning setup: {:?}", b);
-                    try!(b.hash(cfg, hash));
-                }
-                Ok(())
             }
             &B::CacheDirs(ref map) => {
                 for (k, v) in map.iter() {

@@ -7,7 +7,7 @@ use unshare::{Command, Stdio};
 use config::settings::Settings;
 use config::builders::Git;
 use config::builders::GitInstall;
-use config::builders::GitSource;
+use builder::commands::subcontainer::GitSource;
 use super::super::capsule;
 use super::super::context::Context;
 use super::generic::run_command_at;

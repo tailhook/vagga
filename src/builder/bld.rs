@@ -48,15 +48,6 @@ impl BuildCommand for Builder {
             &B::BuildDeps(ref pkgs) => {
                 try!(packaging::build_deps(pkgs, guard, build))
             }
-            &B::Container(ref name) => {
-                try!(subcontainer::clone(name, guard, build))
-            }
-            &B::Build(ref binfo) => {
-                try!(subcontainer::build(binfo, guard, build))
-            }
-            &B::SubConfig(ref sconfig) => {
-                try!(subcontainer::subconfig(sconfig, guard, build))
-            }
             &B::Text(ref files) => {
                 if build {
                     try!(text::write_text_files(files, guard))
