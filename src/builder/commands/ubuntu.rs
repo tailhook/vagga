@@ -9,7 +9,7 @@ use config::builders::{UbuntuRepo, UbuntuRelease, AptTrust};
 use container::util::clean_dir;
 use super::super::context::{Context};
 use super::super::download::download_file;
-use super::super::tarcmd::unpack_file;
+use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};
 use shaman::sha2::Sha256;

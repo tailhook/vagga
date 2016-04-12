@@ -5,17 +5,15 @@ use rand;
 
 use config::read_config;
 use config::{Config, Container, Settings};
-use config::builders::Tar;
 use argparse::{ArgumentParser, Store, StoreTrue};
 use self::context::{Context};
-use self::tarcmd::tar_command;
+use self::commands::tarcmd::{Tar, tar_command};
 use build_step::BuildStep;
 pub use self::guard::Guard;
 pub use self::error::StepError;
 
 pub mod context;
 mod download;
-mod tarcmd;
 pub mod commands {
     pub mod ubuntu;
     pub mod generic;
@@ -31,6 +29,7 @@ pub mod commands {
     pub mod text;
     pub mod dirs;
     pub mod packaging;
+    pub mod tarcmd;
 }
 pub mod capsule;
 mod packages;

@@ -152,14 +152,8 @@ impl BuildCommand for Builder {
                 }
             }
             &B::Tar(ref tar) => {
-                if build {
-                    try!(tarcmd::tar_command(&mut guard.ctx, tar));
-                }
             }
             &B::TarInstall(ref tar_inst) => {
-                if build {
-                    try!(tarcmd::tar_install(&mut guard.ctx, tar_inst));
-                }
             }
             &B::Download(ref dlinfo) => {
                 if build {

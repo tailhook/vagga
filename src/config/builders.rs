@@ -72,22 +72,6 @@ pub struct PacmanRepo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Tar {
-    pub url: String,
-    pub sha256: Option<String>,
-    pub path: PathBuf,
-    pub subdir: PathBuf,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct TarInstall {
-    pub url: String,
-    pub sha256: Option<String>,
-    pub subdir: Option<PathBuf>,
-    pub script: String,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct Git {
     pub url: String,
     pub revision: Option<String>,
@@ -418,6 +402,8 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Py2Requirements" => step(cmd::pip::Py2Requirements::decode(d)),
         "Py3Install" => step(cmd::pip::Py3Install::decode(d)),
         "Py3Requirements" => step(cmd::pip::Py3Requirements::decode(d)),
+        "Tar" => step(cmd::tarcmd::Tar::decode(d)),
+        "TarInstall" => step(cmd::tarcmd::TarInstall::decode(d)),
         step_name => panic!("Step {} is not yet implemented",
                             step_name),
     }
