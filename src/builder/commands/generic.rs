@@ -5,7 +5,16 @@ use unshare::{Command};
 use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
 use process_util::{capture_stdout};
-use build_step::StepError;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+// Build Steps
+#[derive(Debug)]
+pub struct Sh(String);
+tuple_struct_decode!(Sh);
+
+#[derive(Debug)]
+pub struct Cmd(Vec<String>);
+tuple_struct_decode!(Cmd);
 
 
 fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
@@ -131,5 +140,49 @@ pub fn run(mut cmd: Command) -> Result<(), StepError> {
         Ok(ref s) if s.success() => Ok(()),
         Ok(s) => Err(StepError::CommandFailed(Box::new(cmd), s)),
         Err(e) => Err(StepError::CommandError(Box::new(cmd), e)),
+    }
+}
+
+impl BuildStep for Sh {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("Sh", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(run_command(&mut guard.ctx,
+                &["/bin/sh".to_string(),
+                  "-exc".to_string(),
+                  self.0.to_string()]));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+
+impl BuildStep for Cmd {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("Cmd", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(run_command(&mut guard.ctx, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
     }
 }

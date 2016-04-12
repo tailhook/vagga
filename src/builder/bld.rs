@@ -107,17 +107,8 @@ impl BuildCommand for Builder {
             &B::UbuntuUniverse => {
             }
             &B::Sh(ref text) => {
-                if build {
-                    try!(generic::run_command(&mut guard.ctx,
-                        &["/bin/sh".to_string(),
-                          "-exc".to_string(),
-                          text.to_string()]));
-                }
             }
             &B::Cmd(ref cmd) => {
-                if build {
-                    try!(generic::run_command(&mut guard.ctx, &cmd));
-                }
             }
             &B::Env(ref pairs) => {
                 for (k, v) in pairs.iter() {

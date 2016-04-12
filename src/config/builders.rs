@@ -404,6 +404,8 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Py3Requirements" => step(cmd::pip::Py3Requirements::decode(d)),
         "Tar" => step(cmd::tarcmd::Tar::decode(d)),
         "TarInstall" => step(cmd::tarcmd::TarInstall::decode(d)),
+        "Sh" => step(cmd::generic::Sh::decode(d)),
+        "Cmd" => step(cmd::generic::Cmd::decode(d)),
         step_name => panic!("Step {} is not yet implemented",
                             step_name),
     }
