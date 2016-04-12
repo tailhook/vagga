@@ -35,6 +35,7 @@ impl Default for ComposerSettings {
             runtime_exe: None,
             include_path: None,
             keep_composer: false,
+            vendor_dir: None,
         }
     }
 }
@@ -124,14 +125,20 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     try!(ctx.add_cache_dir(Path::new("/tmp/composer-cache"),
                            "composer-cache".to_string()));
 
+    let vendor_dir = ctx.composer_settings.vendor_dir.as_ref()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|| COMPOSER_VENDOR_DIR.to_owned());
+
+    ctx.environ.insert("COMPOSER_VENDOR_DIR".to_owned(), vendor_dir);
+    
     ctx.environ.insert("COMPOSER_HOME".to_owned(),
                        COMPOSER_HOME.to_owned());
-    ctx.environ.insert("COMPOSER_VENDOR_DIR".to_owned(),
-                       COMPOSER_VENDOR_DIR.to_owned());
     ctx.environ.insert("COMPOSER_BIN_DIR".to_owned(),
                        COMPOSER_BIN_DIR.to_owned());
     ctx.environ.insert("COMPOSER_CACHE_DIR".to_owned(),
                        COMPOSER_CACHE.to_owned());
+    ctx.environ.insert("COMPOSER_ALLOW_SUPERUSER".to_owned(),
+                       "1".to_owned());
 
     Ok(())
 }
