@@ -160,23 +160,6 @@ impl BuildCommand for Builder {
                     try!(gem::bundle(&mut guard.distro, &mut guard.ctx, info));
                 }
             }
-            &B::NpmConfig(ref npm_settings) => {
-                guard.ctx.npm_settings = npm_settings.clone();
-            }
-            &B::NpmInstall(ref pkgs) => {
-                try!(guard.distro.npm_configure(&mut guard.ctx));
-                if build {
-                    try!(npm::npm_install(&mut guard.distro, &mut guard.ctx,
-                        pkgs));
-                }
-            }
-            &B::NpmDependencies(ref info) => {
-                try!(guard.distro.npm_configure(&mut guard.ctx));
-                if build {
-                    try!(npm::npm_deps(&mut guard.distro, &mut guard.ctx,
-                        info));
-                }
-            }
             &B::ComposerConfig(ref composer_settings) => {
                 guard.ctx.composer_settings = composer_settings.clone();
             }

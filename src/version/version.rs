@@ -18,70 +18,9 @@ use super::managers::{bundler, composer};
 use build_step::{Step, BuildStep, Digest};
 
 /*
-fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
-    let deps = data.find(key);
-    if let Some(&Json::Object(ref ob)) = deps {
-        hash.input(key.as_bytes());
-        hash.input(b"-->\0");
-        // Note the BTree is sorted on its own
-        for (key, val) in ob {
-            hash.input(key.as_bytes());
-            hash.input(val.as_string()
-                .map(|x| x.as_bytes())
-                .unwrap_or(b"*"));
-            hash.input(b"\0");
-        }
-        hash.input(b"<--\0");
-    }
-}
 impl VersionHash for Builder {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
         match self {
-            &B::Py2Requirements(ref fname) | &B::Py3Requirements(ref fname)
-            => {
-                let path = Path::new("/work").join(fname);
-                let err = |e| Error::Io(e, path.clone());
-                File::open(&path)
-                .and_then(|f| {
-                        let f = BufReader::new(f);
-                        for line in f.lines() {
-                            let line = try!(line);
-                            let chunk = line[..].trim();
-                            // Ignore empty lines and comments
-                            if chunk.len() == 0 || chunk.starts_with("#") {
-                                continue;
-                            }
-                            // Should we also ignore the order?
-                            hash.input(chunk.as_bytes());
-                        }
-                        Ok(())
-                }).map_err(err)
-            }
-            &B::PyFreeze(_) => unimplemented!(),
-            &B::NpmDependencies(ref info) => {
-                let path = Path::new("/work").join(&info.file);
-                File::open(&path).map_err(|e| Error::Io(e, path.clone()))
-                .and_then(|mut f| Json::from_reader(&mut f)
-                    .map_err(|e| Error::Json(e, path.to_path_buf())))
-                .map(|data| {
-                    if info.package {
-                        npm_hash_deps(&data, "dependencies", hash);
-                    }
-                    if info.dev {
-                        npm_hash_deps(&data, "devDependencies", hash);
-                    }
-                    if info.peer {
-                        npm_hash_deps(&data, "peerDependencies", hash);
-                    }
-                    if info.bundled {
-                        npm_hash_deps(&data, "bundledDependencies", hash);
-                        npm_hash_deps(&data, "bundleDependencies", hash);
-                    }
-                    if info.optional {
-                        npm_hash_deps(&data, "optionalDependencies", hash);
-                    }
-                })
-            }
             &B::GemBundle(ref info) => bundler::hash(info, hash),
             &B::ComposerDependencies(ref info) => composer::hash(info, hash),
             &B::CacheDirs(ref map) => {

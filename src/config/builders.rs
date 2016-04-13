@@ -91,15 +91,6 @@ pub struct UbuntuRepo {
 }
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct NpmConfig {
-    pub install_node: bool,
-    pub npm_exe: String,
-}
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct NpmInstall(Vec<String>);
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct ComposerConfig {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
     pub install_runtime: bool,
@@ -141,15 +132,6 @@ pub struct Copy {
     pub ignore_regex: String,
 }
 
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct NpmDependencies {
-    pub file: PathBuf,
-    pub package: bool,
-    pub dev: bool,
-    pub peer: bool,
-    pub bundled: bool,
-    pub optional: bool,
-}
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct ComposerDependencies {
@@ -362,8 +344,10 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Container" => step(cmd::subcontainer::Container::decode(d)),
         "Build" => step(cmd::subcontainer::Build::decode(d)),
         "SubConfig" => step(cmd::subcontainer::SubConfig::decode(d)),
-        step_name => panic!("Step {} is not yet implemented",
-                            step_name),
+        "NpmConfig" => step(cmd::npm::NpmConfig::decode(d)),
+        "NpmDependencies" => step(cmd::npm::NpmDependencies::decode(d)),
+        "NpmInstall" => step(cmd::npm::NpmInstall::decode(d)),
+        step_name => panic!("Step {} is not yet implemented", step_name),
     }
 }
 

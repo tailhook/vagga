@@ -12,7 +12,7 @@ use config::Settings;
 use config::builders::ComposerConfig;
 use config::builders::GemConfig;
 use builder::commands::pip::PipConfig;
-use config::builders::NpmConfig;
+use builder::commands::npm::NpmConfig;
 use super::capsule;
 use super::packages;
 use super::timer;

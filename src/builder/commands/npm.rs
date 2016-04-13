@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::fs::File;
+use std::path::{Path, PathBuf};
 use std::os::unix::io::{FromRawFd, AsRawFd};
 
 use unshare::{Stdio};
@@ -7,10 +7,31 @@ use rustc_serialize::json::Json;
 
 use super::super::context::{Context};
 use super::super::packages;
-use builder::error::StepError;
-use builder::distrib::Distribution;
+use builder::distrib::{Distribution, DistroBox};
 use builder::commands::generic::{command, run};
-use config::builders::{NpmConfig, NpmDependencies};
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+#[derive(RustcDecodable, Debug, Clone)]
+pub struct NpmConfig {
+    pub install_node: bool,
+    pub npm_exe: String,
+}
+
+#[derive(Debug)]
+pub struct NpmInstall(Vec<String>);
+tuple_struct_decode!(NpmInstall);
+
+#[derive(RustcDecodable, Debug)]
+pub struct NpmDependencies {
+    pub file: PathBuf,
+    pub package: bool,
+    pub dev: bool,
+    pub peer: bool,
+    pub bundled: bool,
+    pub optional: bool,
+}
+
 
 impl Default for NpmConfig {
     fn default() -> NpmConfig {
@@ -162,4 +183,95 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     // TODO(tailhook) fixme in rust 1.6. as_raw_fd -> into_raw_fd
     cmd.stdout(unsafe { Stdio::from_raw_fd(file.as_raw_fd()) });
     run(cmd)
+}
+
+fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
+    let deps = data.find(key);
+    if let Some(&Json::Object(ref ob)) = deps {
+        // Note the BTree is sorted on its own
+        for (key, val) in ob {
+            hash.field(key, val.as_string().unwrap_or("*"));
+        }
+    }
+}
+
+impl BuildStep for NpmConfig {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("npm_exe", &self.npm_exe);
+        hash.bool("install_node", self.install_node);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        guard.ctx.npm_settings = self.clone();
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for NpmInstall {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("NpmInstall", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(guard.distro.npm_configure(&mut guard.ctx));
+        if build {
+            try!(npm_install(&mut guard.distro, &mut guard.ctx, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for NpmDependencies {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        let path = Path::new("/work").join(&self.file);
+        File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))
+        .and_then(|mut f| Json::from_reader(&mut f)
+            .map_err(|e| VersionError::Json(e, path.to_path_buf())))
+        .map(|data| {
+            if self.package {
+                npm_hash_deps(&data, "dependencies", hash);
+            }
+            if self.dev {
+                npm_hash_deps(&data, "devDependencies", hash);
+            }
+            if self.peer {
+                npm_hash_deps(&data, "peerDependencies", hash);
+            }
+            if self.bundled {
+                npm_hash_deps(&data, "bundledDependencies", hash);
+                npm_hash_deps(&data, "bundleDependencies", hash);
+            }
+            if self.optional {
+                npm_hash_deps(&data, "optionalDependencies", hash);
+            }
+        })
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(guard.distro.npm_configure(&mut guard.ctx));
+        if build {
+            try!(npm_deps(&mut guard.distro, &mut guard.ctx, &self));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }
