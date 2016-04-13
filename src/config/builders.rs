@@ -14,23 +14,7 @@ use build_step::{Step, BuildStep};
 pub struct Text(BTreeMap<PathBuf, String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct UbuntuPPA(String);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GemInstall(Vec<String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct DebianRepo {
-    pub url: String,
-    pub suite: String,
-    pub components: Vec<String>,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct AptTrust {
-    pub server: Option<String>,
-    pub keys: Vec<String>,
-}
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct PacmanRepo {
@@ -61,19 +45,6 @@ pub struct FileInfo {
     pub contents: String,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct UbuntuRelease {
-    pub version: String,
-    pub arch: String,
-    pub keep_chfn_command: bool,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct UbuntuRepo {
-    pub url: String,
-    pub suite: String,
-    pub components: Vec<String>,
-}
 
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct ComposerConfig {
@@ -313,6 +284,9 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
     match options[index] {
         "Alpine" => step(cmd::alpine::Alpine::decode(d)),
         "Ubuntu" => step(cmd::ubuntu::Ubuntu::decode(d)),
+        "UbuntuRepo" => step(cmd::ubuntu::UbuntuRepo::decode(d)),
+        "UbuntuRelease" => step(cmd::ubuntu::UbuntuRelease::decode(d)),
+        "UbuntuPPA" => step(cmd::ubuntu::UbuntuPPA::decode(d)),
         "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
         "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),

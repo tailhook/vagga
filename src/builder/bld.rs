@@ -64,39 +64,6 @@ impl BuildCommand for Builder {
                     try!(guard.distro.bootstrap(&mut guard.ctx));
                 }
             }
-            &B::UbuntuRelease(ref release_info) => {
-                try!(ubuntu::configure(guard, release_info));
-                if build {
-                    try!(guard.distro.bootstrap(&mut guard.ctx));
-                }
-            }
-            &B::UbuntuRepo(ref repo) => {
-                if build {
-                    let ref mut ctx = guard.ctx;
-                    try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
-                        try!(u.add_debian_repo(ctx, repo));
-                        Ok(())
-                    }));
-                }
-            }
-            &B::UbuntuPPA(ref name) => {
-                if build {
-                    let ref mut ctx = guard.ctx;
-                    try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
-                        u.add_ubuntu_ppa(ctx, name)
-                    }));
-                }
-            }
-            &B::AptTrust(ref key) => {
-                if build {
-                    let ref mut ctx = guard.ctx;
-                    try!(guard.distro.specific(|u: &mut ubuntu::Ubuntu| {
-                        u.add_apt_key(ctx, key)
-                    }));
-                }
-            }
-            &B::UbuntuUniverse => {
-            }
             &B::Git(ref git) => {
                 if build {
                     try!(vcs::git_command(&mut guard.ctx, git));
