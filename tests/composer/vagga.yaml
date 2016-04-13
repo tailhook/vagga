@@ -6,6 +6,21 @@ containers:
     - !ComposerInstall
     - !Sh composer --version
 
+  keep-composer:
+    setup:
+    - !Alpine v3.3
+    - !ComposerConfig
+      keep_composer: true
+    - !ComposerInstall
+
+  change-vendor-dir:
+    setup:
+    - !Alpine v3.3
+    - !EnsureDir /usr/local/dependencies/vendor
+    - !ComposerConfig
+      vendor_dir: /usr/local/dependencies/vendor
+    - !ComposerInstall [nette/tester:1.7.0]
+
   # php
   php-ubuntu-trusty:
     setup:
@@ -54,13 +69,6 @@ containers:
     - !Alpine v3.3
     - !ComposerDependencies
       prefer: wrong
-
-  php-keep-composer:
-    setup:
-    - !Alpine v3.3
-    - !ComposerConfig
-      keep_composer: true
-    - !ComposerInstall
 
   # hhvm
   hhvm-base:
