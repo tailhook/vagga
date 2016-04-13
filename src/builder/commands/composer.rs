@@ -25,6 +25,7 @@ const COMPOSER_CACHE: &'static str = "/tmp/composer-cache";
 const COMPOSER_VENDOR_DIR: &'static str = "/usr/local/lib/composer/vendor";
 const COMPOSER_BIN_DIR: &'static str = "/usr/local/bin";
 const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
+const COMPOSER_SELF_CACHE: &'static str = "/tmp/composer-self-cache";
 
 
 impl Default for ComposerSettings {
@@ -122,15 +123,18 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    try!(ctx.add_cache_dir(Path::new("/tmp/composer-cache"),
+    try!(ctx.add_cache_dir(Path::new(COMPOSER_CACHE),
                            "composer-cache".to_string()));
+
+    try!(ctx.add_cache_dir(Path::new(COMPOSER_SELF_CACHE),
+                           "composer-self-cache".to_owned()));
 
     let vendor_dir = ctx.composer_settings.vendor_dir.as_ref()
         .map(|p| p.to_string_lossy().into_owned())
         .unwrap_or_else(|| COMPOSER_VENDOR_DIR.to_owned());
 
     ctx.environ.insert("COMPOSER_VENDOR_DIR".to_owned(), vendor_dir);
-    
+
     ctx.environ.insert("COMPOSER_HOME".to_owned(),
                        COMPOSER_HOME.to_owned());
     ctx.environ.insert("COMPOSER_BIN_DIR".to_owned(),
@@ -147,28 +151,51 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
     try_msg!(file_util::create_dir(COMPOSER_HOME, true),
         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
 
-    let composer_inst = try!(download::download_file(ctx, COMPOSER_BOOTSTRAP));
-    try!(file_util::copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
-        .map_err(|e| format!("Error copying composer installer: {}", e)));
-
     let runtime_exe = ctx.composer_settings
         .runtime_exe
         .clone()
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
-    let args = [
-        runtime_exe,
-        "/tmp/composer-setup.php".to_owned(),
-        "--install-dir=/usr/local/bin/".to_owned(),
-        "--filename=composer".to_owned(),
-    ];
-    try!(run_command(ctx, &args));
+    let cached_composer = format!("/vagga/root{}/composer.phar", COMPOSER_SELF_CACHE);
+    if Path::new(&cached_composer).exists() {
+        try!(update_composer(ctx, &runtime_exe));
+    } else {
+        try!(install_composer(ctx, &runtime_exe));
+    }
+
+    try!(file_util::copy(cached_composer, "/vagga/root/usr/local/bin/composer")
+        .map_err(|e| format!("Error copying composer binary: {}", e)));
 
     if ctx.composer_settings.install_runtime {
         try!(setup_include_path(ctx));
     }
 
     Ok(())
+}
+
+fn update_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
+    let args = [
+        runtime.to_owned(),
+        format!("{}/composer.phar", COMPOSER_SELF_CACHE),
+        "self-update".to_owned(),
+        "--clean-backups".to_owned(),
+    ];
+
+    run_command(ctx, &args)
+}
+
+fn install_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
+    let composer_inst = try!(download::download_file(ctx, COMPOSER_BOOTSTRAP));
+    try!(file_util::copy(&composer_inst, &Path::new("/vagga/root/tmp/composer-setup.php"))
+        .map_err(|e| format!("Error copying composer installer: {}", e)));
+
+    let args = [
+        runtime.to_owned(),
+        "/tmp/composer-setup.php".to_owned(),
+        format!("--install-dir={}", COMPOSER_SELF_CACHE),
+    ];
+
+    run_command(ctx, &args)
 }
 
 fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
