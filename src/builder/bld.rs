@@ -97,15 +97,6 @@ impl BuildCommand for Builder {
             }
             &B::UbuntuUniverse => {
             }
-            &B::Sh(ref text) => {
-            }
-            &B::Cmd(ref cmd) => {
-            }
-            &B::Env(ref pairs) => {
-                for (k, v) in pairs.iter() {
-                    guard.ctx.environ.insert(k.clone(), v.clone());
-                }
-            }
             &B::Remove(ref path) => {
                 try!(dirs::remove(path, guard))
             }

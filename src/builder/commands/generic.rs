@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::collections::BTreeMap;
 
 use unshare::{Command};
 
@@ -19,6 +20,10 @@ tuple_struct_decode!(Cmd);
 #[derive(Debug)]
 pub struct Depends(PathBuf);
 tuple_struct_decode!(Depends);
+
+#[derive(Debug)]
+pub struct Env(BTreeMap<String, String>);
+tuple_struct_decode!(Env);
 
 
 fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
@@ -201,6 +206,28 @@ impl BuildStep for Cmd {
     {
         if build {
             try!(run_command(&mut guard.ctx, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for Env {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        for (k, v) in &self.0 {
+            hash.field(k, v);
+        }
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, _build: bool)
+        -> Result<(), StepError>
+    {
+        for (k, v) in &self.0 {
+            guard.ctx.environ.insert(k.clone(), v.clone());
         }
         Ok(())
     }
