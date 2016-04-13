@@ -18,6 +18,20 @@ teardown() {
     [[ $link = ".roots/composer-lifecycle.1de6d854/root" ]]
 }
 
+@test "composer: keep composer after build" {
+    run vagga _build keep-composer
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ -f .vagga/keep-composer/usr/local/bin/composer ]]
+}
+
+@test "composer: change vendor directory" {
+    run vagga _build change-vendor-dir
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ -d .vagga/change-vendor-dir/usr/local/dependencies/vendor/nette/tester ]]
+}
+
 # php
 
 @test "composer: php ubuntu trusty" {
@@ -113,6 +127,7 @@ teardown() {
 # hhvm
 
 @test "composer: hhvm ubuntu trusty" {
+    skip
     run vagga _run hhvm-ubuntu-trusty laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]

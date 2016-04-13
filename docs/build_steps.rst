@@ -1243,7 +1243,15 @@ PHP/Composer Commands
 
    include_path
         (default ``.:/usr/local/lib/composer``) Set ``include_path``. This option
-        overrides the default ``include_path`` instead of appending to it;
+        overrides the default ``include_path`` instead of appending to it.
+
+   keep_composer
+        (default ``false``) If set to ``true``, the composer binary will not be
+        removed after build.
+
+   vendor_dir
+        (default ``/usr/local/lib/composer/vendor``) The directory where composer
+        dependencies will be installed.
 
    .. note:: Setting ``install_runtime`` to false still installs Composer.
 
