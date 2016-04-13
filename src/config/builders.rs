@@ -11,22 +11,7 @@ use builder::commands as cmd;
 use build_step::{Step, BuildStep};
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Env(BTreeMap<String, String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct Text(BTreeMap<PathBuf, String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Remove(PathBuf);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct EnsureDir(PathBuf);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct EmptyDir(PathBuf);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct CacheDirs(BTreeMap<PathBuf, String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct UbuntuPPA(String);
@@ -341,6 +326,10 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Sh" => step(cmd::generic::Sh::decode(d)),
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
         "Env" => step(cmd::generic::Env::decode(d)),
+        "EnsureDir" => step(cmd::dirs::EnsureDir::decode(d)),
+        "CacheDirs" => step(cmd::dirs::CacheDirs::decode(d)),
+        "EmptyDir" => step(cmd::dirs::EmptyDir::decode(d)),
+        "Remove" => step(cmd::dirs::Remove::decode(d)),
         "Depends" => step(cmd::generic::Depends::decode(d)),
         "Container" => step(cmd::subcontainer::Container::decode(d)),
         "Build" => step(cmd::subcontainer::Build::decode(d)),

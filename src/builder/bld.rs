@@ -97,21 +97,6 @@ impl BuildCommand for Builder {
             }
             &B::UbuntuUniverse => {
             }
-            &B::Remove(ref path) => {
-                try!(dirs::remove(path, guard))
-            }
-            &B::EmptyDir(ref path) => {
-                try!(clean_dir(path, false));
-                guard.ctx.add_empty_dir(&path);
-            }
-            &B::EnsureDir(ref path) => {
-                try!(dirs::ensure(path, guard));
-            }
-            &B::CacheDirs(ref pairs) => {
-                for (k, v) in pairs.iter() {
-                    try!(guard.ctx.add_cache_dir(k, v.clone()));
-                }
-            }
             &B::Git(ref git) => {
                 if build {
                     try!(vcs::git_command(&mut guard.ctx, git));
