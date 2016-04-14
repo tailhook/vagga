@@ -264,6 +264,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "UbuntuRelease" => step(cmd::ubuntu::UbuntuRelease::decode(d)),
         "UbuntuPPA" => step(cmd::ubuntu::UbuntuPPA::decode(d)),
         "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
+        "AptTrust" => step(cmd::ubuntu::AptTrust::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
         "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
         "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
