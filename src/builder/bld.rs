@@ -47,16 +47,6 @@ impl BuildCommand for Builder {
                     try!(copy::copy(cinfo, guard))
                 }
             }
-            &B::Git(ref git) => {
-                if build {
-                    try!(vcs::);
-                }
-            }
-            &B::GitInstall(ref git) => {
-                if build {
-                    try!(vcs::);
-                }
-            }
             &B::Download(ref dlinfo) => {
                 if build {
                     try!(download::download(&mut guard.ctx, dlinfo));
@@ -74,8 +64,6 @@ impl BuildCommand for Builder {
                 if build {
                     try!(gem::bundle(&mut guard.distro, &mut guard.ctx, info));
                 }
-            }
-            &B::ComposerDependencies(ref info) => {
             }
         }
         if build {
