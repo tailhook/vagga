@@ -29,6 +29,7 @@ mod path_util;
 mod process_util;
 mod tty_util;
 mod options;
+mod digest;
 mod build_step;
 
 // Commands

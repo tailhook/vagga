@@ -45,18 +45,6 @@ pub struct FileInfo {
     pub contents: String,
 }
 
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct ComposerConfig {
-    // It is used 'runtime' instead of 'php' in order to support hhvm in the future
-    pub install_runtime: bool,
-    pub install_dev: bool,
-    pub runtime_exe: Option<String>,
-    pub include_path: Option<String>,
-}
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct ComposerInstall(Vec<String>);
-
 #[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
 pub struct GemConfig {
     pub install_ruby: bool,
@@ -89,18 +77,6 @@ pub struct Copy {
 }
 
 
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct ComposerDependencies {
-    pub working_dir: Option<String>,
-    pub dev: bool,
-    pub prefer: Option<String>,
-    pub ignore_platform_reqs: bool,
-    pub no_autoloader: bool,
-    pub no_scripts: bool,
-    pub no_plugins: bool,
-    pub optimize_autoloader: bool,
-    pub classmap_authoritative: bool,
-}
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct GemBundle {

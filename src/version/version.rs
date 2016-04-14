@@ -14,7 +14,7 @@ use config::{Config, Container};
 use config::read_config;
 use path_util::ToRelative;
 use super::error::Error::{self, New, ContainerNotFound};
-use super::managers::{bundler, composer};
+use super::managers::{bundler};
 use build_step::{Step, BuildStep, Digest};
 
 /*

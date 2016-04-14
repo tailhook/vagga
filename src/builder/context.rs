@@ -9,7 +9,7 @@ use container::util::clean_dir;
 use config::Config;
 use config::Container;
 use config::Settings;
-use config::builders::ComposerConfig;
+use builder::commands::composer::ComposerConfig;
 use config::builders::GemConfig;
 use builder::commands::pip::PipConfig;
 use builder::commands::npm::NpmConfig;

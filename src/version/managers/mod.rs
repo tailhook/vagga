@@ -2,7 +2,6 @@ use rustc_serialize::json::Json;
 use shaman::digest::Digest;
 
 pub mod bundler;
-pub mod composer;
 
 /// Hashes dependencies list in json format
 ///
