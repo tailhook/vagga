@@ -1,17 +1,35 @@
 use std::fs::rename;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
+use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Stdio};
 
 use config::settings::Settings;
-use config::builders::Git;
-use config::builders::GitInstall;
 use builder::commands::subcontainer::GitSource;
 use super::super::capsule;
 use super::super::context::Context;
 use super::generic::run_command_at;
 use super::super::super::path_util::ToRelative;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+#[derive(RustcDecodable, Debug)]
+pub struct Git {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+    pub path: PathBuf,
+}
+
+#[derive(RustcDecodable, Debug)]
+pub struct GitInstall {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+    pub subdir: PathBuf,
+    pub script: String,
+}
 
 
 fn git_cache(url: &String) -> Result<PathBuf, String> {
@@ -128,4 +146,45 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
          .map_err(|e| format!("Error creating dir: {}", e)));
     try!(git_checkout(&cache_path, &dest, &git.revision, &git.branch));
     Ok(())
+}
+
+impl BuildStep for Git {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("url", &self.url);
+        hash.opt_field("revision", &self.revision);
+        hash.opt_field("branch", &self.branch);
+        hash.field("path", self.path.as_os_str().as_bytes());
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        git_command(&mut guard.ctx, &self).map_err(|e| e.into())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for GitInstall {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("url", &self.url);
+        hash.opt_field("revision", &self.revision);
+        hash.opt_field("branch", &self.branch);
+        hash.field("subdir", self.subdir.as_os_str().as_bytes());
+        hash.field("script", &self.script);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        git_install(&mut guard.ctx, &self).map_err(|e| e.into())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

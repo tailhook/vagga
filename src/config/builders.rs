@@ -20,23 +20,6 @@ pub struct PacmanRepo {
 }
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Git {
-    pub url: String,
-    pub revision: Option<String>,
-    pub branch: Option<String>,
-    pub path: PathBuf,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct GitInstall {
-    pub url: String,
-    pub revision: Option<String>,
-    pub branch: Option<String>,
-    pub subdir: PathBuf,
-    pub script: String,
-}
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct FileInfo {
     pub name: PathBuf,
     pub contents: String,
@@ -264,6 +247,8 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "AptTrust" => step(cmd::ubuntu::AptTrust::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
         "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
+        "Git" => step(cmd::vcs::Git::decode(d)),
+        "GitInstall" => step(cmd::vcs::GitInstall::decode(d)),
         "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
         "Py2Install" => step(cmd::pip::Py2Install::decode(d)),
         "Py2Requirements" => step(cmd::pip::Py2Requirements::decode(d)),

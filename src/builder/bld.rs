@@ -49,12 +49,12 @@ impl BuildCommand for Builder {
             }
             &B::Git(ref git) => {
                 if build {
-                    try!(vcs::git_command(&mut guard.ctx, git));
+                    try!(vcs::);
                 }
             }
             &B::GitInstall(ref git) => {
                 if build {
-                    try!(vcs::git_install(&mut guard.ctx, git));
+                    try!(vcs::);
                 }
             }
             &B::Download(ref dlinfo) => {
