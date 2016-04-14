@@ -42,26 +42,9 @@ impl BuildCommand for Builder {
         -> Result<(), StepError>
     {
         match self {
-            &B::Install(ref pkgs) => {
-                try!(packaging::install(pkgs, guard, build))
-            }
-            &B::BuildDeps(ref pkgs) => {
-                try!(packaging::build_deps(pkgs, guard, build))
-            }
-            &B::Text(ref files) => {
-                if build {
-                    try!(text::write_text_files(files, guard))
-                }
-            }
             &B::Copy(ref cinfo) => {
                 if build {
                     try!(copy::copy(cinfo, guard))
-                }
-            }
-            &B::Ubuntu(ref codename) => {
-                try!(ubuntu::configure_simple(guard, codename));
-                if build {
-                    try!(guard.distro.bootstrap(&mut guard.ctx));
                 }
             }
             &B::Git(ref git) => {
@@ -74,22 +57,11 @@ impl BuildCommand for Builder {
                     try!(vcs::git_install(&mut guard.ctx, git));
                 }
             }
-            &B::Tar(ref tar) => {
-            }
-            &B::TarInstall(ref tar_inst) => {
-            }
             &B::Download(ref dlinfo) => {
                 if build {
                     try!(download::download(&mut guard.ctx, dlinfo));
                 }
             }
-            &B::Alpine(ref version) => {
-                try!()
-            }
-            &B::PipConfig(ref pip_settings) => {
-                guard.ctx.pip_settings = pip_settings.clone();
-            }
-            &B::PyFreeze(_) => unimplemented!(),
             &B::GemConfig(ref gem_settings) => {
                 guard.ctx.gem_settings = gem_settings.clone();
             }

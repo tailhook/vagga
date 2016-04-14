@@ -11,9 +11,6 @@ use builder::commands as cmd;
 use build_step::{Step, BuildStep};
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Text(BTreeMap<PathBuf, String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct GemInstall(Vec<String>);
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -277,6 +274,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Sh" => step(cmd::generic::Sh::decode(d)),
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
         "Env" => step(cmd::generic::Env::decode(d)),
+        "Text" => step(cmd::text::Text::decode(d)),
         "EnsureDir" => step(cmd::dirs::EnsureDir::decode(d)),
         "CacheDirs" => step(cmd::dirs::CacheDirs::decode(d)),
         "EmptyDir" => step(cmd::dirs::EmptyDir::decode(d)),
