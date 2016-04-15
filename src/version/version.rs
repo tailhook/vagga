@@ -1,42 +1,14 @@
-use std::io::{BufReader, BufRead, Read};
-use std::io::ErrorKind;
-use std::fs::{File, symlink_metadata};
-use std::os::unix::ffi::OsStrExt;
+use std::io::Read;
+use std::fs::File;
 use std::path::Path;
 
-use rustc_serialize::json::{self, Json};
-use regex::Regex;
-use scan_dir::ScanDir;
 use shaman::sha2::Sha256;
 use shaman::digest::Digest as ShamanDigest;
 
 use config::{Config, Container};
-use config::read_config;
-use path_util::ToRelative;
-use super::error::Error::{self, New, ContainerNotFound};
+use super::error::Error;
 use build_step::{Step, BuildStep, Digest};
 
-/*
-impl VersionHash for Builder {
-    fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
-        match self {
-            &B::CacheDirs(ref map) => {
-                for (k, v) in map.iter() {
-                    hash.input(k.as_os_str().as_bytes());
-                    hash.input(b"\0");
-                    hash.input(v.as_bytes());
-                    hash.input(b"\0");
-                }
-                Ok(())
-            }
-            _ => {
-                hash.input(json::encode(self).unwrap().as_bytes());
-                Ok(())
-            }
-        }
-    }
-}
-*/
 
 fn all(setup: &[Step], cfg: &Config)
     -> Result<Sha256, (String, Error)>

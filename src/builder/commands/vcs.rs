@@ -149,7 +149,7 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
 }
 
 impl BuildStep for Git {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);
@@ -161,7 +161,10 @@ impl BuildStep for Git {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        git_command(&mut guard.ctx, &self).map_err(|e| e.into())
+        if build {
+            try!(git_command(&mut guard.ctx, &self));
+        }
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
@@ -169,7 +172,7 @@ impl BuildStep for Git {
 }
 
 impl BuildStep for GitInstall {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);
@@ -182,7 +185,10 @@ impl BuildStep for GitInstall {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        git_install(&mut guard.ctx, &self).map_err(|e| e.into())
+        if build {
+            try!(git_install(&mut guard.ctx, &self));
+        }
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None

@@ -196,14 +196,14 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
 }
 
 impl BuildStep for NpmConfig {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("npm_exe", &self.npm_exe);
         hash.bool("install_node", self.install_node);
         Ok(())
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
         guard.ctx.npm_settings = self.clone();
@@ -215,7 +215,7 @@ impl BuildStep for NpmConfig {
 }
 
 impl BuildStep for NpmInstall {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("NpmInstall", &self.0);
@@ -236,7 +236,7 @@ impl BuildStep for NpmInstall {
 }
 
 impl BuildStep for NpmDependencies {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.file);

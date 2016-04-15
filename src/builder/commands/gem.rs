@@ -272,7 +272,7 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
 }
 
 impl BuildStep for GemInstall {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("GemInstall", &self.0);
@@ -281,7 +281,10 @@ impl BuildStep for GemInstall {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        install(&mut guard.distro, &mut guard.ctx, &self.0).map_err(Into::into)
+        if build {
+            try!(install(&mut guard.distro, &mut guard.ctx, &self.0));
+        }
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
@@ -289,7 +292,7 @@ impl BuildStep for GemInstall {
 }
 
 impl BuildStep for GemConfig {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.bool("install_ruby", self.install_ruby);
@@ -297,7 +300,7 @@ impl BuildStep for GemConfig {
         hash.bool("update_gem", self.update_gem);
         Ok(())
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
         guard.ctx.gem_settings = self.clone();
@@ -309,7 +312,7 @@ impl BuildStep for GemConfig {
 }
 
 impl BuildStep for GemBundle {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.gemfile);
@@ -318,7 +321,8 @@ impl BuildStep for GemBundle {
             .map(|dir| dir.join("Gemfile.lock"))
             .ok_or("Gemfile should be under /work".to_owned()));
         if gemlock.exists() {
-            hash.file(&gemlock, None, None);
+            try!(hash.file(&gemlock, None, None)
+                .map_err(|e| VersionError::Io(e, gemlock)));
         }
 
         let f = try!(File::open(&path)
@@ -340,7 +344,10 @@ impl BuildStep for GemBundle {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        bundle(&mut guard.distro, &mut guard.ctx, self)
+        if build {
+            try!(bundle(&mut guard.distro, &mut guard.ctx, self));
+        }
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None

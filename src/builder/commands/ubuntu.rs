@@ -530,7 +530,7 @@ pub fn configure_simple(guard: &mut Guard, codename: &str)
 }
 
 impl BuildStep for Ubuntu {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("Ubuntu", &self.0);
@@ -551,7 +551,7 @@ impl BuildStep for Ubuntu {
 }
 
 impl BuildStep for UbuntuUniverse {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.item("UbuntuUniverse");
@@ -575,7 +575,7 @@ impl BuildStep for UbuntuUniverse {
 }
 
 impl BuildStep for UbuntuPPA {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("UbuntuPPA", &self.0);
@@ -598,7 +598,7 @@ impl BuildStep for UbuntuPPA {
 }
 
 impl BuildStep for AptTrust {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.opt_field("server", &self.server);
@@ -622,7 +622,7 @@ impl BuildStep for AptTrust {
 }
 
 impl BuildStep for UbuntuRepo {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);
@@ -648,7 +648,7 @@ impl BuildStep for UbuntuRepo {
 }
 
 impl BuildStep for UbuntuRelease {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("version", &self.version);

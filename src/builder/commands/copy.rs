@@ -2,7 +2,6 @@ use std::io::ErrorKind;
 use std::fs::{symlink_metadata};
 use std::path::{Path, PathBuf};
 use std::os::unix::raw::{uid_t, gid_t};
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
 use regex::Regex;
@@ -24,7 +23,7 @@ pub struct Copy {
 
 
 impl BuildStep for Copy {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         let ref src = self.source;
@@ -82,9 +81,12 @@ impl BuildStep for Copy {
         }
         Ok(())
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, _guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
+        if !build {
+            return Ok(());
+        }
         let ref src = self.source;
         let dest = Path::new("/vagga/root").join(self.path.rel());
         let typ = try!(symlink_metadata(src)

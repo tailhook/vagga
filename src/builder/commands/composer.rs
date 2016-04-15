@@ -304,7 +304,7 @@ fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
 }
 
 impl BuildStep for ComposerConfig {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.opt_field("runtime_exe", &self.runtime_exe);
@@ -313,7 +313,7 @@ impl BuildStep for ComposerConfig {
         hash.bool("install_dev", self.install_dev);
         Ok(())
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
         guard.ctx.composer_settings = self.clone();
@@ -325,7 +325,7 @@ impl BuildStep for ComposerConfig {
 }
 
 impl BuildStep for ComposerInstall {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("ComposerInstall", &self.0);
@@ -373,7 +373,7 @@ fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
 }
 
 impl BuildStep for ComposerDependencies {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         let base_path: PathBuf = {

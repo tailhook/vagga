@@ -1,11 +1,5 @@
-use std::fs;
-use std::io::{self, Read};
 use std::rc::Rc;
-use std::fmt::{Debug, Display};
-use std::path::Path;
-use std::os::unix::raw::{uid_t, gid_t};
-use std::os::unix::ffi::OsStrExt;
-use std::os::unix::fs::{PermissionsExt, MetadataExt};
+use std::fmt::Debug;
 
 
 // Convenient reexports
@@ -39,6 +33,6 @@ impl BuildStep for Step {
     }
     fn is_dependent_on(&self) -> Option<&str>
     {
-        self.is_dependent_on()
+        self.0.is_dependent_on()
     }
 }

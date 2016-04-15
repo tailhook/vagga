@@ -211,7 +211,7 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
 }
 
 impl BuildStep for PipConfig {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("find_links", &self.find_links);
@@ -223,7 +223,7 @@ impl BuildStep for PipConfig {
         hash.opt_field("python_exe", &self.python_exe);
         Ok(())
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
         guard.ctx.pip_settings = self.clone();
@@ -235,7 +235,7 @@ impl BuildStep for PipConfig {
 }
 
 impl BuildStep for Py2Install {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("Py2Install", &self.0);
@@ -256,7 +256,7 @@ impl BuildStep for Py2Install {
 }
 
 impl BuildStep for Py3Install {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("Py3Install", &self.0);
@@ -297,7 +297,7 @@ fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
 }
 
 impl BuildStep for Py2Requirements {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         version_req(hash, &self.0)
@@ -318,7 +318,7 @@ impl BuildStep for Py2Requirements {
 }
 
 impl BuildStep for Py3Requirements {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         version_req(hash, &self.0)

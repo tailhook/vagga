@@ -9,7 +9,6 @@ use std::os::unix::ffi::OsStrExt;
 
 use nix;
 use libc::{uid_t, gid_t, c_int};
-use shaman::digest::Digest;
 use nix::fcntl::{flock, FlockArg};
 
 

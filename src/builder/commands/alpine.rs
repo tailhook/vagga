@@ -255,7 +255,7 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 impl BuildStep for Alpine {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("Alpine", &self.0);

@@ -1,15 +1,14 @@
-use std::rc::Rc;
 use std::default::Default;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use quire::validate as V;
 use libc::{uid_t, gid_t};
-use rustc_serialize::{Decodable, Decoder};
+use rustc_serialize::{Decoder};
 
 use super::builders::{builder_validator};
 use super::Range;
-use build_step::{BuildStep, Step};
+use build_step::{Step};
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SnapshotInfo {

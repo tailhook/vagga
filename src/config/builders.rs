@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::path::PathBuf;
 use std::default::Default;
-use std::collections::BTreeMap;
 
 use quire::validate as V;
 use libc::{uid_t, gid_t};

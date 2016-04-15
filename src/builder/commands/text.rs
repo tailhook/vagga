@@ -15,7 +15,7 @@ tuple_struct_decode!(Text);
 
 
 impl BuildStep for Text {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         for (k, v) in &self.0 {
@@ -23,7 +23,7 @@ impl BuildStep for Text {
         }
         Ok(())
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, _guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
         if build {

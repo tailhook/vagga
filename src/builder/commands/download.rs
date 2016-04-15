@@ -5,7 +5,6 @@ use std::os::unix::ffi::OsStrExt;
 
 use file_util::copy;
 use path_util::ToRelative;
-use builder::context::Context;
 use builder::download::download_file;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -19,7 +18,7 @@ pub struct Download {
 
 
 impl BuildStep for Download {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);

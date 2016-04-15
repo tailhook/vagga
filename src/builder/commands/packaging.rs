@@ -11,7 +11,7 @@ pub struct BuildDeps(Vec<String>);
 tuple_struct_decode!(BuildDeps);
 
 impl BuildStep for Install {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("Install", &self.0);
@@ -35,7 +35,7 @@ impl BuildStep for Install {
 }
 
 impl BuildStep for BuildDeps {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("BuildDeps", &self.0);

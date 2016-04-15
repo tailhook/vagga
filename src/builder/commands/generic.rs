@@ -153,7 +153,7 @@ pub fn run(mut cmd: Command) -> Result<(), StepError> {
 }
 
 impl BuildStep for Sh {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("Sh", &self.0);
@@ -176,14 +176,14 @@ impl BuildStep for Sh {
 }
 
 impl BuildStep for Depends {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.0);
-        hash.file(&path, None, None);
-        Ok(())
+        hash.file(&path, None, None)
+        .map_err(|e| VersionError::Io(e, path))
     }
-    fn build(&self, guard: &mut Guard, build: bool)
+    fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
         Ok(())
@@ -195,7 +195,7 @@ impl BuildStep for Depends {
 
 
 impl BuildStep for Cmd {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.sequence("Cmd", &self.0);

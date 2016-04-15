@@ -139,7 +139,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
 }
 
 impl BuildStep for Tar {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         if let Some(ref sha) = self.sha256 {
@@ -165,7 +165,7 @@ impl BuildStep for Tar {
 }
 
 impl BuildStep for TarInstall {
-    fn hash(&self, cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         if let Some(ref sha) = self.sha256 {
