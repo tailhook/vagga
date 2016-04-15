@@ -14,15 +14,12 @@ use config::{Config, Container};
 use config::read_config;
 use path_util::ToRelative;
 use super::error::Error::{self, New, ContainerNotFound};
-use super::managers::{bundler};
 use build_step::{Step, BuildStep, Digest};
 
 /*
 impl VersionHash for Builder {
     fn hash(&self, cfg: &Config, hash: &mut Digest) -> Result<(), Error> {
         match self {
-            &B::GemBundle(ref info) => bundler::hash(info, hash),
-            &B::ComposerDependencies(ref info) => composer::hash(info, hash),
             &B::CacheDirs(ref map) => {
                 for (k, v) in map.iter() {
                     hash.input(k.as_os_str().as_bytes());

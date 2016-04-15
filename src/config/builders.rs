@@ -11,9 +11,6 @@ use builder::commands as cmd;
 use build_step::{Step, BuildStep};
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct GemInstall(Vec<String>);
-
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct PacmanRepo {
     pub name: String,
     pub url: String,
@@ -23,13 +20,6 @@ pub struct PacmanRepo {
 pub struct FileInfo {
     pub name: PathBuf,
     pub contents: String,
-}
-
-#[derive(Clone, RustcDecodable, Debug, RustcEncodable)]
-pub struct GemConfig {
-    pub install_ruby: bool,
-    pub gem_exe: Option<String>,
-    pub update_gem: bool,
 }
 
 
@@ -56,14 +46,6 @@ pub struct Copy {
     pub ignore_regex: String,
 }
 
-
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct GemBundle {
-    pub gemfile: PathBuf,
-    pub without: Vec<String>,
-    pub trust_policy: Option<String>,
-}
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
     V::Enum::new()
@@ -271,6 +253,9 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "NpmConfig" => step(cmd::npm::NpmConfig::decode(d)),
         "NpmDependencies" => step(cmd::npm::NpmDependencies::decode(d)),
         "NpmInstall" => step(cmd::npm::NpmInstall::decode(d)),
+        "GemInstall" => step(cmd::gem::GemInstall::decode(d)),
+        "GemBundle" => step(cmd::gem::GemBundle::decode(d)),
+        "GemConfig" => step(cmd::gem::GemConfig::decode(d)),
         step_name => panic!("Step {} is not yet implemented", step_name),
     }
 }

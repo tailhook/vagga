@@ -1,23 +1,41 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::{Read, Write, BufReader, BufRead};
 
 use regex::Regex;
 
 use super::super::context::Context;
 use super::super::packages;
 use super::generic::{capture_command, run_command_at_env};
-use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use config::builders::{GemConfig, GemBundle};
 use process_util::capture_stdout;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const DEFAULT_GEM_EXE: &'static str = "/usr/bin/gem";
 const BIN_DIR: &'static str = "/usr/local/bin";
 const GEM_VERSION_WITH_NO_DOCUMENT_OPT: f32 = 2.0;
 const VALID_TRUST_POLICIES: [&'static str; 3] = ["LowSecurity", "MediumSecurity", "HighSecurity"];
 
+
+#[derive(Debug)]
+pub struct GemInstall(Vec<String>);
+tuple_struct_decode!(GemInstall);
+
+
+#[derive(RustcDecodable, Debug, Clone)]
+pub struct GemConfig {
+    pub install_ruby: bool,
+    pub gem_exe: Option<String>,
+    pub update_gem: bool,
+}
+
+#[derive(RustcDecodable, Debug)]
+pub struct GemBundle {
+    pub gemfile: PathBuf,
+    pub without: Vec<String>,
+    pub trust_policy: Option<String>,
+}
 
 impl Default for GemConfig {
     fn default() -> Self {
@@ -251,4 +269,80 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
             .map_err(|e| format!("Error dumping gems package list: {}", e))
         }));
     Ok(())
+}
+
+impl BuildStep for GemInstall {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("GemInstall", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        install(&mut guard.distro, &mut guard.ctx, &self.0).map_err(Into::into)
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for GemConfig {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.bool("install_ruby", self.install_ruby);
+        hash.opt_field("gem_exe", &self.gem_exe);
+        hash.bool("update_gem", self.update_gem);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        guard.ctx.gem_settings = self.clone();
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for GemBundle {
+    fn hash(&self, cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        let path = Path::new("/work").join(&self.gemfile);
+
+        let gemlock = try!(path.parent()
+            .map(|dir| dir.join("Gemfile.lock"))
+            .ok_or("Gemfile should be under /work".to_owned()));
+        if gemlock.exists() {
+            hash.file(&gemlock, None, None);
+        }
+
+        let f = try!(File::open(&path)
+            .map_err(|e| VersionError::Io(e, path.clone())));
+        let reader = BufReader::new(f);
+
+        for line in reader.lines() {
+            let line = try!(line
+                .map_err(|e| VersionError::Io(e, path.clone())));
+            let line = line.trim();
+            if line.is_empty() || line.starts_with("#") {
+                continue
+            }
+            hash.item(line);
+        }
+
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        bundle(&mut guard.distro, &mut guard.ctx, self)
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

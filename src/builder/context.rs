@@ -10,7 +10,7 @@ use config::Config;
 use config::Container;
 use config::Settings;
 use builder::commands::composer::ComposerConfig;
-use config::builders::GemConfig;
+use builder::commands::gem::GemConfig;
 use builder::commands::pip::PipConfig;
 use builder::commands::npm::NpmConfig;
 use super::capsule;

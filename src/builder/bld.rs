@@ -52,19 +52,6 @@ impl BuildCommand for Builder {
                     try!(download::download(&mut guard.ctx, dlinfo));
                 }
             }
-            &B::GemConfig(ref gem_settings) => {
-                guard.ctx.gem_settings = gem_settings.clone();
-            }
-            &B::GemInstall(ref pkgs) => {
-                if build {
-                    try!(gem::install(&mut guard.distro, &mut guard.ctx, pkgs));
-                }
-            }
-            &B::GemBundle(ref info) => {
-                if build {
-                    try!(gem::bundle(&mut guard.distro, &mut guard.ctx, info));
-                }
-            }
         }
         if build {
             try!(guard.ctx.timelog.mark(format_args!("Step: {:?}", self))
