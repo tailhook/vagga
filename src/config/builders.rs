@@ -31,13 +31,6 @@ pub struct PyFreeze {
 }
 
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct Download {
-    pub url: String,
-    pub path: PathBuf,
-    pub mode: u32,
-}
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct Copy {
     pub source: PathBuf,
     pub path: PathBuf,
@@ -242,6 +235,8 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
         "Env" => step(cmd::generic::Env::decode(d)),
         "Text" => step(cmd::text::Text::decode(d)),
+        "Copy" => step(cmd::copy::Copy::decode(d)),
+        "Download" => step(cmd::download::Download::decode(d)),
         "EnsureDir" => step(cmd::dirs::EnsureDir::decode(d)),
         "CacheDirs" => step(cmd::dirs::CacheDirs::decode(d)),
         "EmptyDir" => step(cmd::dirs::EmptyDir::decode(d)),

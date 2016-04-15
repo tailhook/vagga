@@ -41,18 +41,6 @@ impl BuildCommand for Builder {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        match self {
-            &B::Copy(ref cinfo) => {
-                if build {
-                    try!(copy::copy(cinfo, guard))
-                }
-            }
-            &B::Download(ref dlinfo) => {
-                if build {
-                    try!(download::download(&mut guard.ctx, dlinfo));
-                }
-            }
-        }
         if build {
             try!(guard.ctx.timelog.mark(format_args!("Step: {:?}", self))
                 .map_err(|e| format!("Can't write timelog: {}", e)));
