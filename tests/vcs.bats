@@ -8,7 +8,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/git)
-    [[ $link = ".roots/git.321b9aa9/root" ]]
+    [[ $link = ".roots/git.8a42a366/root" ]]
 }
 
 @test "vcs: install from git checkout" {
@@ -17,5 +17,5 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/git-install)
-    [[ $link = ".roots/git-install.90f37c1b/root" ]]
+    [[ $link = ".roots/git-install.a244fe11/root" ]]
 }

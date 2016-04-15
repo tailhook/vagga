@@ -17,7 +17,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2-alpine)
-    [[ $link = ".roots/py2-alpine.a7327653/root" ]]
+    [[ $link = ".roots/py2-alpine.ca22d0a9/root" ]]
 }
 
 @test "py2: ubuntu git" {
@@ -35,7 +35,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2-git-alpine)
-    [[ $link = ".roots/py2-git-alpine.569f9a5e/root" ]]
+    [[ $link = ".roots/py2-git-alpine.5b99e59e/root" ]]
 }
 
 @test "py3: ubuntu pkg" {
@@ -91,7 +91,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2req-alpine)
-    [[ $link = ".roots/py2req-alpine.eb8c5b79/root" ]]
+    [[ $link = ".roots/py2req-alpine.21272396/root" ]]
 }
 
 @test "py3: ubuntu req-https.txt" {
@@ -107,7 +107,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-alpine)
-    [[ $link = ".roots/py3req-https-alpine.04976852/root" ]]
+    [[ $link = ".roots/py3req-https-alpine.b9a37a7c/root" ]]
 }
 
 @test "py3: container inheritance" {
@@ -115,7 +115,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-inherit)
-    [[ $link = ".roots/py3req-inherit.04976852/root" ]]
+    [[ $link = ".roots/py3req-inherit.b9a37a7c/root" ]]
 }
 
 @test "pip: C dependencies caching" {
