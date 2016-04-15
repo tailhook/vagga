@@ -8,7 +8,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg)
-    [[ $link = ".roots/pkg.59688055/root" ]]
+    [[ $link = ".roots/pkg.ba34671c/root" ]]
 }
 
 @test "npm: ubuntu pkg" {
@@ -17,7 +17,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-ubuntu)
-    [[ $link = ".roots/pkg-ubuntu.14bc28ff/root" ]]
+    [[ $link = ".roots/pkg-ubuntu.7f95a983/root" ]]
 }
 
 @test "npm: precise pkg" {
@@ -26,7 +26,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-precise)
-    [[ $link = ".roots/pkg-precise.47a114e9/root" ]]
+    [[ $link = ".roots/pkg-precise.e1b60bf3/root" ]]
 }
 
 @test "npm: alpine pkg" {
@@ -35,7 +35,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-alpine)
-    [[ $link = ".roots/pkg-alpine.864640c4/root" ]]
+    [[ $link = ".roots/pkg-alpine.4111ae2d/root" ]]
 }
 
 @test "npm: default git" {
@@ -44,7 +44,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git)
-    [[ $link = ".roots/git.0d63daec/root" ]]
+    [[ $link = ".roots/git.b7217faa/root" ]]
 }
 
 @test "npm: ubuntu git" {
@@ -53,7 +53,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-ubuntu)
-    [[ $link = ".roots/git-ubuntu.a3bf710f/root" ]]
+    [[ $link = ".roots/git-ubuntu.761ad1bb/root" ]]
 }
 
 @test "npm: alpine git" {
@@ -62,7 +62,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-alpine)
-    [[ $link = ".roots/git-alpine.d6b3d182/root" ]]
+    [[ $link = ".roots/git-alpine.cb0d5fa4/root" ]]
 }
 
 @test "npm: NpmDependencies" {
@@ -71,7 +71,7 @@ setup() {
     [[ $status = 124 ]]  # no resolve but has classnames --v
     [[ -f .vagga/npm-deps/usr/lib/node_modules/classnames/index.js ]]
     link=$(readlink .vagga/npm-deps)
-    [[ $link = ".roots/npm-deps.22206178/root" ]]
+    [[ $link = ".roots/npm-deps.04f8aff0/root" ]]
 }
 @test "npm: NpmDependencies dev" {
     run vagga _run npm-dev-deps resolve .
@@ -79,5 +79,5 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/npm-dev-deps)
-    [[ $link = ".roots/npm-dev-deps.1dd280f9/root" ]]
+    [[ $link = ".roots/npm-dev-deps.d399be0f/root" ]]
 }

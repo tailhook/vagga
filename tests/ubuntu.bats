@@ -67,7 +67,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/trusty-calc)
-    [[ $link = ".roots/trusty-calc.97c8fccd/root" ]]
+    [[ $link = ".roots/trusty-calc.32adcc6c/root" ]]
 }
 
 @test "Run precise bc" {
