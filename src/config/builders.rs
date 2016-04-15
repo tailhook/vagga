@@ -251,6 +251,10 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "GemInstall" => step(cmd::gem::GemInstall::decode(d)),
         "GemBundle" => step(cmd::gem::GemBundle::decode(d)),
         "GemConfig" => step(cmd::gem::GemConfig::decode(d)),
+        "ComposerInstall" => step(cmd::composer::ComposerInstall::decode(d)),
+        "ComposerDependencies"
+        => step(cmd::composer::ComposerDependencies::decode(d)),
+        "ComposerConfig" => step(cmd::composer::ComposerConfig::decode(d)),
         step_name => panic!("Step {} is not yet implemented", step_name),
     }
 }
