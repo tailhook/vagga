@@ -5,7 +5,7 @@ use builder::distrib::{Unknown,Distribution};
 use builder::error::{Error};
 use builder::commands::{composer, gem, npm, pip};
 use builder::packages;
-use builder::bld::BuildCommand;
+use build_step::BuildStep;
 use container::util::clean_dir;
 use container::mount::{unmount, mount_system_dirs};
 use file_util::{create_dir, copy};
@@ -31,7 +31,7 @@ impl<'a> Guard<'a> {
         for b in self.ctx.container_config.setup.iter() {
             debug!("Building step: {:?}", b);
             try!(b.build(self, true)
-                .map_err(|e| Error::Step(b.clone(), e)));
+                .map_err(|e| Error::Step(b.0.clone(), e)));
         }
 
         try!(self.finish());

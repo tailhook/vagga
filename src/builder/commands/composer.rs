@@ -1,21 +1,22 @@
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
 use std::io::Write;
+use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command};
 use scan_dir::{self, ScanDir};
 use regex::Regex;
+use rustc_serialize::json::Json;
 
 use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command, capture_command};
-use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
 use builder::download;
-use config::builders::{ComposerSettings, ComposerDepInfo};
 use process_util::capture_stdout;
 use file_util;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
 const DEFAULT_INCLUDE_PATH: &'static str = ".:/usr/local/lib/composer";
@@ -27,10 +28,46 @@ const COMPOSER_BIN_DIR: &'static str = "/usr/local/bin";
 const COMPOSER_BOOTSTRAP: &'static str = "https://getcomposer.org/installer";
 const COMPOSER_SELF_CACHE: &'static str = "/tmp/composer-self-cache";
 
+const LOCKFILE_RELEVANT_KEYS: &'static [&'static str] = &[
+    "name",
+    "version",
+    "source",
+    "dist",
+    "extra",
+    "autoload",
+];
 
-impl Default for ComposerSettings {
+#[derive(RustcDecodable, Debug, Clone)]
+pub struct ComposerConfig {
+    // It is used 'runtime' instead of 'php' in order to support hhvm in the future
+    pub install_runtime: bool,
+    pub install_dev: bool,
+    pub runtime_exe: Option<String>,
+    pub include_path: Option<String>,
+    pub keep_composer: bool,
+    pub vendor_dir: Option<PathBuf>,
+}
+
+#[derive(Debug)]
+pub struct ComposerInstall(Vec<String>);
+tuple_struct_decode!(ComposerInstall);
+
+#[derive(RustcDecodable, Debug)]
+pub struct ComposerDependencies {
+    pub working_dir: Option<String>,
+    pub dev: bool,
+    pub prefer: Option<String>,
+    pub ignore_platform_reqs: bool,
+    pub no_autoloader: bool,
+    pub no_scripts: bool,
+    pub no_plugins: bool,
+    pub optimize_autoloader: bool,
+    pub classmap_authoritative: bool,
+}
+
+impl Default for ComposerConfig {
     fn default() -> Self {
-        ComposerSettings {
+        ComposerConfig {
             install_runtime: true,
             install_dev: false,
             runtime_exe: None,
@@ -41,7 +78,7 @@ impl Default for ComposerSettings {
     }
 }
 
-fn scan_features(settings: &ComposerSettings)
+fn scan_features(settings: &ComposerConfig)
     -> Vec<packages::Package>
 {
     let mut res = vec!();
@@ -91,7 +128,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 pub fn composer_dependencies(distro: &mut Box<Distribution>,
-    ctx: &mut Context, info: &ComposerDepInfo)
+    ctx: &mut Context, info: &ComposerDependencies)
     -> Result<(), StepError>
 {
     let features = scan_features(&ctx.composer_settings);
@@ -304,4 +341,133 @@ fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
         }));
 
     Ok(())
+}
+
+impl BuildStep for ComposerConfig {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.opt_field("runtime_exe", &self.runtime_exe);
+        hash.opt_field("include_path", &self.include_path);
+        hash.bool("install_runtime", self.install_runtime);
+        hash.bool("install_dev", self.install_dev);
+        hash.bool("keep_composer", self.keep_composer);
+        hash.opt_field("vendor_dir",
+            &self.vendor_dir.as_ref().map(|x| x.as_os_str().as_bytes()));
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, _build: bool)
+        -> Result<(), StepError>
+    {
+        guard.ctx.composer_settings = self.clone();
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for ComposerInstall {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.sequence("ComposerInstall", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.ctx));
+        if build {
+            try!(composer_install(&mut guard.distro, &mut guard.ctx, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+fn get<'x>(dic: &'x Json, key: &str) -> &'x Json {
+    // TODO(tailhook) is there a better way for the following?
+    let x: &'static Json = unsafe { ::std::mem::transmute(&Json::Null) };
+    dic.find(key).unwrap_or(x)
+}
+
+fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
+    File::open(&path).map_err(|e| VersionError::Io(e, path.to_path_buf()))
+    .and_then(|mut f| Json::from_reader(&mut f)
+        .map_err(|e| VersionError::Json(e, path.to_path_buf())))
+    .and_then(|data| {
+        let packages = try!(data.find("packages")
+            .ok_or("Missing 'packages' property from composer.lock".to_owned()));
+        let packages = try!(packages.as_array()
+            .ok_or("'packages' property is not an array".to_owned()));
+        for package in packages.iter() {
+            for key in LOCKFILE_RELEVANT_KEYS.iter() {
+                write!(hash, "{}: {}\n", key, get(&package, key)).unwrap();
+            }
+            write!(hash, "require: {}\n", get(&package, "require")).unwrap();
+            write!(hash, "require-dev: {}\n",
+                get(&package, "require-dev")).unwrap();
+        }
+        Ok(())
+    })
+}
+
+impl BuildStep for ComposerDependencies {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        let base_path: PathBuf = {
+            let path = Path::new("/work");
+            if let Some(ref working_dir) = self.working_dir {
+                path.join(working_dir)
+            } else {
+                path.to_owned()
+            }
+        };
+
+        let path = base_path.join("composer.lock");
+        if path.exists() {
+            try!(hash_lock_file(&path, hash));
+        }
+
+        let path = base_path.join("composer.json");
+        File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))
+        .and_then(|mut f| Json::from_reader(&mut f)
+            .map_err(|e| VersionError::Json(e, path.to_path_buf())))
+        .map(|data| {
+            // Jsons are sorted so should be hash as string predictably
+            write!(hash, "require: {}\n", get(&data, "require")).unwrap();
+            write!(hash, "conflict: {}\n", get(&data, "conflict")).unwrap();
+            write!(hash, "replace: {}\n", get(&data, "replace")).unwrap();
+            write!(hash, "provide: {}\n", get(&data, "provide")).unwrap();
+            write!(hash, "autoload: {}\n", get(&data, "autoload")).unwrap();
+            write!(hash, "repositories: {}\n",
+                get(&data, "repositories")).unwrap();
+            write!(hash, "minimum-stability: {}\n",
+                get(&data, "minimum-stability")).unwrap();
+            write!(hash, "prefer-stable: {}\n",
+                get(&data, "prefer-stable")).unwrap();
+
+            if self.dev {
+                write!(hash, "require-dev: {}\n",
+                    get(&data, "autoload-dev")).unwrap();
+            }
+        })
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(&mut guard.ctx));
+        if build {
+            try!(composer_dependencies(&mut guard.distro,
+                &mut guard.ctx, &self));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

@@ -6,7 +6,7 @@ setup() {
     run vagga _run text cat /etc/shakespeare
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/text)
-    [[ $link = ".roots/text.0412f7b2/root" ]]
+    [[ $link = ".roots/text.54a32625/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
@@ -31,7 +31,7 @@ setup() {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/cache_dirs)
-    [[ $link = ".roots/cache_dirs.549b79e7/root" ]]
+    [[ $link = ".roots/cache_dirs.975bcc73/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
 
@@ -39,7 +39,7 @@ setup() {
     run vagga _run ensure_dir echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ensure_dir)
-    [[ $link = ".roots/ensure_dir.d67589d0/root" ]]
+    [[ $link = ".roots/ensure_dir.a1cd217a/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
     [[ -d ".vagga/ensure_dir/var/lib/mount_point/subdir" ]]
     [[ $output =~ "\"/var/lib/mount_point/subdir\" directory is in the volume: \"/var/lib/mount_point\"" ]]
@@ -50,7 +50,7 @@ setup() {
     run vagga two-lines
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
+    [[ $link = ".roots/busybox.d4736d2b/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
@@ -59,7 +59,6 @@ setup() {
     run vagga one-kills-another
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-4]} = "hello" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
@@ -69,13 +68,11 @@ setup() {
     run vagga two-lines --only first-line
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
 
     run vagga two-lines --only second-line
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
@@ -83,21 +80,18 @@ setup() {
     run vagga tagged --only first_and_third
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
 
     run vagga tagged --only first_and_second
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 
     run vagga tagged --only third_only
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
 }
 
@@ -105,14 +99,12 @@ setup() {
     run vagga tagged --only first first_and_second
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 
     run vagga tagged --only third first_and_second
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-4]} = "hello" ]]
     [[ ${lines[${#lines[@]}-3]} = "world" ]]
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
@@ -122,13 +114,11 @@ setup() {
     run vagga two-lines --exclude second-line
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
 
     run vagga two-lines --exclude first-line
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
@@ -136,19 +126,16 @@ setup() {
     run vagga tagged --exclude first_and_third
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 
     run vagga tagged --exclude first_and_second
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
 
     run vagga tagged --exclude third_only
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
@@ -157,13 +144,11 @@ setup() {
     run vagga tagged --exclude first first_and_second
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
 
     run vagga tagged --exclude first_and_third third_only
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.f87ff413/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
@@ -192,5 +177,5 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
-    [[ $link = ".roots/vagga.13a63976/root" ]]
+    [[ $link = ".roots/vagga.f4d65ae1/root" ]]
 }

@@ -1,17 +1,35 @@
 use std::fs::rename;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
+use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Stdio};
 
 use config::settings::Settings;
-use config::builders::GitInfo;
-use config::builders::GitInstallInfo;
-use config::builders::GitSource;
+use builder::commands::subcontainer::GitSource;
 use super::super::capsule;
 use super::super::context::Context;
 use super::generic::run_command_at;
 use super::super::super::path_util::ToRelative;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+#[derive(RustcDecodable, Debug)]
+pub struct Git {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+    pub path: PathBuf,
+}
+
+#[derive(RustcDecodable, Debug)]
+pub struct GitInstall {
+    pub url: String,
+    pub revision: Option<String>,
+    pub branch: Option<String>,
+    pub subdir: PathBuf,
+    pub script: String,
+}
 
 
 fn git_cache(url: &String) -> Result<PathBuf, String> {
@@ -84,7 +102,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 }
 
 
-pub fn git_command(ctx: &mut Context, git: &GitInfo) -> Result<(), String>
+pub fn git_command(ctx: &mut Context, git: &Git) -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::Git]));
     let dest = PathBuf::from("/vagga/root").join(&git.path.rel());
@@ -95,7 +113,7 @@ pub fn git_command(ctx: &mut Context, git: &GitInfo) -> Result<(), String>
     Ok(())
 }
 
-pub fn git_install(ctx: &mut Context, git: &GitInstallInfo)
+pub fn git_install(ctx: &mut Context, git: &GitInstall)
     -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::Git]));
@@ -115,6 +133,7 @@ pub fn git_install(ctx: &mut Context, git: &GitInstallInfo)
         &workdir);
 }
 
+#[allow(unused)]
 pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
     git: &GitSource)
     -> Result<(), String>
@@ -127,4 +146,51 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
          .map_err(|e| format!("Error creating dir: {}", e)));
     try!(git_checkout(&cache_path, &dest, &git.revision, &git.branch));
     Ok(())
+}
+
+impl BuildStep for Git {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("url", &self.url);
+        hash.opt_field("revision", &self.revision);
+        hash.opt_field("branch", &self.branch);
+        hash.field("path", self.path.as_os_str().as_bytes());
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(git_command(&mut guard.ctx, &self));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for GitInstall {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("url", &self.url);
+        hash.opt_field("revision", &self.revision);
+        hash.opt_field("branch", &self.branch);
+        hash.field("subdir", self.subdir.as_os_str().as_bytes());
+        hash.field("script", &self.script);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(git_install(&mut guard.ctx, &self));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

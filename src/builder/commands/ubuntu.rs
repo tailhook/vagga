@@ -5,20 +5,52 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::{AsRawFd, FromRawFd};
 
-use config::builders::{UbuntuRepoInfo, UbuntuReleaseInfo, AptKey};
 use container::util::clean_dir;
 use super::super::context::{Context};
 use super::super::download::download_file;
-use super::super::tarcmd::unpack_file;
+use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};
 use shaman::sha2::Sha256;
-use shaman::digest::Digest;
+use shaman::digest::Digest as ShamanDigest;
 use builder::distrib::{Distribution, Named, DistroBox};
-use builder::guard::Guard;
-use builder::error::StepError;
 use unshare::Stdio;
 use file_util::copy;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+// Build Steps
+#[derive(Debug)]
+pub struct Ubuntu(String);
+tuple_struct_decode!(Ubuntu);
+
+#[derive(RustcDecodable, Debug)]
+pub struct UbuntuRelease {
+    pub version: String,
+    pub arch: String,
+    pub keep_chfn_command: bool,
+}
+
+#[derive(Debug, RustcDecodable)]
+pub struct UbuntuUniverse;
+
+#[derive(Debug)]
+pub struct UbuntuPPA(String);
+tuple_struct_decode!(UbuntuPPA);
+
+#[derive(RustcDecodable, Debug)]
+pub struct UbuntuRepo {
+    pub url: String,
+    pub suite: String,
+    pub components: Vec<String>,
+}
+
+#[derive(RustcDecodable, Debug)]
+pub struct AptTrust {
+    pub server: Option<String>,
+    pub keys: Vec<String>,
+}
+
 
 #[derive(Debug)]
 pub enum Version {
@@ -27,7 +59,7 @@ pub enum Version {
 }
 
 #[derive(Debug)]
-pub struct Ubuntu {
+pub struct Distro {
     version: Version,
     codename: Option<String>,
     arch: String,
@@ -36,11 +68,11 @@ pub struct Ubuntu {
     clobber_chfn: bool,
 }
 
-impl Named for Ubuntu {
+impl Named for Distro {
     fn static_name() -> &'static str { "ubuntu" }
 }
 
-impl Distribution for Ubuntu {
+impl Distribution for Distro {
     fn name(&self) -> &'static str { "Ubuntu" }
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         try!(fetch_ubuntu_core(ctx, &self.version, self.arch.clone()));
@@ -148,13 +180,13 @@ impl Distribution for Ubuntu {
     }
 }
 
-impl Ubuntu {
+impl Distro {
     pub fn enable_universe(&mut self) -> Result<(), StepError> {
         self.has_universe = true;
         self.apt_update = true;
         Ok(())
     }
-    pub fn add_debian_repo(&mut self, _: &mut Context, repo: &UbuntuRepoInfo)
+    pub fn add_debian_repo(&mut self, _: &mut Context, repo: &UbuntuRepo)
         -> Result<(), String>
     {
         self.apt_update = true;
@@ -188,14 +220,14 @@ impl Ubuntu {
     {
         try!(self.ensure_codename(ctx));
         let suite = self.codename.as_ref().unwrap().to_string();
-        try!(self.add_debian_repo(ctx, &UbuntuRepoInfo {
+        try!(self.add_debian_repo(ctx, &UbuntuRepo {
             url: format!("http://ppa.launchpad.net/{}/ubuntu", name),
             suite: suite,
             components: vec!["main".to_string()],
         }));
         Ok(())
     }
-    pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptKey)
+    pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptTrust)
         -> Result<(), StepError>
     {
         let mut cmd = try!(command(ctx, "apt-key"));
@@ -452,10 +484,10 @@ pub fn clobber_chfn() -> Result<(), String> {
     Ok(())
 }
 
-pub fn configure(guard: &mut Guard, info: &UbuntuReleaseInfo)
+pub fn configure(guard: &mut Guard, info: &UbuntuRelease)
     -> Result<(), StepError>
 {
-    try!(guard.distro.set(Ubuntu {
+    try!(guard.distro.set(Distro {
         version: Version::Release { version: info.version.clone() },
         arch: info.arch.clone(),
         codename: None, // unknown yet
@@ -486,7 +518,7 @@ fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
 pub fn configure_simple(guard: &mut Guard, codename: &str)
     -> Result<(), StepError>
 {
-    try!(guard.distro.set(Ubuntu {
+    try!(guard.distro.set(Distro {
         version: Version::Daily { codename: codename.to_string() },
         arch: "amd64".to_string(),
         codename: Some(codename.to_string()),
@@ -495,4 +527,145 @@ pub fn configure_simple(guard: &mut Guard, codename: &str)
         has_universe: false,
     }));
     configure_common(&mut guard.ctx)
+}
+
+impl BuildStep for Ubuntu {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("Ubuntu", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure_simple(guard, &self.0));
+        if build {
+            try!(guard.distro.bootstrap(&mut guard.ctx));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for UbuntuUniverse {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.item("UbuntuUniverse");
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        let ref mut ctx = guard.ctx;
+        guard.distro.specific(|u: &mut Distro| {
+            try!(u.enable_universe());
+            if build {
+                try!(u.add_universe(ctx));
+            }
+            Ok(())
+        })
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for UbuntuPPA {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("UbuntuPPA", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            let ref mut ctx = guard.ctx;
+            try!(guard.distro.specific(|u: &mut Distro| {
+                u.add_ubuntu_ppa(ctx, &self.0)
+            }));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for AptTrust {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.opt_field("server", &self.server);
+        hash.sequence("keys", &self.keys);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            let ref mut ctx = guard.ctx;
+            try!(guard.distro.specific(|u: &mut Distro| {
+                u.add_apt_key(ctx, &self)
+            }));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for UbuntuRepo {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("url", &self.url);
+        hash.field("suite", &self.suite);
+        hash.sequence("components", &self.components);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            let ref mut ctx = guard.ctx;
+            try!(guard.distro.specific(|u: &mut Distro| {
+                try!(u.add_debian_repo(ctx, &self));
+                Ok(())
+            }));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for UbuntuRelease {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("version", &self.version);
+        hash.field("arch", &self.arch);
+        hash.bool("keep_chfn_command", self.keep_chfn_command);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        try!(configure(guard, &self));
+        if build {
+            try!(guard.distro.bootstrap(&mut guard.ctx));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

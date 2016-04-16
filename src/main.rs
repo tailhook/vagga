@@ -1,3 +1,5 @@
+#[allow(unused)]
+
 use std::env;
 
 extern crate shaman;
@@ -27,6 +29,8 @@ mod path_util;
 mod process_util;
 mod tty_util;
 mod options;
+mod digest;
+mod build_step;
 
 // Commands
 mod launcher;

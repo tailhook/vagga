@@ -1,18 +1,35 @@
 use std::fs::{create_dir_all, set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 use unshare::{Command, Stdio};
 use libmount::BindMount;
 
 use container::mount::{unmount};
-use config::builders::TarInfo;
-use config::builders::TarInstallInfo;
-use super::context::Context;
-use super::download::download_file;
-use super::commands::generic::run_command_at;
+use builder::context::Context;
+use builder::download::download_file;
+use builder::commands::generic::run_command_at;
 use file_util::{read_visible_entries, create_dir};
 use path_util::ToRelative;
+use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+
+#[derive(RustcDecodable, Debug)]
+pub struct Tar {
+    pub url: String,
+    pub sha256: Option<String>,
+    pub path: PathBuf,
+    pub subdir: PathBuf,
+}
+
+#[derive(RustcDecodable, Debug)]
+pub struct TarInstall {
+    pub url: String,
+    pub sha256: Option<String>,
+    pub subdir: Option<PathBuf>,
+    pub script: String,
+}
 
 
 pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
@@ -47,7 +64,7 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     }
 }
 
-pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
+pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
     let filename = if tar.url.starts_with(".") {
@@ -80,7 +97,7 @@ pub fn tar_command(ctx: &mut Context, tar: &TarInfo) -> Result<(), String>
     Ok(())
 }
 
-pub fn tar_install(ctx: &mut Context, tar: &TarInstallInfo)
+pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
     let filename = if tar.url.starts_with(".") {
@@ -119,4 +136,57 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstallInfo)
         "-exc".to_string(),
         tar.script.to_string()],
         &workdir);
+}
+
+impl BuildStep for Tar {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        if let Some(ref sha) = self.sha256 {
+            hash.field("hash", sha);
+        } else {
+            hash.field("url", &self.url);
+        }
+        hash.field("path", self.path.as_os_str().as_bytes());
+        hash.field("subdir", self.subdir.as_os_str().as_bytes());
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(tar_command(&mut guard.ctx, self));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for TarInstall {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        if let Some(ref sha) = self.sha256 {
+            hash.field("hash", sha);
+        } else {
+            hash.field("url", &self.url);
+        }
+        hash.opt_field("subdir",
+            &self.subdir.as_ref().map(|x| x.as_os_str().as_bytes()));
+        hash.field("script", &self.script);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(tar_install(&mut guard.ctx, self));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
 }

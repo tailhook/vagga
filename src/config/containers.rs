@@ -4,9 +4,11 @@ use std::path::PathBuf;
 
 use quire::validate as V;
 use libc::{uid_t, gid_t};
+use rustc_serialize::{Decoder};
 
-use super::builders::{Builder, builder_validator};
+use super::builders::{builder_validator};
 use super::Range;
+use build_step::{Step};
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SnapshotInfo {
@@ -39,7 +41,7 @@ pub struct TmpfsInfo {
 
 #[derive(RustcDecodable, Clone)]
 pub struct Container {
-    pub setup: Vec<Builder>,
+    pub setup: Vec<Step>,
     pub image_cache_url: Option<String>,
     pub auto_clean: bool,
 
@@ -103,4 +105,3 @@ pub fn container_validator<'a>() -> V::Structure<'a> {
         V::Directory::new().is_absolute(true),
         volume_validator()))
 }
-

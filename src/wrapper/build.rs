@@ -20,12 +20,11 @@ use container::util::clean_dir;
 use container::mount::{unmount};
 use container::uidmap::{map_users};
 use config::{Container};
-use config::builders::Builder as B;
-use config::builders::Source as S;
 use file_util::{create_dir, Lock};
 use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
 use super::Wrapper;
 use super::setup;
+use build_step::Step;
 
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
@@ -86,7 +85,7 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
     return Ok(());
 }
 
-pub fn get_version_hash(container: &String, wrapper: &Wrapper)
+pub fn get_version_hash(container: &str, wrapper: &Wrapper)
     -> Result<Option<String>, String>
 {
     let cconfig = try!(wrapper.config.containers.get(container)
@@ -120,7 +119,7 @@ pub fn get_version_hash(container: &String, wrapper: &Wrapper)
     }
 }
 
-pub fn build_container(container: &String, force: bool, no_image: bool,
+pub fn build_container(container: &str, force: bool, no_image: bool,
     wrapper: &Wrapper)
     -> Result<String, String>
 {
@@ -172,7 +171,7 @@ pub fn build_container(container: &String, force: bool, no_image: bool,
     return Ok(name);
 }
 
-pub fn _build_container(cconfig: &Container, container: &String,
+pub fn _build_container(cconfig: &Container, container: &str,
     force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
@@ -322,37 +321,16 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     .map(|_| 0)
 }
 
-pub fn build_wrapper(name: &String, force: bool, no_image: bool, wrapper: &Wrapper)
+pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
     let container = try!(wrapper.config.containers.get(name)
         .ok_or(format!("Container {:?} not found", name)));
-    for step in container.setup.iter() {
-        match step {
-            &B::Container(ref name) => {
-                try!(build_wrapper(name, force, no_image, wrapper)
-                    .map(|x| debug!("Built container with name {}", x))
-                    .map(|()| 0));
-            }
-            &B::Build(ref binfo) => {
-                try!(build_wrapper(&binfo.container, force, no_image, wrapper)
-                    .map(|x| debug!("Built container with name {}", x))
-                    .map(|()| 0));
-            }
-            &B::SubConfig(ref cfg) => {
-                match cfg.source {
-                    S::Directory => {}
-                    S::Container(ref name) => {
-                        try!(build_wrapper(name, force, no_image, wrapper)
-                            .map(|x| debug!("Built container with name {}", x))
-                            .map(|()| 0));
-                    }
-                    S::Git(ref _git) => {
-                        unimplemented!();
-                    }
-                }
-            }
-            _ => {}
+    for &Step(ref step) in container.setup.iter() {
+        if let Some(name) = step.is_dependent_on() {
+            try!(build_wrapper(name, force, no_image, wrapper)
+                .map(|x| debug!("Built container with name {}", x))
+                .map(|()| 0));
         }
     }
 

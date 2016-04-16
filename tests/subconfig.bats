@@ -8,7 +8,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/subdir)
-    [[ $link = ".roots/subdir.68a08ebe/root" ]]
+    [[ $link = ".roots/subdir.b97bf45e/root" ]]
 }
 
 @test "subconfig: docker-raw" {
@@ -17,7 +17,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/docker-raw)
-    [[ $link = ".roots/docker-raw.91190e88/root" ]]
+    [[ $link = ".roots/docker-raw.06f543d8/root" ]]
 }
 
 @test "subconfig: docker-smart" {
@@ -26,5 +26,5 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/docker-smart)
-    [[ $link = ".roots/docker-smart.e2fa942b/root" ]]
+    [[ $link = ".roots/docker-smart.b423818b/root" ]]
 }

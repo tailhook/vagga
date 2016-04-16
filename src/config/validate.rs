@@ -1,40 +1,20 @@
 use super::Config;
 use super::containers::Container;
-use config::builders::Source as S;
+use build_step::Step;
 
 fn find_name(name: &str, cont: &Container, cfg: &Config) -> Result<(), String>
 {
-    for step in &cont.setup {
-        use config::builders::Builder::*;
-        match step {
-            &Container(ref subname) => {
-                if subname == name {
-                    return Err(format!("Container {:?} has cyclic dependency",
-                                       name));
-                } else {
-                    let subcont = try!(cfg.containers.get(subname)
-                        .ok_or(format!("Container {:?} referenced from {:?} \
-                            is not found", subname, name)));
-                    try!(find_name(name, subcont, cfg))
-                }
+    for &Step(ref step) in &cont.setup {
+        if let Some(subname) = step.is_dependent_on() {
+            if subname == name {
+                return Err(format!("Container {:?} has cyclic dependency",
+                                   name));
+            } else {
+                let subcont = try!(cfg.containers.get(subname)
+                    .ok_or(format!("Container {:?} referenced from {:?} \
+                        is not found", subname, name)));
+                try!(find_name(name, subcont, cfg))
             }
-            &SubConfig(ref scfg) => {
-                match scfg.source {
-                    S::Container(ref subname) => {
-                        if subname == name {
-                            return Err(format!("Container {:?} has cyclic \
-                                                dependency", name));
-                        } else {
-                            let subcont = try!(cfg.containers.get(subname)
-                                .ok_or(format!("Container {:?} referenced \
-                                    from {:?} is not found", subname, name)));
-                            try!(find_name(name, subcont, cfg));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
         }
     }
     Ok(())
