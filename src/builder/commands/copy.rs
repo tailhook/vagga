@@ -1,9 +1,9 @@
 use std::io::ErrorKind;
 use std::fs::{symlink_metadata};
 use std::path::{Path, PathBuf};
-use std::os::unix::raw::{uid_t, gid_t};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
+use libc::{uid_t, gid_t};
 use regex::Regex;
 use scan_dir::{ScanDir};
 

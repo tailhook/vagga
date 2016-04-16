@@ -3,9 +3,9 @@ use std::fs;
 use std::fmt::Display;
 use std::path::Path;
 use std::os::unix::ffi::OsStrExt;
-use std::os::unix::raw::{uid_t, gid_t};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
+use libc::{uid_t, gid_t};
 use shaman::sha2;
 use shaman::digest::Digest as DigestTrait;
 
