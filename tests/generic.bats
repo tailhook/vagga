@@ -179,3 +179,51 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
     [[ $link = ".roots/vagga.f4d65ae1/root" ]]
 }
+
+@test "generic: unpack zip archive" {
+    curl -o test-file.zip http://files.zerogw.com/test-files/test-file.zip
+    hash=($(sha256sum test-file.zip))
+
+    cached_file="../../tmp/cache/downloads/${hash:0:8}-test-file.zip"
+    rm -f $cached_file
+    
+    run vagga _build unzip-local
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/unzip-local)
+    [[ $link = ".roots/unzip-local.24255fd9/root" ]]
+    [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) = "2" ]]
+    [[ $(cat .vagga/unzip-local/root/test/2/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/2/dir/file2.txt) = "2" ]]
+    [[ $(cat .vagga/unzip-local/root/test/3/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/3/dir/file2.txt) = "2" ]]
+    [[ $(cat .vagga/unzip-local/root/test/4/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/4/file2.txt) = "2" ]]
+    [[ ! -d .vagga/unzip-local/root/configs/4/dir ]]
+    [[ $(cat .vagga/unzip-local/root/test/5/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-local/root/test/5/file2.txt) = "2" ]]
+    [[ ! -d .vagga/unzip-local/root/configs/5/dir ]]
+    [[ ! -f $cached_file ]]
+
+    run vagga _build unzip-downloaded
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/unzip-downloaded)
+    [[ $link = ".roots/unzip-downloaded.267da19f/root" ]]
+    [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
+    [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
+    [[ -f $cached_file ]]
+
+    run vagga _build unzip-no-subdir
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *'./dir" is not found in archive'* ]]
+    [[ -f test-file.zip ]]
+
+    run vagga _build unzip-mismatch-hashsum
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *"Hashsum mismatch: expected 12345678 but was ${hash}"* ]]
+    [[ -f test-file.zip ]]
+
+    rm test-file.zip
+}

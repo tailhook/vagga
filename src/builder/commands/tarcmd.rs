@@ -1,4 +1,5 @@
-use std::fs::{create_dir_all, set_permissions, Permissions};
+use std::fs::Permissions;
+use std::fs::{create_dir_all, set_permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -8,7 +9,7 @@ use libmount::BindMount;
 
 use container::mount::{unmount};
 use builder::context::Context;
-use builder::download::download_file;
+use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
 use file_util::{read_visible_entries, create_dir};
 use path_util::ToRelative;
@@ -67,12 +68,9 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
 pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
-    let filename = if tar.url.starts_with(".") {
-        PathBuf::from("/work").join(&tar.url)
-    } else {
-        try!(download_file(ctx, &tar.url))
-    };
-    // TODO(tailhook) check sha256 sum
+    let filename = try!(maybe_download_and_check_hashsum(
+        ctx, &tar.url, tar.sha256.clone()));
+
     if &Path::new(&tar.subdir) == &Path::new(".") {
         try!(unpack_file(ctx, &filename, &fpath, &[], &[]));
     } else {
@@ -100,12 +98,9 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
-    let filename = if tar.url.starts_with(".") {
-        PathBuf::from("/work").join(&tar.url)
-    } else {
-        try!(download_file(ctx, &tar.url))
-    };
-    // TODO(tailhook) check sha256 sum
+    let filename = try!(maybe_download_and_check_hashsum(
+        ctx, &tar.url, tar.sha256.clone()));
+
     let tmppath = PathBuf::from("/vagga/root/tmp")
         .join(filename.file_name().unwrap());
     try!(create_dir_all(&tmppath)

@@ -16,6 +16,7 @@ extern crate libmount;
 extern crate signal;
 extern crate regex;
 extern crate scan_dir;
+extern crate zip;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;

@@ -39,6 +39,56 @@ containers:
     - !Alpine v3.1
     - !Sh env
 
+  unzip-local:
+    setup:
+    - !Alpine v3.3
+    - !EnsureDir /root/test/1/dir
+    - !Text
+      /root/test/1/dir/file.txt: Hello world!
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/1
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/2
+      subdir: .
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/3
+      sha256: a42fad23ae69324e6c912872af575954720205bfc6138c540d5ba9fc10fe2aad
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/4
+      subdir: dir
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/5
+      subdir: dir/
+
+  unzip-downloaded:
+    setup:
+    - !Alpine v3.3
+    - !Unzip
+      url: http://files.zerogw.com/test-files/test-file.zip
+      path: /root/test
+      sha256: a42fad23ae69324e6c912872af575954720205bfc6138c540d5ba9fc10fe2aad
+
+  unzip-no-subdir:
+    setup:
+    - !Alpine v3.3
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/
+      subdir: ./dir
+
+  unzip-mismatch-hashsum:
+    setup:
+    - !Alpine v3.3
+    - !Unzip
+      url: ./test-file.zip
+      path: /root/test/
+      sha256: 12345678
+
   vagga:
     setup:
     - !Alpine v3.1

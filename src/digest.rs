@@ -77,15 +77,22 @@ impl Digest {
             self.0.input(data.as_os_str().as_bytes());
         } else if stat.file_type().is_file() {
             let mut file = try!(fs::File::open(&path));
-            loop {
-                let mut chunk = [0u8; 8*1024];
-                let bytes = match file.read(&mut chunk[..]) {
-                    Ok(0) => break,
-                    Ok(bytes) => bytes,
-                    Err(e) => return Err(e),
-                };
-                self.0.input(&chunk[..bytes]);
-            }
+            try!(self.stream(&mut file));
+        }
+        Ok(())
+    }
+    pub fn stream(&mut self, reader: &mut Read)
+        -> Result<(), io::Error>
+    {
+        let mut buf = [0u8; 8*1024];
+        loop {
+            let len = match reader.read(&mut buf[..]) {
+                Ok(0) => break,
+                Ok(len) => len,
+                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                Err(e) => return Err(e),
+            };
+            self.0.input(&buf[..len]);
         }
         Ok(())
     }
