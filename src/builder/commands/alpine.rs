@@ -2,6 +2,7 @@ use std::io::Write;
 use std::fs::File;
 use std::path::Path;
 
+use quire::validate as V;
 use unshare::{Command, Stdio};
 use rand::{thread_rng, Rng};
 use regex::Regex;
@@ -24,6 +25,12 @@ static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 #[derive(Debug)]
 pub struct Alpine(String);
 tuple_struct_decode!(Alpine);
+
+impl Alpine {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
 
 // Distro
 #[derive(Debug)]

@@ -41,6 +41,13 @@ pub struct Copy {
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
     V::Enum::new()
+    .option("Alpine", cmd::alpine::Alpine::config())
+    .option("Ubuntu", cmd::ubuntu::Ubuntu::config())
+    .option("UbuntuRelease", cmd::ubuntu::UbuntuRelease::config())
+    .option("UbuntuRepo", cmd::ubuntu::UbuntuRepo::config())
+    .option("UbuntuPPA", cmd::ubuntu::UbuntuPPA::config())
+    .option("UbuntuUniverse", cmd::ubuntu::UbuntuUniverse::config())
+    .option("AptTrust", cmd::ubuntu::AptTrust::config())
     .option("Install", V::Sequence::new(V::Scalar::new()))
     .option("BuildDeps", V::Sequence::new(V::Scalar::new()))
     .option("Container", V::Scalar::new())
@@ -79,20 +86,6 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("owner_uid", V::Numeric::new().min(0).optional())
         .member("owner_gid", V::Numeric::new().min(0).optional()))
 
-    .option("Ubuntu", V::Scalar::new())
-    .option("UbuntuRelease", V::Structure::new()
-        .member("version", V::Scalar::new())
-        .member("arch", V::Scalar::new().default("amd64"))
-        .member("keep_chfn_command", V::Scalar::new().default(false)))
-    .option("UbuntuRepo", V::Structure::new()
-        .member("url", V::Scalar::new())
-        .member("suite", V::Scalar::new())
-        .member("components", V::Sequence::new(V::Scalar::new())))
-    .option("UbuntuPPA", V::Scalar::new())
-    .option("UbuntuUniverse", V::Nothing)
-    .option("AptTrust", V::Structure::new()
-        .member("server", V::Scalar::new().optional())
-        .member("keys", V::Sequence::new(V::Scalar::new())))
     .option("Sh", V::Scalar::new())
     .option("Cmd", V::Sequence::new(V::Scalar::new()))
     .option("Remove", V::Directory::new().is_absolute(true))
@@ -142,7 +135,6 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("url", V::Scalar::new())
         .member("path", V::Directory::new().is_absolute(true))
         .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777)))
-    .option("Alpine", V::Scalar::new())
 
     // Python
     .option("PipConfig", V::Structure::new()

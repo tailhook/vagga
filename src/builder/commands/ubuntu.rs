@@ -5,6 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::{AsRawFd, FromRawFd};
 
+use quire::validate as V;
 use container::util::clean_dir;
 use super::super::context::{Context};
 use super::super::download::download_file;
@@ -24,6 +25,12 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 pub struct Ubuntu(String);
 tuple_struct_decode!(Ubuntu);
 
+impl Ubuntu {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
+
 #[derive(RustcDecodable, Debug)]
 pub struct UbuntuRelease {
     pub version: String,
@@ -31,12 +38,33 @@ pub struct UbuntuRelease {
     pub keep_chfn_command: bool,
 }
 
+impl UbuntuRelease {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("version", V::Scalar::new())
+        .member("arch", V::Scalar::new().default("amd64"))
+        .member("keep_chfn_command", V::Scalar::new().default(false))
+    }
+}
+
 #[derive(Debug, RustcDecodable)]
 pub struct UbuntuUniverse;
+
+impl UbuntuUniverse {
+    pub fn config() -> V::Nothing {
+        V::Nothing
+    }
+}
 
 #[derive(Debug)]
 pub struct UbuntuPPA(String);
 tuple_struct_decode!(UbuntuPPA);
+
+impl UbuntuPPA {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
 
 #[derive(RustcDecodable, Debug)]
 pub struct UbuntuRepo {
@@ -45,12 +73,28 @@ pub struct UbuntuRepo {
     pub components: Vec<String>,
 }
 
+impl UbuntuRepo {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("suite", V::Scalar::new())
+        .member("components", V::Sequence::new(V::Scalar::new()))
+    }
+}
+
 #[derive(RustcDecodable, Debug)]
 pub struct AptTrust {
     pub server: Option<String>,
     pub keys: Vec<String>,
 }
 
+impl AptTrust {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("server", V::Scalar::new().optional())
+        .member("keys", V::Sequence::new(V::Scalar::new()))
+    }
+}
 
 #[derive(Debug)]
 pub enum Version {
