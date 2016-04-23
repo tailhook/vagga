@@ -2,6 +2,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::os::unix::io::{FromRawFd, AsRawFd};
 
+use quire::validate as V;
 use unshare::{Stdio};
 use rustc_serialize::json::Json;
 
@@ -18,9 +19,23 @@ pub struct NpmConfig {
     pub npm_exe: String,
 }
 
+impl NpmConfig {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("npm_exe", V::Scalar::new().default("npm"))
+        .member("install_node", V::Scalar::new().default(true))
+    }
+}
+
 #[derive(Debug)]
 pub struct NpmInstall(Vec<String>);
 tuple_struct_decode!(NpmInstall);
+
+impl NpmInstall {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
 
 #[derive(RustcDecodable, Debug)]
 pub struct NpmDependencies {
@@ -32,6 +47,17 @@ pub struct NpmDependencies {
     pub optional: bool,
 }
 
+impl NpmDependencies {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("file", V::Scalar::new().default("package.json"))
+        .member("package", V::Scalar::new().default(true))
+        .member("dev", V::Scalar::new().default(true))
+        .member("peer", V::Scalar::new().default(false))
+        .member("bundled", V::Scalar::new().default(true))
+        .member("optional", V::Scalar::new().default(false))
+    }
+}
 
 impl Default for NpmConfig {
     fn default() -> NpmConfig {

@@ -114,17 +114,9 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Py3Requirements", cmd::pip::Py3Requirements::config())
 
     // Node.js
-    .option("NpmConfig", V::Structure::new()
-        .member("npm_exe", V::Scalar::new().default("npm"))
-        .member("install_node", V::Scalar::new().default(true)))
-    .option("NpmInstall", V::Sequence::new(V::Scalar::new()))
-    .option("NpmDependencies", V::Structure::new()
-        .member("file", V::Scalar::new().default("package.json"))
-        .member("package", V::Scalar::new().default(true))
-        .member("dev", V::Scalar::new().default(true))
-        .member("peer", V::Scalar::new().default(false))
-        .member("bundled", V::Scalar::new().default(true))
-        .member("optional", V::Scalar::new().default(false)))
+    .option("NpmConfig", cmd::npm::NpmConfig::config())
+    .option("NpmInstall", cmd::npm::NpmDependencies::config())
+    .option("NpmDependencies", cmd::npm::NpmDependencies::config())
 
     // Composer
     .option("ComposerConfig", V::Structure::new()
