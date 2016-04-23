@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use libmount::BindMount;
 
+use quire::validate as V;
 use config::read_config;
 use config::containers::Container as Cont;
 use version::short_version;
@@ -18,6 +19,12 @@ use builder::error::StepError as E;
 pub struct Container(String);
 tuple_struct_decode!(Container);
 
+impl Container {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
+
 #[derive(RustcDecodable, Debug)]
 pub struct Build {
     pub container: String,
@@ -25,6 +32,20 @@ pub struct Build {
     pub path: Option<PathBuf>,
     pub temporary_mount: Option<PathBuf>,
 }
+
+impl Build {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("container", V::Scalar::new())
+        .member("source".to_string(),
+            V::Directory::new().is_absolute(true).default("/"))
+        .member("path".to_string(),
+            V::Directory::new().is_absolute(true).optional())
+        .member("temporary_mount".to_string(),
+            V::Directory::new().is_absolute(true).optional())
+    }
+}
+
 
 #[derive(RustcDecodable, Debug)]
 pub struct GitSource {
@@ -49,6 +70,26 @@ pub struct SubConfig {
     pub change_dir: Option<bool>,
 }
 
+impl SubConfig {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("source", V::Enum::new()
+            .option("Directory", V::Nothing)
+            .option("Container", V::Scalar::new())
+            .option("Git", V::Structure::new()
+                .member("url", V::Scalar::new())
+                .member("revision", V::Scalar::new().optional())
+                .member("branch", V::Scalar::new().optional()))
+            .optional()
+            .default_tag("Directory"))
+        .member("path".to_string(), V::Directory::new()
+            .is_absolute(false)
+            .default("vagga.yaml"))
+        .member("container", V::Scalar::new())
+        .member("cache", V::Scalar::new().optional())
+        .member("change_dir", V::Scalar::new().optional())
+    }
+}
 
 pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
