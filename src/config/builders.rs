@@ -21,14 +21,6 @@ pub struct FileInfo {
     pub contents: String,
 }
 
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct PyFreeze {
-    pub freeze_file: PathBuf,
-    pub requirements: Option<PathBuf>,
-    pub packages: Vec<String>,
-}
-
 #[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
 pub struct Copy {
     pub source: PathBuf,
@@ -115,24 +107,11 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777)))
 
     // Python
-    .option("PipConfig", V::Structure::new()
-        .member("dependencies", V::Scalar::new().default(false).optional())
-        .member("cache_wheels", V::Scalar::new().default(true))
-        .member("find_links", V::Sequence::new(V::Scalar::new()))
-        .member("index_urls", V::Sequence::new(V::Scalar::new()))
-        .member("trusted_hosts", V::Sequence::new(V::Scalar::new()))
-        .member("python_exe", V::Scalar::new().optional())
-        .member("install_python", V::Scalar::new().default(true)))
-    .option("Py2Install", V::Sequence::new(V::Scalar::new()))
-    .option("Py2Requirements", V::Scalar::new()
-        .default("requirements.txt"))
-    .option("Py3Install", V::Sequence::new(V::Scalar::new()))
-    .option("Py3Requirements",
-        V::Scalar::new().default("requirements.txt"))
-    .option("PyFreeze", V::Structure::new()
-        .member("freeze_file", V::Scalar::new().default("requirements.txt"))
-        .member("requirements", V::Scalar::new().optional())
-        .member("packages", V::Sequence::new(V::Scalar::new())))
+    .option("PipConfig", cmd::pip::PipConfig::config())
+    .option("Py2Install", cmd::pip::Py2Install::config())
+    .option("Py2Requirements", cmd::pip::Py2Requirements::config())
+    .option("Py3Install", cmd::pip::Py3Install::config())
+    .option("Py3Requirements", cmd::pip::Py3Requirements::config())
 
     // Node.js
     .option("NpmConfig", V::Structure::new()

@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
+use quire::validate as V;
 use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command_at_env, capture_command};
@@ -21,22 +22,58 @@ pub struct PipConfig {
     pub python_exe: Option<String>,
 }
 
+impl PipConfig {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("dependencies", V::Scalar::new().default(false).optional())
+        .member("cache_wheels", V::Scalar::new().default(true))
+        .member("find_links", V::Sequence::new(V::Scalar::new()))
+        .member("index_urls", V::Sequence::new(V::Scalar::new()))
+        .member("trusted_hosts", V::Sequence::new(V::Scalar::new()))
+        .member("python_exe", V::Scalar::new().optional())
+        .member("install_python", V::Scalar::new().default(true))
+    }
+}
 
 #[derive(Debug)]
 pub struct Py2Install(Vec<String>);
 tuple_struct_decode!(Py2Install);
 
+impl Py2Install {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
+
 #[derive(Debug)]
 pub struct Py2Requirements(PathBuf);
 tuple_struct_decode!(Py2Requirements);
+
+impl Py2Requirements {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new().default("requirements.txt")
+    }
+}
 
 #[derive(Debug)]
 pub struct Py3Install(Vec<String>);
 tuple_struct_decode!(Py3Install);
 
+impl Py3Install {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
+
 #[derive(Debug)]
 pub struct Py3Requirements(PathBuf);
 tuple_struct_decode!(Py3Requirements);
+
+impl Py3Requirements {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new().default("requirements.txt")
+    }
+}
 
 
 impl Default for PipConfig {
