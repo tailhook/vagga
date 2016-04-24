@@ -1,5 +1,6 @@
-use std::fs::File;
+use std::fs::{File, Permissions, set_permissions};
 use std::os::unix::ffi::OsStrExt;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use zip::ZipArchive;
@@ -51,10 +52,15 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
             try_msg!(create_dir(&fout_path, true),
                 "Error creating dir: {err}");
         } else {
-            let mut fout = try_msg!(File::create(fout_path),
+            let mut fout = try_msg!(File::create(&fout_path),
                 "Error creating file: {err}");
             try_msg!(copy_stream(&mut fin, &mut fout),
                 "Error unpacking file: {err}");
+        }
+        if let Some(mode) = fin.unix_mode() {
+            let perms = Permissions::from_mode(mode);
+            try_msg!(set_permissions(&fout_path, perms),
+                 "Error setting permissions: {err}");
         }
     }
 
