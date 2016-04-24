@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
 use libc::{uid_t, gid_t};
+use quire::validate as V;
 use regex::Regex;
 use scan_dir::{ScanDir};
 
@@ -21,6 +22,17 @@ pub struct Copy {
     pub ignore_regex: String,
 }
 
+impl Copy {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("source", V::Scalar::new())
+        .member("path", V::Directory::new().is_absolute(true))
+        .member("ignore_regex", V::Scalar::new().default(
+            r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
+        .member("owner_uid", V::Numeric::new().min(0).optional())
+        .member("owner_gid", V::Numeric::new().min(0).optional())
+    }
+}
 
 impl BuildStep for Copy {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)

@@ -45,16 +45,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Container", cmd::subcontainer::Container::config())
     .option("SubConfig", cmd::subcontainer::SubConfig::config())
     .option("Build", cmd::subcontainer::Build::config())
-    .option("Text", V::Mapping::new(
-        V::Directory::new().is_absolute(true),
-        V::Scalar::new()))
-    .option("Copy", V::Structure::new()
-        .member("source", V::Scalar::new())
-        .member("path", V::Directory::new().is_absolute(true))
-        .member("ignore_regex", V::Scalar::new().default(
-            r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
-        .member("owner_uid", V::Numeric::new().min(0).optional())
-        .member("owner_gid", V::Numeric::new().min(0).optional()))
+    .option("Text", cmd::text::Text::config())
+    .option("Copy", cmd::copy::Copy::config())
 
     .option("Sh", V::Scalar::new())
     .option("Cmd", V::Sequence::new(V::Scalar::new()))
@@ -115,7 +107,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
 
     // Node.js
     .option("NpmConfig", cmd::npm::NpmConfig::config())
-    .option("NpmInstall", cmd::npm::NpmDependencies::config())
+    .option("NpmInstall", cmd::npm::NpmInstall::config())
     .option("NpmDependencies", cmd::npm::NpmDependencies::config())
 
     // Composer

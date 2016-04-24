@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::ffi::OsStrExt;
 
+use quire::validate as V;
 use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -13,6 +14,13 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 pub struct Text(BTreeMap<PathBuf, String>);
 tuple_struct_decode!(Text);
 
+impl Text {
+    pub fn config() -> V::Mapping<'static> {
+        V::Mapping::new(
+            V::Directory::new().is_absolute(true),
+            V::Scalar::new())
+    }
+}
 
 impl BuildStep for Text {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
