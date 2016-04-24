@@ -48,18 +48,16 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Text", cmd::text::Text::config())
     .option("Copy", cmd::copy::Copy::config())
 
-    .option("Sh", V::Scalar::new())
-    .option("Cmd", V::Sequence::new(V::Scalar::new()))
+    .option("Sh", cmd::generic::Sh::config())
+    .option("Cmd", cmd::generic::Cmd::config())
     .option("Remove", V::Directory::new().is_absolute(true))
     .option("EnsureDir", V::Directory::new().is_absolute(true))
     .option("EmptyDir", V::Directory::new().is_absolute(true))
     .option("CacheDirs", V::Mapping::new(
         V::Directory::new().is_absolute(true),
         V::Scalar::new()))
-    .option("Env", V::Mapping::new(
-        V::Scalar::new(),
-        V::Scalar::new()))
-    .option("Depends", V::Scalar::new())
+    .option("Env", cmd::generic::Env::config())
+    .option("Depends", cmd::generic::Depends::config())
     .option("Git", V::Structure::new()
         .member("url", V::Scalar::new())
         .member("revision", V::Scalar::new().optional())

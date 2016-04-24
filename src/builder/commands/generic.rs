@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 
 use unshare::{Command};
+use quire::validate as V;
 
 use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
@@ -13,17 +14,43 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 pub struct Sh(String);
 tuple_struct_decode!(Sh);
 
+impl Sh {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct Cmd(Vec<String>);
 tuple_struct_decode!(Cmd);
+
+impl Cmd {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
 
 #[derive(Debug)]
 pub struct Depends(PathBuf);
 tuple_struct_decode!(Depends);
 
+impl Depends {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
+
 #[derive(Debug)]
 pub struct Env(BTreeMap<String, String>);
 tuple_struct_decode!(Env);
+
+impl Env {
+    pub fn config() -> V::Mapping<'static> {
+        V::Mapping::new(
+            V::Scalar::new(),
+            V::Scalar::new())
+    }
+}
 
 
 fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
