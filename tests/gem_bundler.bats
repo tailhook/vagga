@@ -50,7 +50,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 10.5.0" ]]
     link=$(readlink .vagga/pkg-ubuntu-precise)
-    [[ $link = ".roots/pkg-ubuntu-precise.cefdf7ce/root" ]]
+    [[ $link = ".roots/pkg-ubuntu-precise.7f49b038/root" ]]
 }
 
 @test "gem/bundler: ubuntu precise pkg no update gem" {
@@ -59,7 +59,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 10.5.0" ]]
     link=$(readlink .vagga/pkg-ubuntu-precise-no-update-gem)
-    [[ $link = ".roots/pkg-ubuntu-precise-no-update-gem.1839b7fd/root" ]]
+    [[ $link = ".roots/pkg-ubuntu-precise-no-update-gem.cea9c7ae/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle" {
@@ -116,5 +116,5 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.0" ]]
     link=$(readlink .vagga/bundle-lock)
-    [[ $link = ".roots/bundle-lock.d695d3b2/root" ]]
+    [[ $link = ".roots/bundle-lock.f5dc34fa/root" ]]
 }

@@ -25,12 +25,12 @@ containers:
 
   pkg-ubuntu-precise:
     setup:
-    - !Ubuntu precise
+    - !UbuntuRelease { version: 12.04.5 }
     - !GemInstall [rake:10.5.0]
 
   pkg-ubuntu-precise-no-update-gem:
     setup:
-    - !Ubuntu precise
+    - !UbuntuRelease { version: 12.04.5 }
     - !GemConfig
       update_gem: false
     - !GemInstall [rake, "-v", 10.5.0]

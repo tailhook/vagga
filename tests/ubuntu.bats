@@ -70,13 +70,14 @@ setup() {
     [[ $link = ".roots/trusty-calc.32adcc6c/root" ]]
 }
 
-@test "Run precise bc" {
-    run vagga precise-calc 23*7+3
+@test "Run xenial bc" {
+    skip "xenial doesn't work yet"
+    run vagga xenial-calc 23*7+3
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
-    link=$(readlink .vagga/precise-calc)
-    [[ $link = ".roots/precise-calc.d85cc6fc/root" ]]
+    link=$(readlink .vagga/xenial-calc)
+    [[ $link = ".roots/xenial-calc.d85cc6fc/root" ]]
 }
 
 @test "Test VAGGAENV_* vars" {

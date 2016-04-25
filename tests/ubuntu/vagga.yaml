@@ -15,9 +15,9 @@ containers:
     - !Ubuntu trusty
     - !Install [bc]
 
-  precise-calc:
+  xenial-calc:
     setup:
-    - !Ubuntu precise
+    - !Ubuntu xenial
     - !Install [bc]
 
   ppa:
@@ -57,8 +57,8 @@ commands:
     accepts-arguments: true
     run: echo "$*" | bc
 
-  precise-calc: !Command
-    container: precise-calc
+  xenial-calc: !Command
+    container: xenial-calc
     accepts-arguments: true
     run: echo "$*" | bc
 
