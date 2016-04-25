@@ -15,7 +15,6 @@ use process_util::convert_status;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
 use super::path_util::ToRelative;
 use self::wrap::Wrapper;
-use self::version::Version;
 
 mod list;
 mod user;
@@ -26,7 +25,6 @@ mod build;
 mod wrap;
 mod pack;
 mod push;
-mod version;
 mod storage;
 mod completion;
 
@@ -91,14 +89,6 @@ pub fn run() -> i32 {
             return 126;
         }
     };
-
-    if let Some(ref min) = config.minimum_vagga {
-        if Version(min) > Version(env!("VAGGA_VERSION")) {
-            writeln!(&mut err,
-                "Please upgrade vagga to at least {:?}", &min).ok();
-            return 126;
-        }
-    }
 
     if owner_check {
         let uid = unsafe { getuid() };

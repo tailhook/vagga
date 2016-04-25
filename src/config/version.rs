@@ -1,7 +1,11 @@
 use std::str::CharIndices;
 use std::iter::Peekable;
 use std::cmp::Ordering;
+use std::default::Default;
 
+use quire::validate as V;
+use quire::ast::{Ast, NullKind, Tag};
+use quire::sky::Error as QuireError;
 
 pub struct Version<'a>(pub &'a str);
 pub struct Components<'a>(&'a str, Peekable<CharIndices<'a>>);
@@ -92,6 +96,59 @@ impl<'a> PartialOrd for Version<'a> {
                 return val;
             }
         }
+    }
+}
+
+#[derive(Default)]
+pub struct MinimumVagga {
+    pub optional: bool,
+    pub current_version: Option<String>,
+}
+
+impl MinimumVagga {
+    pub fn new() -> MinimumVagga {
+        Default::default()
+    }
+    pub fn optional(mut self) -> MinimumVagga {
+        self.optional = true;
+        self
+    }
+    pub fn current_version(mut self, version: String) -> MinimumVagga {
+        self.current_version = Some(version);
+        self
+    }
+}
+
+impl V::Validator for MinimumVagga {
+    fn default(&self, pos: V::Pos) -> Option<Ast> {
+        if self.optional {
+            Some(Ast::Null(pos.clone(), Tag::NonSpecific, NullKind::Implicit))
+        } else {
+            None
+        }
+    }
+    fn validate(&self, ast: Ast) -> (Ast, Vec<QuireError>) {
+        let mut warnings = vec!();
+        let (pos, kind, val) = match ast {
+            Ast::Scalar(pos, _, kind, min_version) => {
+                if let Some(ref current_version) = self.current_version {
+                    if Version(&min_version) > Version(current_version) {
+                        warnings.push(QuireError::validation_error(&pos,
+                            format!("Please upgrade vagga to at least {:?}", min_version)));
+                    }
+                }
+                (pos, kind, min_version)
+            }
+            Ast::Null(_, _, _) if self.optional => {
+                return (ast, warnings);
+            }
+            ast => {
+                warnings.push(QuireError::validation_error(&ast.pos(),
+                    format!("Value must be scalar")));
+                return (ast, warnings);
+            }
+        };
+        (Ast::Scalar(pos, Tag::NonSpecific, kind, val), warnings)
     }
 }
 
