@@ -115,8 +115,9 @@ commands:
     environ:
       PATH: /usr/local/musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
     run: |
-      rm target/x86_64-unknown-linux-musl/release/vagga # rebuild for sure
-      make release || exit 1
+      set -ex
+      rm target/x86_64-unknown-linux-musl/release/vagga || true # force rebuild
+      make release
       make ubuntu-package
       make tarball
 
@@ -127,7 +128,8 @@ commands:
     environ:
       PATH: /usr/local/musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
     run: |
-      rm target/x86_64-unknown-linux-musl/debug/vagga # rebuild for sure
+      set -ex
+      rm target/x86_64-unknown-linux-musl/debug/vagga || true # force rebuild
       make all
       make ubuntu-package CHECKINSTALL_FLAGS=--strip=no
       make tarball
