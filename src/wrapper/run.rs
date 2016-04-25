@@ -70,7 +70,9 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         true => setup::WriteMode::TransientHardlinkCopy(pid),
     };
     let container_ver = wrapper.root.as_ref().unwrap();
-    try!(setup::setup_filesystem(cconfig, write_mode, container_ver));
+    let mut setup_info = setup::SetupInfo::from_container(&cconfig);
+    setup_info.write_mode(write_mode);
+    try!(setup::setup_filesystem(&setup_info, container_ver));
 
     let env = try!(setup::get_environment(cconfig, &wrapper.settings));
     let mut cpath = PathBuf::from(&command);

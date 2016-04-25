@@ -166,3 +166,15 @@ commands:
     run: |
       echo 'nope' > /etc/shakespeare
       cat /etc/shakespeare
+
+  override-volumes: &override !Command
+    container: moretext
+    volumes:
+      /etc: !BindRW /work/etc
+    run: |
+      echo 'yeah' > /etc/shakespeare
+      cat /etc/shakespeare
+
+  override-volumes-supervise: !Supervise
+    children:
+      override: *override

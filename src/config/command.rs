@@ -1,11 +1,14 @@
 use std::default::Default;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use quire::validate as V;
 use quire::ast::Ast as A;
 use quire::ast::Ast;
 use quire::ast::Tag::{NonSpecific};
 use quire::ast::ScalarKind::{Plain};
+
+use super::containers::{Volume, volume_validator};
 
 type PortNumValidator = V::Numeric;
 
@@ -56,6 +59,7 @@ pub struct CommandInfo {
     pub container: String,
     pub accepts_arguments: Option<bool>,
     pub environ: BTreeMap<String, String>,
+    pub volumes: BTreeMap<PathBuf, Volume>,
     pub write_mode: WriteMode,
     pub run: Vec<String>,
     pub user_id: u32,
@@ -138,6 +142,9 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
         .member("container", V::Scalar::new())
         .member("accepts_arguments", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
+        .member("volumes", V::Mapping::new(
+            V::Directory::new().is_absolute(true),
+            volume_validator()))
         .member("write_mode", V::Scalar::new().default("read-only"))
         .member("run", V::Sequence::new(V::Scalar::new())
             .parser(shell_command as fn(Ast) -> Vec<Ast>))
