@@ -190,25 +190,30 @@ setup() {
     run vagga _build unzip-local
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-local)
-    [[ $link = ".roots/unzip-local.24255fd9/root" ]]
+    [[ $link = ".roots/unzip-local.6e26085b/root" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) = "2" ]]
+    [[ -x .vagga/unzip-local/root/test/1/install.sh ]]
     [[ $(cat .vagga/unzip-local/root/test/2/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/2/dir/file2.txt) = "2" ]]
+    [[ -x .vagga/unzip-local/root/test/2/install.sh ]]
     [[ $(cat .vagga/unzip-local/root/test/3/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/3/dir/file2.txt) = "2" ]]
+    [[ -x .vagga/unzip-local/root/test/3/install.sh ]]
     [[ $(cat .vagga/unzip-local/root/test/4/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/4/file2.txt) = "2" ]]
     [[ ! -d .vagga/unzip-local/root/configs/4/dir ]]
+    [[ ! -f .vagga/unzip-local/root/test/4/install.sh ]]
     [[ $(cat .vagga/unzip-local/root/test/5/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/5/file2.txt) = "2" ]]
     [[ ! -d .vagga/unzip-local/root/configs/5/dir ]]
+    [[ ! -f .vagga/unzip-local/root/test/5/install.sh ]]
     [[ ! -f $cached_file ]]
 
     run vagga _build unzip-downloaded
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-downloaded)
-    [[ $link = ".roots/unzip-downloaded.267da19f/root" ]]
+    [[ $link = ".roots/unzip-downloaded.386f9553/root" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
     [[ -f $cached_file ]]
