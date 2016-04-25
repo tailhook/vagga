@@ -113,7 +113,7 @@ commands:
     container: rust-musl
     write-mode: transient-hard-link-copy
     environ:
-      PATH: /usr/local/musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+      PATH: /musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
     run: |
       set -ex
       rm target/x86_64-unknown-linux-musl/release/vagga || true # force rebuild
@@ -126,7 +126,7 @@ commands:
     container: rust-musl
     write-mode: transient-hard-link-copy
     environ:
-      PATH: /usr/local/musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+      PATH: /musl/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
     run: |
       set -ex
       rm target/x86_64-unknown-linux-musl/debug/vagga || true # force rebuild
