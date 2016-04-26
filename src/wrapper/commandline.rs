@@ -67,7 +67,11 @@ pub fn commandline_cmd(command: &CommandInfo,
         => setup::WriteMode::TransientHardlinkCopy(pid),
     };
     let cont_ver = wrapper.root.as_ref().unwrap();
-    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
+    let mut setup_info = setup::SetupInfo::from_container(&cconfig);
+    setup_info
+        .volumes(&command.volumes)
+        .write_mode(write_mode);
+    try!(setup::setup_filesystem(&setup_info, &cont_ver));
 
     let mut env = try!(setup::get_environment(cconfig, &wrapper.settings));
     for (k, v) in command.environ.iter() {

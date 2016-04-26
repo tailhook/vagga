@@ -99,7 +99,10 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         => setup::WriteMode::TransientHardlinkCopy(pid),
     };
     let cont_ver = wrapper.root.as_ref().unwrap();
-    try!(setup::setup_filesystem(cconfig, write_mode, &cont_ver));
+    let mut setup_info = setup::SetupInfo::from_container(&cconfig);
+    setup_info.volumes(&command.volumes)
+        .write_mode(write_mode);
+    try!(setup::setup_filesystem(&setup_info, &cont_ver));
 
     try!(_write_hosts(supervise));
 

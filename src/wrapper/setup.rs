@@ -11,6 +11,7 @@ use libc::pid_t;
 use libmount::BindMount;
 
 use config::{Container, Settings};
+use config::containers::Volume;
 use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, BindRO, Snapshot};
 use config::containers::Volume::{Empty};
 use container::root::{change_root};
@@ -295,8 +296,41 @@ pub fn get_environment(container: &Container, settings: &Settings)
     return Ok(result);
 }
 
-pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
-    container_ver: &str)
+pub struct SetupInfo<'a> {
+    pub volumes: BTreeMap<&'a PathBuf, &'a Volume>,
+    pub write_mode: WriteMode,
+    pub resolv_conf_path: Option<&'a PathBuf>,
+    pub hosts_file_path: Option<&'a PathBuf>,
+}
+
+impl<'a> SetupInfo<'a> {
+    pub fn from_container(container: &Container) -> SetupInfo {
+        let mut setup_info = SetupInfo {
+            volumes: BTreeMap::new(),
+            write_mode: WriteMode::ReadOnly,
+            resolv_conf_path: container.resolv_conf_path.as_ref(),
+            hosts_file_path: container.hosts_file_path.as_ref(),
+        };
+        setup_info.volumes(&container.volumes);
+        setup_info
+    }
+    pub fn volumes(&mut self, volumes: &'a BTreeMap<PathBuf, Volume>)
+        -> &mut SetupInfo<'a>
+    {
+        for (path, vol) in volumes.iter() {
+            self.volumes.insert(&path, &vol);
+        }
+        self
+    }
+    pub fn write_mode(&mut self, write_mode: WriteMode)
+        -> &mut SetupInfo<'a>
+    {
+        self.write_mode = write_mode;
+        self
+    }
+}
+
+pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     -> Result<(), String>
 {
     let tgtroot = Path::new("/vagga/root");
@@ -305,7 +339,7 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
                  "Can't create rootfs mountpoint: {err}");
     }
     let image_base = Path::new("/vagga/base/.roots").join(container_ver);
-    match write_mode {
+    match setup_info.write_mode {
         WriteMode::ReadOnly => {
             let nroot = image_base.join("root");
             try_msg!(BindMount::new(&nroot, &tgtroot).mount(),
@@ -333,19 +367,19 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
     try!(mount_system_dirs()
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
 
-    if let None = container.volumes.get(&PathBuf::from("/tmp")) {
+    if let None = setup_info.volumes.get(&PathBuf::from("/tmp")) {
         try!(mount_tmpfs(&tgtroot.join("tmp"), "size=100m,mode=01777"));
     }
-    if let None = container.volumes.get(&PathBuf::from("/run")) {
+    if let None = setup_info.volumes.get(&PathBuf::from("/run")) {
         let dest = tgtroot.join("run");
         try!(mount_tmpfs(&dest, "size=100m,mode=0766"));
         try_msg!(create_dir_mode(&dest.join("shm"), 0o1777),
             "Error creating /run/shm: {err}");
     }
 
-    for (path, vol) in container.volumes.iter() {
+    for (path, vol) in setup_info.volumes.iter() {
         let dest = tgtroot.join(path.rel());
-        match vol {
+        match *vol {
             &Tmpfs(ref params) => {
                 try!(mount_tmpfs(&dest,
                     &format!("size={},mode=0{:o}", params.size, params.mode)));
@@ -385,12 +419,12 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
             "mount namespaces: {err}");
     }
 
-    if let Some(ref path) = container.resolv_conf_path {
+    if let Some(path) = setup_info.resolv_conf_path {
         let path = tgtroot.join(path.rel());
         try!(copy(&Path::new("/etc/resolv.conf"), &path)
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
     }
-    if let Some(ref path) = container.hosts_file_path {
+    if let Some(path) = setup_info.hosts_file_path {
         let path = tgtroot.join(path.rel());
         try!(copy(&Path::new("/etc/hosts"), &path)
             .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
@@ -399,7 +433,7 @@ pub fn setup_filesystem(container: &Container, write_mode: WriteMode,
     //  Currently we need the root to be writeable for putting resolv.conf and
     //  hosts.  It's a bit ugly but bearable for development environments.
     //  Eventually we'll find a better way
-    if write_mode == WriteMode::ReadOnly {
+    if setup_info.write_mode == WriteMode::ReadOnly {
         try!(remount_ro(&tgtroot));
     }
 

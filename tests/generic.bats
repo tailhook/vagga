@@ -27,6 +27,20 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
 
+@test "generic: Overriding container volumes" {
+    rm -f etc/shakespeare
+    run vagga override-volumes
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-1]} = "yeah" ]]
+    [[ $(cat etc/shakespeare) = "yeah" ]]
+
+    rm -f etc/shakespeare
+    run vagga override-volumes-supervise
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "yeah" ]]
+    [[ $(cat etc/shakespeare) = "yeah" ]]
+}
+
 @test "generic: The CacheDirs tag works" {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
