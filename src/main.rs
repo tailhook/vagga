@@ -17,6 +17,8 @@ extern crate signal;
 extern crate regex;
 extern crate scan_dir;
 extern crate zip;
+extern crate tar;
+extern crate flate2;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;
