@@ -26,7 +26,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-precise)
-    [[ $link = ".roots/pkg-precise.e1b60bf3/root" ]]
+    [[ $link = ".roots/pkg-precise.2f2572d9/root" ]]
 }
 
 @test "npm: alpine pkg" {

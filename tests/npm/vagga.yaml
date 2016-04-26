@@ -11,7 +11,7 @@ containers:
 
   pkg-precise:
     setup:
-    - !Ubuntu precise
+    - !UbuntuRelease { version: 12.04.5 }
     - !NpmInstall [resolve-cli]
 
   pkg-alpine:
