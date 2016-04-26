@@ -3,12 +3,14 @@ setup() {
 }
 
 @test "UbuntuRelease builds" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     vagga _build vivid
     link=$(readlink .vagga/vivid)
     [[ $link = ".roots/vivid.0fd62318/root" ]]
 }
 
 @test "Run echo command in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga echo-cmd hello
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -20,6 +22,7 @@ setup() {
 }
 
 @test "Run echo shell in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga echo-shell
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -31,6 +34,7 @@ setup() {
 }
 
 @test "Run echo shell with arguments in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga echo-shell-arg
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -42,6 +46,7 @@ setup() {
 }
 
 @test "Run absent command in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga test something
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 121 ]]
@@ -49,6 +54,7 @@ setup() {
 }
 
 @test "Run vivid bc in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga vivid-calc 100*24
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
@@ -58,6 +64,7 @@ setup() {
 }
 
 @test "ubuntu_release: Run vivid bc in ubuntu derived from release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga vivid-derived-calc 100*24
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
@@ -76,19 +83,25 @@ setup() {
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     VAGGAENV_TESTVAR=testvalue run vagga _run vivid printenv TESTVAR
+    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = testvalue ]]
 }
 
 @test "Test set env in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga --environ TESTVAR=1value1 _run vivid printenv TESTVAR
+    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = 1value1 ]]
 }
 
 @test "Test propagate env in ubuntu release" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     TESTVAR=2value2 run vagga --use-env TESTVAR _run vivid printenv TESTVAR
+    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = 2value2 ]]
 }

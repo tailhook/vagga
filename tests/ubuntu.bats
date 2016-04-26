@@ -71,7 +71,7 @@ setup() {
 }
 
 @test "Run xenial bc" {
-    skip "xenial doesn't work yet"
+    skip "xenial doesn't work yet, will be fixed by #230"
     run vagga xenial-calc 23*7+3
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]

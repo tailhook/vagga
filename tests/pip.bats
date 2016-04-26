@@ -58,6 +58,7 @@ setup() {
 }
 
 @test "py3: ubuntu 15.04 py3.5" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     vagga _build py35-ubuntu-15.04
     run vagga _run py35-ubuntu-15.04 python3.5 -m urp -Q key=val http://example.com
     printf "%s\n" "${lines[@]}"
@@ -95,6 +96,7 @@ setup() {
 }
 
 @test "py3: ubuntu req-https.txt" {
+    skip "15.04 is absent on cdimage already, will be fixed by #230"
     run vagga _build py3req-https-ubuntu
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
