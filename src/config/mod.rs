@@ -11,4 +11,4 @@ pub mod builders;
 pub mod config;
 pub mod command;
 pub mod validate;
-
+pub mod version;

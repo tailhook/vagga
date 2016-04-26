@@ -6,11 +6,13 @@ use rustc_serialize::{Decoder};
 
 use quire::parse_config;
 use quire::validate as V;
+
 use super::containers;
 use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
 use super::validate::validate_config;
+use super::version::MinimumVagga;
 
 #[derive(RustcDecodable)]
 pub struct Config {
@@ -21,7 +23,9 @@ pub struct Config {
 
 pub fn config_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
-    .member("minimum_vagga", V::Scalar::new().optional())
+    .member("minimum_vagga", MinimumVagga::new()
+        .optional()
+        .current_version(env!("VAGGA_VERSION").to_string()))
     .member("containers", V::Mapping::new(
         V::Scalar::new(),
         containers::container_validator()))
