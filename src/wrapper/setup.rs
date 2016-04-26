@@ -296,29 +296,35 @@ pub fn get_environment(container: &Container, settings: &Settings)
     return Ok(result);
 }
 
-pub struct SetupInfo {
-    pub volumes: BTreeMap<PathBuf, Volume>,
+pub struct SetupInfo<'a> {
+    pub volumes: BTreeMap<&'a PathBuf, &'a Volume>,
     pub write_mode: WriteMode,
-    pub resolv_conf_path: Option<PathBuf>,
-    pub hosts_file_path: Option<PathBuf>,
+    pub resolv_conf_path: Option<&'a PathBuf>,
+    pub hosts_file_path: Option<&'a PathBuf>,
 }
 
-impl SetupInfo {
+impl<'a> SetupInfo<'a> {
     pub fn from_container(container: &Container) -> SetupInfo {
-        SetupInfo {
-            volumes: container.volumes.clone(),
+        let mut setup_info = SetupInfo {
+            volumes: BTreeMap::new(),
             write_mode: WriteMode::ReadOnly,
-            resolv_conf_path: container.resolv_conf_path.clone(),
-            hosts_file_path: container.hosts_file_path.clone(),
-        }
+            resolv_conf_path: container.resolv_conf_path.as_ref(),
+            hosts_file_path: container.hosts_file_path.as_ref(),
+        };
+        setup_info.volumes(&container.volumes);
+        setup_info
     }
-    pub fn volumes(&mut self, volumes: &BTreeMap<PathBuf, Volume>) -> &mut SetupInfo {
+    pub fn volumes(&mut self, volumes: &'a BTreeMap<PathBuf, Volume>)
+        -> &mut SetupInfo<'a>
+    {
         for (path, vol) in volumes.iter() {
-            self.volumes.insert(path.clone(), vol.clone());
+            self.volumes.insert(&path, &vol);
         }
         self
     }
-    pub fn write_mode(&mut self, write_mode: WriteMode) -> &mut SetupInfo {
+    pub fn write_mode(&mut self, write_mode: WriteMode)
+        -> &mut SetupInfo<'a>
+    {
         self.write_mode = write_mode;
         self
     }
@@ -373,7 +379,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
 
     for (path, vol) in setup_info.volumes.iter() {
         let dest = tgtroot.join(path.rel());
-        match vol {
+        match *vol {
             &Tmpfs(ref params) => {
                 try!(mount_tmpfs(&dest,
                     &format!("size={},mode=0{:o}", params.size, params.mode)));
@@ -413,12 +419,12 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
             "mount namespaces: {err}");
     }
 
-    if let Some(ref path) = setup_info.resolv_conf_path {
+    if let Some(path) = setup_info.resolv_conf_path {
         let path = tgtroot.join(path.rel());
         try!(copy(&Path::new("/etc/resolv.conf"), &path)
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
     }
-    if let Some(ref path) = setup_info.hosts_file_path {
+    if let Some(path) = setup_info.hosts_file_path {
         let path = tgtroot.join(path.rel());
         try!(copy(&Path::new("/etc/hosts"), &path)
             .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
