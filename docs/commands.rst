@@ -99,8 +99,8 @@ Parameters of `!Command`
    The command to run. It can be:
 
    - either a string encompassing a shell command line (which is feeded to
-     ``/bin/sh -c``) 
-   - or a list containing first the full path to the executable to run 
+     ``/bin/sh -c``)
+   - or a list containing first the full path to the executable to run
      and then possibly static arguments.
 
 .. opt:: work-dir
@@ -113,18 +113,30 @@ Parameters of `!Command`
 .. opt:: accepts-arguments
 
    Denotes whether command accepts additional arguments. Defaults to:
-   
+
    - ``false`` for a shell command line (if ``run`` is a string);
    - ``true`` if command is an executable (if ``run`` is a list).
 
    NB: If command is a shell command line - even if it's composed of
-   only one call to an executable -, arguments are given to its 
+   only one call to an executable -, arguments are given to its
    executing context, not appended to it.
 
 .. opt:: environ
 
    The mapping of environment to pass to command. This overrides environment
    specified in container on value by value basis.
+
+.. opt:: volumes
+
+   The mapping of mount points to the definition of volume. Allows to mount
+   some additional filesystems inside the container. See :ref:`volumes` for
+   more info.
+
+   The volumes defined here override `volumes` specified in the
+   container definition (each volume name is considered separately).
+
+   .. note:: You must create a folder for each volume. See
+      :ref:`build_commands` for documentation.
 
 .. opt:: pid1mode
 
