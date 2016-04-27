@@ -132,7 +132,7 @@ Parameters of `!Command`
    some additional filesystems inside the container. See :ref:`volumes` for
    more info.
 
-   The volumes defined here override `volumes` specified in the
+   The volumes defined here override :opt:`volumes` specified in the
    container definition (each volume name is considered separately).
 
    .. note:: You must create a folder for each volume. See
