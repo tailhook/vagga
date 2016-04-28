@@ -425,25 +425,41 @@ pub fn read_ubuntu_codename() -> Result<String, String>
 pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
     -> Result<(), String>
 {
-    let url_base = "http://cdimage.ubuntu.com/ubuntu";
-    let kind = "core";
     let url = match *ver {
         Version::Daily { ref codename } => {
             format!(
-                "{url_base}-{kind}/{release}/daily/current/\
-                 {release}-{kind}-{arch}.tar.gz",
-                url_base=url_base, kind=kind, arch=arch, release=codename)
+                "http://cloud-images.ubuntu.com/{codename}/current/\
+                 {codename}-server-cloudimg-{arch}-root.tar.gz",
+                arch=arch, codename=codename)
         },
         Version::Release { ref version } => {
-            format!(
-                "{url_base}-{kind}/releases/{release}/release/\
-                 ubuntu-{kind}-{release}-{kind}-{arch}.tar.gz",
-                url_base=url_base, kind=kind, arch=arch, release=version)
+            let major_end = version.bytes().position(|x| x == b'.')
+                .and_then(|x| version[x+1..].bytes().position(|x| x == b'.'));
+            match major_end {
+                Some(end) => {
+                    // For exact release like 12.04.5 use that
+                    // but it's not what user usually want
+                    format!(
+                        "http://cloud-images.ubuntu.com/\
+                         releases/{major}/{release}/\
+                         ubuntu-{major}-server-cloudimg-{arch}-root.tar.gz",
+                        arch=arch, major=&version[..end], release=version)
+                }
+                None => {
+                    format!(
+                        "http://cloud-images.ubuntu.com/\
+                         releases/{major}/release/\
+                         ubuntu-{major}-server-cloudimg-{arch}-root.tar.gz",
+                        arch=arch, major=version)
+                }
+            }
         },
     };
     let filename = try!(download_file(ctx, &url[0..], None));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
-        &[Path::new("dev")]));
+        &[Path::new("dev"),
+          Path::new("etc/resolv.conf"),
+          Path::new("etc/hosts")]));
 
     Ok(())
 }
