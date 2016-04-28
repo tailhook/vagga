@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 
 use tar::Archive;
 use flate2::FlateReadExt;
+use xz2::read::XzDecoder;
+use bzip2::read::BzDecoder;
 use libmount::BindMount;
 
 use container::mount::{unmount};
@@ -53,6 +55,14 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
         return unpack_stream(
             try!(file.gz_decode().map_err(&read_err)),
             src, tgt, includes, excludes);
+    } else if magic.len() >= 6 && magic[..6] ==
+        [ 0xFD, b'7', b'z', b'X', b'Z', 0x00]
+    {
+        return unpack_stream(XzDecoder::new(file),
+            src, tgt, includes, excludes);
+    } else if magic.len() >= 3 && magic[..3] == [ b'B', b'Z', b'h'] {
+        return unpack_stream(BzDecoder::new(file),
+            src, tgt, includes, excludes);
     } else {
         return Err(format!("unpacking {:?}: unexpected compression", src));
     }
@@ -67,14 +77,6 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
     let mut arc = Archive::new(file);
 
     for item in try!(arc.entries().map_err(&read_err)) {
-        /* TODO(tailhook)
-        for i in includes.iter() {
-            cmd.arg(i);
-        }
-        for i in excludes.iter() {
-            cmd.arg("--exclude").arg(i);
-        }
-        */
         let mut src = try!(item.map_err(&read_err));
         let path_ref = try!(src.header().path().map_err(&read_err))
             .to_path_buf();
