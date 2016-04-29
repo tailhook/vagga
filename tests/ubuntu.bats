@@ -105,6 +105,7 @@ setup() {
 
 @test "ubuntu: builddeps needed for other packages" {
     run vagga checkinstall -v
+    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/dependency-conflict)

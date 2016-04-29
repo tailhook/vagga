@@ -1,6 +1,6 @@
 use std::io::{self, Read, Seek, SeekFrom};
 use std::fs::{File, Permissions};
-use std::fs::{create_dir_all, set_permissions};
+use std::fs::{create_dir_all, set_permissions, hard_link};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -75,28 +75,32 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
 {
     let read_err = |e| format!("Error reading {:?}: {}", srcpath, e);
     let mut arc = Archive::new(file);
+    let mut hardlinks = Vec::new();
 
     for item in try!(arc.entries().map_err(&read_err)) {
         let mut src = try!(item.map_err(&read_err));
         let path_ref = try!(src.header().path().map_err(&read_err))
             .to_path_buf();
-        let mut path: &Path = &path_ref;
-        if path.is_absolute() {
-            path = path.strip_prefix("/").unwrap();
+        let mut orig_path: &Path = &path_ref;
+        if orig_path.is_absolute() {
+            orig_path = orig_path.strip_prefix("/").unwrap();
         }
         if includes.len() > 0 {
-            if !includes.iter().any(|x| path.starts_with(x)) {
+            if !includes.iter().any(|x| orig_path.starts_with(x)) {
                 continue;
             }
         }
-        if excludes.iter().any(|x| path.starts_with(x)) {
+        if excludes.iter().any(|x| orig_path.starts_with(x)) {
             continue;
         }
-        let path = tgt.join(path);
+        let path = tgt.join(orig_path);
         let write_err = |e| format!("Error writing {:?}: {}", path, e);
         let entry = src.header().entry_type();
         if entry.is_dir() {
             try!(create_dir(&path, true).map_err(&write_err));
+            let mode = try!(src.header().mode().map_err(&read_err));
+            try!(set_permissions(&path, Permissions::from_mode(mode))
+                .map_err(&write_err));
         } else if entry.is_symlink() {
             let src = try!(try!(src.header().link_name().map_err(&read_err))
                 .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
@@ -115,6 +119,15 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                     }
                 }
             };
+        } else if entry.is_hard_link() {
+            let link = try!(try!(src.header().link_name().map_err(&read_err))
+                .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
+            let link = if link.is_absolute() {
+                link.strip_prefix("/").unwrap()
+            } else {
+                &*link
+            };
+            hardlinks.push((tgt.join(link).to_path_buf(), path.to_path_buf()));
         } else {
             let mut dest = match File::create(&path) {
                 Ok(x) => x,
@@ -138,6 +151,26 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
             try!(set_permissions(&path, Permissions::from_mode(mode))
                 .map_err(&write_err));
         }
+    }
+    for (src, dst) in hardlinks.into_iter() {
+        let write_err = |e| {
+            format!("Error hardlinking {:?} - {:?}: {}", &src, &dst, e)
+        };
+        match hard_link(&src, &dst) {
+            Ok(_) => {},
+            Err(e) => {
+                if e.kind() == io::ErrorKind::NotFound {
+                    if let Some(parent) = dst.parent() {
+                        try!(create_dir(parent, true).map_err(&write_err));
+                        try!(hard_link(&src, &dst).map_err(&write_err))
+                    } else {
+                        return Err(write_err(e));
+                    }
+                } else {
+                    return Err(write_err(e));
+                }
+            }
+        };
     }
     Ok(())
 }
