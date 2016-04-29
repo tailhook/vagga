@@ -64,7 +64,9 @@ pub fn download_file(ctx: &mut Context, url: &str, sha256: Option<String>)
                                         "Cannot open archive: {err}");
                 if let Err(e) = check_stream_hashsum(&mut tmpfile, sha256) {
                     remove_file(&filename)
-                        .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
+                        .map_err(|e| error!(
+                            "Error unlinking cache file: {}", e)).ok();
+                    error!("Bad hashsum of {:?}", url);
                     return Err(e);
                 }
             }
@@ -75,11 +77,13 @@ pub fn download_file(ctx: &mut Context, url: &str, sha256: Option<String>)
         Ok(val) => {
             remove_file(&tmpfilename)
                 .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
+            error!("Error downloading {:?}", url);
             Err(format!("Wget exited with status: {}", val))
         }
         Err(x) => {
             remove_file(&tmpfilename)
                 .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
+            error!("Error downloading {:?}", url);
             Err(format!("Error starting wget: {}", x))
         }
     }
