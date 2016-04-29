@@ -434,7 +434,8 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
         },
         Version::Release { ref version } => {
             let major_end = version.bytes().position(|x| x == b'.')
-                .and_then(|x| version[x+1..].bytes().position(|x| x == b'.'));
+                .and_then(|x| version[x+1..].bytes().position(|y| y == b'.')
+                                                    .map(|y| x+1+y));
             match major_end {
                 Some(end) => {
                     // For exact release like 12.04.5 use that
@@ -458,6 +459,8 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
     let filename = try!(download_file(ctx, &url[0..], None));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev"),
+          Path::new("sys"),
+          Path::new("proc"),
           Path::new("etc/resolv.conf"),
           Path::new("etc/hosts")]));
 
