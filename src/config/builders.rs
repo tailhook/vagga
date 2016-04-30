@@ -1,6 +1,5 @@
 use std::rc::Rc;
 use std::path::PathBuf;
-use std::default::Default;
 
 use quire::validate as V;
 use libc::{uid_t, gid_t};
@@ -40,8 +39,8 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("UbuntuPPA", cmd::ubuntu::UbuntuPPA::config())
     .option("UbuntuUniverse", cmd::ubuntu::UbuntuUniverse::config())
     .option("AptTrust", cmd::ubuntu::AptTrust::config())
-    .option("Install", V::Sequence::new(V::Scalar::new()))
-    .option("BuildDeps", V::Sequence::new(V::Scalar::new()))
+    .option("Install", cmd::packaging::Install::config())
+    .option("BuildDeps", cmd::packaging::BuildDeps::config())
     .option("Container", cmd::subcontainer::Container::config())
     .option("SubConfig", cmd::subcontainer::SubConfig::config())
     .option("Build", cmd::subcontainer::Build::config())
@@ -61,10 +60,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Tar", cmd::tarcmd::Tar::config())
     .option("TarInstall", cmd::tarcmd::TarInstall::config())
     .option("Unzip", cmd::unzip::Unzip::config())
-    .option("Download", V::Structure::new()
-        .member("url", V::Scalar::new())
-        .member("path", V::Directory::new().is_absolute(true))
-        .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777)))
+    .option("Download", cmd::download::Download::config())
 
     // Python
     .option("PipConfig", cmd::pip::PipConfig::config())

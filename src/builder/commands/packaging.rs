@@ -1,3 +1,5 @@
+use quire::validate as V;
+
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -6,9 +8,21 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 pub struct Install(Vec<String>);
 tuple_struct_decode!(Install);
 
+impl Install {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
+
 #[derive(Debug)]
 pub struct BuildDeps(Vec<String>);
 tuple_struct_decode!(BuildDeps);
+
+impl BuildDeps {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
 
 impl BuildStep for Install {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)

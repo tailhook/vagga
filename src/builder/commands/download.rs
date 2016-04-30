@@ -3,6 +3,7 @@ use std::fs::{set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::ffi::OsStrExt;
 
+use quire::validate as V;
 use file_util::copy;
 use path_util::ToRelative;
 use builder::download::download_file;
@@ -14,6 +15,15 @@ pub struct Download {
     pub url: String,
     pub path: PathBuf,
     pub mode: u32,
+}
+
+impl Download {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("path", V::Directory::new().is_absolute(true))
+        .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777))
+    }
 }
 
 
