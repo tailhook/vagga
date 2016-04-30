@@ -5,6 +5,7 @@ use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Stdio};
 
+use quire::validate as V;
 use config::settings::Settings;
 use builder::commands::subcontainer::GitSource;
 use super::super::capsule;
@@ -22,6 +23,16 @@ pub struct Git {
     pub path: PathBuf,
 }
 
+impl Git {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("revision", V::Scalar::new().optional())
+        .member("branch", V::Scalar::new().optional())
+        .member("path", V::Directory::new().is_absolute(true))
+    }
+}
+
 #[derive(RustcDecodable, Debug)]
 pub struct GitInstall {
     pub url: String,
@@ -29,6 +40,21 @@ pub struct GitInstall {
     pub branch: Option<String>,
     pub subdir: PathBuf,
     pub script: String,
+}
+
+impl GitInstall {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("revision", V::Scalar::new().optional())
+        .member("branch", V::Scalar::new().optional())
+        .member("subdir", V::Directory::new()
+            .default(".").is_absolute(false))
+        .member("script", V::Scalar::new()
+                .default("./configure --prefix=/usr\n\
+                          make\n\
+                          make install\n"))
+    }
 }
 
 
