@@ -87,15 +87,9 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
         cmd::composer::ComposerDependencies::config())
 
     // Ruby
-    .option("GemConfig", V::Structure::new()
-        .member("install_ruby", V::Scalar::new().default(true))
-        .member("gem_exe", V::Scalar::new().optional())
-        .member("update_gem", V::Scalar::new().default(true)))
-    .option("GemInstall", V::Sequence::new(V::Scalar::new()))
-    .option("GemBundle", V::Structure::new()
-        .member("gemfile", V::Scalar::new().default("Gemfile"))
-        .member("without", V::Sequence::new(V::Scalar::new()))
-        .member("trust_policy", V::Scalar::new().optional()))
+    .option("GemConfig", cmd::gem::GemConfig::config())
+    .option("GemInstall", cmd::gem::GemInstall::config())
+    .option("GemBundle", cmd::gem::GemBundle::config())
 }
 
 fn step<T: BuildStep + 'static, E>(val: Result<T, E>)

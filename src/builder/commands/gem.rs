@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{Read, Write, BufReader, BufRead};
 
 use regex::Regex;
+use quire::validate as V;
 
 use super::super::context::Context;
 use super::super::packages;
@@ -22,6 +23,11 @@ const VALID_TRUST_POLICIES: [&'static str; 3] = ["LowSecurity", "MediumSecurity"
 pub struct GemInstall(Vec<String>);
 tuple_struct_decode!(GemInstall);
 
+impl GemInstall {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
 
 #[derive(RustcDecodable, Debug, Clone)]
 pub struct GemConfig {
@@ -30,11 +36,29 @@ pub struct GemConfig {
     pub update_gem: bool,
 }
 
+impl GemConfig {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("install_ruby", V::Scalar::new().default(true))
+        .member("gem_exe", V::Scalar::new().optional())
+        .member("update_gem", V::Scalar::new().default(true))
+    }
+}
+
 #[derive(RustcDecodable, Debug)]
 pub struct GemBundle {
     pub gemfile: PathBuf,
     pub without: Vec<String>,
     pub trust_policy: Option<String>,
+}
+
+impl GemBundle {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("gemfile", V::Scalar::new().default("Gemfile"))
+        .member("without", V::Sequence::new(V::Scalar::new()))
+        .member("trust_policy", V::Scalar::new().optional())
+    }
 }
 
 impl Default for GemConfig {
