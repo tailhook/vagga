@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use unshare::{Command, Stdio};
 use libmount::BindMount;
 
+use quire::validate as V;
 use container::mount::{unmount};
 use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
@@ -24,12 +25,35 @@ pub struct Tar {
     pub subdir: PathBuf,
 }
 
+impl Tar {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("sha256", V::Scalar::new().optional())
+        .member("path", V::Directory::new().is_absolute(true).default("/"))
+        .member("subdir", V::Directory::new().default("").is_absolute(false))
+    }
+}
+
 #[derive(RustcDecodable, Debug)]
 pub struct TarInstall {
     pub url: String,
     pub sha256: Option<String>,
     pub subdir: Option<PathBuf>,
     pub script: String,
+}
+
+impl TarInstall {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("sha256", V::Scalar::new().optional())
+        .member("subdir", V::Directory::new().optional().is_absolute(false))
+        .member("script", V::Scalar::new()
+                .default("./configure --prefix=/usr\n\
+                          make\n\
+                          make install\n"))
+    }
 }
 
 
