@@ -50,12 +50,10 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
 
     .option("Sh", cmd::generic::Sh::config())
     .option("Cmd", cmd::generic::Cmd::config())
-    .option("Remove", V::Directory::new().is_absolute(true))
-    .option("EnsureDir", V::Directory::new().is_absolute(true))
-    .option("EmptyDir", V::Directory::new().is_absolute(true))
-    .option("CacheDirs", V::Mapping::new(
-        V::Directory::new().is_absolute(true),
-        V::Scalar::new()))
+    .option("Remove", cmd::dirs::Remove::config())
+    .option("EnsureDir", cmd::dirs::EnsureDir::config())
+    .option("EmptyDir", cmd::dirs::EmptyDir::config())
+    .option("CacheDirs", cmd::dirs::CacheDirs::config())
     .option("Env", cmd::generic::Env::config())
     .option("Depends", cmd::generic::Depends::config())
     .option("Git", cmd::vcs::Git::config())

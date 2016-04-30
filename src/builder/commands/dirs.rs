@@ -3,6 +3,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::ffi::OsStrExt;
 use std::collections::BTreeMap;
 
+use quire::validate as V;
+
 use std::path::{Path, PathBuf};
 use path_util::ToRelative;
 use container::util::{clean_dir};
@@ -13,18 +15,43 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 pub struct EnsureDir(PathBuf);
 tuple_struct_decode!(EnsureDir);
 
+impl EnsureDir {
+    pub fn config() -> V::Directory {
+        V::Directory::new().is_absolute(true)
+    }
+}
+
 #[derive(Debug)]
 pub struct Remove(PathBuf);
 tuple_struct_decode!(Remove);
+
+impl Remove {
+    pub fn config() -> V::Directory {
+        V::Directory::new().is_absolute(true)
+    }
+}
 
 #[derive(Debug)]
 pub struct EmptyDir(PathBuf);
 tuple_struct_decode!(EmptyDir);
 
+impl EmptyDir {
+    pub fn config() -> V::Directory {
+        V::Directory::new().is_absolute(true)
+    }
+}
+
 #[derive(Debug)]
 pub struct CacheDirs(BTreeMap<PathBuf, String>);
 tuple_struct_decode!(CacheDirs);
 
+impl CacheDirs {
+    pub fn config() -> V::Mapping<'static> {
+        V::Mapping::new(
+            V::Directory::new().is_absolute(true),
+            V::Scalar::new())
+    }
+}
 
 pub fn remove(path: &PathBuf, guard: &mut Guard)
     -> Result<(), StepError>
