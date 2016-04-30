@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use zip::ZipArchive;
 
+use quire::validate as V;
 use builder::context::Context;
 use builder::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -13,11 +14,21 @@ use path_util::ToRelative;
 
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct Zip {
+pub struct Unzip {
     pub url: String,
     pub sha256: Option<String>,
     pub path: PathBuf,
     pub subdir: PathBuf,
+}
+
+impl Unzip {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new())
+        .member("sha256", V::Scalar::new().optional())
+        .member("path", V::Directory::new().is_absolute(true).default("/"))
+        .member("subdir", V::Directory::new().default("").is_absolute(false))
+    }
 }
 
 
@@ -71,7 +82,7 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
     }
 }
 
-impl BuildStep for Zip {
+impl BuildStep for Unzip {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
