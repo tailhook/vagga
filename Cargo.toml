@@ -26,7 +26,7 @@ scan_dir = "0.3.1"
 libmount = "0.1.1"
 zip = "0.1"
 xz2 = "0.1.0"
-tar = { git="git://github.com/tailhook/tar-rs", rev="ff91870"}
+tar = { git="git://github.com/alexcrichton/tar-rs", rev="c402adf"}
 flate2 = "0.2.13"
 bzip2 = "0.3.0"
 

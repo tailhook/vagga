@@ -21,7 +21,7 @@ dependencies = [
  "scan_dir 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "shaman 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar 0.4.5 (git+git://github.com/tailhook/tar-rs?rev=ff91870)",
+ "tar 0.4.5 (git+git://github.com/alexcrichton/tar-rs?rev=c402adf)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "unshare 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -305,7 +305,7 @@ dependencies = [
 [[package]]
 name = "tar"
 version = "0.4.5"
-source = "git+git://github.com/tailhook/tar-rs?rev=ff91870#ff91870a9e598196d8dba5503cae38169adaaa98"
+source = "git+git://github.com/alexcrichton/tar-rs?rev=c402adf#c402adf543362c1e661a654e56fe4e1728352d9e"
 dependencies = [
  "filetime 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
