@@ -7,6 +7,7 @@ use unshare::{Command};
 use scan_dir::{self, ScanDir};
 use regex::Regex;
 use rustc_serialize::json::Json;
+use quire::validate as V;
 
 use super::super::context::{Context};
 use super::super::packages;
@@ -48,9 +49,27 @@ pub struct ComposerConfig {
     pub vendor_dir: Option<PathBuf>,
 }
 
+impl ComposerConfig {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("install_runtime", V::Scalar::new().default(true))
+        .member("install_dev", V::Scalar::new().default(false))
+        .member("runtime_exe", V::Scalar::new().optional())
+        .member("include_path", V::Scalar::new().optional())
+        .member("keep_composer", V::Scalar::new().default(false))
+        .member("vendor_dir", V::Directory::new().optional())
+    }
+}
+
 #[derive(Debug)]
 pub struct ComposerInstall(Vec<String>);
 tuple_struct_decode!(ComposerInstall);
+
+impl ComposerInstall {
+    pub fn config() -> V::Sequence<'static> {
+        V::Sequence::new(V::Scalar::new())
+    }
+}
 
 #[derive(RustcDecodable, Debug)]
 pub struct ComposerDependencies {
@@ -63,6 +82,21 @@ pub struct ComposerDependencies {
     pub no_plugins: bool,
     pub optimize_autoloader: bool,
     pub classmap_authoritative: bool,
+}
+
+impl ComposerDependencies {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("working_dir", V::Scalar::new().optional())
+        .member("dev", V::Scalar::new().default(true))
+        .member("prefer", V::Scalar::new().optional())
+        .member("ignore_platform_reqs", V::Scalar::new().default(false))
+        .member("no_autoloader", V::Scalar::new().default(false))
+        .member("no_scripts", V::Scalar::new().default(false))
+        .member("no_plugins", V::Scalar::new().default(false))
+        .member("optimize_autoloader", V::Scalar::new().default(false))
+        .member("classmap_authoritative", V::Scalar::new().default(false))
+    }
 }
 
 impl Default for ComposerConfig {

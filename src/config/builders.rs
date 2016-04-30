@@ -81,24 +81,10 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("NpmDependencies", cmd::npm::NpmDependencies::config())
 
     // Composer
-    .option("ComposerConfig", V::Structure::new()
-        .member("install_runtime", V::Scalar::new().default(true))
-        .member("install_dev", V::Scalar::new().default(false))
-        .member("runtime_exe", V::Scalar::new().optional())
-        .member("include_path", V::Scalar::new().optional())
-        .member("keep_composer", V::Scalar::new().default(false))
-        .member("vendor_dir", V::Directory::new().optional()))
-    .option("ComposerInstall", V::Sequence::new(V::Scalar::new()))
-    .option("ComposerDependencies", V::Structure::new()
-        .member("working_dir", V::Scalar::new().optional())
-        .member("dev", V::Scalar::new().default(true))
-        .member("prefer", V::Scalar::new().optional())
-        .member("ignore_platform_reqs", V::Scalar::new().default(false))
-        .member("no_autoloader", V::Scalar::new().default(false))
-        .member("no_scripts", V::Scalar::new().default(false))
-        .member("no_plugins", V::Scalar::new().default(false))
-        .member("optimize_autoloader", V::Scalar::new().default(false))
-        .member("classmap_authoritative", V::Scalar::new().default(false)))
+    .option("ComposerConfig", cmd::composer::ComposerConfig::config())
+    .option("ComposerInstall", cmd::composer::ComposerInstall::config())
+    .option("ComposerDependencies",
+        cmd::composer::ComposerDependencies::config())
 
     // Ruby
     .option("GemConfig", V::Structure::new()
