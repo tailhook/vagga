@@ -8,6 +8,7 @@ use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use libc::pid_t;
+use libmount;
 use libmount::BindMount;
 
 use config::{Container, Settings};
@@ -16,7 +17,7 @@ use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, BindRO, Snapshot};
 use config::containers::Volume::{Empty};
 use container::root::{change_root};
 use container::mount::{unmount, mount_system_dirs, remount_ro};
-use container::mount::{mount_tmpfs, mount_proc, mount_dev};
+use container::mount::{mount_proc, mount_dev};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
@@ -157,7 +158,8 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
 {
     let mnt_dir = project_root.join(".vagga/.mnt");
     try!(make_mountpoint(project_root));
-    try!(mount_tmpfs(&mnt_dir, "size=100m"));
+    try!(libmount::Tmpfs::new(&mnt_dir).size_bytes(100 << 20).mount()
+         .map_err(|e| format!("{}", e)));
 
     let proc_dir = mnt_dir.join("proc");
     try_msg!(create_dir(&proc_dir, false),
@@ -368,11 +370,17 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
 
     if let None = setup_info.volumes.get(&PathBuf::from("/tmp")) {
-        try!(mount_tmpfs(&tgtroot.join("tmp"), "size=100m,mode=01777"));
+        try!(libmount::Tmpfs::new(&tgtroot.join("tmp"))
+            .size_bytes(100 << 20)
+            .mode(0o1777)
+            .mount().map_err(|e| format!("{}", e)));
     }
     if let None = setup_info.volumes.get(&PathBuf::from("/run")) {
         let dest = tgtroot.join("run");
-        try!(mount_tmpfs(&dest, "size=100m,mode=0766"));
+        try!(libmount::Tmpfs::new(&dest)
+            .size_bytes(100 << 20)
+            .mode(0o766)
+            .mount().map_err(|e| format!("{}", e)));
         try_msg!(create_dir_mode(&dest.join("shm"), 0o1777),
             "Error creating /run/shm: {err}");
     }
@@ -381,8 +389,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         let dest = tgtroot.join(path.rel());
         match *vol {
             &Tmpfs(ref params) => {
-                try!(mount_tmpfs(&dest,
-                    &format!("size={},mode=0{:o}", params.size, params.mode)));
+                try!(libmount::Tmpfs::new(&dest)
+                    .size_bytes(params.size)
+                    .mode(params.mode)
+                    .mount().map_err(|e| format!("{}", e)));
                 for (subpath, info) in &params.subdirs {
                     try_msg!(create_dir_mode(&dest.join(&subpath), info.mode),
                         "Error creating subdir {sub:?} of {vol:?}: {err}",
@@ -403,7 +413,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 try!(remount_ro(&dest));
             }
             &Empty => {
-                try!(mount_tmpfs(&dest, "size=1,mode=0"));
+                try!(libmount::Tmpfs::new(&dest)
+                    .size_bytes(1)
+                    .mode(0)
+                    .mount().map_err(|e| format!("{}", e)));
                 try!(remount_ro(&dest));
             }
             &Snapshot(ref info) => {

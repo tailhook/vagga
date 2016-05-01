@@ -4,6 +4,7 @@ use std::io::{self, stdout, stderr, Write};
 use std::path::Path;
 
 use time::{SteadyTime, Duration};
+use libmount::Tmpfs;
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU};
@@ -11,7 +12,6 @@ use nix::sys::signal::{SIGQUIT, SIGKILL};
 use unshare::{Command, Namespace, reap_zombies};
 
 use options::build_mode::{build_mode, BuildMode};
-use container::mount::{mount_tmpfs};
 use container::nsutil::{set_namespace, unshare_namespace};
 use config::{Settings};
 use config::command::{SuperviseInfo, Networking};
@@ -149,7 +149,10 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         try!(network::join_gateway_namespaces());
         try!(unshare_namespace(Namespace::Mount)
             .map_err(|e| format!("Failed to create mount namespace: {}", e)));
-        try!(mount_tmpfs(&nsdir, "size=10m,mode=0755"));
+        try!(Tmpfs::new(&nsdir)
+            .size_bytes(10 << 20)
+            .mode(0o755)
+            .mount().map_err(|e| format!("{}", e)));
 
         let bridge_ns = nsdir.join("bridge");
         let ip = try!(network::setup_bridge(&bridge_ns, &forwards));
