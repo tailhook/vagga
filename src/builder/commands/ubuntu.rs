@@ -3,7 +3,6 @@ use std::os::unix::fs::{PermissionsExt, symlink};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::os::unix::io::{AsRawFd, FromRawFd};
 
 use quire::validate as V;
 use container::util::clean_dir;
@@ -217,8 +216,7 @@ impl Distribution for Distro {
             .map_err(|e| StepError::Write(PathBuf::from(pkglist), e)));
         let mut cmd = try!(command(ctx, "dpkg"));
         cmd.arg("-l");
-        // TODO(tailhook) fixme in rust 1.6. as_raw_fd -> into_raw_fd
-        cmd.stdout(unsafe { Stdio::from_raw_fd(output.as_raw_fd()) });
+        cmd.stdout(Stdio::from_file(output));
         try!(run(cmd));
         Ok(())
     }

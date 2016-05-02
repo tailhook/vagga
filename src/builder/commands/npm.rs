@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::os::unix::io::{FromRawFd, AsRawFd};
 
 use quire::validate as V;
 use unshare::{Stdio};
@@ -206,8 +205,7 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
     cmd.arg("ls");
     cmd.arg("--global");
-    // TODO(tailhook) fixme in rust 1.6. as_raw_fd -> into_raw_fd
-    cmd.stdout(unsafe { Stdio::from_raw_fd(file.as_raw_fd()) });
+    cmd.stdout(Stdio::from_file(file));
     run(cmd)
 }
 
