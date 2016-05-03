@@ -428,8 +428,8 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
     let url = match *ver {
         Version::Daily { ref codename } => {
             format!(
-                "http://cloud-images.ubuntu.com/{codename}/current/\
-                 {codename}-server-cloudimg-{arch}-root.tar.gz",
+                "http://partner-images.ubuntu.com/core/{codename}/current/\
+                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
                 arch=arch, codename=codename)
         },
         Version::Release { ref version } => {
