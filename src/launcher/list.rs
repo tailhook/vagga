@@ -5,13 +5,14 @@ use argparse::{ArgumentParser, StoreTrue};
 use config::Config;
 
 
-pub fn print_list(config: &Config, args: Vec<String>)
+pub fn print_list(config: &Config, mut args: Vec<String>)
     -> Result<i32, String>
 {
     let mut all = false;
     let mut builtin = false;
     let mut hidden = false;
     {
+        args.insert(0, String::from("vagga _list"));
         let mut ap = ArgumentParser::new();
         ap.refer(&mut all)
             .add_option(&["-A", "--all"], StoreTrue,
