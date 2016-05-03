@@ -425,38 +425,34 @@ pub fn read_ubuntu_codename() -> Result<String, String>
 pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
     -> Result<(), String>
 {
-    let url = match *ver {
+    let urls = match *ver {
         Version::Daily { ref codename } => {
-            format!(
-                "http://partner-images.ubuntu.com/core/{codename}/current/\
-                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
-                arch=arch, codename=codename)
+            vec![
+                format!(
+                    "https://partner-images.canonical.com/core/\
+                     {codename}/current/\
+                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                    arch=arch, codename=codename)
+            ]
         },
         Version::Release { ref version } => {
-            let major_end = version.bytes().position(|x| x == b'.')
-                .and_then(|x| version[x+1..].bytes().position(|y| y == b'.')
-                                                    .map(|y| x+1+y));
-            match major_end {
-                Some(end) => {
-                    // For exact release like 12.04.5 use that
-                    // but it's not what user usually want
-                    format!(
-                        "http://cloud-images.ubuntu.com/\
-                         releases/{major}/{release}/\
-                         ubuntu-{major}-server-cloudimg-{arch}-root.tar.gz",
-                        arch=arch, major=&version[..end], release=version)
-                }
-                None => {
-                    format!(
-                        "http://cloud-images.ubuntu.com/\
-                         releases/{major}/release/\
-                         ubuntu-{major}-server-cloudimg-{arch}-root.tar.gz",
-                        arch=arch, major=version)
-                }
-            }
+            vec![
+                format!(
+                    "http://cdimage.ubuntu.com/ubuntu-core/releases\
+                     /{release}/release/\
+                     ubuntu-core-{release}-core-{arch}.tar.gz",
+                    arch=arch, release=version),
+                format!(
+                    "http://old-releases.ubuntu.com/releases\
+                     /{release}/\
+                     ubuntu-core-{release}-core-{arch}.tar.gz",
+                    arch=arch, release=version),
+            ]
         },
     };
-    let filename = try!(download_file(ctx, &url[0..], None));
+    let filename = try!(download_file(ctx,
+        &urls.iter().map(|x| &x[..]).collect::<Vec<_>>(),
+        None));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev"),
           Path::new("sys"),

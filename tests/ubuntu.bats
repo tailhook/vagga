@@ -76,7 +76,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/xenial-calc)
-    [[ $link = ".roots/xenial-calc.d85cc6fc/root" ]]
+    [[ $link = ".roots/xenial-calc.2eb52675/root" ]]
 }
 
 @test "Test VAGGAENV_* vars" {
