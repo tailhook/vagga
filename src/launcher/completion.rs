@@ -48,7 +48,7 @@ const NO_VERSION_CHECK: &'static CommandOption<'static> =
 };
 
 const GLOBAL_OPTIONS: &'static [&'static CommandOption<'static>] = &[
-    &CommandOption { 
+    &CommandOption {
         names: &["-V", "--version"],
         has_args: false,
         single: true,
@@ -283,6 +283,11 @@ const BUILTIN_COMMANDS:
             },
         ]
     },
+    &BuiltinCommand {
+        name: "_check_overlayfs_support",
+        accept_container: false,
+        options: &[]
+    },
 ];
 
 
@@ -472,7 +477,7 @@ impl<'a> CompletionState<'a> {
             self.state = next_state;
         }
     }
-    
+
     fn maybe_user_cmd(&self, arg: &'a str) -> Option<States<'a>> {
         for (cmd_name, user_cmd) in self.commands.iter() {
             if arg != cmd_name {
@@ -502,7 +507,7 @@ impl<'a> CompletionState<'a> {
         }
         return None;
     }
-    
+
     fn maybe_supervise_option(&self, arg: &'a str, cmd_name: &'a str)
         -> Option<States<'a>>
     {
@@ -516,7 +521,7 @@ impl<'a> CompletionState<'a> {
         }
         return None;
     }
-    
+
     fn maybe_builtin_cmd(&self, arg: &'a str) -> Option<States<'a>> {
         for cmd in BUILTIN_COMMANDS {
             if cmd.name == arg {
