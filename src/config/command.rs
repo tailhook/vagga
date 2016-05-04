@@ -114,6 +114,12 @@ impl ChildCommand {
             ChildCommand::BridgeCommand(ref info) => &info.tags,
         }
     }
+    pub fn get_volumes(&self) -> &BTreeMap<PathBuf, Volume> {
+        match *self {
+            ChildCommand::Command(ref info) => &info.volumes,
+            ChildCommand::BridgeCommand(ref info) => &info.volumes,
+        }
+    }
 }
 
 fn shell_command(ast: Ast) -> Vec<Ast> {

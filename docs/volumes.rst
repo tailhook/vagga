@@ -132,3 +132,33 @@ Available volume types:
 
    Additional properties, like the source directory will be added to the later
    versions of vagga
+
+.. volume:: Container
+
+   Mount a root file system of other container as a volume.
+
+   Example::
+
+       containers:
+         app:
+         - !Ubuntu trusty
+         ...
+         deploy-tools:
+            setup:
+            - !Alpine v3.3
+            - !Install [rsync]
+            volumes:
+                /mnt: !Container app
+
+   This may be useful to deploy the container without installing anything to
+   the host file system. E.g. you can ``rsync`` the container's file system
+   to remote host. Or ``tar`` it (but better use :cmd:`_pack_image` or
+   :cmd:`_push_image` for that). Or do other fancy things.
+
+   Unless you know what are you doing both containers should share same
+   :opt:`uids` and :opt:`gids`.
+
+   .. note:: Nothing is mounted on top of container's file system. I.e.
+      ``/dev``, ``/proc`` and ``/sys`` directories are empty. So you probably
+      can't chroot into the filesystem in any sensible way. But having that
+      folders empty is actually what is useful for use cases like deploying.

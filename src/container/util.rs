@@ -164,3 +164,13 @@ pub fn hardlink_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
     }
     Ok(())
 }
+
+pub fn version_from_symlink<P: AsRef<Path>>(path: P) -> Result<String, String>
+{
+    let lnk = path.as_ref();
+    let path = try!(read_link(&path)
+        .map_err(|e| format!("Can't read link {:?}: {}", lnk, e)));
+    path.iter().rev().nth(1).and_then(|x| x.to_str())
+    .ok_or_else(|| format!("Bad symlink {:?}: {:?}", lnk, path))
+    .map(|x| x.to_string())
+}

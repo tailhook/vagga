@@ -8,13 +8,11 @@ use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use libc::pid_t;
-use libmount;
-use libmount::BindMount;
+use libmount::{BindMount, Tmpfs};
 
 use config::{Container, Settings};
 use config::containers::Volume;
-use config::containers::Volume::{Tmpfs, VaggaBin, BindRW, BindRO, Snapshot};
-use config::containers::Volume::{Empty};
+use config::containers::Volume as V;
 use container::root::{change_root};
 use container::mount::{unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_proc, mount_dev};
@@ -24,6 +22,7 @@ use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode, copy, safe_ensure_dir};
 use path_util::ToRelative;
 use wrapper::snapshot::make_snapshot;
+use container::util::version_from_symlink;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -158,7 +157,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
 {
     let mnt_dir = project_root.join(".vagga/.mnt");
     try!(make_mountpoint(project_root));
-    try!(libmount::Tmpfs::new(&mnt_dir).size_bytes(100 << 20).mount()
+    try!(Tmpfs::new(&mnt_dir).size_bytes(100 << 20).mount()
          .map_err(|e| format!("{}", e)));
 
     let proc_dir = mnt_dir.join("proc");
@@ -370,14 +369,14 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         .map_err(|e| format!("Error mounting system dirs: {}", e)));
 
     if let None = setup_info.volumes.get(&PathBuf::from("/tmp")) {
-        try!(libmount::Tmpfs::new(&tgtroot.join("tmp"))
+        try!(Tmpfs::new(&tgtroot.join("tmp"))
             .size_bytes(100 << 20)
             .mode(0o1777)
             .mount().map_err(|e| format!("{}", e)));
     }
     if let None = setup_info.volumes.get(&PathBuf::from("/run")) {
         let dest = tgtroot.join("run");
-        try!(libmount::Tmpfs::new(&dest)
+        try!(Tmpfs::new(&dest)
             .size_bytes(100 << 20)
             .mode(0o766)
             .mount().map_err(|e| format!("{}", e)));
@@ -388,8 +387,8 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     for (path, vol) in setup_info.volumes.iter() {
         let dest = tgtroot.join(path.rel());
         match *vol {
-            &Tmpfs(ref params) => {
-                try!(libmount::Tmpfs::new(&dest)
+            &V::Tmpfs(ref params) => {
+                try!(Tmpfs::new(&dest)
                     .size_bytes(params.size)
                     .mode(params.mode)
                     .mount().map_err(|e| format!("{}", e)));
@@ -399,28 +398,37 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                         sub=subpath, vol=path);
                 }
             }
-            &VaggaBin => {
+            &V::VaggaBin => {
                 try_msg!(BindMount::new("/vagga/bin", &dest).mount(),
                     "mount !VaggaBin: {err}");
             }
-            &BindRW(ref bindpath) => {
+            &V::BindRW(ref bindpath) => {
                 try_msg!(BindMount::new(&bindpath, &dest).mount(),
                     "mount !BindRW: {err}");
             }
-            &BindRO(ref bindpath) => {
+            &V::BindRO(ref bindpath) => {
                 try_msg!(BindMount::new(&bindpath, &dest).mount(),
                     "mount !BindRO: {err}");
                 try!(remount_ro(&dest));
             }
-            &Empty => {
-                try!(libmount::Tmpfs::new(&dest)
+            &V::Empty => {
+                try!(Tmpfs::new(&dest)
                     .size_bytes(1)
                     .mode(0)
                     .mount().map_err(|e| format!("{}", e)));
                 try!(remount_ro(&dest));
             }
-            &Snapshot(ref info) => {
+            &V::Snapshot(ref info) => {
                 try!(make_snapshot(&dest, info));
+            }
+            &V::Container(ref child_cont) => {
+                let container_ver = try!(version_from_symlink(
+                    format!("/work/.vagga/{}", child_cont)));
+                let target = Path::new("/vagga/base/.roots")
+                    .join(container_ver).join("root");
+                try_msg!(BindMount::new(&target, &dest).mount(),
+                    "mount !Container: {err}");
+                try!(remount_ro(&dest));
             }
         }
     }

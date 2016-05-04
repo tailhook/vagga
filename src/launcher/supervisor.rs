@@ -13,7 +13,7 @@ use unshare::{Command, Namespace, reap_zombies};
 
 use options::build_mode::{build_mode, BuildMode};
 use container::nsutil::{set_namespace, unshare_namespace};
-use config::{Settings};
+use config::{Config, Settings};
 use config::command::{SuperviseInfo, Networking};
 use config::command::SuperviseMode::{stop_on_failure};
 use config::command::ChildCommand::{BridgeCommand};
@@ -23,11 +23,12 @@ use super::build::{build_container};
 use file_util::create_dir;
 use process_util::{convert_status, killpg};
 use super::wrap::Wrapper;
+use launcher::volumes::prepare_volumes;
 
 
-pub fn run_supervise_command(settings: &Settings, workdir: &Path,
-    sup: &SuperviseInfo, cmdname: String, mut args: Vec<String>,
-    mut bmode: BuildMode)
+pub fn run_supervise_command(config: &Config, settings: &Settings,
+    workdir: &Path, sup: &SuperviseInfo,
+    cmdname: String, mut args: Vec<String>, mut bmode: BuildMode)
     -> Result<i32, String>
 {
     let mut only: Vec<String> = Vec::new();
@@ -81,7 +82,12 @@ pub fn run_supervise_command(settings: &Settings, workdir: &Path,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
+            let continfo = try!(config.containers.get(cont)
+                .ok_or_else(|| format!("Container {:?} not found", cont)));
             let ver = try!(build_container(settings, cont, bmode));
+            try!(prepare_volumes(continfo.volumes.values(), settings, bmode));
+            try!(prepare_volumes(child.get_volumes().values(),
+                                 settings, bmode));
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {

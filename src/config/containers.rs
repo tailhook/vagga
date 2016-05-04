@@ -25,6 +25,7 @@ pub enum Volume {
     Empty,
     VaggaBin,
     Snapshot(SnapshotInfo),
+    Container(String),
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
@@ -82,6 +83,7 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
         .member("owner_uid", V::Numeric::new().min(0).optional())
         .member("owner_gid", V::Numeric::new().min(0).optional())
         )
+    .option("Container",  V::Scalar::new())
 }
 
 pub fn container_validator<'a>() -> V::Structure<'a> {

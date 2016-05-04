@@ -1,6 +1,5 @@
 use std::env;
 use std::io::{stdout, stderr};
-use std::fs::read_link;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use unshare::{Command, Namespace};
@@ -9,6 +8,7 @@ use options::build_mode::BuildMode;
 use config::Settings;
 use process_util::{capture_fd3, set_uidmap, copy_env_vars, squash_stdio};
 use container::uidmap::get_max_uidmap;
+use container::util::version_from_symlink;
 
 
 pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
@@ -21,12 +21,7 @@ pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
             &[String::from("--no-image-download")])),
         NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
         NoVersion => {
-            let lnk = format!(".vagga/{}", name);
-            let path = try!(read_link(&lnk)
-                .map_err(|e| format!("Can't read link {:?}: {}", lnk, e)));
-            try!(path.iter().rev().nth(1).and_then(|x| x.to_str())
-                .ok_or(format!("Bad symlink {:?}: {:?}", lnk, path)))
-                .to_string()
+            try!(version_from_symlink(format!(".vagga/{}", name)))
         }
     };
     Ok(ver)

@@ -27,6 +27,7 @@ mod pack;
 mod push;
 mod storage;
 mod completion;
+mod volumes;
 
 
 pub fn run() -> i32 {

@@ -200,7 +200,7 @@ setup() {
 
     cached_file="../../tmp/cache/downloads/${hash:0:8}-test-file.zip"
     rm -f $cached_file
-    
+
     run vagga _build unzip-local
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-local)
@@ -245,4 +245,11 @@ setup() {
     [[ -f test-file.zip ]]
 
     rm test-file.zip
+}
+
+@test "generic: Container volume works" {
+    run vagga snoop
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
+    [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }

@@ -17,6 +17,13 @@ containers:
     volumes:
       /etc: !Snapshot
 
+  snoop_shakespeare:
+    setup:
+    - !Alpine v3.3
+    - !EnsureDir /mnt
+    volumes:
+      /mnt: !Container text
+
   cache_dirs:
     setup:
     - !Alpine v3.1
@@ -160,6 +167,10 @@ commands:
   vagga: !Command
     container: vagga
     run: ["/usr/lib/vagga/vagga"]
+
+  snoop: !Command
+    container: snoop_shakespeare
+    run: ["cat", "/mnt/etc/shakespeare"]
 
   replace-shake: !Command
     container: moretext
