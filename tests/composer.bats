@@ -49,7 +49,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "No tests found" ]]
     link=$(readlink .vagga/php-ubuntu-precise)
-    [[ $link = ".roots/php-ubuntu-precise.7f8167fe/root" ]]
+    [[ $link = ".roots/php-ubuntu-precise.83e8d6e2/root" ]]
 }
 
 @test "composer: php alpine 3.3" {

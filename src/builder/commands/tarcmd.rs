@@ -1,10 +1,14 @@
-use std::fs::Permissions;
-use std::fs::{create_dir_all, set_permissions};
-use std::os::unix::fs::PermissionsExt;
+use std::io::{self, Read, Seek, SeekFrom};
+use std::fs::{File, Permissions};
+use std::fs::{create_dir_all, set_permissions, hard_link};
+use std::os::unix::fs::{PermissionsExt, symlink};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
-use unshare::{Command, Stdio};
+use tar::Archive;
+use flate2::FlateReadExt;
+use xz2::read::XzDecoder;
+use bzip2::read::BzDecoder;
 use libmount::BindMount;
 
 use quire::validate as V;
@@ -12,7 +16,7 @@ use container::mount::{unmount};
 use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
-use file_util::{read_visible_entries, create_dir};
+use file_util::{read_visible_entries, create_dir, copy_stream};
 use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -61,32 +65,144 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     includes: &[&Path], excludes: &[&Path])
     -> Result<(), String>
 {
-    info!("Unpacking {} -> {}", src.display(), tgt.display());
-    let mut cmd = Command::new("/vagga/bin/busybox");
-    cmd.stdin(Stdio::null())
-        .arg("tar")
-        .arg("-x")
-        .arg("-f").arg(src)
-        .arg("-C").arg(tgt);
-    for i in includes.iter() {
-        cmd.arg(i);
-    }
-    for i in excludes.iter() {
-        cmd.arg("--exclude").arg(i);
+
+    info!("Unpacking {:?} -> {:?}", src, tgt);
+    let read_err = |e| format!("Error reading {:?}: {}", src, e);
+
+    let mut file = try!(File::open(&src).map_err(&read_err));
+
+    let mut buf = [0u8; 8];
+    let nbytes = try!(file.read(&mut buf).map_err(&read_err));
+    try!(file.seek(SeekFrom::Start(0)).map_err(&read_err));
+    let magic = &buf[..nbytes];
+    if magic.len() >= 2 && magic[..2] == [0x1f, 0x8b] {
+        return unpack_stream(
+            try!(file.gz_decode().map_err(&read_err)),
+            src, tgt, includes, excludes);
+    } else if magic.len() >= 6 && magic[..6] ==
+        [ 0xFD, b'7', b'z', b'X', b'Z', 0x00]
+    {
+        return unpack_stream(XzDecoder::new(file),
+            src, tgt, includes, excludes);
+    } else if magic.len() >= 3 && magic[..3] == [ b'B', b'Z', b'h'] {
+        return unpack_stream(BzDecoder::new(file),
+            src, tgt, includes, excludes);
+    } else {
+        return Err(format!("unpacking {:?}: unexpected compression", src));
     }
 
-    match src.extension().and_then(|x| x.to_str()) {
-        Some("gz")|Some("tgz") => { cmd.arg("-z"); }
-        Some("bz")|Some("tbz") => { cmd.arg("-j"); }
-        Some("xz")|Some("txz") => { cmd.arg("-J"); }
-        _ => {}
-    };
-    info!("Running: {:?}", cmd);
-    match cmd.status() {
-        Ok(st) if st.success() => Ok(()),
-        Ok(val) => Err(format!("Tar exited with status: {}", val)),
-        Err(e) => Err(format!("Error running tar: {}", e)),
+}
+
+fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
+    includes: &[&Path], excludes: &[&Path])
+    -> Result<(), String>
+{
+    let read_err = |e| format!("Error reading {:?}: {}", srcpath, e);
+    let mut arc = Archive::new(file);
+    let mut hardlinks = Vec::new();
+
+    for item in try!(arc.entries().map_err(&read_err)) {
+        let mut src = try!(item.map_err(&read_err));
+        let path_ref = try!(src.header().path().map_err(&read_err))
+            .to_path_buf();
+        let mut orig_path: &Path = &path_ref;
+        if orig_path.is_absolute() {
+            orig_path = orig_path.strip_prefix("/").unwrap();
+        }
+        if includes.len() > 0 {
+            if !includes.iter().any(|x| orig_path.starts_with(x)) {
+                continue;
+            }
+        }
+        if excludes.iter().any(|x| orig_path.starts_with(x)) {
+            continue;
+        }
+        let path = tgt.join(orig_path);
+        let write_err = |e| format!("Error writing {:?}: {}", path, e);
+        let entry = src.header().entry_type();
+        if entry.is_dir() {
+            try!(create_dir(&path, true).map_err(&write_err));
+            let mode = try!(src.header().mode().map_err(&read_err));
+            try!(set_permissions(&path, Permissions::from_mode(mode))
+                .map_err(&write_err));
+        } else if entry.is_symlink() {
+            let src = try!(try!(src.header().link_name().map_err(&read_err))
+                .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
+            match symlink(&src, &path) {
+                Ok(_) => {},
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::NotFound {
+                        if let Some(parent) = path.parent() {
+                            try!(create_dir(parent, true).map_err(&write_err));
+                            try!(symlink(&src, &path).map_err(&write_err))
+                        } else {
+                            return Err(write_err(e));
+                        }
+                    } else {
+                        return Err(write_err(e));
+                    }
+                }
+            };
+        } else if entry.is_hard_link() {
+            let link = try!(try!(src.header().link_name().map_err(&read_err))
+                .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
+            let link = if link.is_absolute() {
+                link.strip_prefix("/").unwrap()
+            } else {
+                &*link
+            };
+            hardlinks.push((tgt.join(link).to_path_buf(), path.to_path_buf()));
+        } else if entry.is_pax_global_extensions() ||
+                  entry.is_pax_local_extensions() ||
+                  entry.is_gnu_longname() ||
+                  entry.is_gnu_longlink()
+        {
+            // nothing to do
+        } else {
+            let mut dest = match File::create(&path) {
+                Ok(x) => x,
+                Err(e) => {
+                    if e.kind() == io::ErrorKind::NotFound {
+                        if let Some(parent) = path.parent() {
+                            try!(create_dir(parent, true).map_err(&write_err));
+                            try!(File::create(&path).map_err(&write_err))
+                        } else {
+                            return Err(write_err(e));
+                        }
+                    } else {
+                        return Err(write_err(e));
+                    }
+                }
+            };
+            try!(copy_stream(&mut src, &mut dest).map_err(|e|
+                format!("Error unpacking {:?} -> {:?}: {}",
+                        srcpath, path, e)));
+            let mode = try!(src.header().mode().map_err(&read_err));
+            try!(set_permissions(&path, Permissions::from_mode(mode))
+                .map_err(&write_err));
+        }
     }
+    for (src, dst) in hardlinks.into_iter() {
+        let write_err = |e| {
+            format!("Error hardlinking {:?} - {:?}: {}", &src, &dst, e)
+        };
+        match hard_link(&src, &dst) {
+            Ok(_) => {},
+            Err(e) => {
+                if e.kind() == io::ErrorKind::NotFound {
+                    if let Some(parent) = dst.parent() {
+                        try!(create_dir(parent, true).map_err(&write_err));
+                        try!(hard_link(&src, &dst).map_err(&write_err))
+                    } else {
+                        return Err(write_err(e));
+                    }
+                } else {
+                    return Err(write_err(e));
+                }
+            }
+        };
+    }
+    Ok(())
 }
 
 pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>

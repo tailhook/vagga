@@ -71,13 +71,12 @@ setup() {
 }
 
 @test "Run xenial bc" {
-    skip "xenial doesn't work yet, will be fixed by #230"
     run vagga xenial-calc 23*7+3
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/xenial-calc)
-    [[ $link = ".roots/xenial-calc.d85cc6fc/root" ]]
+    [[ $link = ".roots/xenial-calc.2eb52675/root" ]]
 }
 
 @test "Test VAGGAENV_* vars" {
@@ -106,6 +105,7 @@ setup() {
 
 @test "ubuntu: builddeps needed for other packages" {
     run vagga checkinstall -v
+    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/dependency-conflict)

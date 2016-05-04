@@ -1,3 +1,4 @@
+use std::io;
 use std::fs::{remove_file, rename, create_dir_all, set_permissions};
 use std::fs::{File, Permissions};
 use std::os::unix::fs::PermissionsExt;
@@ -12,19 +13,19 @@ use super::context::Context;
 use file_util::check_stream_hashsum;
 
 
-pub fn download_file(ctx: &mut Context, url: &str, sha256: Option<String>)
+pub fn download_file(ctx: &mut Context, urls: &[&str], sha256: Option<String>)
     -> Result<PathBuf, String>
 {
-    let https = url.starts_with("https:");
+    let https = urls.iter().any(|x| x.starts_with("https:"));
     if https {
         try!(capsule::ensure_features(ctx, &[capsule::Https]));
     }
-    let urlpath = Path::new(url);
+    let urlpath = Path::new(urls[0]);
     let hash = match sha256 {
         Some(ref sha256) => sha256[..8].to_string(),
         None => {
             let mut hash = Sha256::new();
-            hash.input_str(url);
+            hash.input_str(urls[0]);
             hash.result_str()[..8].to_string()
         },
     };
@@ -44,45 +45,58 @@ pub fn download_file(ctx: &mut Context, url: &str, sha256: Option<String>)
     if filename.exists() {
         return Ok(filename);
     }
-    info!("Downloading image {} -> {}", url, filename.display());
-    let tmpfilename = filename.with_file_name(name + ".part");
-    let mut cmd = Command::new(
-        if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
-    cmd.stdin(Stdio::null());
-    if !https {
-        cmd.arg("wget");
-    }
-    cmd.arg("-O");
-    cmd.arg(&tmpfilename);
-    cmd.arg(url);
+    for url in urls {
+        info!("Downloading image {} -> {}", url, filename.display());
+        let tmpfilename = filename.with_file_name(name.clone() + ".part");
+        let mut cmd = Command::new(
+            if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
+        cmd.stdin(Stdio::null());
+        if !https {
+            cmd.arg("wget");
+        }
+        cmd.arg("-O");
+        cmd.arg(&tmpfilename);
+        cmd.arg(url);
 
-    debug!("Running: {:?}", cmd);
-    match cmd.status() {
-        Ok(st) if st.success() => {
-            if let Some(ref sha256) = sha256 {
-                let mut tmpfile = try_msg!(File::open(&tmpfilename),
-                                        "Cannot open archive: {err}");
-                if let Err(e) = check_stream_hashsum(&mut tmpfile, sha256) {
-                    remove_file(&filename)
-                        .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
-                    return Err(e);
+        debug!("Running: {:?}", cmd);
+        match cmd.status() {
+            Ok(st) if st.success() => {
+                if let Some(ref sha256) = sha256 {
+                    let mut tmpfile = try_msg!(File::open(&tmpfilename),
+                                            "Cannot open archive: {err}");
+                    if let Err(e) = check_stream_hashsum(&mut tmpfile, sha256) {
+                        remove_file(&filename)
+                            .map_err(|e| error!(
+                                "Error unlinking cache file: {}", e)).ok();
+                        error!("Bad hashsum of {:?}", url);
+                        return Err(e);
+                    }
                 }
+                try!(rename(&tmpfilename, &filename)
+                    .map_err(|e| format!("Error moving file: {}", e)));
+                return Ok(filename);
             }
-            try!(rename(&tmpfilename, &filename)
-                .map_err(|e| format!("Error moving file: {}", e)));
-            Ok(filename)
-        }
-        Ok(val) => {
-            remove_file(&tmpfilename)
-                .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
-            Err(format!("Wget exited with status: {}", val))
-        }
-        Err(x) => {
-            remove_file(&tmpfilename)
-                .map_err(|e| error!("Error unlinking cache file: {}", e)).ok();
-            Err(format!("Error starting wget: {}", x))
+            Ok(val) => {
+                match remove_file(&tmpfilename) {
+                    Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                        // Assume we got 404 and download have not even started
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Error unlinking cache file: {}", e);
+                    }
+                    Ok(_) => {}
+                }
+                error!("Error downloading {:?}", url);
+                return Err(format!("Wget exited with status: {}", val));
+            }
+            Err(x) => {
+                return Err(format!("Error starting wget: {}", x));
+            }
         }
     }
+    return Err(format!("Error downloading file {:?} from {:?}",
+        filename, urls));
 }
 
 pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
@@ -100,7 +114,7 @@ pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
         }
         filename
     } else {
-        try!(download_file(ctx, url, sha256))
+        try!(download_file(ctx, &[url], sha256))
     };
 
     Ok(filename)

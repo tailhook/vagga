@@ -29,7 +29,7 @@ containers:
 
   php-ubuntu-precise:
     setup:
-    - !UbuntuRelease { version: 12.04.5 }
+    - !Ubuntu precise
     - !Install [php5-cgi]
     - !ComposerInstall ["nette/tester:1.7.0"]
 

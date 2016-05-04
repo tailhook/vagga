@@ -423,25 +423,40 @@ pub fn read_ubuntu_codename() -> Result<String, String>
 pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
     -> Result<(), String>
 {
-    let url_base = "http://cdimage.ubuntu.com/ubuntu";
-    let kind = "core";
-    let url = match *ver {
+    let urls = match *ver {
         Version::Daily { ref codename } => {
-            format!(
-                "{url_base}-{kind}/{release}/daily/current/\
-                 {release}-{kind}-{arch}.tar.gz",
-                url_base=url_base, kind=kind, arch=arch, release=codename)
+            vec![
+                format!(
+                    "https://partner-images.canonical.com/core/\
+                     {codename}/current/\
+                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                    arch=arch, codename=codename)
+            ]
         },
         Version::Release { ref version } => {
-            format!(
-                "{url_base}-{kind}/releases/{release}/release/\
-                 ubuntu-{kind}-{release}-{kind}-{arch}.tar.gz",
-                url_base=url_base, kind=kind, arch=arch, release=version)
+            vec![
+                format!(
+                    "http://cdimage.ubuntu.com/ubuntu-core/releases\
+                     /{release}/release/\
+                     ubuntu-core-{release}-core-{arch}.tar.gz",
+                    arch=arch, release=version),
+                format!(
+                    "http://old-releases.ubuntu.com/releases\
+                     /{release}/\
+                     ubuntu-core-{release}-core-{arch}.tar.gz",
+                    arch=arch, release=version),
+            ]
         },
     };
-    let filename = try!(download_file(ctx, &url[0..], None));
+    let filename = try!(download_file(ctx,
+        &urls.iter().map(|x| &x[..]).collect::<Vec<_>>(),
+        None));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
-        &[Path::new("dev")]));
+        &[Path::new("dev"),
+          Path::new("sys"),
+          Path::new("proc"),
+          Path::new("etc/resolv.conf"),
+          Path::new("etc/hosts")]));
 
     Ok(())
 }
