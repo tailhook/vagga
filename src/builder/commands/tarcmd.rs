@@ -103,7 +103,7 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
 
     for item in try!(arc.entries().map_err(&read_err)) {
         let mut src = try!(item.map_err(&read_err));
-        let path_ref = try!(src.header().path().map_err(&read_err))
+        let path_ref = try!(src.path().map_err(&read_err))
             .to_path_buf();
         let mut orig_path: &Path = &path_ref;
         if orig_path.is_absolute() {
@@ -144,7 +144,7 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                 }
             };
         } else if entry.is_hard_link() {
-            let link = try!(try!(src.header().link_name().map_err(&read_err))
+            let link = try!(try!(src.link_name().map_err(&read_err))
                 .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
             let link = if link.is_absolute() {
                 link.strip_prefix("/").unwrap()
