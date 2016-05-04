@@ -128,6 +128,12 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                 &*link
             };
             hardlinks.push((tgt.join(link).to_path_buf(), path.to_path_buf()));
+        } else if entry.is_pax_global_extensions() ||
+                  entry.is_pax_local_extensions() ||
+                  entry.is_gnu_longname() ||
+                  entry.is_gnu_longlink()
+        {
+            // nothing to do
         } else {
             let mut dest = match File::create(&path) {
                 Ok(x) => x,
