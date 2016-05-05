@@ -30,6 +30,8 @@ impl<'a> Guard<'a> {
 
         for b in self.ctx.container_config.setup.iter() {
             debug!("Building step: {:?}", b);
+            try!(self.ctx.timelog.mark(format_args!("Step: {:?}", b))
+                .map_err(|e| format!("Can't write timelog: {}", e)));
             try!(b.build(self, true)
                 .map_err(|e| Error::Step(b.0.clone(), e)));
         }
