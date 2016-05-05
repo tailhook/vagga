@@ -93,7 +93,7 @@ pub fn read_settings(project_root: &Path)
         proxy_env_vars: true,
         version_check: true,
         uid_map: None,
-        ubuntu_mirror: "mirror://mirrors.ubuntu.com/mirrors.txt".to_string(),
+        ubuntu_mirror: None,
         alpine_mirror: None,
         push_image_script: None,
     };
@@ -128,7 +128,7 @@ pub fn read_settings(project_root: &Path)
             int_settings.proxy_env_vars = val;
         }
         if let Some(ref val) = cfg.ubuntu_mirror {
-            int_settings.ubuntu_mirror = val.clone();
+            int_settings.ubuntu_mirror = Some(val.clone());
         }
         if let Some(ref val) = cfg.alpine_mirror {
             int_settings.alpine_mirror = Some(val.clone());
@@ -151,7 +151,7 @@ pub fn read_settings(project_root: &Path)
                 int_settings.version_check = val;
             }
             if let Some(ref val) = cfg.ubuntu_mirror {
-                int_settings.ubuntu_mirror = val.clone();
+                int_settings.ubuntu_mirror = Some(val.clone());
             }
             if let Some(ref val) = cfg.alpine_mirror {
                 int_settings.alpine_mirror = Some(val.clone());
@@ -177,7 +177,7 @@ pub fn read_settings(project_root: &Path)
             int_settings.version_check = val;
         }
         if let Some(ref val) = cfg.ubuntu_mirror {
-            int_settings.ubuntu_mirror = val.clone();
+            int_settings.ubuntu_mirror = Some(val.clone());
         }
         if let Some(ref val) = cfg.alpine_mirror {
             int_settings.alpine_mirror = Some(val.clone());

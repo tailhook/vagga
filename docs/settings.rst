@@ -143,9 +143,12 @@ not to do so.
 .. opt:: ubuntu-mirror
 
     Set to your preferred ubuntu mirror. By default it's
-    ``mirror://mirrors.ubuntu.com/mirrors.txt`` which means mirror will be
-    determined automatically. Note that it's different from default in ubuntu
-    itself where ``http://archive.ubuntu.com/ubuntu/`` is the default.
+    ``http://archive.ubuntu.com/ubuntu/``. You are encouraged to set this
+    setting to ``http://<COUNTRY_CODE>.archive.ubuntu.com/ubuntu/``,
+    to have faster download speed.
+
+    You may also set special url ``mirror://mirrors.ubuntu.com/mirrors.txt``,
+    but it works very unreliably.
 
 .. opt:: alpine-mirror
 

@@ -8,7 +8,7 @@ use rustc_serialize::json;
 pub struct Settings {
     pub version_check: bool,
     pub proxy_env_vars: bool,
-    pub ubuntu_mirror: String,
+    pub ubuntu_mirror: Option<String>,
     pub alpine_mirror: Option<String>,
     pub uid_map: Option<(Vec<(uid_t, uid_t, uid_t)>,
                          Vec<(gid_t, gid_t, gid_t)>)>,

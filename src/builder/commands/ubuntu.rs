@@ -18,6 +18,7 @@ use unshare::Stdio;
 use file_util::copy;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
+const DEFAULT_MIRROR: &'static str = "http://archive.ubuntu.com/ubuntu/";
 
 // Build Steps
 #[derive(Debug)]
@@ -218,6 +219,14 @@ impl Distribution for Distro {
         cmd.arg("-l");
         cmd.stdout(Stdio::from_file(output));
         try!(run(cmd));
+        if ctx.settings.ubuntu_mirror.is_none() {
+            warn!("To make future builds faster you should set a preferred \
+               ubuntu mirror.\n\
+               Add the following to your ~/.vagga.yaml:\
+               \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
+               Where CC is a two-letter country code where you currently are.\
+               ");
+        }
         Ok(())
     }
 }
@@ -304,14 +313,16 @@ impl Distro {
         try!(self.ensure_codename(ctx));
         let codename = self.codename.as_ref().unwrap();
         let target = "/vagga/root/etc/apt/sources.list.d/universe.list";
+        let mirror = ctx.settings.ubuntu_mirror.as_ref().map(|x| &x[..])
+            .unwrap_or(DEFAULT_MIRROR);
         try!(File::create(&Path::new(target))
             .and_then(|mut f| {
                 try!(writeln!(&mut f, "deb {} {} universe",
-                    ctx.settings.ubuntu_mirror, codename));
+                    mirror, codename));
                 try!(writeln!(&mut f, "deb {} {}-updates universe",
-                    ctx.settings.ubuntu_mirror, codename));
+                    mirror, codename));
                 try!(writeln!(&mut f, "deb {} {}-security universe",
-                    ctx.settings.ubuntu_mirror, codename));
+                    mirror, codename));
                 Ok(())
             })
             .map_err(|e| format!("Error writing universe.list file: {}", e)));
@@ -469,6 +480,10 @@ pub fn init_ubuntu_core(ctx: &mut Context) -> Result<(), String> {
 }
 
 fn set_mirror(ctx: &mut Context) -> Result<(), String> {
+    let mirror = match ctx.settings.ubuntu_mirror {
+        Some(ref mirror) => mirror,
+        None => return Ok(()),
+    };
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
     let source = BufReader::new(try!(File::open(&sources_list)
         .map_err(|e| format!("Error reading sources.list file: {}", e))));
@@ -478,8 +493,8 @@ fn set_mirror(ctx: &mut Context) -> Result<(), String> {
             for line in source.lines() {
                 let line = try!(line);
                 try!(f.write_all(
-                    line.replace("http://archive.ubuntu.com/ubuntu/",
-                     &ctx.settings.ubuntu_mirror).as_bytes()));
+                    line.replace("http://archive.ubuntu.com/ubuntu/", mirror)
+                    .as_bytes()));
                 try!(f.write_all(b"\n"));
             }
             Ok(())
