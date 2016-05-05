@@ -122,13 +122,13 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
 {
     let mut cmd = Command::new(env_path_find("id")
                                .unwrap_or(PathBuf::from("/usr/bin/id")));
-    cmd.arg("--user").arg("--name");
+    cmd.arg("-u").arg("-n");
     if let Ok(path) = env::var("_VAGGA_PATH") {
         cmd.env("PATH", path);
     }
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
     let username = try!(capture_stdout(cmd)
-        .map_err(|e| format!("Error running `id --user --name`: {}", e))
+        .map_err(|e| format!("Error running `id -u -n`: {}", e))
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
     let uid_map = read_uid_map(&username)
