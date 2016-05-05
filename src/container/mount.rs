@@ -1,18 +1,15 @@
 #![allow(dead_code)]
 use std::ffi::CString;
-use std::fs::{File, read_link};
+use std::fs::{read_link};
 use std::io::{ErrorKind, Error as IoError};
-use std::io::{BufRead, BufReader};
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::ptr::null;
-use std::str::FromStr;
 
 use libc::{c_ulong, c_int};
 use libmount::BindMount;
 
-use super::super::path_util::{ToCString, ToRelative};
-use super::tools::NextValue;
+use super::super::path_util::ToCString;
 
 // sys/mount.h
 static MS_RDONLY: c_ulong = 1;                /* Mount read-only.  */
@@ -52,109 +49,6 @@ extern {
         data: *const u8) -> c_int;
     fn umount(target: *const u8) -> c_int;
     fn umount2(target: *const u8, flags: c_int) -> c_int;
-}
-
-
-pub struct MountRecord<'a> {
-    pub mount_id: usize,
-    pub parent_id: usize,
-    _device: &'a str,  // TODO(tailhook) parse if ever need
-    pub relative_root: &'a str,
-    pub mount_point: &'a str,
-    pub mount_options: &'a str,
-    pub tag_shared: Option<usize>,
-    pub tag_master: Option<usize>,
-    pub tag_propagate_from: Option<usize>,
-    pub tag_unbindable: Option<()>,
-    pub fstype: &'a str,
-    pub mount_source: &'a str,
-    pub super_options: &'a str,
-}
-
-impl<'a> MountRecord<'a> {
-    pub fn from_str<'x>(line: &'x str) -> Result<MountRecord<'x>, ()> {
-        let mut parts = line.split_whitespace();
-        let mount_id = try!(parts.next_value());
-        let parent_id = try!(parts.next_value());
-        let device = try!(parts.next().ok_or(()));
-        let relative_root = try!(parts.next().ok_or(()));
-        let mount_point = try!(parts.next().ok_or(()));
-        let mount_options = try!(parts.next().ok_or(()));
-        let mut tag_shared = None;
-        let mut tag_master = None;
-        let mut tag_propagate_from = None;
-        let mut tag_unbindable = None;
-
-        for name in &mut parts {
-            if name == "-" { break; }
-            let mut pair = name.splitn(2, ':');
-            let key = pair.next();
-            match key {
-                Some("shared") => {
-                    tag_shared = Some(try!(pair.next_value()));
-                }
-                Some("master") => {
-                    tag_master = Some(try!(pair.next_value()));
-                }
-                Some("propagate_from") => {
-                    tag_propagate_from = Some(try!(pair.next_value()));
-                }
-                Some("unbindable") => tag_unbindable = Some(()),
-                _ => {}
-            }
-        }
-
-        let fstype = try!(parts.next().ok_or(()));
-        let mount_source = try!(parts.next().ok_or(()));
-        let super_options = try!(parts.next().ok_or(()));
-
-        return Ok(MountRecord {
-            mount_id: mount_id,
-            parent_id: parent_id,
-            _device: device,
-            relative_root: relative_root,
-            mount_point: mount_point,
-            mount_options: mount_options,
-            tag_shared: tag_shared,
-            tag_master: tag_master,
-            tag_propagate_from: tag_propagate_from,
-            tag_unbindable: tag_unbindable,
-            fstype: fstype,
-            mount_source: mount_source,
-            super_options: super_options,
-            });
-    }
-    pub fn is_private(&self) -> bool {
-        return self.tag_shared.is_none()
-            && self.tag_master.is_none()
-            && self.tag_propagate_from.is_none()
-            && self.tag_unbindable.is_none();
-    }
-}
-
-pub fn get_submounts_of(dir: &Path)
-    -> Result<Vec<PathBuf>, String>
-{
-    let f = try!(File::open(&Path::new("/proc/self/mountinfo"))
-        .map_err(|e| format!("Can't open mountinfo: {}", e)));
-    let buf = BufReader::new(f);
-    let mut result = vec!();
-    for line in buf.lines() {
-        let line = try!(line
-            .map_err(|e| format!("Can't read mountinfo: {}", e)));
-        match MountRecord::from_str(&line) {
-            Ok(rec) => {
-                let path = Path::new(rec.mount_point);
-                if dir.is_ancestor(&path) {
-                    result.push(path.to_path_buf());
-                }
-            }
-            Err(()) => {
-                return Err(format!("Can't parse mountinfo line: {}", line));
-            }
-        }
-    }
-    return Ok(result);
 }
 
 pub fn remount_ro(target: &Path) -> Result<(), String> {
