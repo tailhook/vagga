@@ -91,6 +91,21 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
 
 pub fn get_max_uidmap() -> Result<Uidmap, String>
 {
+    let uid = unsafe { geteuid() };
+    let gid = unsafe { getegid() };
+
+    if uid == 0 && !Path::new("/etc/subuid").exists() {
+        // For root user we may use all available user ids
+        // This is useful mostly for running vagga in vagga
+        let uid_rng = try!(read_uid_ranges("/proc/self/uid_map", true));
+        let gid_rng = try!(read_uid_ranges("/proc/self/gid_map", true));
+        return Ok(Ranges(
+            uid_rng.into_iter()
+                .map(|r| (r.start(), r.start(), r.len())).collect(),
+            gid_rng.into_iter()
+                .map(|r| (r.start(), r.start(), r.len())).collect()));
+    }
+
     let mut cmd = Command::new(env_path_find("id")
                                .unwrap_or(PathBuf::from("/usr/bin/id")));
     cmd.arg("-u").arg("-n");
@@ -107,18 +122,7 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
     let gid_map = read_uid_map("/etc/subgid", &username)
         .map_err(|e| error!("Error reading gidmap: {}", e));
 
-    let uid = unsafe { geteuid() };
-    let gid = unsafe { getegid() };
     if let (Ok(uid_map), Ok(gid_map)) = (uid_map, gid_map) {
-        if uid_map.len() == 0 && gid_map.len() == 0 && uid == 0 {
-            let uid_rng = try!(read_uid_ranges("/proc/self/uid_map", true));
-            let gid_rng = try!(read_uid_ranges("/proc/self/gid_map", true));
-            return Ok(Ranges(
-                uid_rng.into_iter()
-                    .map(|r| (r.start(), r.start(), r.len())).collect(),
-                gid_rng.into_iter()
-                    .map(|r| (r.start(), r.start(), r.len())).collect()));
-        }
         let mut uids = vec!((0, uid, 1));
         for &rng in uid_map.iter() {
             let mut rng = rng;
