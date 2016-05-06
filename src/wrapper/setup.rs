@@ -455,7 +455,12 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     //  hosts.  It's a bit ugly but bearable for development environments.
     //  Eventually we'll find a better way
     if setup_info.write_mode == WriteMode::ReadOnly {
-        try!(remount_ro(&tgtroot));
+        if let Err(e) = remount_ro(&tgtroot) {
+            warn!("Failed to remount readonly root of the file system: {}. \
+                Some programs may overwrite files in initial system image. \
+                This is usually happen when root filesystem is on tmpfs. \
+                You may ignore the error.", e);
+        }
     }
 
     try!(change_root(&tgtroot, &tgtroot.join("tmp"))
