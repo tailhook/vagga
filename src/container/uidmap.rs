@@ -211,28 +211,30 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     let default_gids = vec!(Range::new(0, 0));
     let uids = if uids.len() > 0 { uids } else { &default_uids };
     let gids = if gids.len() > 0 { gids } else { &default_gids };
-    if settings.uid_map.is_none() {
-        let ranges = try!(read_uid_ranges("/proc/self/uid_map", true));
-        let uid_map = try!(match_ranges(uids, &ranges, 0)
-            .map_err(|()| {
-                return format!("Number of allowed subuids is too small. \
-                    Required {:?}, allowed {:?}. You either need to increase \
-                    allowed numbers in /etc/subuid (preferred) or decrease \
-                    needed ranges in vagga.yaml by adding `uids` key \
-                    to container config", uids, ranges);
-            }));
-        let ranges = try!(read_uid_ranges("/proc/self/gid_map", true));
-        let gid_map = try!(match_ranges(gids, &ranges, 0)
-            .map_err(|()| {
-                return format!("Number of allowed subgids is too small. \
-                    Required {:?}, allowed {:?}. You either need to increase \
-                    allowed numbers in /etc/subgid (preferred) or decrease \
-                    needed ranges in vagga.yaml by adding `gids` key \
-                    to container config", gids, ranges);
-            }));
-        return Ok(Ranges(uid_map, gid_map));
-    } else {
-        let &(ref uids, ref gids) = settings.uid_map.as_ref().unwrap();
-        return Ok(Ranges(uids.clone(), gids.clone()));
+    match settings.uid_map {
+        None => {
+            let ranges = try!(read_uid_ranges("/proc/self/uid_map", true));
+            let uid_map = try!(match_ranges(uids, &ranges, 0)
+                .map_err(|()| {
+                    return format!("Number of allowed subuids is too small. \
+                        Required {:?}, allowed {:?}. You either need to increase \
+                        allowed numbers in /etc/subuid (preferred) or decrease \
+                        needed ranges in vagga.yaml by adding `uids` key \
+                        to container config", uids, ranges);
+                }));
+            let ranges = try!(read_uid_ranges("/proc/self/gid_map", true));
+            let gid_map = try!(match_ranges(gids, &ranges, 0)
+                .map_err(|()| {
+                    return format!("Number of allowed subgids is too small. \
+                        Required {:?}, allowed {:?}. You either need to increase \
+                        allowed numbers in /etc/subgid (preferred) or decrease \
+                        needed ranges in vagga.yaml by adding `gids` key \
+                        to container config", gids, ranges);
+                }));
+            Ok(Ranges(uid_map, gid_map))
+        },
+        Some((ref uids, ref gids)) => {
+            Ok(Ranges(uids.clone(), gids.clone()))
+        }
     }
 }
