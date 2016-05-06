@@ -22,58 +22,29 @@ pub enum Uidmap {
 }
 
 
-fn read_uid_map(username: &str) -> Result<Vec<Range>,String> {
-    let file = try_msg!(File::open(&Path::new("/etc/subuid")),
-        "Can't open /etc/subuid: {err}");
+fn read_uid_map(file_path: &str, username: &str) -> Result<Vec<Range>,String> {
+    let file = try_msg!(File::open(&Path::new(file_path)),
+        "Can't open {path}: {err}", path=file_path);
     let mut res = Vec::new();
     let reader = BufReader::new(file);
     for (num, line) in reader.lines().enumerate() {
-        let line = try_msg!(line, "Error reading /etc/subuid: {err}");
+        let line = try_msg!(line, "Error reading {path}: {err}", path=file_path);
         let parts: Vec<&str> = line[..].split(':').collect();
         if parts.len() == 0 || parts[0].trim().starts_with('#') {
             continue;
         }
         if parts.len() != 3 {
-            return Err(format!("/etc/subuid:{}: Bad syntax: {:?}",
-                num+1, line));
+            return Err(format!("{}:{}: Bad syntax: {:?}",
+                file_path, num+1, line));
         }
         let start = FromStr::from_str(parts[1]);
         let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
         if parts.len() != 3 || start.is_err() || count.is_err() {
-            return Err(format!("/etc/subuid:{}: Bad syntax: {:?}",
-                num+1, line));
+            return Err(format!("{}:{}: Bad syntax: {:?}",
+                file_path, num+1, line));
         }
         if parts[0].eq(username) {
             let start: uid_t = start.unwrap();
-            let end = start + count.unwrap() - 1;
-            res.push(Range::new(start, end));
-        }
-    }
-    return Ok(res);
-}
-
-fn read_gid_map(username: &str) -> Result<Vec<Range>,String> {
-    let file = try_msg!(File::open(&Path::new("/etc/subgid")),
-        "Can't open /etc/subgid: {err}");
-    let mut res = Vec::new();
-    let reader = BufReader::new(file);
-    for (num, line) in reader.lines().enumerate() {
-        let line = try_msg!(line, "Error reading /etc/subgid: {err}");
-        let parts: Vec<&str> = line[..].split(':').collect();
-        if parts.len() == 0 || parts[0].trim().starts_with('#') {
-            continue;
-        }
-        if parts.len() != 3 {
-            return Err(format!("/etc/subgid:{}: Bad syntax: {:?}",
-                num+1, line));
-        }
-        let start = FromStr::from_str(parts[1]);
-        let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
-        if parts.len() != 3 || start.is_err() || count.is_err() {
-            return Err(format!("/etc/subgid:{}: Bad syntax", num+1));
-        }
-        if parts[0].eq(username) {
-            let start: gid_t = start.unwrap();
             let end = start + count.unwrap() - 1;
             res.push(Range::new(start, end));
         }
@@ -131,9 +102,9 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
         .map_err(|e| format!("Error running `id -u -n`: {}", e))
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e))));
-    let uid_map = read_uid_map(&username)
+    let uid_map = read_uid_map("/etc/subuid", &username)
         .map_err(|e| error!("Error reading uidmap: {}", e));
-    let gid_map = read_gid_map(&username)
+    let gid_map = read_uid_map("/etc/subgid", &username)
         .map_err(|e| error!("Error reading gidmap: {}", e));
 
     let uid = unsafe { geteuid() };
@@ -211,28 +182,30 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     let default_gids = vec!(Range::new(0, 0));
     let uids = if uids.len() > 0 { uids } else { &default_uids };
     let gids = if gids.len() > 0 { gids } else { &default_gids };
-    if settings.uid_map.is_none() {
-        let ranges = try!(read_uid_ranges("/proc/self/uid_map", true));
-        let uid_map = try!(match_ranges(uids, &ranges, 0)
-            .map_err(|()| {
-                return format!("Number of allowed subuids is too small. \
-                    Required {:?}, allowed {:?}. You either need to increase \
-                    allowed numbers in /etc/subuid (preferred) or decrease \
-                    needed ranges in vagga.yaml by adding `uids` key \
-                    to container config", uids, ranges);
-            }));
-        let ranges = try!(read_uid_ranges("/proc/self/gid_map", true));
-        let gid_map = try!(match_ranges(gids, &ranges, 0)
-            .map_err(|()| {
-                return format!("Number of allowed subgids is too small. \
-                    Required {:?}, allowed {:?}. You either need to increase \
-                    allowed numbers in /etc/subgid (preferred) or decrease \
-                    needed ranges in vagga.yaml by adding `gids` key \
-                    to container config", gids, ranges);
-            }));
-        return Ok(Ranges(uid_map, gid_map));
-    } else {
-        let &(ref uids, ref gids) = settings.uid_map.as_ref().unwrap();
-        return Ok(Ranges(uids.clone(), gids.clone()));
+    match settings.uid_map {
+        None => {
+            let ranges = try!(read_uid_ranges("/proc/self/uid_map", true));
+            let uid_map = try!(match_ranges(uids, &ranges, 0)
+                .map_err(|()| {
+                    return format!("Number of allowed subuids is too small. \
+                        Required {:?}, allowed {:?}. You either need to increase \
+                        allowed numbers in /etc/subuid (preferred) or decrease \
+                        needed ranges in vagga.yaml by adding `uids` key \
+                        to container config", uids, ranges);
+                }));
+            let ranges = try!(read_uid_ranges("/proc/self/gid_map", true));
+            let gid_map = try!(match_ranges(gids, &ranges, 0)
+                .map_err(|()| {
+                    return format!("Number of allowed subgids is too small. \
+                        Required {:?}, allowed {:?}. You either need to increase \
+                        allowed numbers in /etc/subgid (preferred) or decrease \
+                        needed ranges in vagga.yaml by adding `gids` key \
+                        to container config", gids, ranges);
+                }));
+            Ok(Ranges(uid_map, gid_map))
+        },
+        Some((ref uids, ref gids)) => {
+            Ok(Ranges(uids.clone(), gids.clone()))
+        }
     }
 }

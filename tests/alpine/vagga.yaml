@@ -33,6 +33,13 @@ containers:
     setup:
     - !Alpine v3.3-1
 
+  vagga-alpine:
+    setup:
+    - !Alpine v3.3
+    - !Text
+      /etc/subuid: ""
+      /etc/subgid: ""
+
 commands:
   echo-cmd: !Command
     container: v31
@@ -61,3 +68,9 @@ commands:
   v33-tar: !Command
     container: v33-tar
     run: [tar]
+
+  vagga-alpine: !Command
+    container: vagga-alpine
+    run: |
+      cd vagga_inside_alpine
+      ./vagga _version_hash --short v33

@@ -70,3 +70,15 @@ setup() {
     link=$(readlink .vagga/v30-calc)
     [[ $link = ".roots/v30-calc.6e88b72d/root" ]]
 }
+
+@test "alpine: Run vagga inside alpine" {
+    cp ../../vagga vagga_inside_alpine/
+    cp ../../apk vagga_inside_alpine/
+    cp ../../busybox vagga_inside_alpine/
+    cp ../../alpine-keys.apk vagga_inside_alpine/
+
+    run vagga vagga-alpine
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = fd6e2ff1 ]]
+}
