@@ -1,7 +1,7 @@
 containers:
   browser:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !Install [firefox]
     volumes:
@@ -16,4 +16,4 @@ commands:
   firefox: !Command
     container: browser
     environ: { HOME: /tmp }
-    run: [firefox]
+    run: [firefox, --no-remote]

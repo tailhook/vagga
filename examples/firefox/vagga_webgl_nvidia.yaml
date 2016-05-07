@@ -1,7 +1,7 @@
 containers:
   browser:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !Install [binutils, pkg-config, mesa-utils]
     - !Sh sh /work/NVIDIA-Linux-x86_64-331.67.run -a -N --ui=none --no-kernel-module
@@ -19,4 +19,4 @@ commands:
   firefox: !Command
     container: browser
     environ: { HOME: /tmp }
-    run: [firefox]
+    run: [firefox, --no-remote]
