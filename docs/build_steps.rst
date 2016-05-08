@@ -243,25 +243,25 @@ Generic Commands
        - !Ubuntu trusty
        - !Cmd ["apt-get", "install", "-y", "python"]
 
-    You may use YAMLy features to get complex things. To run complex python
-    code you may use::
+   You may use YAMLy features to get complex things. To run complex python
+   code you may use::
 
-        setup:
-        - !Cmd
-          - python
-          - -c
-          - |
-            import socket
-            print("Builder host", socket.gethostname())
+       setup:
+       - !Cmd
+         - python
+         - -c
+         - |
+           import socket
+           print("Builder host", socket.gethostname())
 
-    Or to get behavior similar to :step:`Sh` command, but with different shell:
+   Or to get behavior similar to :step:`Sh` command, but with different shell::
 
-        setup:
-        - !Cmd
-          - /bin/bash
-          - -exc
-          - |
-            echo this is a bash script
+       setup:
+       - !Cmd
+         - /bin/bash
+         - -exc
+         - |
+           echo this is a bash script
 
 .. step:: Download
 
