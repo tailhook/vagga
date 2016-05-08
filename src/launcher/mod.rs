@@ -1,6 +1,6 @@
 use std::env;
 use std::io::{stderr, Write};
-use std::path::{Path};
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
@@ -8,8 +8,8 @@ use std::os::unix::fs::MetadataExt;
 use libc::getuid;
 use unshare::Command;
 
-use options::build_mode::build_mode;
-use config::find_config;
+use options::build_mode::{build_mode, BuildMode};
+use config::{Config, Settings, find_config};
 use config::read_settings::read_settings;
 use process_util::convert_status;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
@@ -18,17 +18,27 @@ use self::wrap::Wrapper;
 
 mod list;
 mod user;
-mod network;
-mod supervisor;
-mod underscore;
-mod build;
-mod wrap;
 mod pack;
 mod push;
+mod build;
 mod storage;
+mod underscore;
 mod completion;
+
+mod supervisor;
+mod simple;
+
+mod wrap;
+mod network;
 mod volumes;
 
+
+pub struct Context {
+    config: Config,
+    settings: Settings,
+    workdir: PathBuf,
+    build_mode: BuildMode,
+}
 
 pub fn run() -> i32 {
     let mut err = stderr();
@@ -219,8 +229,12 @@ pub fn run() -> i32 {
             completion::generate_completions(&config, args)
         }
         _ => {
-            user::run_user_command(&config, &int_settings,
-                &int_workdir, cname, args, bmode)
+            user::run_user_command(&Context {
+                config: config,
+                settings: int_settings,
+                workdir: int_workdir.to_path_buf(),
+                build_mode: bmode,
+            }, cname, args)
         }
     };
 

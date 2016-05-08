@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 use std::collections::{HashMap};
 use std::io::{self, stdout, stderr, Write};
-use std::path::Path;
 
 use time::{SteadyTime, Duration};
 use libmount::Tmpfs;
@@ -13,7 +12,6 @@ use unshare::{Command, Namespace, reap_zombies};
 
 use options::build_mode::{build_mode, BuildMode};
 use container::nsutil::{set_namespace, unshare_namespace};
-use config::{Config, Settings};
 use config::command::{SuperviseInfo, Networking};
 use config::command::SuperviseMode::{stop_on_failure};
 use config::command::ChildCommand::{BridgeCommand};
@@ -24,20 +22,39 @@ use file_util::create_dir;
 use process_util::{convert_status, killpg};
 use super::wrap::Wrapper;
 use launcher::volumes::prepare_volumes;
+use launcher::user::ArgError;
+use launcher::Context;
 
 
-pub fn run_supervise_command(config: &Config, settings: &Settings,
-    workdir: &Path, sup: &SuperviseInfo,
-    cmdname: String, mut args: Vec<String>, mut bmode: BuildMode)
-    -> Result<i32, String>
+pub struct Args {
+    cmdname: String,
+    only: Vec<String>,
+    exclude: Vec<String>,
+    build_mode: BuildMode,
+}
+
+pub struct Data {
+    containers_in_netns: Vec<String>,
+    containers_host_net: Vec<String>,
+    forwards: Vec<(u16, String, u16)>,
+    ports: Vec<u16>,
+    versions: HashMap<String, String>,
+}
+
+
+pub fn parse_args(sup: &SuperviseInfo, context: &Context,
+    cmd: String, mut args: Vec<String>)
+    -> Result<Args, ArgError>
 {
     let mut only: Vec<String> = Vec::new();
     let mut exclude: Vec<String> = Vec::new();
+    let mut bmode = context.build_mode;
     if sup.mode != stop_on_failure {
-        panic!("Only stop-on-failure mode implemented");
+        return Err(ArgError::Error(
+            format!("Only stop-on-failure mode implemented")));
     }
     {
-        args.insert(0, "vagga ".to_string() + &cmdname);
+        args.insert(0, "vagga ".to_string() + &cmd);
         let mut ap = ArgumentParser::new();
         ap.set_description(sup.description.as_ref().map(|x| &x[..])
             .unwrap_or("Run multiple processes simultaneously"));
@@ -52,13 +69,21 @@ pub fn run_supervise_command(config: &Config, settings: &Settings,
         build_mode(&mut ap, &mut bmode);
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
-            Err(0) => return Ok(0),
-            Err(_) => {
-                return Ok(122);
-            }
+            Err(0) => return Err(ArgError::Exit(0)),
+            Err(_) => return Err(ArgError::Exit(122)),
         }
     }
+    Ok(Args {
+        cmdname: cmd,
+        only: only,
+        exclude: exclude,
+        build_mode: bmode,
+    })
+}
 
+pub fn prepare_containers(sup: &SuperviseInfo, args: &Args, context: &Context)
+    -> Result<Data, String>
+{
     let mut containers = BTreeSet::new();
     let mut containers_in_netns = vec!();
     let mut bridges = vec!();
@@ -68,12 +93,12 @@ pub fn run_supervise_command(config: &Config, settings: &Settings,
     let mut versions = HashMap::new();
     let filtered_children = sup.children
         .iter().filter(|&(ref name, ref child)| {
-            if only.len() > 0 {
-                only.iter().find(|x| {
+            if args.only.len() > 0 {
+                args.only.iter().find(|x| {
                     name == x || child.get_tags().iter().any(|t| t == *x)
                 }).is_some()
             } else {
-                exclude.iter().find(|x| {
+                args.exclude.iter().find(|x| {
                     name == x || child.get_tags().iter().any(|t| t == *x)
                 }).is_none()
             }
@@ -82,12 +107,12 @@ pub fn run_supervise_command(config: &Config, settings: &Settings,
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            let continfo = try!(config.containers.get(cont)
+            let continfo = try!(context.config.containers.get(cont)
                 .ok_or_else(|| format!("Container {:?} not found", cont)));
-            let ver = try!(build_container(settings, cont, bmode));
-            try!(prepare_volumes(continfo.volumes.values(), settings, bmode));
-            try!(prepare_volumes(child.get_volumes().values(),
-                                 settings, bmode));
+            let ver = try!(build_container(&context.settings, cont,
+                args.build_mode));
+            try!(prepare_volumes(continfo.volumes.values(), context));
+            try!(prepare_volumes(child.get_volumes().values(), context));
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {
@@ -111,6 +136,27 @@ pub fn run_supervise_command(config: &Config, settings: &Settings,
     }
     debug!("Containers {} with host neworking, {} in netns",
         containers_host_net.len(), containers_in_netns.len());
+    Ok(Data {
+        containers_in_netns: containers_in_netns,
+        containers_host_net: containers_host_net,
+        forwards: forwards,
+        ports: ports,
+        versions: versions,
+    })
+}
+
+
+pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
+    context: &Context)
+    -> Result<i32, String>
+{
+    let Data {
+        containers_in_netns,
+        containers_host_net,
+        forwards,
+        ports,
+        versions,
+    } = data;
 
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
@@ -124,10 +170,10 @@ pub fn run_supervise_command(config: &Config, settings: &Settings,
     for name in containers_host_net.iter() {
         let mut cmd: Command = Wrapper::new(
             Some(&versions[sup.children[name].get_container()]),
-            settings);
-        cmd.workdir(workdir);
+            &context.settings);
+        cmd.workdir(&context.workdir);
         cmd.userns();
-        cmd.arg(&cmdname);
+        cmd.arg(&args.cmdname);
         cmd.arg(&name);
         cmd.make_group_leader(true);
         match cmd.spawn() {
@@ -171,9 +217,9 @@ pub fn run_supervise_command(config: &Config, settings: &Settings,
             let child = sup.children.get(name).unwrap();
             let mut cmd: Command = Wrapper::new(
                 Some(&versions[sup.children[name].get_container()]),
-                settings);
-            cmd.workdir(workdir);
-            cmd.arg(&cmdname);
+                &context.settings);
+            cmd.workdir(&context.workdir);
+            cmd.arg(&args.cmdname);
             cmd.arg(&name);
 
             try!(set_namespace(&bridge_ns, Namespace::Net)

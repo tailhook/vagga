@@ -1,18 +1,17 @@
-use config::Settings;
 use config::containers::Volume::{self, Container};
-use options::build_mode::BuildMode;
 use launcher::build::build_container;
+use launcher::Context;
 
 
-pub fn prepare_volumes<'x, I>(volumes: I, settings: &Settings,
-    build_mode: BuildMode)
+pub fn prepare_volumes<'x, I>(volumes: I, context: &Context)
     -> Result<(), String>
     where I: Iterator<Item=&'x Volume>
 {
     for v in volumes {
         match *v {
             Container(ref name) => {
-                try!(build_container(settings, name, build_mode));
+                try!(build_container(
+                    &context.settings, name, context.build_mode));
             }
             _ => {}
         }
