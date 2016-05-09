@@ -31,6 +31,7 @@ mod simple;
 mod wrap;
 mod network;
 mod volumes;
+mod prerequisites;
 
 
 pub struct Context {
@@ -38,6 +39,7 @@ pub struct Context {
     settings: Settings,
     workdir: PathBuf,
     build_mode: BuildMode,
+    prerequisites: bool,
 }
 
 pub fn run() -> i32 {
@@ -49,6 +51,7 @@ pub fn run() -> i32 {
     let mut propagate_env = Vec::<String>::new();
     let mut bmode = Default::default();
     let mut owner_check = true;
+    let mut prerequisites = true;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -71,6 +74,9 @@ pub fn run() -> i32 {
         ap.refer(&mut owner_check)
           .add_option(&["--ignore-owner-check"], StoreFalse,
                 "Ignore checking owner of the project directory");
+        ap.refer(&mut prerequisites)
+            .add_option(&["--no-prerequisites"], StoreFalse,
+            "Run only specified command(s), don't run prerequisites");
         build_mode(&mut ap, &mut bmode);
         ap.refer(&mut commands)
           .add_option(&["-m", "--run-multi"], List, "
@@ -178,6 +184,7 @@ pub fn run() -> i32 {
             settings: int_settings,
             workdir: int_workdir.to_path_buf(),
             build_mode: bmode,
+            prerequisites: prerequisites,
         }, commands);
         match result {
             Ok(rc) => {
@@ -261,6 +268,7 @@ pub fn run() -> i32 {
                 settings: int_settings,
                 workdir: int_workdir.to_path_buf(),
                 build_mode: bmode,
+                prerequisites: prerequisites,
             }, cname, args)
         }
     };

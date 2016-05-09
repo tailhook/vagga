@@ -59,6 +59,48 @@ These parameters work for both kinds of commands:
    returned zero exit status. Useful to print further instructions, e.g. to
    display names of build artifacts produced by command.
 
+.. opt:: prerequisites
+
+   The list of commands to run before the command, each time it is started.
+
+   Example:
+
+   .. code-block:: yaml
+
+       commands:
+         make:
+           container: build
+           run: "make prog"
+         run:
+           container: build
+           prerequisites: [make]
+           run: "./prog"
+
+   The sequence of running of command with ``prerequesites`` is following:
+
+   1. Container is built if needed for each prerequisite
+   2. Container is built if needed for main command
+   3. Each prerequisite is run in sequence
+   4. Command is started
+
+   If any step fails, neither next step nor the command is run.
+
+   The :opt:`prerequisites` are recursive. If any of the prerequisite has
+   prerequisites itself, they will be called. But each named command will be
+   run only once. We use topology sort to ensure prerequisite commands are
+   started before dependent commands. For cyclic dependencies, we ensure that
+   command specified in the command line is run later, otherwise order of
+   cyclic dependencies is unspecified.
+
+   The supervise command's ``--only`` and ``--except`` influences neither
+   running prerequisites itself nor commands inside the prerequisite if the
+   latter happens to be supervise command. But there is a global flag
+   ``--no-prerequisites``.
+
+   The :opt:`prerequisites` is not (yet) supported in the any of ``children``
+   of a ``!Supervise`` command, but you can write prerequisites for the whole
+   command group.
+
 
 Parameters of `!Command`
 ========================

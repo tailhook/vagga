@@ -50,10 +50,11 @@ pub struct CommandInfo {
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
-    pub tags: Vec<String>,
+    pub prerequisites: Vec<String>,  // Only for toplevel
 
     // Command
-    pub network: Option<Network>, // Only for top-levels
+    pub tags: Vec<String>,  // Only for supervise chidlren
+    pub network: Option<Network>, // Only for supervise children
     pub pid1mode: Pid1Mode,
     pub work_dir: Option<String>,
     pub container: String,
@@ -73,6 +74,7 @@ pub struct SuperviseInfo {
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
+    pub prerequisites: Vec<String>,
 
     // Supervise
     pub mode: SuperviseMode,
@@ -91,6 +93,12 @@ impl MainCommand {
         match *self {
             MainCommand::Command(ref cmd) => cmd.description.as_ref(),
             MainCommand::Supervise(ref cmd) => cmd.description.as_ref(),
+        }
+    }
+    pub fn prerequisites<'x>(&'x self) -> &Vec<String> {
+        match *self {
+            MainCommand::Command(ref cmd) => cmd.prerequisites.as_ref(),
+            MainCommand::Supervise(ref cmd) => cmd.prerequisites.as_ref(),
         }
     }
 }
@@ -169,26 +177,31 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
     return cmd;
 }
 
-fn command_fields<'a>(cmd: V::Structure) -> V::Structure {
-    cmd
-    .member("description", V::Scalar::new().optional())
-    .member("banner", V::Scalar::new().optional())
-    .member("banner_delay", V::Numeric::new().optional().min(0))
-    .member("epilog", V::Scalar::new().optional())
-    .member("tags", V::Sequence::new(V::Scalar::new()))
+fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
+{
+    cmd = cmd
+        .member("description", V::Scalar::new().optional())
+        .member("banner", V::Scalar::new().optional())
+        .member("banner_delay", V::Numeric::new().optional().min(0))
+        .member("epilog", V::Scalar::new().optional())
+        .member("tags", V::Sequence::new(V::Scalar::new()));
+    if toplevel {
+        cmd = cmd.member("prerequisites", V::Sequence::new(V::Scalar::new()))
+    }
+    return cmd;
 }
 
 fn subcommand_validator<'a>() -> V::Enum<'a> {
     V::Enum::new()
     .option("Command",
-        run_fields(command_fields(V::Structure::new()), true))
+        run_fields(command_fields(V::Structure::new(), false), true))
     .option("BridgeCommand",
-        run_fields(command_fields(V::Structure::new()), false))
+        run_fields(command_fields(V::Structure::new(), false), false))
 }
 
 pub fn command_validator<'a>() -> V::Enum<'a> {
-    let cmd = run_fields(command_fields(V::Structure::new()), false);
-    let sup = command_fields(V::Structure::new());
+    let cmd = run_fields(command_fields(V::Structure::new(), true), false);
+    let sup = command_fields(V::Structure::new(), true);
 
     let sup = sup
         .member("mode", V::Scalar::new().default("stop-on-failure"))

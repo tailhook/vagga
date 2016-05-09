@@ -1,0 +1,24 @@
+containers:
+  only:
+    setup:
+    - !Alpine v3.3
+
+commands:
+  one: !Command
+    container: only
+    run: [echo, one]
+
+  two: !Command
+    container: only
+    prerequisites: [one]
+    run: [echo, two]
+
+  three: !Command
+    container: only
+    prerequisites: [one]
+    run: [echo, three]
+
+  four: !Command
+    container: only
+    prerequisites: [two, three]
+    run: [echo, four]
