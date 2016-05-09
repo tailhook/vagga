@@ -22,6 +22,36 @@ vagga.
 There are also builtin commands. All builtin commands start with underscore
 ``_`` character to be clearly distinguished from user-defined commands.
 
+Multiple Commands
+=================
+
+Since vagga 0.6 there is a way to run multiple commands at once::
+
+    $ vagga -m cmd1 cmd2
+
+This is similar to running::
+
+    $ vagga cmd1 && vagga cmd2
+
+But there is one key difference: **containers needed to run all the commands
+are built beforehand**. This has two consequences:
+
+1. When containers need to be rebuilt, they are rebuilt first, then you see
+   the output of both commands in sequence (no container build log in-between)
+2. If container for command 2 depends on side-effects of running command 1
+   (i.e. container contains a binary built by command 1), you will get wrong
+   results. In that case you should rely on shell to do the work (for exammple
+   ``vagga -m make test`` is **not** the right way, the right is ``vagga make
+   && vagga test``)
+
+Obviously you can't pass any arguments to either of commands when running
+``vagga -m``, this is also the biggest reason of why you can't run built-in
+commands (those starting with underscore) using the option. But you can use
+global options, and they influence all the commands, for example::
+
+    $ vagga --environ DISPLAY:0 -m clean_profile run_firefox
+
+
 Builtin Commands
 ================
 

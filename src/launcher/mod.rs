@@ -42,6 +42,7 @@ pub struct Context {
 
 pub fn run() -> i32 {
     let mut err = stderr();
+    let mut commands = Vec::<String>::new();
     let mut cname = "".to_string();
     let mut args = vec!();
     let mut set_env = Vec::<String>::new();
@@ -71,6 +72,14 @@ pub fn run() -> i32 {
           .add_option(&["--ignore-owner-check"], StoreFalse,
                 "Ignore checking owner of the project directory");
         build_mode(&mut ap, &mut bmode);
+        ap.refer(&mut commands)
+          .add_option(&["-m", "--run-multi"], List, "
+            Run the following list of commands. Each without an arguments.
+            When any of them fails, stop the chain. Basically it's the
+            shortcut to `vagga cmd1 && vagga cmd2` except containers for
+            `cmd2` are built beforehand, for your convenience. Also builtin
+            commands (those starting with underscore) do not work with
+            `vagga -m`");
         ap.refer(&mut cname)
           .add_argument("command", Store,
                 "A vagga command to run");
@@ -160,6 +169,24 @@ pub fn run() -> i32 {
             env::set_var(&key, value.to_string());
         } else {
             env::remove_var(&key);
+        }
+    }
+
+    if commands.len() > 0 {
+        let result = user::run_multiple_commands(&Context {
+            config: config,
+            settings: int_settings,
+            workdir: int_workdir.to_path_buf(),
+            build_mode: bmode,
+        }, commands);
+        match result {
+            Ok(rc) => {
+                return rc;
+            }
+            Err(text) =>  {
+                writeln!(&mut err, "{}", text).ok();
+                return 121;
+            }
         }
     }
 

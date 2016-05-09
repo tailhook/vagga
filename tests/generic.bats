@@ -253,3 +253,9 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
+
+@test "generic: The vagga -m works" {
+    run vagga -m hello world
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-1]} = "helloworld!" ]]
+}
