@@ -91,22 +91,22 @@ setup() {
 }
 
 @test "generic: The supervice --only with tags" {
-    run vagga tagged --only first_and_third
-    printf "%s\n" "${lines[@]}"
-    link=$(readlink .vagga/busybox)
-    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
-    [[ ${lines[${#lines[@]}-2]} = ":)" ]]
-
-    run vagga tagged --only first_and_second
-    printf "%s\n" "${lines[@]}"
-    link=$(readlink .vagga/busybox)
-    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
-    [[ ${lines[${#lines[@]}-2]} = "world" ]]
-
-    run vagga tagged --only third_only
+    run sh -c 'vagga tagged --only first_and_third | sort'
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
+    [[ ${lines[${#lines[@]}-1]} = "hello" ]]
+
+    run sh -c "vagga tagged --only first_and_second | sort"
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ ${lines[${#lines[@]}-2]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
+
+    run sh -c "vagga tagged --only third_only | sort"
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ ${lines[${#lines[@]}-1]} = ":)" ]]
 }
 
 @test "generic: The supervice --only mixed" {
