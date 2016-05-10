@@ -62,12 +62,16 @@ pub fn run_command(settings: &Settings, workdir: &Path,
     cmd.arg("_run");
     cmd.args(&args[1..]);
     cmd.userns();
+    cmd.gid(0);
+    cmd.groups(Vec::new());
     let res = run_and_wait(&mut cmd).map(convert_status);
 
     if copy {
         let mut cmd: Command = Wrapper::new(None, settings);
         cmd.workdir(workdir);
         cmd.userns();
+        cmd.gid(0);
+        cmd.groups(Vec::new());
         cmd.arg("_clean").arg("--transient");
         match cmd.status() {
             Ok(s) if s.success() => {}

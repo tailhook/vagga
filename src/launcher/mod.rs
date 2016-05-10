@@ -235,6 +235,8 @@ pub fn run() -> i32 {
             let mut cmd: Command = Wrapper::new(None, &int_settings);
             cmd.workdir(&int_workdir);
             cmd.userns();
+            cmd.gid(0);
+            cmd.groups(Vec::new());
             cmd.arg(&cname).args(&args);
             cmd.status()
             .map(convert_status)

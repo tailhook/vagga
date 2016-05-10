@@ -227,6 +227,15 @@ Parameters of `!Command`
    behaviour when running as root would think they are not root (but has
    user id 1)
 
+.. opt:: group-id
+
+   The group id to run command as. Default is ``0``.
+
+.. opt:: supplementary-gids
+
+   The list of group ids of the supplementary groups. By default it's empty
+   list.
+
 .. opt:: pass-tcp-socket
 
    Binds a TCP to the specified address and passes it to the application

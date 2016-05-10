@@ -93,6 +93,8 @@ pub fn commandline_cmd(command: &CommandInfo,
         set_uidmap(&mut cmd, &uid_map, false);
         cmd.uid(command.user_id);
     }
+    cmd.gid(command.group_id);
+    cmd.groups(Vec::new());
     if let Some(ref wd) = command.work_dir {
         cmd.current_dir(Path::new("/work").join(&wd));
     } else {

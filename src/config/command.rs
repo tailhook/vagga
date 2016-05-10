@@ -66,6 +66,8 @@ pub struct CommandInfo {
     pub run: Vec<String>,
     pub user_id: u32,
     pub external_user_id: Option<u32>,
+    pub group_id: u32,
+    pub supplementary_gids: Vec<u32>,
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
@@ -171,7 +173,11 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
             .parser(shell_command as fn(Ast) -> Vec<Ast>))
         .member("user_id", V::Numeric::new().min(0).max(1 << 30).default(0))
         .member("external_user_id",
-            V::Numeric::new().min(0).max(1 << 30).optional());
+            V::Numeric::new().min(0).max(1 << 30).optional())
+        .member("group_id", V::Numeric::new()
+            .min(0).max(1 << 30).default(0))
+        .member("supplementary_gids",
+            V::Sequence::new(V::Numeric::new().min(0).max(1 << 30)));
     if network {
         cmd = cmd
             .member("network", V::Structure::new().optional()

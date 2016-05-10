@@ -129,6 +129,8 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         set_uidmap(&mut cmd, &curmap, false);
         cmd.uid(command.user_id);
     }
+    cmd.gid(command.group_id);
+    cmd.groups(command.supplementary_gids.clone());
     if let Some(ref wd) = command.work_dir {
         cmd.current_dir(Path::new("/work").join(&wd));
     } else {

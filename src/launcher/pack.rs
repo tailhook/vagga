@@ -21,6 +21,8 @@ pub fn pack_command(settings: &Settings, args: Vec<String>)
 
     let mut cmd: Command = Wrapper::new(Some(&ver), &settings);
     cmd.userns();
+    cmd.gid(0);
+    cmd.groups(Vec::new());
     cmd.arg("_pack_image").args(&args);
     cmd.status().map(convert_status)
     .map_err(|e| format!("Error running `vagga_wrapperr _pack_image`: {}", e))

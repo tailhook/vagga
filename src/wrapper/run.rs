@@ -105,6 +105,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     cmd.current_dir(&env::var("_VAGGA_WORKDIR")
                     .unwrap_or("/work".to_string()));
     uid_map.map(|x| set_uidmap(&mut cmd, &x, false));
+    cmd.gid(0);
+    cmd.groups(Vec::new());
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
     for (ref k, ref v) in env.iter() {

@@ -184,6 +184,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
             &context.settings);
         cmd.workdir(&context.workdir);
         cmd.userns();
+        cmd.gid(0);
+        cmd.groups(Vec::new());
         cmd.arg(&args.cmdname);
         cmd.arg(&name);
         cmd.make_group_leader(true);

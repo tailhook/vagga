@@ -32,6 +32,8 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         .join(&ver)
         .join(image_name);
     pack_cmd.userns();
+    pack_cmd.gid(0);
+    pack_cmd.groups(Vec::new());
     pack_cmd
         .arg("_pack_image")
         .arg(&opt.name)

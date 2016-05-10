@@ -96,6 +96,8 @@ pub fn get_version_hash(container: &str, wrapper: &Wrapper)
     let mut cmd = Command::new("/vagga/bin/vagga");
     cmd.arg0("vagga_version");
     set_uidmap(&mut cmd, &uid_map, false);
+    cmd.gid(0);
+    cmd.groups(Vec::new());
     cmd.arg(&container);
     cmd.arg("--settings");
     cmd.arg(json::encode(wrapper.settings).unwrap());
@@ -219,6 +221,8 @@ pub fn _build_container(cconfig: &Container, container: &str,
     let mut cmd = Command::new("/vagga/bin/vagga");
     cmd.arg0("vagga_build");
     set_uidmap(&mut cmd, &uid_map, false);
+    cmd.gid(0);
+    cmd.groups(Vec::new());
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
     cmd.arg(&container);

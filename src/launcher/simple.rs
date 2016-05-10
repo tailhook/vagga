@@ -51,6 +51,8 @@ pub fn run(cinfo: &CommandInfo, (cmdname, args): Args, version: Version,
     }
     if cinfo.network.is_none() { // TODO(tailhook) is it still a thing?
         cmd.userns();
+        cmd.gid(0);
+        cmd.groups(Vec::new());
     }
     let res = run_and_wait(&mut cmd).map(convert_status);
 
@@ -58,6 +60,8 @@ pub fn run(cinfo: &CommandInfo, (cmdname, args): Args, version: Version,
         let mut cmd: Command = Wrapper::new(None, &context.settings);
         cmd.workdir(&context.workdir);
         cmd.userns();
+        cmd.gid(0);
+        cmd.groups(Vec::new());
         cmd.arg("_clean").arg("--transient");
         match cmd.status() {
             Ok(s) if s.success() => {}
