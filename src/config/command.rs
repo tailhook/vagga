@@ -50,6 +50,7 @@ pub struct CommandInfo {
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
+    pub pass_tcp_socket: Option<String>,
     pub prerequisites: Vec<String>,  // Only for toplevel
 
     // Command
@@ -128,6 +129,12 @@ impl ChildCommand {
             ChildCommand::BridgeCommand(ref info) => &info.volumes,
         }
     }
+    pub fn pass_socket(&self) -> Option<&String> {
+        match *self {
+            ChildCommand::Command(ref c) => c.pass_tcp_socket.as_ref(),
+            ChildCommand::BridgeCommand(ref c) => c.pass_tcp_socket.as_ref(),
+        }
+    }
 }
 
 fn shell_command(ast: Ast) -> Vec<Ast> {
@@ -184,7 +191,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("banner", V::Scalar::new().optional())
         .member("banner_delay", V::Numeric::new().optional().min(0))
         .member("epilog", V::Scalar::new().optional())
-        .member("tags", V::Sequence::new(V::Scalar::new()));
+        .member("tags", V::Sequence::new(V::Scalar::new()))
+        .member("pass_tcp_socket", V::Scalar::new().optional());
     if toplevel {
         cmd = cmd.member("prerequisites", V::Sequence::new(V::Scalar::new()))
     }

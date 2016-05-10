@@ -227,6 +227,45 @@ Parameters of `!Command`
    behaviour when running as root would think they are not root (but has
    user id 1)
 
+.. opt:: pass-tcp-socket
+
+   Binds a TCP to the specified address and passes it to the application
+   as a file descriptor #3.
+
+   Example:
+
+   .. code-block:: yaml
+
+      nginx:
+        container: nginx
+        run: nginx
+        pass-tcp-socket: 8080
+        environ:
+          NGINX: "3;" # inform nginx not to listen on its own
+
+   You may specify what to listen to with the following formats:
+
+   * `8080` -- just a port number -- listens on 127.0.0.1
+   * `*:8080` -- wildcard pattern for host -- listens on every host
+   * `0.0.0.0:8080` -- same as `*:8080`
+   * `192.0.2.1:8080` -- listen on specified IPv4 host
+   * `[2001:db8::1]:8080` -- listen on specified IPv6 host
+   * `localhost:8080` -- resolve a name and listen that host (note: name
+     must resolve to a single address)
+
+   This is better then listening by the application itself in the following
+   cases:
+
+   1. If you want to test systemd socket activation
+   2. If you prepare your application to a powerful supervisor like lithos_
+      (lithos can run multiple processes on the same port using the feature)
+   3. To declare (document) that your application listens specified port
+      (otherwise it may be hidden somewhere deeply in config)
+   4. To listen port in the **host** network namespace when applying network
+      isolation (as an alternate to :opt:`public-ports`)
+
+   .. _lithos: http://lithos.readthedocs.io
+
 
 Parameters of `!Supervise`
 ==========================

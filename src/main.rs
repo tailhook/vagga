@@ -19,6 +19,7 @@ extern crate tar;
 extern crate flate2;
 extern crate xz2;
 extern crate bzip2;
+extern crate net2;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;

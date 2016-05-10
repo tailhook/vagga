@@ -1,4 +1,4 @@
-use unshare::{Command};
+use unshare::{Command, Fd};
 
 use config::command::{CommandInfo, Networking, WriteMode};
 use process_util::{run_and_wait, convert_status};
@@ -7,6 +7,7 @@ use super::wrap::Wrapper;
 use launcher::volumes::prepare_volumes;
 use launcher::user::ArgError;
 use launcher::Context;
+use launcher::socket;
 
 pub type Args = (String, Vec<String>);
 pub type Version = String;
@@ -43,7 +44,12 @@ pub fn run(cinfo: &CommandInfo, (cmdname, args): Args, version: Version,
     cmd.workdir(&context.workdir);
     cmd.arg(cmdname);
     cmd.args(&args);
-    if cinfo.network.is_none() {
+    if let Some(ref sock_str) = cinfo.pass_tcp_socket {
+        let sock = try!(socket::parse_and_bind(sock_str)
+            .map_err(|e| format!("Error listening {:?}: {}", sock_str, e)));
+        cmd.file_descriptor(3, Fd::from_file(sock));
+    }
+    if cinfo.network.is_none() { // TODO(tailhook) is it still a thing?
         cmd.userns();
     }
     let res = run_and_wait(&mut cmd).map(convert_status);

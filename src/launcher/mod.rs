@@ -30,6 +30,7 @@ mod simple;
 
 mod wrap;
 mod network;
+mod socket;
 mod volumes;
 mod prerequisites;
 

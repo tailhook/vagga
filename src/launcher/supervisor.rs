@@ -8,7 +8,7 @@ use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU};
 use nix::sys::signal::{SIGQUIT, SIGKILL};
-use unshare::{Command, Namespace, reap_zombies};
+use unshare::{Command, Namespace, reap_zombies, Fd};
 
 use options::build_mode::{build_mode, BuildMode};
 use container::nsutil::{set_namespace, unshare_namespace};
@@ -23,6 +23,7 @@ use process_util::{convert_status, killpg};
 use super::wrap::Wrapper;
 use launcher::volumes::prepare_volumes;
 use launcher::user::ArgError;
+use launcher::socket;
 use launcher::Context;
 
 
@@ -158,6 +159,16 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         versions,
     } = data;
 
+    let mut sockets = HashMap::new();
+    for (cname, child) in sup.children.iter() {
+        if let Some(sock_str) = child.pass_socket() {
+            let sock = try!(socket::parse_and_bind(sock_str)
+                .map_err(|e| format!("Error listening {:?}: {}",
+                                     sock_str, e)));
+            sockets.insert(cname, sock);
+        }
+    }
+
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
     let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
@@ -176,6 +187,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         cmd.arg(&args.cmdname);
         cmd.arg(&name);
         cmd.make_group_leader(true);
+        if let Some(sock) = sockets.remove(name) {
+            cmd.file_descriptor(3, Fd::from_file(sock));
+        }
         match cmd.spawn() {
             Ok(child) => { children.insert(child.pid(), (name, child)); }
             Err(e) => {
@@ -221,6 +235,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
             cmd.workdir(&context.workdir);
             cmd.arg(&args.cmdname);
             cmd.arg(&name);
+            if let Some(sock) = sockets.remove(name) {
+                cmd.file_descriptor(3, Fd::from_file(sock));
+            }
 
             try!(set_namespace(&bridge_ns, Namespace::Net)
                 .map_err(|e| format!("Error setting netns: {}", e)));
