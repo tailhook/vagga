@@ -40,9 +40,9 @@ are built beforehand**. This has two consequences:
    the output of both commands in sequence (no container build log in-between)
 2. If container for command 2 depends on side-effects of running command 1
    (i.e. container contains a binary built by command 1), you will get wrong
-   results. In that case you should rely on shell to do the work (for exammple
-   ``vagga -m make test`` is **not** the right way, the right is ``vagga make
-   && vagga test``)
+   results. In that case you should rely on shell to do the work (for example
+   in the repository of vagga itself ``vagga -m make test`` is **not** the
+   right way, the right is ``vagga make && vagga test``)
 
 Obviously you can't pass any arguments to either of commands when running
 ``vagga -m``, this is also the biggest reason of why you can't run built-in
