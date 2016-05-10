@@ -3,7 +3,7 @@ setup() {
     vagga _build only
 }
 
-@test "version: One prerequisite" {
+@test "prerequisites: One prerequisite" {
     run vagga two
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -11,7 +11,7 @@ setup() {
     [[ ${lines[1]} = "two" ]]
 }
 
-@test "version: Collapsing prerequisites" {
+@test "prerequisites: Collapsing prerequisites" {
     run vagga four
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
@@ -21,7 +21,7 @@ setup() {
     [[ ${lines[3]} = "four" ]]
 }
 
-@test "version: Force order" {
+@test "prerequisites: Force order" {
     run vagga -m three two four
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
