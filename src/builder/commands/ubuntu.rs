@@ -147,6 +147,18 @@ impl Distribution for Distro {
                     clean_dir(&Path::new("/vagga/cache/apt-lists"), false)
                         .map_err(|e| error!(
                             "Cleaning apt-lists cache failed: {}", e)).ok();
+                    if ctx.settings.ubuntu_mirror.is_none() {
+                        warn!("The `apt-get update` failed. You have no mirror\
+                           setup, and default one is not always perfect.\n\
+                           Add the following to your ~/.vagga.yaml:\
+                           \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
+                           Where CC is a two-letter country code where you currently are.\
+                           ");
+                    } else {
+                        warn!("The `apt-get update` failed. \
+                            If this happens too often, consider changing \
+                            the `ubuntu-mirror` in settings");
+                    }
                     error
                 }));
         }
