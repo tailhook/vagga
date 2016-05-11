@@ -32,7 +32,7 @@ Ubuntu Commands
 
 .. step:: Ubuntu
 
-   Simple and straightforward way to install Ubuntu LTS release.
+   Simple and straightforward way to install Ubuntu release.
 
    Example::
 
@@ -42,7 +42,7 @@ Ubuntu Commands
    The value is single string having the codename of release ``trusty`` or
    ``precise`` known to work at the time of writing.
 
-   The Ubuntu LTS images are updated on daily basis. But vagga downloads and
+   The Ubuntu images are updated on daily basis. But vagga downloads and
    caches the image. To update the image that was downloaded by vagga you need
    to clean the cache.
 
@@ -51,17 +51,29 @@ Ubuntu Commands
    This is more exensible but more cumbersome way to setup ubuntu (comparing
    to :step:`Ubuntu`). For example to install trusty you need::
 
-   - !UbuntuRelease { version: 14.04 }
+   - !UbuntuRelease { codename: trusty }
 
-   But you can install non-lts version with this command::
+   (note this works since vagga 0.6, previous versions required `version` field
+   shich is now deprecated).
 
-   - !UbuntuRelease { version: 15.10 }
+   You can also setup non-LTS release of different architecture::
+
+   - !UbuntuRelease { codename: vivid, arch: i386 }
 
    All options:
 
-   version
-     The verison of ubuntu to install. This must be digital ``YY.MM`` form,
-     not a code name. **Required**.
+   codename
+     Name of the ubuntu release. Like `xenial` or `trusty`. Either this field
+     or `url` field must be specified. If both are specified `url` take
+     precedence.
+
+   url
+     Url to specific ubuntu image to download. May be any image, including
+     `server` and `desktop` versions, but `cloudimg` is recommended. This
+     must be filesystem image (i.e usuallly ending with `root.tar.gz`) not
+     `.iso` image.
+
+     Example: ``http://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-root.tar.gz``
 
    arch
      The architecture to install. Defaults to ``amd64``.
@@ -73,6 +85,12 @@ Ubuntu Commands
      <https://github.com/tailhook/vagga/issues/52>`_ as an example). The
      command is very rarely useful, so the option here is for completeness
      only.
+
+   version
+     The verison of ubuntu to install. This must be digital ``YY.MM`` form,
+     not a code name. **Deprecated**. Supported versions: ``12.04``,
+     ``14.04``, ``14.10``, ``15.10``, ``16.04``. Other version will not work.
+     This field will also be removed at some point in future.
 
 
 .. step:: AptTrust

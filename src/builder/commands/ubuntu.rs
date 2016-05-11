@@ -31,9 +31,11 @@ impl Ubuntu {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(RustcDecodable, Debug, Clone)]
 pub struct UbuntuRelease {
-    pub version: String,
+    pub codename: Option<String>,
+    pub version: Option<String>,
+    pub url: Option<String>,
     pub arch: String,
     pub keep_chfn_command: bool,
 }
@@ -41,7 +43,9 @@ pub struct UbuntuRelease {
 impl UbuntuRelease {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
-        .member("version", V::Scalar::new())
+        .member("version", V::Scalar::new().optional())
+        .member("codename", V::Scalar::new().optional())
+        .member("url", V::Scalar::new().optional())
         .member("arch", V::Scalar::new().default("amd64"))
         .member("keep_chfn_command", V::Scalar::new().default(false))
     }
@@ -97,19 +101,11 @@ impl AptTrust {
 }
 
 #[derive(Debug)]
-pub enum Version {
-    Daily { codename: String },
-    Release { version: String },
-}
-
-#[derive(Debug)]
 pub struct Distro {
-    version: Version,
+    config: UbuntuRelease,
     codename: Option<String>,
-    arch: String,
     apt_update: bool,
     has_universe: bool,
-    clobber_chfn: bool,
 }
 
 impl Named for Distro {
@@ -119,7 +115,7 @@ impl Named for Distro {
 impl Distribution for Distro {
     fn name(&self) -> &'static str { "Ubuntu" }
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
-        try!(fetch_ubuntu_core(ctx, &self.version, self.arch.clone()));
+        try!(fetch_ubuntu_core(ctx, &self.config));
         let codename = try!(read_ubuntu_codename());
         if self.codename.is_some() && self.codename.as_ref() != Some(&codename) {
             return Err(From::from("Codename mismatch. \
@@ -128,7 +124,7 @@ impl Distribution for Distro {
         ctx.binary_ident = format!("{}-ubuntu-{}",
             ctx.binary_ident, codename);
         try!(init_ubuntu_core(ctx));
-        if self.clobber_chfn {
+        if !self.config.keep_chfn_command {
             try!(clobber_chfn());
         }
         Ok(())
@@ -443,37 +439,68 @@ pub fn read_ubuntu_codename() -> Result<String, String>
                 lsb_release_path=lsb_release_path))
 }
 
-pub fn fetch_ubuntu_core(ctx: &mut Context, ver: &Version, arch: String)
+pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
     -> Result<(), String>
 {
-    let urls = match *ver {
-        Version::Daily { ref codename } => {
-            vec![
-                format!(
-                    "https://partner-images.canonical.com/core/\
-                     {codename}/current/\
-                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
-                    arch=arch, codename=codename)
-            ]
-        },
-        Version::Release { ref version } => {
-            vec![
-                format!(
-                    "http://cdimage.ubuntu.com/ubuntu-core/releases\
-                     /{release}/release/\
-                     ubuntu-core-{release}-core-{arch}.tar.gz",
-                    arch=arch, release=version),
-                format!(
-                    "http://old-releases.ubuntu.com/releases\
-                     /{release}/\
-                     ubuntu-core-{release}-core-{arch}.tar.gz",
-                    arch=arch, release=version),
-            ]
-        },
+    let urls = if let Some(ref url) = rel.url {
+        vec![url.to_string()]
+    } else if let Some(ref version) = rel.version {
+        let ver = if version.len() > 5 && version[5..].starts_with('.') {
+            // ignore everything after second dot
+            // i.e. 12.04.5 == 12.04
+            &version[..5]
+        } else {
+            &version[..]
+        };
+        let codename = match ver {
+            "12.04" => "precise",
+            "14.04" => "trusty",
+            "14.10" => "utopic",
+            "15.04" => "vivid",
+            "15.10" => "wily",
+            "16.04" => "xenial",
+            // Note: no new names here
+            // This list is only provided for backwards compatibility
+            _ => return Err(format!("Unknown version {:?}. \
+                Note, we only have certain number of hardcoded versions \
+                for backwards-compatibility. You should use `codename` \
+                property (or `!Ubuntu` step) for first-class support",
+               version)),
+        };
+        warn!("Note `!UbuntuRelease {{ version: {0:?} }}` is deprecated. \
+               Use `!UbuntuRelease {{ codename: {1:?} }}` or `!Ubuntu {1:?}`
+               instead", version, codename);
+        vec![
+            format!(
+                "https://partner-images.canonical.com/core/\
+                 {codename}/current/\
+                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                arch=rel.arch, codename=codename),
+            format!(
+                "https://partner-images.canonical.com/core/unsupported/\
+                 {codename}/current/\
+                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                arch=rel.arch, codename=codename),
+        ]
+    } else if let Some(ref codename) = rel.codename {
+        vec![
+            format!(
+                "https://partner-images.canonical.com/core/\
+                 {codename}/current/\
+                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                arch=rel.arch, codename=codename),
+            format!(
+                "https://partner-images.canonical.com/core/unsupported/\
+                 {codename}/current/\
+                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                arch=rel.arch, codename=codename),
+        ]
+    } else {
+        return Err(format!("UbuntuRelease tag must contain one of \
+            `codename` (preferred), `version` (deprecated) \
+            or `url` (if you need something special)"));
     };
-    let filename = try!(download_file(ctx,
-        &urls.iter().map(|x| &x[..]).collect::<Vec<_>>(),
-        None));
+    let filename = try!(download_file(ctx, &urls, None));
     try!(unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev"),
           Path::new("sys"),
@@ -568,16 +595,14 @@ pub fn clobber_chfn() -> Result<(), String> {
     Ok(())
 }
 
-pub fn configure(guard: &mut Guard, info: &UbuntuRelease)
+pub fn configure(guard: &mut Guard, config: UbuntuRelease)
     -> Result<(), StepError>
 {
     try!(guard.distro.set(Distro {
-        version: Version::Release { version: info.version.clone() },
-        arch: info.arch.clone(),
+        config: config,
         codename: None, // unknown yet
         apt_update: true,
         has_universe: false,
-        clobber_chfn: !info.keep_chfn_command,
     }));
     configure_common(&mut guard.ctx)
 }
@@ -599,20 +624,6 @@ fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
     Ok(())
 }
 
-pub fn configure_simple(guard: &mut Guard, codename: &str)
-    -> Result<(), StepError>
-{
-    try!(guard.distro.set(Distro {
-        version: Version::Daily { codename: codename.to_string() },
-        arch: "amd64".to_string(),
-        codename: Some(codename.to_string()),
-        clobber_chfn: true,
-        apt_update: true,
-        has_universe: false,
-    }));
-    configure_common(&mut guard.ctx)
-}
-
 impl BuildStep for Ubuntu {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
@@ -623,7 +634,13 @@ impl BuildStep for Ubuntu {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure_simple(guard, &self.0));
+        try!(configure(guard, UbuntuRelease {
+            codename: Some(self.0.clone()),
+            version: None,
+            url: None,
+            arch: String::from("amd64"),  // TODO(tailhook) detect
+            keep_chfn_command: false,
+        }));
         if build {
             try!(guard.distro.bootstrap(&mut guard.ctx));
         }
@@ -735,7 +752,9 @@ impl BuildStep for UbuntuRelease {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("version", &self.version);
+        hash.opt_field("codename", &self.codename);
+        hash.opt_field("version", &self.version);
+        hash.opt_field("url", &self.url);
         hash.field("arch", &self.arch);
         hash.bool("keep_chfn_command", self.keep_chfn_command);
         Ok(())
@@ -743,7 +762,7 @@ impl BuildStep for UbuntuRelease {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(guard, &self));
+        try!(configure(guard, self.clone()));
         if build {
             try!(guard.distro.bootstrap(&mut guard.ctx));
         }

@@ -2,11 +2,11 @@ containers:
 
   vivid:
     setup:
-    - !UbuntuRelease { version: 15.04 }
+    - !UbuntuRelease { version: 15.04 } # backward-compat
 
   vivid-calc:
     setup:
-    - !UbuntuRelease { version: 15.04 }
+    - !UbuntuRelease { codename: vivid }
     - !Install [bc]
 
   vivid-derive:
@@ -16,7 +16,13 @@ containers:
 
   trusty-calc:
     setup:
-    - !UbuntuRelease { version: 14.04 }
+    - !UbuntuRelease { version: 14.04 } # backward-compat
+    - !Install [bc]
+
+  xenial-url:
+    setup:
+    - !UbuntuRelease
+      url: http://cloud-images.ubuntu.com/xenial/current/xenial-server-cloudimg-amd64-root.tar.gz
     - !Install [bc]
 
 commands:
@@ -45,5 +51,10 @@ commands:
 
   trusty-calc: !Command
     container: trusty-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  xenial-calc: !Command
+    container: xenial-url
     accepts-arguments: true
     run: echo "$*" | bc

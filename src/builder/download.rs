@@ -13,19 +13,20 @@ use super::context::Context;
 use file_util::check_stream_hashsum;
 
 
-pub fn download_file(ctx: &mut Context, urls: &[&str], sha256: Option<String>)
+pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     -> Result<PathBuf, String>
+    where S: AsRef<str>
 {
-    let https = urls.iter().any(|x| x.starts_with("https:"));
+    let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
     if https {
         try!(capsule::ensure_features(ctx, &[capsule::Https]));
     }
-    let urlpath = Path::new(urls[0]);
+    let urlpath = Path::new(urls[0].as_ref());
     let hash = match sha256 {
         Some(ref sha256) => sha256[..8].to_string(),
         None => {
             let mut hash = Sha256::new();
-            hash.input_str(urls[0]);
+            hash.input_str(urls[0].as_ref());
             hash.result_str()[..8].to_string()
         },
     };
@@ -46,6 +47,7 @@ pub fn download_file(ctx: &mut Context, urls: &[&str], sha256: Option<String>)
         return Ok(filename);
     }
     for url in urls {
+        let url = url.as_ref();
         info!("Downloading image {} -> {}", url, filename.display());
         let tmpfilename = filename.with_file_name(name.clone() + ".part");
         let mut cmd = Command::new(
@@ -87,8 +89,8 @@ pub fn download_file(ctx: &mut Context, urls: &[&str], sha256: Option<String>)
                     }
                     Ok(_) => {}
                 }
-                error!("Error downloading {:?}", url);
-                return Err(format!("Wget exited with status: {}", val));
+                error!("Error downloading {:?}, wget {:?}", url, val);
+                continue;
             }
             Err(x) => {
                 return Err(format!("Error starting wget: {}", x));
@@ -96,7 +98,7 @@ pub fn download_file(ctx: &mut Context, urls: &[&str], sha256: Option<String>)
         }
     }
     return Err(format!("Error downloading file {:?} from {:?}",
-        filename, urls));
+        filename, urls.iter().map(|x| x.as_ref()).collect::<Vec<_>>()));
 }
 
 pub fn maybe_download_and_check_hashsum(ctx: &mut Context,

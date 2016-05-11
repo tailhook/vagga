@@ -54,7 +54,17 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/vivid-calc)
-    [[ $link = ".roots/vivid-calc.b9bec918/root" ]]
+    [[ $link = ".roots/vivid-calc.dfd19e39/root" ]]
+}
+
+@test "ubuntu_release: Run bc in xenial by url" {
+    run vagga xenial-calc 17*11
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/xenial-url)
+    echo "Container: $link"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "187" ]]
+    [[ $link = ".roots/xenial-url.4d5a65ef/root" ]]
 }
 
 @test "ubuntu_release: Run vivid bc in ubuntu derived from release" {
