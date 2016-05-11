@@ -202,4 +202,4 @@ commands:
     user-id: 1
     external-user-id: 0
     container: busybox
-    run: [echo, test]
+    run: [id]
