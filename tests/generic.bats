@@ -259,3 +259,9 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-1]} = "helloworld!" ]]
 }
+
+@test "generic: Hello from fake user" {
+    run vagga fake-user
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-1]} = "uid=1(bin) gid=0(root)" ]]
+}

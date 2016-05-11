@@ -11,12 +11,12 @@ use unshare::Command;
 use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use super::super::config::command::ChildCommand as CC;
 use super::super::container::uidmap::{map_users};
-use super::super::container::uidmap::Uidmap::Ranges;
 use super::Wrapper;
 use super::util::find_cmd;
 use super::setup;
 use super::super::file_util::create_dir;
-use process_util::{set_uidmap, run_and_wait, convert_status, copy_env_vars};
+use process_util::{run_and_wait, convert_status, copy_env_vars};
+use process_util::{set_uidmap, set_fake_uidmap};
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
@@ -120,13 +120,11 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     cmd.env("VAGGA_COMMAND", cmdname);
     cmd.env("VAGGA_SUBCOMMAND", name);
     if !bridge {
-        let curmap = if let Some(euid) = command.external_user_id {
-            Ranges(vec!(
-                (command.user_id as u32, euid as u32, 1)), vec!((0, 0, 1)))
+        if let Some(euid) = command.external_user_id {
+            set_fake_uidmap(&mut cmd, command.user_id, euid, &uid_map);
         } else {
-            uid_map
-        };
-        set_uidmap(&mut cmd, &curmap, false);
+            set_uidmap(&mut cmd, &uid_map, false);
+        }
         cmd.uid(command.user_id);
     }
     cmd.gid(command.group_id);

@@ -214,6 +214,33 @@ pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap, use_bin: bool) {
     }
 }
 
+pub fn set_fake_uidmap(cmd: &mut Command, uid: u32, external_uid:u32,
+    uid_map: &Uidmap)
+{
+    match uid_map {
+        &Uidmap::Singleton(uid, gid) => {
+            cmd.set_id_maps(
+                vec![UidMap { inside_uid: uid,
+                              outside_uid: external_uid, count: 1 }],
+                vec![GidMap { inside_gid: gid, outside_gid: 0, count: 1 }]);
+        }
+        &Uidmap::Ranges(_, ref gids) => {
+            cmd.set_id_maps(vec![
+                    UidMap {
+                        inside_uid: uid,
+                        outside_uid: external_uid,
+                        count: 1
+                    }
+                ],
+                // Gid map is as always in this case
+                gids.iter().map(|&(ing, outg, cntg)| GidMap {
+                    inside_gid: ing, outside_gid: outg, count: cntg })
+                    .collect(),
+            );
+        }
+    }
+}
+
 pub fn copy_env_vars(cmd: &mut Command, settings: &Settings) {
     cmd.env("TERM".to_string(),
             env::var_os("TERM").unwrap_or(From::from("dumb")));

@@ -197,3 +197,9 @@ commands:
   world: !Command
     container: busybox
     run: "echo world!"
+
+  fake-user: !Command
+    user-id: 1
+    external-user-id: 0
+    container: busybox
+    run: [echo, test]

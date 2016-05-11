@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use libc::pid_t;
 use argparse::{ArgumentParser};
-use unshare::{Command, UidMap};
+use unshare::{Command};
 
 use config::command::CommandInfo;
 use config::command::WriteMode;
@@ -15,7 +15,8 @@ use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
-use process_util::{run_and_wait, set_uidmap, convert_status};
+use process_util::{run_and_wait, convert_status};
+use process_util::{set_uidmap, set_fake_uidmap};
 
 
 pub fn commandline_cmd(command: &CommandInfo,
@@ -82,19 +83,13 @@ pub fn commandline_cmd(command: &CommandInfo,
     let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
     if let Some(euid) = command.external_user_id {
-        cmd.set_id_maps(vec![
-            UidMap {
-            inside_uid: command.user_id,
-            outside_uid: euid,
-            count: 1 }
-            ], vec![]);
-        cmd.uid(command.user_id);
+        set_fake_uidmap(&mut cmd, command.user_id, euid, &uid_map);
     } else {
         set_uidmap(&mut cmd, &uid_map, false);
-        cmd.uid(command.user_id);
     }
+    cmd.uid(command.user_id);
     cmd.gid(command.group_id);
-    cmd.groups(Vec::new());
+    cmd.groups(command.supplementary_gids.clone());
     if let Some(ref wd) = command.work_dir {
         cmd.current_dir(Path::new("/work").join(&wd));
     } else {
