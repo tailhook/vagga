@@ -18,10 +18,8 @@ use libmount::BindMount;
 
 use container::util::clean_dir;
 use container::mount::{unmount};
-use container::uidmap::{map_users};
-use config::{Container};
 use file_util::{create_dir, Lock};
-use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
+use process_util::{capture_fd3_status, copy_env_vars};
 use super::Wrapper;
 use super::setup;
 use build_step::Step;
@@ -89,14 +87,8 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
 pub fn get_version_hash(container: &str, wrapper: &Wrapper)
     -> Result<Option<String>, String>
 {
-    let cconfig = try!(wrapper.config.containers.get(container)
-        .ok_or(format!("Container {} not found", container)));
-    let uid_map = try!(map_users(wrapper.settings,
-        &cconfig.uids, &cconfig.gids));
-
     let mut cmd = Command::new("/vagga/bin/vagga");
     cmd.arg0("vagga_version");
-    set_uidmap(&mut cmd, &uid_map, false);
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.arg(&container);
@@ -128,7 +120,7 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
 {
     let cconfig = try!(wrapper.config.containers.get(container)
         .ok_or(format!("Container {} not found", container)));
-    let name = try!(_build_container(cconfig, container, force, no_image, wrapper));
+    let name = try!(_build_container(container, force, no_image, wrapper));
     let destlink = Path::new("/work/.vagga").join(&container);
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
@@ -174,13 +166,10 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
     return Ok(name);
 }
 
-pub fn _build_container(cconfig: &Container, container: &str,
+pub fn _build_container(container: &str,
     force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let uid_map = try!(map_users(wrapper.settings,
-        &cconfig.uids, &cconfig.gids));
-
     let ver = match get_version_hash(container, wrapper) {
         Ok(Some(ver)) => {
             if ver.len() == 64 && ver[..].is_ascii() {
@@ -221,7 +210,6 @@ pub fn _build_container(cconfig: &Container, container: &str,
 
     let mut cmd = Command::new("/vagga/bin/vagga");
     cmd.arg0("vagga_build");
-    set_uidmap(&mut cmd, &uid_map, false);
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.unshare(

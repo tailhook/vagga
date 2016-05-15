@@ -8,13 +8,12 @@ use libc::pid_t;
 use argparse::{ArgumentParser, Store, List, StoreTrue};
 use unshare::{Command};
 
-use container::uidmap::{map_users};
 use super::setup;
 use super::Wrapper;
-use process_util::{set_uidmap, copy_env_vars, run_and_wait, convert_status};
+use process_util::{copy_env_vars, run_and_wait, convert_status};
 
 
-pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
+pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<i32, String>
 {
     let mut container: String = "".to_string();
@@ -58,12 +57,6 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
         wrapper.project_root, wrapper.ext_settings));
     let cconfig = try!(wrapper.config.containers.get(&container)
         .ok_or(format!("Container {} not found", container)));
-    let uid_map = if user_ns {
-        Some(try!(map_users(wrapper.settings,
-            &cconfig.uids, &cconfig.gids)))
-    } else {
-        None
-    };
 
     let write_mode = match copy {
         false => setup::WriteMode::ReadOnly,
@@ -104,7 +97,6 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>, user_ns: bool)
     cmd.args(&args);
     cmd.current_dir(&env::var("_VAGGA_WORKDIR")
                     .unwrap_or("/work".to_string()));
-    uid_map.map(|x| set_uidmap(&mut cmd, &x, false));
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.env_clear();

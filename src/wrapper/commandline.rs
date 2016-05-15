@@ -10,13 +10,12 @@ use unshare::{Command};
 
 use config::command::CommandInfo;
 use config::command::WriteMode;
-use container::uidmap::{map_users};
 
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
 use process_util::{run_and_wait, convert_status};
-use process_util::{set_uidmap, set_fake_uidmap};
+use process_util::{set_fake_uidmap};
 
 
 pub fn commandline_cmd(command: &CommandInfo,
@@ -59,8 +58,6 @@ pub fn commandline_cmd(command: &CommandInfo,
 
     let cconfig = try!(wrapper.config.containers.get(&command.container)
         .ok_or(format!("Container {} not found", command.container)));
-    let uid_map = try!(map_users(wrapper.settings,
-        &cconfig.uids, &cconfig.gids));
 
     let write_mode = match command.write_mode {
         WriteMode::read_only => setup::WriteMode::ReadOnly,
@@ -83,9 +80,7 @@ pub fn commandline_cmd(command: &CommandInfo,
     let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
     if let Some(euid) = command.external_user_id {
-        set_fake_uidmap(&mut cmd, command.user_id, euid, &uid_map);
-    } else {
-        set_uidmap(&mut cmd, &uid_map, false);
+        try!(set_fake_uidmap(&mut cmd, command.user_id, euid));
     }
     cmd.uid(command.user_id);
     cmd.gid(command.group_id);

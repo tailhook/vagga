@@ -198,6 +198,11 @@ fn read_id_ranges(path: &str, read_inside: bool)
     return Ok(result);
 }
 
+pub fn read_mapped_gids() -> Result<Vec<Range>, String>
+{
+    read_id_ranges("/etc/subuid", true)
+}
+
 pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     -> Result<Uidmap, String>
 {

@@ -11,7 +11,7 @@ use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
 use config::Settings;
-use container::uidmap::{Uidmap};
+use container::uidmap::{Uidmap, read_mapped_gids};
 use tty_util::{TtyGuard};
 
 
@@ -214,31 +214,23 @@ pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap, use_bin: bool) {
     }
 }
 
-pub fn set_fake_uidmap(cmd: &mut Command, uid: u32, external_uid:u32,
-    uid_map: &Uidmap)
+pub fn set_fake_uidmap(cmd: &mut Command, uid: u32, external_uid:u32)
+    -> Result<(), String>
 {
-    match uid_map {
-        &Uidmap::Singleton(uid, gid) => {
-            cmd.set_id_maps(
-                vec![UidMap { inside_uid: uid,
-                              outside_uid: external_uid, count: 1 }],
-                vec![GidMap { inside_gid: gid, outside_gid: 0, count: 1 }]);
-        }
-        &Uidmap::Ranges(_, ref gids) => {
-            cmd.set_id_maps(vec![
-                    UidMap {
-                        inside_uid: uid,
-                        outside_uid: external_uid,
-                        count: 1
-                    }
-                ],
-                // Gid map is as always in this case
-                gids.iter().map(|&(ing, outg, cntg)| GidMap {
-                    inside_gid: ing, outside_gid: outg, count: cntg })
-                    .collect(),
-            );
-        }
-    }
+    let gid_ranges = try!(read_mapped_gids());
+    cmd.set_id_maps(vec![
+            UidMap {
+                inside_uid: uid,
+                outside_uid: external_uid,
+                count: 1
+            }
+        ],
+        // Gid map is as always in this case
+        gid_ranges.iter().map(|r| GidMap {
+            inside_gid: r.start(), outside_gid: r.start(), count: r.len() })
+            .collect(),
+    );
+    Ok(())
 }
 
 pub fn copy_env_vars(cmd: &mut Command, settings: &Settings) {

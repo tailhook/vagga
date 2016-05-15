@@ -95,8 +95,7 @@ pub fn run() -> i32 {
         "_check_overlayfs_support" => Ok(debug::check_overlayfs(&wrapper)),
         "_build" => build::build_container_cmd(&wrapper, args),
         "_version_hash" => build::print_version_hash_cmd(&wrapper, args),
-        "_run" => run::run_command_cmd(&wrapper, args, true),
-        "_run_in_netns" => run::run_command_cmd(&wrapper, args, false),
+        "_run" | "_run_in_netns" => run::run_command_cmd(&wrapper, args),
         "_clean" => clean::clean_cmd(&wrapper, args),
         "_pack_image" => pack::pack_image_cmd(&wrapper, args),
         _ => {
