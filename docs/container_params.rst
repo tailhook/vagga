@@ -105,3 +105,8 @@ Container Parameters
    .. warning:: The url must contain at least `${short_hash}` substitution,
       or otherwise it will ruin the vagga's container versioning.
 
+   .. note:: Similarly to :step:`Tar` command we allow paths starting with
+      `.` and `/volumes/` here. It's of limited usage. And we still consider
+      this expreminental. This may be useful for keeping image cache on network
+      file system, presumably on non-public projects.
+

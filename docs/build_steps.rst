@@ -332,9 +332,17 @@ Generic Commands
      **Required**. The url or a path of the archive to fetch. If the url
      startswith dot ``.`` it's treated as a file name relative to the project
      directory. Otherwise it's a url of the file to download.
+
+     .. note:: Since vagga 0.6 we allow to unpack local paths starting
+        with ``/volumes/`` as file on one of the volumes configured in settings
+        (:opt:`external-volumes`). This is exprimental, and requires every user
+        to update their setthings before building a container. Still may be
+        useful for building company-internal things.
+
    path
      (default ``/``). Target path where archive should be unpacked to. By
      default it's a root of the filesystem.
+
    subdir
      Subdirectory inside the archive to extract. May be ``.`` to extract the
      root of the archive.

@@ -101,20 +101,33 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
         filename, urls.iter().map(|x| x.as_ref()).collect::<Vec<_>>()));
 }
 
+fn check_if_local(url: &str, sha256: &Option<String>)
+    -> Result<Option<PathBuf>, String>
+{
+    let path = if url.starts_with(".") {
+        PathBuf::from("/work").join(url)
+    } else if url.starts_with("/volumes/") {
+        PathBuf::from(url)
+    } else {
+        return Ok(None);
+    };
+    if let Some(ref sha256) = *sha256 {
+        let mut file = try_msg!(File::open(&path),
+            "Cannot open file: {err}");
+        try!(check_stream_hashsum(&mut file, sha256)
+            .map_err(|e| format!(
+                "Error when checking hashsum for file {:?}: {}",
+                &path, e)));
+    }
+    Ok(Some(path))
+}
+
 pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
     url: &str, sha256: Option<String>)
     -> Result<PathBuf, String>
 {
-    let filename = if url.starts_with(".") {
-        let filename = PathBuf::from("/work").join(url);
-        if let Some(ref sha256) = sha256 {
-            let mut file = try_msg!(File::open(&filename),
-                "Cannot open file: {err}");
-            try!(check_stream_hashsum(&mut file, sha256)
-                .map_err(|e| format!(
-                    "Error when checking hashsum for file {:?}: {}", &filename, e)));
-        }
-        filename
+    let filename = if let Some(path) = try!(check_if_local(url, &sha256)) {
+        path
     } else {
         try!(download_file(ctx, &[url], sha256))
     };
