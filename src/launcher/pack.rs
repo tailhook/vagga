@@ -1,13 +1,13 @@
 use unshare::Command;
 
 use options::pack::{Options};
-use config::settings::Settings;
+use launcher::Context;
 use launcher::build::build_container;
 use launcher::wrap::Wrapper;
 use process_util::convert_status;
 
 
-pub fn pack_command(settings: &Settings, args: Vec<String>)
+pub fn pack_command(context: &Context, args: Vec<String>)
     -> Result<i32, String>
 {
     let mut cmdline = args.clone();
@@ -17,10 +17,12 @@ pub fn pack_command(settings: &Settings, args: Vec<String>)
         Err(code) => return Ok(code),
     };
 
-    let ver = try!(build_container(settings, &opt.name, opt.build_mode));
+    let ver = try!(build_container(context, &opt.name, opt.build_mode));
 
-    let mut cmd: Command = Wrapper::new(Some(&ver), &settings);
-    cmd.userns();
+    let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
+    try!(cmd.map_users_for(
+        &context.config.get_container(&opt.name).unwrap(),
+        &context.settings));
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.arg("_pack_image").args(&args);

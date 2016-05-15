@@ -6,12 +6,10 @@ use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 
 use libc::getuid;
-use unshare::Command;
 
 use options::build_mode::{build_mode, BuildMode};
 use config::{Config, Settings, find_config};
-use config::read_settings::read_settings;
-use process_util::convert_status;
+use config::read_settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
 use super::path_util::ToRelative;
 use self::wrap::Wrapper;
@@ -38,6 +36,7 @@ mod prerequisites;
 pub struct Context {
     config: Config,
     settings: Settings,
+    ext_settings: MergedSettings,
     workdir: PathBuf,
     build_mode: BuildMode,
     prerequisites: bool,
@@ -179,14 +178,17 @@ pub fn run() -> i32 {
         }
     }
 
+    let context = Context {
+        config: config,
+        settings: int_settings,
+        ext_settings: ext_settings,
+        workdir: int_workdir.to_path_buf(),
+        build_mode: bmode,
+        prerequisites: prerequisites,
+    };
+
     if commands.len() > 0 {
-        let result = user::run_multiple_commands(&Context {
-            config: config,
-            settings: int_settings,
-            workdir: int_workdir.to_path_buf(),
-            build_mode: bmode,
-            prerequisites: prerequisites,
-        }, commands);
+        let result = user::run_multiple_commands(&context, commands);
         match result {
             Ok(rc) => {
                 return rc;
@@ -201,7 +203,7 @@ pub fn run() -> i32 {
     let result:Result<i32, String> = match &cname[..] {
         "" => {
             writeln!(&mut err, "Available commands:").ok();
-            for (k, cmd) in config.commands.iter() {
+            for (k, cmd) in context.config.commands.iter() {
                 write!(&mut err, "    {}", k).ok();
                 match cmd.description() {
                     Some(ref val) => {
@@ -222,57 +224,43 @@ pub fn run() -> i32 {
             return 127;
         }
         "_create_netns" => {
-            network::create_netns(&config, args)
+            network::create_netns(&context.config, args)
         }
         "_destroy_netns" => {
-            network::destroy_netns(&config, args)
+            network::destroy_netns(&context.config, args)
         }
         "_list" => {
-            list::print_list(&config, args)
+            list::print_list(&context.config, args)
         }
-        "_build_shell" | "_clean" | "_version_hash" |
-        "_check_overlayfs_support" => {
-            let mut cmd: Command = Wrapper::new(None, &int_settings);
-            cmd.workdir(&int_workdir);
-            cmd.userns();
-            cmd.gid(0);
-            cmd.groups(Vec::new());
-            cmd.arg(&cname).args(&args);
-            cmd.status()
-            .map(convert_status)
-            .map_err(|e| format!("Error running `vagga_wrapper {}`: {}",
-                                 cname, e))
+        "_version_hash" => {
+            underscore::version_hash(&context, &cname, args)
+        }
+        "_build_shell" | "_clean" | "_check_overlayfs_support" => {
+            underscore::passthrough(&context, &cname, args)
         }
         "_build" => {
-            build::build_command(&int_settings, args)
+            build::build_command(&context, args)
         }
         "_run" => {
-            underscore::run_command(&int_settings, &int_workdir, args, bmode)
+            underscore::run_command(&context, args)
         }
         "_run_in_netns" => {
-            underscore::run_in_netns(&int_settings, &int_workdir, cname, args,
-                bmode)
+            underscore::run_in_netns(&context, cname, args)
         }
         "_pack_image" => {
-            pack::pack_command(&int_settings, args)
+            pack::pack_command(&context, args)
         }
         "_push_image" => {
-            push::push_command(&ext_settings, &int_settings, args)
+            push::push_command(&context, args)
         }
         "_init_storage_dir" => {
-            storage::init_dir(&ext_settings, &cfg_dir, args)
+            storage::init_dir(&context.ext_settings, &cfg_dir, args)
         }
         "_compgen" => {
-            completion::generate_completions(&config, args)
+            completion::generate_completions(&context.config, args)
         }
         _ => {
-            user::run_user_command(&Context {
-                config: config,
-                settings: int_settings,
-                workdir: int_workdir.to_path_buf(),
-                build_mode: bmode,
-                prerequisites: prerequisites,
-            }, cname, args)
+            user::run_user_command(&context, cname, args)
         }
     };
 

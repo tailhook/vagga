@@ -110,8 +110,7 @@ pub fn prepare_containers(sup: &SuperviseInfo, args: &Args, context: &Context)
             containers.insert(cont.to_string());
             let continfo = try!(context.config.containers.get(cont)
                 .ok_or_else(|| format!("Container {:?} not found", cont)));
-            let ver = try!(build_container(&context.settings, cont,
-                args.build_mode));
+            let ver = try!(build_container(context, cont, args.build_mode));
             try!(prepare_volumes(continfo.volumes.values(), context));
             try!(prepare_volumes(child.get_volumes().values(), context));
             versions.insert(cont.to_string(), ver);
@@ -179,11 +178,14 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     let mut children = HashMap::new();
     let mut error = false;
     for name in containers_host_net.iter() {
+        let cname = sup.children[name].get_container();
         let mut cmd: Command = Wrapper::new(
-            Some(&versions[sup.children[name].get_container()]),
+            Some(&versions[cname]),
             &context.settings);
         cmd.workdir(&context.workdir);
-        cmd.userns();
+        try!(cmd.map_users_for(
+            &context.config.get_container(cname).unwrap(),
+            &context.settings));
         cmd.gid(0);
         cmd.groups(Vec::new());
         cmd.arg(&args.cmdname);

@@ -10,8 +10,7 @@ pub fn prepare_volumes<'x, I>(volumes: I, context: &Context)
     for v in volumes {
         match *v {
             Container(ref name) => {
-                try!(build_container(
-                    &context.settings, name, context.build_mode));
+                try!(build_container(context, name, context.build_mode));
             }
             _ => {}
         }

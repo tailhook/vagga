@@ -52,7 +52,7 @@ pub fn capture_fd3(mut cmd: Command) -> Result<Vec<u8>, String>
     cmd.file_descriptor(3, Fd::piped_write());
     info!("Running {:?}", cmd);
     let mut child = try!(cmd.spawn()
-        .map_err(|e| format!("{}", e)));
+        .map_err(|e| format!("Command {:?}: {}", cmd, e)));
     let mut buf = Vec::with_capacity(1024);
     try!(child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
         .map_err(|e| format!("Error reading from pipe: {}", e)));

@@ -4,22 +4,22 @@ use std::io::{stdout, stderr};
 use argparse::{ArgumentParser, Store, StoreTrue};
 use unshare::{Command, Namespace};
 
+use launcher::Context;
+use launcher::wrap::Wrapper;
 use options::build_mode::BuildMode;
-use config::Settings;
-use process_util::{capture_fd3, set_uidmap, copy_env_vars, squash_stdio};
-use container::uidmap::get_max_uidmap;
+use process_util::{capture_fd3, copy_env_vars, squash_stdio};
 use container::util::version_from_symlink;
 
 
-pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
+pub fn build_container(context: &Context, name: &String, mode: BuildMode)
     -> Result<String, String>
 {
     use options::build_mode::BuildMode::*;
     let ver = match mode {
-        Normal => try!(build_internal(settings, name, &[])),
-        NoImage => try!(build_internal(settings, name,
+        Normal => try!(build_internal(context, name, &[])),
+        NoImage => try!(build_internal(context, name,
             &[String::from("--no-image-download")])),
-        NoBuild => format!("{}.{}", &name, try!(get_version(settings, &name))),
+        NoBuild => format!("{}.{}", &name, try!(get_version(context, &name))),
         NoVersion => {
             try!(version_from_symlink(format!(".vagga/{}", name)))
         }
@@ -28,15 +28,14 @@ pub fn build_container(settings: &Settings, name: &String, mode: BuildMode)
 }
 
 /// Similar to build_container but never actually builds
-pub fn get_version(settings: &Settings, name: &str) -> Result<String, String> {
-    let mut cmd = Command::new("/proc/self/exe");
-    cmd.arg0("vagga_wrapper");
+pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
+    let mut cmd: Command = Wrapper::new(None, &context.settings);
     cmd.arg("_version_hash");
     cmd.arg("--short");
     cmd.arg("--fd3");
     cmd.arg(name);
     cmd.env_clear();
-    copy_env_vars(&mut cmd, settings);
+    copy_env_vars(&mut cmd, &context.settings);
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -48,24 +47,26 @@ pub fn get_version(settings: &Settings, name: &str) -> Result<String, String> {
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
+    try!(cmd.map_users_for(
+        try!(context.config.get_container(name)),
+        &context.settings));
 
     capture_fd3(cmd)
     .and_then(|x| String::from_utf8(x)
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-fn build_internal(settings: &Settings, name: &str, args: &[String])
+fn build_internal(context: &Context, name: &str, args: &[String])
     -> Result<String, String>
 {
-    let mut cmd = Command::new("/proc/self/exe");
+    let mut cmd = Wrapper::new(None, &context.settings);
     try!(squash_stdio(&mut cmd));
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
     cmd.args(&args);
     cmd.env_clear();
-    copy_env_vars(&mut cmd, settings);
+    copy_env_vars(&mut cmd, &context.settings);
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -77,14 +78,16 @@ fn build_internal(settings: &Settings, name: &str, args: &[String])
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
+    try!(cmd.map_users_for(
+        try!(context.config.get_container(name)),
+        &context.settings));
 
     capture_fd3(cmd)
     .and_then(|x| String::from_utf8(x)
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-pub fn build_command(settings: &Settings, args: Vec<String>)
+pub fn build_command(context: &Context, args: Vec<String>)
     -> Result<i32, String>
 {
     let mut name: String = "".to_string();
@@ -115,7 +118,7 @@ pub fn build_command(settings: &Settings, args: Vec<String>)
         args.push("--force".to_string());
     }
 
-    build_internal(settings, &name, &args)
+    build_internal(context, &name, &args)
     .map(|v| debug!("Container {:?} build with version {:?}", name, v))
     .map(|()| 0)
 }

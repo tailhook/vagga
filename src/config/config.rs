@@ -21,6 +21,13 @@ pub struct Config {
     pub containers: BTreeMap<String, Container>,
 }
 
+impl Config {
+    pub fn get_container(&self, name: &str) -> Result<&Container, String> {
+        self.containers.get(name)
+        .ok_or_else(|| format!("Container {} not found", name))
+    }
+}
+
 pub fn config_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
     .member("minimum_vagga", MinimumVagga::new()

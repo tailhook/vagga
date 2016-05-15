@@ -3,15 +3,13 @@ use std::path::{Path, PathBuf};
 
 use unshare::{Command, Stdio};
 
-use config::read_settings::MergedSettings;
-use config::settings::Settings;
+use launcher::Context;
 use launcher::build::build_container;
 use launcher::wrap::Wrapper;
 use options::push::Options;
 
 
-pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Vec<String>)
-    -> Result<i32, String>
+pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
 {
     let mut cmdline = args.clone();
     cmdline.insert(0, "vagga _push_image".to_string());
@@ -20,18 +18,20 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         Err(code) => return Ok(code),
     };
 
-    let ver = try!(build_container(settings, &opt.name, opt.build_mode));
+    let cinfo = try!(ctx.config.get_container(&opt.name));
+
+    let ver = try!(build_container(ctx, &opt.name, opt.build_mode));
     let short_hash = match ver.rsplitn(2, ".").next() {
         Some(v) => v,
         None => return Err(format!("Incorrect container version")),
     };
 
-    let mut pack_cmd: Command = Wrapper::new(Some(&ver), &settings);
+    let mut pack_cmd: Command = Wrapper::new(Some(&ver), &ctx.settings);
     let image_name = "image.tar.xz";
     let image_path = Path::new("/vagga/base/.roots")
         .join(&ver)
         .join(image_name);
-    pack_cmd.userns();
+    try!(pack_cmd.map_users_for(cinfo, &ctx.settings));
     pack_cmd.gid(0);
     pack_cmd.groups(Vec::new());
     pack_cmd
@@ -49,7 +49,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         _ => {},
     }
 
-    let roots = if ext_settings.storage_dir.is_some() {
+    let roots = if ctx.ext_settings.storage_dir.is_some() {
         Path::new(".lnk/.roots")
     } else {
         Path::new(".roots")
@@ -58,7 +58,7 @@ pub fn push_command(ext_settings: &MergedSettings, settings: &Settings, args: Ve
         .join(&roots)
         .join(&ver)
         .join("image.tar.xz");
-    match settings.push_image_script {
+    match ctx.settings.push_image_script {
         Some(ref push_image_script) => {
             let mut upload_cmd = Command::new("/bin/sh");
             upload_cmd.stdin(Stdio::null())

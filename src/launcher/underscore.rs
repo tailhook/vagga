@@ -1,28 +1,28 @@
 use std::io::{stdout, stderr};
-use std::path::Path;
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, List, StoreOption, Store};
 use unshare::{Command, Namespace};
 
-use options::build_mode::{build_mode, BuildMode};
-use config::{Settings};
+use options::build_mode::build_mode;
+use options::version_hash;
 use container::nsutil::{set_namespace};
 use process_util::{run_and_wait, convert_status};
 
 use super::network;
 use super::build::{build_container};
 use super::wrap::Wrapper;
+use launcher::Context;
 
 
-pub fn run_command(settings: &Settings, workdir: &Path,
-    mut args: Vec<String>, mut bmode: BuildMode)
+pub fn run_command(context: &Context, mut args: Vec<String>)
     -> Result<i32, String>
 {
     let mut cmdargs = Vec::<String>::new();
     let mut container = "".to_string();
     let mut command = "".to_string();
     let mut copy = false;
+    let mut bmode = context.build_mode;
     {
         args.insert(0, "vagga _run".to_string());
         let mut ap = ArgumentParser::new();
@@ -56,20 +56,21 @@ pub fn run_command(settings: &Settings, workdir: &Path,
             }
         }
     }
-    let ver = try!(build_container(settings, &container, bmode));
-    let mut cmd: Command = Wrapper::new(Some(&ver), settings);
-    cmd.workdir(workdir);
+    let cinfo = try!(context.config.get_container(&container));
+    let ver = try!(build_container(context, &container, bmode));
+    let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
+    cmd.workdir(&context.workdir);
     cmd.arg("_run");
     cmd.args(&args[1..]);
-    cmd.userns();
+    try!(cmd.map_users_for(cinfo, &context.settings));
     cmd.gid(0);
     cmd.groups(Vec::new());
     let res = run_and_wait(&mut cmd).map(convert_status);
 
     if copy {
-        let mut cmd: Command = Wrapper::new(None, settings);
-        cmd.workdir(workdir);
-        cmd.userns();
+        let mut cmd: Command = Wrapper::new(None, &context.settings);
+        cmd.workdir(&context.workdir);  // TODO(tailhook) why is it needed?
+        cmd.max_uidmap();
         cmd.gid(0);
         cmd.groups(Vec::new());
         cmd.arg("_clean").arg("--transient");
@@ -83,13 +84,13 @@ pub fn run_command(settings: &Settings, workdir: &Path,
     return res;
 }
 
-pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
-    mut args: Vec<String>, mut bmode: BuildMode)
+pub fn run_in_netns(context: &Context, cname: String, mut args: Vec<String>)
     -> Result<i32, String>
 {
     let mut cmdargs: Vec<String> = vec!();
     let mut container = "".to_string();
     let mut pid = None;
+    let mut bmode = context.build_mode;
     {
         args.insert(0, "vagga ".to_string() + &cname);
         let mut ap = ArgumentParser::new();
@@ -119,16 +120,51 @@ pub fn run_in_netns(settings: &Settings, workdir: &Path, cname: String,
             }
         }
     }
-    let ver = try!(build_container(settings, &container, bmode));
+    let ver = try!(build_container(context, &container, bmode));
     try!(network::join_gateway_namespaces());
     if let Some::<i32>(pid) = pid {
         try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
             .map_err(|e| format!("Error setting networkns: {}", e)));
     }
-    let mut cmd: Command = Wrapper::new(Some(&ver), settings);
-    cmd.workdir(workdir);
+    let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
+    cmd.workdir(&context.workdir);
     cmd.arg(cname);
     cmd.arg(container.clone());
     cmd.args(&cmdargs);
     run_and_wait(&mut cmd).map(convert_status)
+}
+
+pub fn version_hash(ctx: &Context, cname: &str, args: Vec<String>)
+    -> Result<i32, String>
+{
+    let opt = match version_hash::Options::parse(&args, false) {
+        Ok(x) => x,
+        Err(e) => return Ok(e),
+    };
+    let mut cmd: Command = Wrapper::new(None, &ctx.settings);
+    cmd.workdir(&ctx.workdir);
+    try!(cmd.map_users_for(
+        &ctx.config.get_container(&opt.container).unwrap(),
+        &ctx.settings));
+    cmd.gid(0);
+    cmd.groups(Vec::new());
+    cmd.arg(&cname).args(&args);
+    cmd.status()
+    .map(convert_status)
+    .map_err(|e| format!("Error running `vagga_wrapper {}`: {}",
+                         cname, e))
+}
+pub fn passthrough(ctx: &Context, cname: &str, args: Vec<String>)
+    -> Result<i32, String>
+{
+    let mut cmd: Command = Wrapper::new(None, &ctx.settings);
+    cmd.workdir(&ctx.workdir);
+    cmd.max_uidmap();
+    cmd.gid(0);
+    cmd.groups(Vec::new());
+    cmd.arg(&cname).args(&args);
+    cmd.status()
+    .map(convert_status)
+    .map_err(|e| format!("Error running `vagga_wrapper {}`: {}",
+                         cname, e))
 }

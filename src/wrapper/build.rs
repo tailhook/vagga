@@ -25,6 +25,7 @@ use process_util::{capture_fd3_status, set_uidmap, copy_env_vars};
 use super::Wrapper;
 use super::setup;
 use build_step::Step;
+use options::version_hash;
 
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
@@ -344,39 +345,15 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<i32, String>
 {
-    let mut name: String = "".to_string();
-    let mut short = false;
-    let mut fd3 = false;
-    {
-        let mut ap = ArgumentParser::new();
-        ap.set_description("
-            Prints version hash of the container without building it. If
-            this command exits with code 29, then container can't be versioned
-            before the build.
-            ");
-        ap.refer(&mut name)
-            .add_argument("container_name", Store,
-                "Container name to build");
-        ap.refer(&mut short)
-            .add_option(&["-s", "--short"], StoreTrue,
-                "Print short container version, like used in directory names \
-                 (8 chars)");
-        ap.refer(&mut fd3)
-            .add_option(&["--fd3"], StoreTrue,
-                "Print into file descriptor #3 instead of stdout");
-        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
-            Ok(()) => {}
-            Err(0) => return Ok(0),
-            Err(_) => {
-                return Ok(122);
-            }
-        }
-    }
+    let opt = match version_hash::Options::parse(&cmdline, true) {
+        Ok(x) => x,
+        Err(e) => return Ok(e),
+    };
     try!(setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings));
-    if let Some(hash) = try!(get_version_hash(&name, wrapper)) {
-        let res = if short { &hash[..8] } else { &hash[..] };
-        if fd3 {
+    if let Some(hash) = try!(get_version_hash(&opt.container, wrapper)) {
+        let res = if opt.short { &hash[..8] } else { &hash[..] };
+        if opt.fd3 {
             try!(unsafe { File::from_raw_fd(3) }.write_all(res.as_bytes())
                 .map_err(|e| format!("Error writing to fd 3: {}", e)));
         } else {

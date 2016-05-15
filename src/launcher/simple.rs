@@ -27,8 +27,8 @@ pub fn parse_args(cinfo: &CommandInfo, _context: &Context,
 pub fn prepare_containers(cinfo: &CommandInfo, _: &Args, context: &Context)
     -> Result<Version, String>
 {
-    let ver = try!(build_container(
-        &context.settings, &cinfo.container, context.build_mode));
+    let ver = try!(build_container(context, &cinfo.container,
+        context.build_mode));
     let cont = try!(context.config.containers.get(&cinfo.container)
         .ok_or_else(|| format!("Container {:?} not found", cinfo.container)));
     try!(prepare_volumes(cont.volumes.values(), context));
@@ -50,7 +50,9 @@ pub fn run(cinfo: &CommandInfo, (cmdname, args): Args, version: Version,
         cmd.file_descriptor(3, Fd::from_file(sock));
     }
     if cinfo.network.is_none() { // TODO(tailhook) is it still a thing?
-        cmd.userns();
+        try!(cmd.map_users_for(
+            &context.config.get_container(&cinfo.container).unwrap(),
+            &context.settings));
         cmd.gid(0);
         cmd.groups(Vec::new());
     }
@@ -59,7 +61,7 @@ pub fn run(cinfo: &CommandInfo, (cmdname, args): Args, version: Version,
     if cinfo.write_mode != WriteMode::read_only {
         let mut cmd: Command = Wrapper::new(None, &context.settings);
         cmd.workdir(&context.workdir);
-        cmd.userns();
+        cmd.max_uidmap();
         cmd.gid(0);
         cmd.groups(Vec::new());
         cmd.arg("_clean").arg("--transient");

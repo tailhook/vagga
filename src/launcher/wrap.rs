@@ -4,15 +4,17 @@ use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Namespace};
 
-use config::Settings;
+use config::{Settings, Container};
 use process_util::{set_uidmap, copy_env_vars};
-use container::uidmap::get_max_uidmap;
+use container::uidmap::{get_max_uidmap, map_users};
 
 
 pub trait Wrapper {
     fn new(root: Option<&str>, settings: &Settings) -> Self;
     fn workdir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self;
-    fn userns(&mut self) -> &mut Self;
+    fn max_uidmap(&mut self) -> &mut Self;
+    fn map_users_for(&mut self, container: &Container, settings: &Settings)
+        -> Result<(), String>;
 }
 
 impl Wrapper for Command {
@@ -63,8 +65,17 @@ impl Wrapper for Command {
         }
         self
     }
-    fn userns(&mut self) -> &mut Self {
+    fn max_uidmap(&mut self) -> &mut Self {
+        // TODO(tailhook) is this unwrap fine?
         set_uidmap(self, &get_max_uidmap().unwrap(), true);
         self
+    }
+    fn map_users_for(&mut self, container: &Container, settings: &Settings)
+        -> Result<(), String>
+    {
+        let uid_map = try!(map_users(settings,
+            &container.uids, &container.gids));
+        set_uidmap(self, &uid_map, true);
+        Ok(())
     }
 }
