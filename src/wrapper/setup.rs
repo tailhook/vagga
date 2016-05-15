@@ -87,9 +87,20 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
                 if let Some(name) = lnk.file_name() {
                     let target = dir.join(name);
                     if lnk.parent() != Some(&*dir) {
-                        return Err(concat!("You have set storage_dir to {}, ",
-                            "but .vagga/.lnk points to {}. You probably need ",
-                            "to run `ln -sfn {} .vagga/.lnk`").to_string());
+                        let newlnk = dir.join(name);
+                        if newlnk.exists() {
+                            return Err(format!("You have set `storage-dir` \
+                                to {:?}, but .vagga/.lnk points to {:?}. \
+                                You probably need to run \
+                                `ln -sfn {:?} .vagga/.lnk`",
+                                dir, lnk, newlnk));
+                        } else {
+                            return Err(format!("You have set `storage-dir` \
+                                to {:?}, but .vagga/.lnk points to {:?}. \
+                                If storage dir is new, \
+                                just remove `.vagga` dir.",
+                                dir, lnk));
+                        }
                     }
                     if !lnkdir.exists() {
                         return Err(format!("Your .vagga/.lnk points to a \
