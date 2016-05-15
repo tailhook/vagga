@@ -22,6 +22,10 @@ create one. The recommended contents are following::
 
     your_user_name:100000:65536
 
+You should also check ``/etc/subgid``, add presumably the same contents to
+``/etc/subgid`` (In subgid file the first field still contains your user name
+not a group name).
+
 ----
 
 You may get another similar error::
