@@ -200,7 +200,7 @@ fn read_id_ranges(path: &str, read_inside: bool)
 
 pub fn read_mapped_gids() -> Result<Vec<Range>, String>
 {
-    read_id_ranges("/etc/subuid", true)
+    read_id_ranges("/proc/self/gid_map", true)
 }
 
 pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
