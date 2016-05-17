@@ -43,6 +43,10 @@ impl<'a> Guard<'a> {
     pub fn start(&mut self) -> Result<(), String> {
         try!(mount_system_dirs());
         try!(mount_proc(&Path::new("/proc")));
+        try!(copy("/proc/self/uid_map", "/vagga/container/uid_map")
+            .map_err(|e| format!("Error copying uid_map: {}", e)));
+        try!(copy("/proc/self/gid_map", "/vagga/container/gid_map")
+            .map_err(|e| format!("Error copying gid_map: {}", e)));
         try_msg!(create_dir("/vagga/root/etc", false),
              "Error creating /etc dir: {err}");
         try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")

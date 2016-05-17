@@ -1,11 +1,11 @@
 use std::env;
 use std::fs::{File, read_link};
-use std::io::Write;
 use std::ffi::OsString;
 use std::io::ErrorKind::NotFound;
 use std::ascii::AsciiExt;
 use std::fs::{rename};
 use std::fs::{remove_file, remove_dir};
+use std::io::{self, Read, Write};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
@@ -166,6 +166,27 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
     return Ok(name);
 }
 
+fn compare_files<A: AsRef<Path>, B: AsRef<Path>>(a: A, b: B)
+    -> io::Result<bool>
+{
+    let mut abuf = Vec::with_capacity(1024);
+    let mut bbuf = Vec::with_capacity(1024);
+    try!(File::open(a.as_ref()).and_then(|mut f| f.read_to_end(&mut abuf)));
+    try!(File::open(b.as_ref()).and_then(|mut f| f.read_to_end(&mut bbuf)));
+    Ok(abuf != bbuf)
+}
+
+fn uidmap_differs(container_path: &Path) -> bool {
+    compare_files(
+        "/proc/self/uid_map",
+        container_path.join("uid_map")
+    ).unwrap_or(true) ||
+    compare_files(
+        "/proc/self/uid_map",
+        container_path.join("uid_map")
+    ).unwrap_or(true)
+}
+
 pub fn _build_container(container: &str,
     force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
@@ -179,9 +200,18 @@ pub fn _build_container(container: &str,
                 debug!("Container path: {:?} (force: {}) {}", finalpath, force,
                     finalpath.exists());
                 if finalpath.exists() && !force {
-                    debug!("Path {} is already built",
-                           finalpath.display());
-                    return Ok(name);
+                    if uidmap_differs(&finalpath) {
+                        warn!("Current uidmap differs from uidmap of container \
+                        when it was built.  This probably means that you \
+                        either running vagga wrong user id or changed uid or \
+                        subuids of your user since container was built. We'll \
+                        rebuilt container to make sure it has proper \
+                        permissions");
+                    } else {
+                        debug!("Path {} is already built",
+                               finalpath.display());
+                        return Ok(name);
+                    }
                 }
                 Some(ver)
             } else {
