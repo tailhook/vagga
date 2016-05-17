@@ -45,7 +45,7 @@ setup() {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/cache_dirs)
-    [[ $link = ".roots/cache_dirs.eaeba474/root" ]]
+    [[ $link = ".roots/cache_dirs.63a632f3/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
 
@@ -227,7 +227,7 @@ setup() {
     run vagga _build unzip-downloaded
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-downloaded)
-    [[ $link = ".roots/unzip-downloaded.1ee6c4c2/root" ]]
+    [[ $link = ".roots/unzip-downloaded.b4156b72/root" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
     [[ -f $cached_file ]]
