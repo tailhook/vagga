@@ -110,6 +110,33 @@ containers:
       subdir: vagga
       path: /usr/lib/vagga
 
+  run_as:
+    setup:
+    - !Alpine v3.1
+    - !RunAs
+      user_id: 1
+      group_id: 1
+      script: |
+        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-11
+    - !RunAs
+      user_id: 1
+      script: |
+        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-10
+    - !RunAs
+      group_id: 1
+      script: |
+        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-01
+    - !RunAs
+      user_id: 1
+      group_id: 1
+      external-user-id: 0
+      script: |
+        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-110
+    - !RunAs
+      script: |
+        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-00
+    - !Sh |
+        cp -a /tmp/ids-* /
 
 commands:
   two-lines: !Supervise

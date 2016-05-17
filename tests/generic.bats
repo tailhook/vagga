@@ -265,3 +265,23 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-1]} = "uid=1(bin) gid=0(root)" ]]
 }
+
+@test "generic: RunAs" {
+    run vagga _build run_as
+    printf "%s\n" "${lines[@]}"
+    [[ $(cat .vagga/run_as/ids-11) = "uid=1 gid=1" ]]
+    [[ $(cat .vagga/run_as/ids-10) = "uid=1 gid=0" ]]
+    [[ $(cat .vagga/run_as/ids-01) = "uid=0 gid=1" ]]
+    [[ $(cat .vagga/run_as/ids-00) = "uid=0 gid=0" ]]
+    [[ $(cat .vagga/run_as/ids-110) = "uid=1 gid=1" ]]
+    [[ ! -O .vagga/run_as/ids-11 ]]
+    [[ ! -G .vagga/run_as/ids-11 ]]
+    [[ ! -O .vagga/run_as/ids-10 ]]
+    [[ -G .vagga/run_as/ids-10 ]]
+    [[ -O .vagga/run_as/ids-01 ]]
+    [[ ! -G .vagga/run_as/ids-01 ]]
+    [[ -O .vagga/run_as/ids-00 ]]
+    [[ -G .vagga/run_as/ids-00 ]]
+    [[ -O .vagga/run_as/ids-110 ]]
+    [[ ! -G .vagga/run_as/ids-110 ]]
+}
