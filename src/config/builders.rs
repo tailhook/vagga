@@ -49,6 +49,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
 
     .option("Sh", cmd::generic::Sh::config())
     .option("Cmd", cmd::generic::Cmd::config())
+    .option("RunAs", cmd::generic::RunAs::config())
     .option("Remove", cmd::dirs::Remove::config())
     .option("EnsureDir", cmd::dirs::EnsureDir::config())
     .option("EmptyDir", cmd::dirs::EmptyDir::config())
@@ -117,6 +118,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "Unzip" => step(cmd::unzip::Unzip::decode(d)),
         "Sh" => step(cmd::generic::Sh::decode(d)),
         "Cmd" => step(cmd::generic::Cmd::decode(d)),
+        "RunAs" => step(cmd::generic::RunAs::decode(d)),
         "Env" => step(cmd::generic::Env::decode(d)),
         "Text" => step(cmd::text::Text::decode(d)),
         "Copy" => step(cmd::copy::Copy::decode(d)),
