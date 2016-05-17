@@ -6,7 +6,7 @@ use quire::validate as V;
 
 use super::super::context::Context;
 use super::super::super::path_util::ToRelative;
-use process_util::{capture_stdout};
+use process_util::{capture_stdout, set_fake_uidmap};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 // Build Steps
@@ -27,6 +27,26 @@ tuple_struct_decode!(Cmd);
 impl Cmd {
     pub fn config() -> V::Sequence<'static> {
         V::Sequence::new(V::Scalar::new())
+    }
+}
+
+#[derive(RustcDecodable, Debug)]
+pub struct RunAs {
+    pub user_id: u32,
+    pub group_id: u32,
+    pub supplementary_gids: Vec<u32>,
+    pub external_user_id: Option<u32>,
+    pub script: String,
+}
+
+impl RunAs {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("user_id", V::Numeric::new().min(0).default(0))
+        .member("group_id", V::Numeric::new().min(0).default(0))
+        .member("external_user_id", V::Numeric::new().min(0).optional())
+        .member("supplementary_gids", V::Sequence::new(V::Numeric::new()))
+        .member("script", V::Scalar::new())
     }
 }
 
@@ -77,6 +97,15 @@ fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
         "-- empty PATH --".to_string()));
 }
 
+fn setup_command(ctx: &Context, cmd: &mut Command)
+{
+    cmd.chroot_dir("/vagga/root");
+    cmd.env_clear();
+    for (k, v) in ctx.environ.iter() {
+        cmd.env(k, v);
+    };
+}
+
 pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     path: &Path, env: &[(&str, &str)])
     -> Result<(), String>
@@ -88,13 +117,9 @@ pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     };
 
     let mut cmd = Command::new(&cmdpath);
-    cmd.current_dir(path);
-    cmd.chroot_dir("/vagga/root");
+    setup_command(ctx, &mut cmd);
     cmd.args(&cmdline[1..]);
-    cmd.env_clear();
-    for (k, v) in ctx.environ.iter() {
-        cmd.env(k, v);
-    }
+    cmd.current_dir(path);
     for &(k, v) in env.iter() {
         cmd.env(k, v);
     }
@@ -257,6 +282,49 @@ impl BuildStep for Env {
             guard.ctx.environ.insert(k.clone(), v.clone());
         }
         Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for RunAs {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.text("user_id", &self.user_id);
+        hash.text("group_id", &self.group_id);
+        if let Some(euid) = self.external_user_id {
+            hash.text("external_user_id", &euid);
+        }
+        for i in self.supplementary_gids.iter() {
+            hash.text("supplementary_gids", &i);
+        }
+        hash.field("script", &self.script);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            let mut cmd = Command::new(&"/bin/sh".to_string());
+            setup_command(&guard.ctx, &mut cmd);
+            cmd.args(&["-exc".to_string(), self.script.to_string()]);
+            cmd.current_dir(&Path::new("/work"));
+
+            let uid = self.user_id;
+            let gid = self.group_id;
+            if let Some(euid) = self.external_user_id {
+                try!(set_fake_uidmap(&mut cmd, uid, euid));
+            }
+            cmd.uid(uid);
+            cmd.gid(gid);
+            cmd.groups(self.supplementary_gids.clone());
+
+            run(cmd)
+        } else {
+            Ok(())
+        }
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None

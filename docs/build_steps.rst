@@ -228,7 +228,7 @@ Generic Commands
 
 .. step:: Sh
 
-    Runs arbitrary shell shell command, for example::
+    Runs arbitrary shell command, for example::
 
         - !Ubuntu trusty
         - !Sh "apt-get install -y package"
@@ -280,6 +280,36 @@ Generic Commands
          - -exc
          - |
            echo this is a bash script
+
+.. step:: RunAs
+
+   Runs arbitrary shell command as specified user (and/or group), for example::
+
+      - !Ubuntu trusty
+      - !RunAs
+         user-id: 1
+         script: |
+           python -c "import os; print(os.getuid())"
+
+   Options:
+
+   script
+      (required) Shell command or script to run
+
+   user-id
+      (default ``0``) User ID to run command as. If the ``external-user-id`` is
+      omitted this has same effect like using ``sudo -u``.
+
+   external-user-id
+      (optional) See :ref:`explanation of external-user-id <external-user-id>`
+      for ``!Command`` as it does the same.
+
+   group-id
+      (default ``0``) Group ID to run command as.
+
+   supplementary-gids
+      (optional) The list of group ids of the supplementary groups.
+      By default it's an empty list.
 
 .. step:: Download
 
