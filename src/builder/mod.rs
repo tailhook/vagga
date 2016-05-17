@@ -6,6 +6,8 @@ use rand;
 use config::read_config;
 use config::{Config, Container, Settings};
 use argparse::{ArgumentParser, Store, StoreTrue};
+
+use file_util::copy;
 use self::context::{Context};
 use self::commands::tarcmd::{Tar, tar_command};
 use build_step::BuildStep;
@@ -101,6 +103,7 @@ pub fn run() -> i32 {
             if let Ok(()) = res {
                 return 0;
             }
+            // TODO(tailhook) Clean the container back again
         }
     }
 
@@ -137,6 +140,12 @@ fn _build_from_image(container_name: &String, container: &Container,
     match tar_command(&mut ctx, &tar) {
         Ok(_) => {
             info!("Succesfully unpack image {}", image_cache_url);
+            // If container is okay, we need to store uid_map used for
+            // unpacking
+            try!(copy("/proc/self/uid_map", "/vagga/container/uid_map")
+                .map_err(|e| format!("Error copying uid_map: {}", e)));
+            try!(copy("/proc/self/gid_map", "/vagga/container/gid_map")
+                .map_err(|e| format!("Error copying gid_map: {}", e)));
         },
         Err(e) => {
             return Err(format!("Error unpacking image {}: {}",
