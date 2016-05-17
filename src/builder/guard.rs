@@ -7,7 +7,7 @@ use builder::commands::{composer, gem, npm, pip};
 use builder::packages;
 use build_step::BuildStep;
 use container::util::clean_dir;
-use container::mount::{unmount, mount_system_dirs};
+use container::mount::{unmount, mount_system_dirs, mount_proc};
 use file_util::{create_dir, copy};
 
 
@@ -42,6 +42,7 @@ impl<'a> Guard<'a> {
 
     pub fn start(&mut self) -> Result<(), String> {
         try!(mount_system_dirs());
+        try!(mount_proc(&Path::new("/proc")));
         try_msg!(create_dir("/vagga/root/etc", false),
              "Error creating /etc dir: {err}");
         try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
