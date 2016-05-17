@@ -6,13 +6,6 @@ containers:
     - !Install [alpine-base, py-sphinx, make]
     - !Py2Requirements docs/requirements.txt
 
-  test_build:
-    setup:
-    - !Alpine v3.3
-    - !Sh |
-        grep . /proc/self/[ug]id_map
-        exit 1
-
   rust-musl:
     environ: &rustenv
       LD_LIBRARY_PATH: /musl/lib/rustlib/x86_64-unknown-linux-musl/lib
