@@ -97,9 +97,18 @@ fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
         "-- empty PATH --".to_string()));
 }
 
-fn build_command(ctx: &mut Context, cmdline: &[String],
+fn setup_command(ctx: &Context, cmd: &mut Command)
+{
+    cmd.chroot_dir("/vagga/root");
+    cmd.env_clear();
+    for (k, v) in ctx.environ.iter() {
+        cmd.env(k, v);
+    };
+}
+
+pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     path: &Path, env: &[(&str, &str)])
-    -> Result<Command, StepError>
+    -> Result<(), String>
 {
     let cmdpath = if cmdline[0][..].starts_with("/") {
         PathBuf::from(&cmdline[0])
@@ -108,24 +117,12 @@ fn build_command(ctx: &mut Context, cmdline: &[String],
     };
 
     let mut cmd = Command::new(&cmdpath);
-    cmd.current_dir(path);
-    cmd.chroot_dir("/vagga/root");
+    setup_command(ctx, &mut cmd);
     cmd.args(&cmdline[1..]);
-    cmd.env_clear();
-    for (k, v) in ctx.environ.iter() {
-        cmd.env(k, v);
-    }
+    cmd.current_dir(path);
     for &(k, v) in env.iter() {
         cmd.env(k, v);
     }
-    Ok(cmd)
-}
-
-pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
-    path: &Path, env: &[(&str, &str)])
-    -> Result<(), String>
-{
-    let mut cmd = try!(build_command(ctx, cmdline, path, env));
 
     debug!("Running {:?}", cmd);
 
@@ -303,19 +300,18 @@ impl BuildStep for RunAs {
         for i in self.supplementary_gids.iter() {
             hash.text("supplementary_gids", &i);
         }
-        hash.field("RunAs", &self.script);
+        hash.field("script", &self.script);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
         if build {
-            let mut cmd = try!(build_command(&mut guard.ctx,
-                                             &["/bin/sh".to_string(),
-                                               "-exc".to_string(),
-                                               self.script.to_string()],
-                                             &Path::new("/work"),
-                                             &[]));
+            let mut cmd = Command::new(&"/bin/sh".to_string());
+            setup_command(&guard.ctx, &mut cmd);
+            cmd.args(&["-exc".to_string(), self.script.to_string()]);
+            cmd.current_dir(&Path::new("/work"));
+
             let uid = self.user_id;
             let gid = self.group_id;
             if let Some(euid) = self.external_user_id {
