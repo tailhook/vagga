@@ -207,6 +207,8 @@ Parameters of `!Command`
    has same effect like using ``sudo -u`` inside container (except it's user
    id instead of user name)
 
+.. _external-user-id:
+
 .. opt:: external-user-id
 
    **(experimental)** This option allows to map the ``user-id`` as seen by
