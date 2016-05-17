@@ -14,7 +14,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine)
-    [[ $link = ".roots/pkg-alpine.fd6e2ff1/root" ]]
+    [[ $link = ".roots/pkg-alpine.ff6f6347/root" ]]
 }
 
 @test "gem/bundler: alpine pkg no update gem" {
