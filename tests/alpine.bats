@@ -5,7 +5,7 @@ setup() {
 @test "alpine: Alpine builds" {
     vagga _build v31
     link=$(readlink .vagga/v31)
-    [[ $link = ".roots/v31.d4736d2b/root" ]]
+    [[ $link = ".roots/v31.3bbd8dfc/root" ]]
 }
 
 @test "alpine: Check stdout" {
@@ -13,7 +13,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/v33-tar)
-    [[ $link = ".roots/v33-tar.3be4b50e/root" ]]
+    [[ $link = ".roots/v33-tar.308cf7fd/root" ]]
     [[ $output = "vagga.yaml" ]]
 }
 
@@ -41,7 +41,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/v33-calc)
-    [[ $link = ".roots/v33-calc.eaeba474/root" ]]
+    [[ $link = ".roots/v33-calc.52ba709f/root" ]]
 }
 
 @test "alpine: Run bc on v3.2" {
@@ -50,7 +50,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/v32-calc)
-    [[ $link = ".roots/v32-calc.44a116b0/root" ]]
+    [[ $link = ".roots/v32-calc.a3ffc64f/root" ]]
 }
 
 @test "alpine: Run bc on v3.1" {
@@ -59,7 +59,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/v31-calc)
-    [[ $link = ".roots/v31-calc.a6b498de/root" ]]
+    [[ $link = ".roots/v31-calc.c42da512/root" ]]
 }
 
 @test "alpine: Run bc on v3.0" {
@@ -68,7 +68,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/v30-calc)
-    [[ $link = ".roots/v30-calc.6e88b72d/root" ]]
+    [[ $link = ".roots/v30-calc.a60099cd/root" ]]
 }
 
 @test "alpine: Run vagga inside alpine" {
@@ -80,5 +80,5 @@ setup() {
     run vagga vagga-alpine
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = fd6e2ff1 ]]
+    [[ ${lines[${#lines[@]}-1]} = 6ea38cf8 ]]
 }

@@ -35,7 +35,7 @@ setup() {
 }
 
 @test "image: push & pull" {
-    hash="eaeba474"
+    hash="52ba709f"
     container_dir="alpine.${hash}"
     image_name="${container_dir}.tar.xz"
 

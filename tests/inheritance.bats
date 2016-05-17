@@ -7,7 +7,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/pythonic)
-    [[ $link = ".roots/pythonic.dac5fc5c/root" ]]
+    [[ $link = ".roots/pythonic.ad609c78/root" ]]
 }
 
 @test "inheritance: Run echo command" {
@@ -24,7 +24,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/calc)
-    [[ $link = ".roots/calc.a6b498de/root" ]]
+    [[ $link = ".roots/calc.c42da512/root" ]]
 }
 
 @test "inheritance: Inherit from container with deep structure" {
@@ -33,7 +33,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
     link=$(readlink .vagga/sub)
-    [[ $link = ".roots/sub.bc93c8be/root" ]]
+    [[ $link = ".roots/sub.218a0ada/root" ]]
 }
 
 @test "inheritance: Test hardlink copy of the deep structure" {
@@ -49,7 +49,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellomount)
-    [[ $link = ".roots/hellomount.c60ef126/root" ]]
+    [[ $link = ".roots/hellomount.e7eb747f/root" ]]
 }
 
 @test "inheritance: Build copy" {
@@ -58,7 +58,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopy)
-    [[ $link = ".roots/hellocopy.d73a2fb7/root" ]]
+    [[ $link = ".roots/hellocopy.b74c576d/root" ]]
 }
 
 @test "inheritance: Deep inheritance" {
@@ -67,5 +67,5 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "10" ]]
     link=$(readlink .vagga/c10)
-    [[ $link = ".roots/c10.d4736d2b/root" ]]
+    [[ $link = ".roots/c10.3bbd8dfc/root" ]]
 }

@@ -6,7 +6,7 @@ setup() {
     run vagga _run text cat /etc/shakespeare
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/text)
-    [[ $link = ".roots/text.54a32625/root" ]]
+    [[ $link = ".roots/text.fa850b7b/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
@@ -45,7 +45,7 @@ setup() {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/cache_dirs)
-    [[ $link = ".roots/cache_dirs.975bcc73/root" ]]
+    [[ $link = ".roots/cache_dirs.eaeba474/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
 
@@ -53,7 +53,7 @@ setup() {
     run vagga _run ensure_dir echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ensure_dir)
-    [[ $link = ".roots/ensure_dir.a1cd217a/root" ]]
+    [[ $link = ".roots/ensure_dir.1bef5403/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
     [[ -d ".vagga/ensure_dir/var/lib/mount_point/subdir" ]]
     [[ $output =~ "\"/var/lib/mount_point/subdir\" directory is in the volume: \"/var/lib/mount_point\"" ]]
@@ -64,7 +64,7 @@ setup() {
     run vagga two-lines
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.d4736d2b/root" ]]
+    [[ $link = ".roots/busybox.3bbd8dfc/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
@@ -191,7 +191,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
-    [[ $link = ".roots/vagga.f4d65ae1/root" ]]
+    [[ $link = ".roots/vagga.6f593ff8/root" ]]
 }
 
 @test "generic: unpack zip archive" {
@@ -204,7 +204,7 @@ setup() {
     run vagga _build unzip-local
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-local)
-    [[ $link = ".roots/unzip-local.6e26085b/root" ]]
+    [[ $link = ".roots/unzip-local.8a1bcf6d/root" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) = "2" ]]
     [[ -x .vagga/unzip-local/root/test/1/install.sh ]]
@@ -227,7 +227,7 @@ setup() {
     run vagga _build unzip-downloaded
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-downloaded)
-    [[ $link = ".roots/unzip-downloaded.386f9553/root" ]]
+    [[ $link = ".roots/unzip-downloaded.1ee6c4c2/root" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
     [[ -f $cached_file ]]

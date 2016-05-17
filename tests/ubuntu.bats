@@ -5,13 +5,13 @@ setup() {
 @test "Ubuntu builds" {
     vagga _build trusty
     link=$(readlink .vagga/trusty)
-    [[ $link = ".roots/trusty.6cc01a27/root" ]]
+    [[ $link = ".roots/trusty.641967e7/root" ]]
 }
 
 @test "Ubuntu i386 builds" {
     vagga _build trusty-i386
     link=$(readlink .vagga/trusty-i386)
-    [[ $link = ".roots/trusty-i386.669da383/root" ]]
+    [[ $link = ".roots/trusty-i386.022c677e/root" ]]
 }
 
 @test "Run echo command" {
@@ -67,7 +67,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/trusty-calc)
-    [[ $link = ".roots/trusty-calc.32adcc6c/root" ]]
+    [[ $link = ".roots/trusty-calc.2b2c058e/root" ]]
 }
 
 @test "Run xenial bc" {
@@ -76,7 +76,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/xenial-calc)
-    [[ $link = ".roots/xenial-calc.2eb52675/root" ]]
+    [[ $link = ".roots/xenial-calc.eacf2878/root" ]]
 }
 
 @test "Test VAGGAENV_* vars" {
@@ -109,7 +109,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/dependency-conflict)
-    [[ $link = ".roots/dependency-conflict.219e408b/root" ]]
+    [[ $link = ".roots/dependency-conflict.af32461f/root" ]]
 }
 
 @test "ubuntu: install from ppa" {
@@ -119,5 +119,5 @@ setup() {
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/ppa)
-    [[ $link = ".roots/ppa.5b1c842a/root" ]]
+    [[ $link = ".roots/ppa.73b33181/root" ]]
 }
