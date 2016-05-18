@@ -311,6 +311,9 @@ Generic Commands
       (optional) The list of group ids of the supplementary groups.
       By default it's an empty list.
 
+   work-dir
+      (default ``/work``) Directory to run script in.
+
 .. step:: Download
 
    Downloads file and puts it somewhere in the file system.
