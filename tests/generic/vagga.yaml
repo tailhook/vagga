@@ -120,12 +120,14 @@ containers:
         echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-11
     - !RunAs
       user_id: 1
+      work-dir: /tmp
       script: |
-        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-10
+        echo "uid=$(id -u) gid=$(id -g)" > ids-10
     - !RunAs
       group_id: 1
+      work-dir: /tmp
       script: |
-        echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-01
+        echo "uid=$(id -u) gid=$(id -g)" > ids-01
     - !RunAs
       user_id: 1
       group_id: 1

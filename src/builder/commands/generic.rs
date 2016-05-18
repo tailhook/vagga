@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
+use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command};
 use quire::validate as V;
@@ -36,6 +37,7 @@ pub struct RunAs {
     pub group_id: u32,
     pub supplementary_gids: Vec<u32>,
     pub external_user_id: Option<u32>,
+    pub work_dir: PathBuf,
     pub script: String,
 }
 
@@ -46,6 +48,7 @@ impl RunAs {
         .member("group_id", V::Numeric::new().min(0).default(0))
         .member("external_user_id", V::Numeric::new().min(0).optional())
         .member("supplementary_gids", V::Sequence::new(V::Numeric::new()))
+        .member("work_dir", V::Directory::new().default("/work"))
         .member("script", V::Scalar::new())
     }
 }
@@ -300,6 +303,7 @@ impl BuildStep for RunAs {
         for i in self.supplementary_gids.iter() {
             hash.text("supplementary_gids", &i);
         }
+        hash.field("work_dir", self.work_dir.as_os_str().as_bytes());
         hash.field("script", &self.script);
         Ok(())
     }
@@ -311,7 +315,7 @@ impl BuildStep for RunAs {
             setup_command(&guard.ctx, &mut cmd);
             cmd.arg("-exc");
             cmd.arg(&self.script);
-            cmd.current_dir("/work");
+            cmd.current_dir(&Path::new("/work").join(&self.work_dir));
 
             let uid = self.user_id;
             let gid = self.group_id;
