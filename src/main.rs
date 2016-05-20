@@ -20,6 +20,7 @@ extern crate flate2;
 extern crate xz2;
 extern crate bzip2;
 extern crate net2;
+extern crate humantime;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;

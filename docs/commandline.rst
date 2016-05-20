@@ -78,7 +78,17 @@ vagga _clean
 
       $ vagga _clean --unused
 
-  There is a faster option for removing unused containers::
+  Another for removes containers which were not uses for some time::
+
+      $ vagga _clean --unused --at-least 10days
+
+  This is faster as it only checks timestamps of the containers. Each time
+  any command in a container is run, we update timestamp. This is generally
+  more useful than bare ``--unused``, because it allows to keep multiple
+  versions of same container, which means you can switch between branches
+  rapidly.
+
+  There an old and deprecated option for removing unused containers::
 
       $ vagga _clean --old
 

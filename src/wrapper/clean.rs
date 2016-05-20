@@ -1,10 +1,14 @@
 use std::collections::HashSet;
-use std::fs::{read_dir, read_link, remove_file};
-use std::io::{stdout, stderr};
+use std::fs::{read_dir, read_link, remove_file, metadata};
+use std::io::{self, stdout, stderr};
 use std::path::Path;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::os::unix::fs::MetadataExt;
 
-use argparse::{ArgumentParser, PushConst, StoreTrue};
+use argparse::{ArgumentParser, PushConst, StoreTrue, StoreOption};
+use scan_dir::ScanDir;
+use humantime;
 
 use super::setup;
 use super::Wrapper;
@@ -29,6 +33,7 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     let mut global = false;
     let mut dry_run = false;
     let mut actions = vec!();
+    let mut duration = None::<humantime::Duration>;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -60,6 +65,11 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         ap.refer(&mut dry_run)
           .add_option(&["-n", "--dry-run"], StoreTrue,
                 "Dry run. Don't delete everything, just print");
+        ap.refer(&mut duration)
+          .add_option(&["--at-least"], StoreOption, "
+            Only in combination with `--unused`. Treat as unused \
+            containers that are unused for specified time, rather than \
+            the ones not used by current version of config");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -73,11 +83,14 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             storage-dir in settings");
         return Ok(2);
     }
+    let duration = duration.map(|x| x.into());
     for action in actions.iter() {
         let res = match *action {
             Action::Temporary => clean_temporary(wrapper, global, dry_run),
             Action::Old => clean_old(wrapper, global, dry_run),
-            Action::Unused => clean_unused(wrapper, global, dry_run),
+            Action::Unused => {
+                clean_unused(wrapper, global, duration, dry_run)
+            }
             Action::Transient => clean_transient(wrapper, global, dry_run),
             _ => unimplemented!(),
         };
@@ -223,7 +236,8 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
     return Ok(());
 }
 
-fn clean_unused(wrapper: &Wrapper, global: bool, dry_run: bool)
+fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
+    dry_run: bool)
     -> Result<(), String>
 {
     if global {
@@ -234,9 +248,31 @@ fn clean_unused(wrapper: &Wrapper, global: bool, dry_run: bool)
         wrapper.project_root, wrapper.ext_settings));
 
     let mut useful: HashSet<String> = HashSet::new();
-    for (name, _) in &wrapper.config.containers {
-        if let Some(version) = try!(get_version_hash(name, wrapper)) {
-            useful.insert(format!("{}.{}", name, &version[..8]));
+    if let Some(duration) = duration {
+        let unixtime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let cut_off = (unixtime - duration).as_secs() as i64;
+        ScanDir::dirs().skip_hidden(false).read("/vagga/base/.roots", |iter| {
+            for (entry, name) in iter {
+                let luse_path = entry.path().join("last_use");
+                match metadata(&luse_path) {
+                    Ok(ref meta) if meta.mtime() > cut_off => {
+                        useful.insert(name);
+                    }
+                    Ok(_) => {}
+                    Err(ref e) if e.kind() == io::ErrorKind::NotFound => {}
+                    Err(e) => {
+                        error!("Error trying to stat {:?}: {}", luse_path, e);
+                    }
+                }
+            }
+        }).map_err(|e| {
+            error!("Error reading `.vagga/.roots`: {}", e);
+        }).ok();
+    } else {
+        for (name, _) in &wrapper.config.containers {
+            if let Some(version) = try!(get_version_hash(name, wrapper)) {
+                useful.insert(format!("{}.{}", name, &version[..8]));
+            }
         }
     }
     debug!("Useful images {:?}", useful);
