@@ -24,7 +24,7 @@ pub struct Config {
 impl Config {
     pub fn get_container(&self, name: &str) -> Result<&Container, String> {
         self.containers.get(name)
-        .ok_or_else(|| format!("Container {} not found", name))
+        .ok_or_else(|| format!("Container {:?} not found", name))
     }
 }
 
