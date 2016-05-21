@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fs::{read_dir, read_link, remove_file, metadata};
 use std::io::{self, stdout, stderr};
+use std::ffi::OsStr;
 use std::path::Path;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
@@ -13,7 +14,7 @@ use humantime;
 use super::setup;
 use super::Wrapper;
 use container::util::clean_dir;
-use file_util::read_visible_entries;
+use file_util::{read_visible_entries, Lock};
 use wrapper::build::get_version_hash;
 
 
@@ -110,8 +111,27 @@ fn clean_dir_wrapper(path: &Path, dry_run: bool) -> Result<(), String> {
     if dry_run {
         println!("Would remove {:?}", path);
     } else {
+        let mut n = path.to_path_buf().into_os_string();
+        n.push(".lock");
+        let lock_name = Path::new(&n);
+        let lock_guard = if lock_name.exists() {
+            match Lock::exclusive(&lock_name) {
+                Ok(x) => Some(x),
+                Err(e) => {
+                    error!("Failed to lock {:?}: {}, skipping", lock_name, e);
+                    return Ok(());
+                }
+            }
+        } else {
+            None
+        };
         debug!("Removing {:?}", path);
         try!(clean_dir(path, true));
+        if let Some(_lock) = lock_guard {
+            try!(remove_file(lock_name)
+                .map_err(|e| format!("Error removing lock file {:?}: {}",
+                    lock_name, e)));
+        }
     }
     Ok(())
 }
@@ -177,26 +197,9 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
                  .and_then(|x| x.to_str()).map(ToString::to_string)
              }))
         .collect();
-    debug!("Useful images {:?}", useful);
 
-    let roots = base.join(".roots");
-    for entry in try_msg!(read_dir(&roots),
-                         "Can't read dir {dir:?}: {err}", dir=roots)
-    {
-        let entry = try_msg!(entry,
-                             "Can't read dir {dir:?}: {err}", dir=roots);
-        let typ = try_msg!(entry.file_type(),
-            "Can't stat {p:?}: {err}", p=entry.path());
-        if !typ.is_dir() {
-            try_msg!(remove_file(&entry.path()),
-                "Can't remove file {p:?}: {err}", p=entry.path());
-        } else if !typ.is_dir() || entry.file_name()[..].to_str()
-            .map(|n| !useful.contains(&n.to_string()))
-            .unwrap_or(false)
-        {
-            try!(clean_dir_wrapper(&entry.path(), dry_run));
-        }
-    }
+    info!("Useful images {:?}", useful);
+    try!(clean_dirs_except(&base.join(".roots"), &useful, dry_run));
 
     return Ok(());
 }
@@ -234,6 +237,38 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
     }
 
     return Ok(());
+}
+
+fn clean_dirs_except<P: AsRef<Path>>(roots: P, useful: &HashSet<String>,
+    dry_run: bool)
+    -> Result<(), String>
+{
+    let roots = roots.as_ref();
+    for entry in try_msg!(read_dir(&roots),
+                         "Can't read dir {dir:?}: {err}", dir=roots)
+    {
+        let entry = try_msg!(entry,
+                             "Can't read dir {dir:?}: {err}", dir=roots);
+        let path = entry.path();
+        let typ = try_msg!(entry.file_type(),
+            "Can't stat {p:?}: {err}", p=path);
+        if !typ.is_dir() {
+            if path.extension() == Some(OsStr::new("lock")) &&
+               path.with_extension("").is_dir()
+            {
+                debug!("Skipping lock file {:?}", path);
+            } else {
+                try_msg!(remove_file(&path),
+                    "Can't remove file {p:?}: {err}", p=path);
+            }
+        } else if !typ.is_dir() || entry.file_name()[..].to_str()
+            .map(|n| !useful.contains(&n.to_string()))
+            .unwrap_or(false)
+        {
+            try!(clean_dir_wrapper(&entry.path(), dry_run));
+        }
+    }
+    Ok(())
 }
 
 fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
@@ -275,26 +310,8 @@ fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
             }
         }
     }
-    debug!("Useful images {:?}", useful);
-
-    let roots = Path::new("/vagga/base/.roots");
-    for entry in try_msg!(read_dir(&roots),
-                         "Can't read dir {dir:?}: {err}", dir=roots)
-    {
-        let entry = try_msg!(entry,
-                             "Can't read dir {dir:?}: {err}", dir=roots);
-        let typ = try_msg!(entry.file_type(),
-            "Can't stat {p:?}: {err}", p=entry.path());
-        if !typ.is_dir() {
-            try_msg!(remove_file(&entry.path()),
-                "Can't remove file {p:?}: {err}", p=entry.path());
-        } else if !typ.is_dir() || entry.file_name()[..].to_str()
-            .map(|n| !useful.contains(&n.to_string()))
-            .unwrap_or(false)
-        {
-            try!(clean_dir_wrapper(&entry.path(), dry_run));
-        }
-    }
+    info!("Useful images {:?}", useful);
+    try!(clean_dirs_except("/vagga/base/.roots", &useful, dry_run));
 
     return Ok(());
 }
