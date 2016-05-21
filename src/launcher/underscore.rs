@@ -134,9 +134,10 @@ pub fn run_in_netns(context: &Context, cname: String, mut args: Vec<String>)
     run_and_wait(&mut cmd).map(convert_status)
 }
 
-pub fn version_hash(ctx: &Context, cname: &str, args: Vec<String>)
+pub fn version_hash(ctx: &Context, cname: &str, mut args: Vec<String>)
     -> Result<i32, String>
 {
+    args.insert(0, "vagga _version_hash".to_string());
     let opt = match version_hash::Options::parse(&args, false) {
         Ok(x) => x,
         Err(e) => return Ok(e),
@@ -148,7 +149,7 @@ pub fn version_hash(ctx: &Context, cname: &str, args: Vec<String>)
         &ctx.settings));
     cmd.gid(0);
     cmd.groups(Vec::new());
-    cmd.arg(&cname).args(&args);
+    cmd.arg(&cname).args(&args[1..]);
     cmd.status()
     .map(convert_status)
     .map_err(|e| format!("Error running `vagga_wrapper {}`: {}",

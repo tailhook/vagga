@@ -27,7 +27,8 @@ impl Options {
                 ");
             ap.refer(&mut opt.container)
                 .add_argument("container_name", Store,
-                    "Container name to build");
+                    "Container name to build")
+                .required();
             ap.refer(&mut opt.short)
                 .add_option(&["-s", "--short"], StoreTrue, "
                     Print short container version, like used in directory

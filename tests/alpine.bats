@@ -80,5 +80,6 @@ setup() {
     run vagga vagga-alpine
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = 6ea38cf8 ]]
+    [[ ${lines[${#lines[@]}-2]} = 6ea38cf8 ]]
+    [[ ${lines[${#lines[@]}-1]} = 6ea38cf8bd751ac737a41c6e1ddb4b87a804f8e562c30064ec42941005b7bc6f ]]
 }

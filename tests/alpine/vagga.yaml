@@ -74,3 +74,4 @@ commands:
     run: |
       cd vagga_inside_alpine
       ./vagga _version_hash --short v33
+      ./vagga _version_hash v33
