@@ -61,6 +61,15 @@ setup() {
     [[ $link = ".roots/hellocopy.b74c576d/root" ]]
 }
 
+@test "inheritance: Build copy file" {
+    run vagga hello-copy-file
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
+    link=$(readlink .vagga/hellocopyfile)
+    [[ $link = ".roots/hellocopyfile.b74c576d/root" ]]
+}
+
 @test "inheritance: Deep inheritance" {
     run vagga ok
     printf "%s\n" "${lines[@]}"

@@ -46,6 +46,16 @@ containers:
       path: /tmp/pkg
     - !Sh dpkg -i /tmp/pkg/hello_1.0-1_amd64.deb
 
+  hellocopyfile:
+    setup:
+    - !Ubuntu trusty
+    - !EnsureDir /tmp/pkg
+    - !Build
+      container: hellopkg
+      source: /var/pkg/hello_1.0-1_amd64.deb
+      path: /tmp/pkg/hello_1.0-1_amd64.deb
+    - !Sh dpkg -i /tmp/pkg/hello_1.0-1_amd64.deb
+
   deep:
     setup:
     - !Alpine v3.1
@@ -92,6 +102,10 @@ commands:
 
   hello-copy: !Command
     container: hellocopy
+    run: cat /usr/share/hello.txt
+
+  hello-copy-file: !Command
+    container: hellocopyfile
     run: cat /usr/share/hello.txt
 
   deep-cat: !Command

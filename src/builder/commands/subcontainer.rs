@@ -8,7 +8,7 @@ use config::containers::Container as Cont;
 use version::short_version;
 use container::mount::{remount_ro};
 use container::util::{copy_dir};
-use file_util::{create_dir};
+use file_util::{create_dir, shallow_copy};
 use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -106,8 +106,13 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
         if let Some(ref dest_rel) = binfo.path {
             let dest = Path::new("/vagga/root")
                 .join(dest_rel.rel());
-            try_msg!(copy_dir(&path, &dest, None, None),
-                "Error copying dir {p:?}: {err}", p=path);
+            if path.is_dir() {
+                try_msg!(copy_dir(&path, &dest, None, None),
+                    "Error copying dir {p:?}: {err}", p=path);
+            } else {
+                try_msg!(shallow_copy(&path, &dest, None, None),
+                    "Error copying dir {p:?}: {err}", p=path);
+            }
         } else if let Some(ref dest_rel) = binfo.temporary_mount {
             let dest = Path::new("/vagga/root")
                 .join(dest_rel.rel());
