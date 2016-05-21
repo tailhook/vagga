@@ -155,6 +155,31 @@ impl Lock {
             file: f,
         })
     }
+    pub fn exclusive_wait<P: AsRef<Path>>(path: P, message: &str)
+        -> Result<Lock, Error>
+    {
+        let f = try!(fs::File::create(path));
+        match flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock) {
+            Ok(()) => {}
+            Err(nix::Error::Sys(nix::Errno::EAGAIN)) => {
+                warn!("{}", message);
+                try!(flock(f.as_raw_fd(), FlockArg::LockExclusive)
+                    .map_err(|e| match e {
+                        nix::Error::Sys(code) => {
+                            Error::from_raw_os_error(code as i32)
+                        },
+                        nix::Error::InvalidPath => unreachable!(),
+                    }));
+            }
+            Err(nix::Error::Sys(code)) => {
+                return Err(Error::from_raw_os_error(code as i32))
+            }
+            Err(nix::Error::InvalidPath) => unreachable!(),
+        }
+        Ok(Lock {
+            file: f,
+        })
+    }
 }
 
 

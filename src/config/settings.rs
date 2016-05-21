@@ -13,6 +13,7 @@ pub struct Settings {
     pub uid_map: Option<(Vec<(uid_t, uid_t, uid_t)>,
                          Vec<(gid_t, gid_t, gid_t)>)>,
     pub push_image_script: Option<String>,
+    pub build_lock_wait: bool,
 }
 
 impl FromStr for Settings {

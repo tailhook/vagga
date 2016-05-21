@@ -21,6 +21,7 @@ struct SecureSettings {
     site_settings: BTreeMap<PathBuf, SecureSettings>,
     external_volumes: HashMap<String, PathBuf>,
     push_image_script: Option<String>,
+    build_lock_wait: Option<bool>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -36,7 +37,8 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("external_volumes", V::Mapping::new(
             V::Directory::new().is_absolute(false),
             V::Directory::new().is_absolute(true)))
-        .member("push_image_script", V::Scalar::new().optional());
+        .member("push_image_script", V::Scalar::new().optional())
+        .member("build_lock_wait", V::Scalar::new().optional());
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -51,23 +53,15 @@ struct InsecureSettings {
     shared_cache: Option<bool>,
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
+    build_lock_wait: Option<bool>,
 }
 
 pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
-    return Box::new(V::Structure { members: vec!(
-        ("version_check".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator + 'a>),
-        ("shared_cache".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator + 'a>),
-        ("ubuntu_mirror".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-        ("alpine_mirror".to_string(), Box::new(V::Scalar {
-            optional: true,
-            .. Default::default()}) as Box<V::Validator>),
-    ), .. Default::default()}) as Box<V::Validator>;
+    Box::new(V::Structure::new()
+    .member("version_check", V::Scalar::new().optional())
+    .member("shared_cache", V::Scalar::new().optional())
+    .member("ubuntu_mirror", V::Scalar::new().optional())
+    .member("alpine_mirror", V::Scalar::new().optional()))
 }
 
 #[derive(Debug)]
@@ -96,6 +90,7 @@ pub fn read_settings(project_root: &Path)
         ubuntu_mirror: None,
         alpine_mirror: None,
         push_image_script: None,
+        build_lock_wait: false,
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {
@@ -139,6 +134,9 @@ pub fn read_settings(project_root: &Path)
         if let Some(ref val) = cfg.push_image_script {
             int_settings.push_image_script = Some(val.clone());
         }
+        if let Some(val) = cfg.build_lock_wait {
+            int_settings.build_lock_wait = val;
+        }
         if let Some(cfg) = cfg.site_settings.get(project_root) {
             if let Some(ref dir) = cfg.storage_dir {
                 ext_settings.storage_dir = Some(dir.clone());
@@ -162,6 +160,9 @@ pub fn read_settings(project_root: &Path)
             if let Some(ref val) = cfg.push_image_script {
                 int_settings.push_image_script = Some(val.clone());
             }
+            if let Some(val) = cfg.build_lock_wait {
+                int_settings.build_lock_wait = val;
+            }
         }
     }
     let mut insecure_files = vec!();
@@ -184,6 +185,9 @@ pub fn read_settings(project_root: &Path)
         }
         if let Some(val) = cfg.shared_cache {
             ext_settings.shared_cache = val;
+        }
+        if let Some(val) = cfg.build_lock_wait {
+            int_settings.build_lock_wait = val;
         }
     }
     return Ok((ext_settings, int_settings));

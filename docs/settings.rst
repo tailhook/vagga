@@ -159,3 +159,10 @@ not to do so.
        :step:`Alpine` distribution, but also internally for fetching tools that
        are outside of the container filesystem (for example to fetch ``git``
        for :step:`Git` or :step:`GitInstall` command(s))
+
+.. opt:: build-lock-wait
+
+    By default (``build-lock-wait: false``) vagga stops current command and
+    prints a message when some other process have already started to build the
+    image. When this flag is set to ``true`` vagga will wait instead. This
+    is mostly useful for CI systems.
