@@ -117,10 +117,18 @@ vagga _init_storage_dir
   ``/vagga-storage``, when you run ``vagga _init_storage_dir abc`` will create
   a ``/vagga-storage/abc`` and ``.vagga`` with ``.vagga/.lnk`` pointing to
   the directory. The command ensures that the storage dir is not used for any
-  other folder.
+  other folder (unless ``--allow-multiple`` is specified).
 
   This is created for buildbots which tend to clean ``.vagga`` directory on
   every build (like gitlab-ci) or just very often.
+
+  Since vagga 0.6 there is ``--allow-multiple`` flag, that allows to keep
+  shared subdirectory for multiple source directories. This is useful for CI
+  systems which use different build directories for different builds.
+
+  .. warning:: While simultanenous builds of different source directories, with
+     the same subdirectory should work most of the time, this functionality
+     still considered exerimental and may have some edge cases.
 
 vagga _pack_image IMAGE_NAME
   Pack image into the tar archive, optionally compressing and output it into

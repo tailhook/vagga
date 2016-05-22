@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::io::{stdout, stderr, Write};
 
-use argparse::{ArgumentParser, Store};
+use argparse::{ArgumentParser, Store, StoreTrue};
 
 use file_util::{safe_ensure_dir, ensure_symlink};
 use config::read_settings::MergedSettings;
@@ -12,6 +12,7 @@ pub fn init_dir(settings: &MergedSettings, project_root: &Path,
     -> Result<i32, String>
 {
     let mut name = "".to_string();
+    let mut multiple = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -20,6 +21,13 @@ pub fn init_dir(settings: &MergedSettings, project_root: &Path,
             try their best to entirely clean the project directory. So we need
             to create `.vagga` dir again and link it to the correct folder in
             the storage.
+            ");
+        ap.refer(&mut multiple)
+            .add_option(&["--allow-multiple"], StoreTrue, "
+                Force this specific name even if it used for some other
+                directory and don't link storage dir back into the project
+                dir. Since vagga v0.6 using single container directory for
+                multiple source directories is supported as an experiment.
             ");
         ap.refer(&mut name)
             .add_argument("subdir_name", Store, "
@@ -49,9 +57,11 @@ pub fn init_dir(settings: &MergedSettings, project_root: &Path,
     let lnk = vagga.join(".lnk");
     try!(ensure_symlink(&target, &lnk)
         .map_err(|e| format!("Error symlinking {:?}: {}", lnk, e)));
-    let target_lnk = target.join(".lnk");
-    try!(ensure_symlink(&project_root, &target_lnk)
-        .map_err(|e| format!("Error symlinking {:?}: {}", target_lnk, e)));
+    if !multiple {
+        let target_lnk = target.join(".lnk");
+        try!(ensure_symlink(&project_root, &target_lnk)
+            .map_err(|e| format!("Error symlinking {:?}: {}", target_lnk, e)));
+    }
 
     return Ok(0);
 }
