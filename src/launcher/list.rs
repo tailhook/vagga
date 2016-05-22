@@ -39,6 +39,9 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
     } else {
         let mut out = stdout();
         for (k, cmd) in config.commands.iter() {
+            if k.starts_with("_") && !hidden {
+                continue;
+            }
             out.write_all(k.as_bytes()).ok();
             match cmd.description() {
                 Some(ref val) => {
@@ -69,4 +72,33 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
         }
     }
     return Ok(0);
+}
+
+pub fn print_help(config: &Config)
+    -> Result<i32, String>
+{
+    let mut err = stderr();
+    writeln!(&mut err, "Available commands:").ok();
+    for (k, cmd) in config.commands.iter() {
+        if k.starts_with("_") {
+            continue;
+        }
+        write!(&mut err, "    {}", k).ok();
+        match cmd.description() {
+            Some(ref val) => {
+                if k.len() > 19 {
+                    write!(&mut err, "\n                        ").ok();
+                } else {
+                    for _ in k.len()..19 {
+                        err.write_all(b" ").ok();
+                    }
+                    err.write_all(b" ").ok();
+                }
+                err.write_all(val[..].as_bytes()).ok();
+            }
+            None => {}
+        }
+        err.write_all(b"\n").ok();
+    }
+    Ok(127)
 }

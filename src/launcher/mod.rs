@@ -202,26 +202,7 @@ pub fn run() -> i32 {
 
     let result:Result<i32, String> = match &cname[..] {
         "" => {
-            writeln!(&mut err, "Available commands:").ok();
-            for (k, cmd) in context.config.commands.iter() {
-                write!(&mut err, "    {}", k).ok();
-                match cmd.description() {
-                    Some(ref val) => {
-                        if k.len() > 19 {
-                            write!(&mut err, "\n                        ").ok();
-                        } else {
-                            for _ in k.len()..19 {
-                                err.write_all(b" ").ok();
-                            }
-                            err.write_all(b" ").ok();
-                        }
-                        err.write_all(val[..].as_bytes()).ok();
-                    }
-                    None => {}
-                }
-                err.write_all(b"\n").ok();
-            }
-            return 127;
+            list::print_help(&context.config)
         }
         "_create_netns" => {
             network::create_netns(&context.config, args)
