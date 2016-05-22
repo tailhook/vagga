@@ -8,7 +8,7 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
 
 use nix;
-use libc::{uid_t, gid_t, c_int};
+use libc::{uid_t, gid_t, c_int, utime, utimbuf};
 use nix::fcntl::{flock, FlockArg};
 
 use digest::Digest;
@@ -273,4 +273,21 @@ pub fn shallow_copy(src: &Path, dest: &Path,
             owner_gid.unwrap_or(stat.gid())));
     }
     Ok(!is_dir)
+}
+
+pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
+    -> io::Result<()>
+{
+    let metadata = try!(fs::metadata(from.as_ref()));
+    let filename = CString::new(to.as_ref().as_os_str().as_bytes())
+                   .unwrap().as_ptr();
+    let utimes = utimbuf {
+        actime: metadata.atime(),
+        modtime: metadata.mtime(),
+    };
+    let rc = unsafe { utime(filename, &utimes) };
+    if rc != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
 }

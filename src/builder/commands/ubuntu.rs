@@ -1,21 +1,22 @@
 use std::fs::{rename, set_permissions, Permissions};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use quire::validate as V;
-use container::util::clean_dir;
+use unshare::Stdio;
+use scan_dir::ScanDir;
+use shaman::sha2::Sha256;
+use shaman::digest::Digest as ShamanDigest;
+
 use super::super::context::{Context};
 use super::super::download::download_file;
 use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};
-use shaman::sha2::Sha256;
-use shaman::digest::Digest as ShamanDigest;
 use builder::distrib::{Distribution, Named, DistroBox};
-use unshare::Stdio;
-use file_util::copy;
+use file_util::{copy, create_dir, copy_utime};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const DEFAULT_MIRROR: &'static str = "http://archive.ubuntu.com/ubuntu/";
@@ -105,6 +106,7 @@ pub struct Distro {
     config: UbuntuRelease,
     codename: Option<String>,
     apt_update: bool,
+    has_indices: bool,
     has_universe: bool,
 }
 
@@ -121,6 +123,9 @@ impl Distribution for Distro {
             return Err(From::from("Codename mismatch. \
                 This is either bug of vagga or may be damaged archive"));
         }
+        if self.codename.is_none() {
+            self.codename = Some(codename.clone());
+        }
         ctx.binary_ident = format!("{}-ubuntu-{}",
             ctx.binary_ident, codename);
         try!(init_ubuntu_core(ctx));
@@ -133,16 +138,18 @@ impl Distribution for Distro {
         -> Result<(), StepError>
     {
         if self.apt_update {
+            if !self.has_indices {
+                try!(self.ensure_codename(ctx));
+                self.copy_apt_lists_from_cache()
+                .map_err(|e| error!("Error copying apt-lists cache: {}. \
+                    Ignored.", e)).ok();
+                self.has_indices = true;
+            }
             self.apt_update = false;
             let mut cmd = try!(command(ctx, "apt-get"));
             cmd.arg("update");
             try!(run(cmd)
                 .map_err(|error| {
-                    debug!("The apt-get update failed. \
-                        Cleaning apt-lists so that apt can proceed next time");
-                    clean_dir(&Path::new("/vagga/cache/apt-lists"), false)
-                        .map_err(|e| error!(
-                            "Cleaning apt-lists cache failed: {}", e)).ok();
                     if ctx.settings.ubuntu_mirror.is_none() {
                         warn!("The `apt-get update` failed. You have no mirror\
                            setup, and default one is not always perfect.\n\
@@ -235,6 +242,9 @@ impl Distribution for Distro {
                Where CC is a two-letter country code where you currently are.\
                ");
         }
+        self.copy_apt_lists_to_cache()
+            .map_err(|e| error!("error when caching apt-lists: {}. Ignored.",
+                e)).ok();
         Ok(())
     }
 }
@@ -413,6 +423,48 @@ impl Distro {
             packages::Git => Some(vec!("git")),
             packages::Mercurial => Some(vec!("mercurial")),
         }
+    }
+
+    fn copy_apt_lists_from_cache(&self) -> io::Result<()> {
+        let dir = format!("/vagga/cache/apt-lists-{}",
+                          self.codename.as_ref().unwrap());
+        let cache_dir = Path::new(&dir);
+        if !cache_dir.exists() {
+            return Ok(());
+        }
+        let dir = Path::new("/vagga/root/var/lib/apt/lists");
+        try!(create_dir(dir, true));
+        ScanDir::files().read(&cache_dir, |iter| {
+            for (entry, name) in iter {
+                let tmpname = dir.join(format!(".tmp.{}", name));
+                let src = entry.path();
+                try!(copy(&src, &tmpname));
+                try!(copy_utime(&src, &tmpname));
+                try!(rename(&tmpname, dir.join(&name)));
+            }
+            Ok(())
+        }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
+    }
+
+    fn copy_apt_lists_to_cache(&self) -> io::Result<()> {
+        if !self.has_indices {
+            return Ok(());
+        }
+        let dir = format!("/vagga/cache/apt-lists-{}",
+            self.codename.as_ref().unwrap());
+        let cache_dir = Path::new(&dir);
+        try!(create_dir(&cache_dir, false));
+        ScanDir::files().read("/vagga/root/var/lib/apt/lists", |iter| {
+            for (entry, name) in iter {
+                if name == "lock" { continue };
+                let tmpname = cache_dir.join(format!(".tmp.{}", name));
+                let src = entry.path();
+                try!(copy(&src, &tmpname));
+                try!(copy_utime(&src, &tmpname));
+                try!(rename(tmpname, cache_dir.join(name)));
+            }
+            Ok(())
+        }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
     }
 }
 
@@ -602,6 +654,7 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
         config: config,
         codename: None, // unknown yet
         apt_update: true,
+        has_indices: false,
         has_universe: false,
     }));
     configure_common(&mut guard.ctx)
@@ -610,8 +663,6 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
 fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
     try!(ctx.add_cache_dir(Path::new("/var/cache/apt"),
                            "apt-cache".to_string()));
-    try!(ctx.add_cache_dir(Path::new("/var/lib/apt/lists"),
-                          "apt-lists".to_string()));
     ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
                        "noninteractive".to_string());
     ctx.environ.insert("LANG".to_string(),
