@@ -1,6 +1,6 @@
 use std::io;
 use std::rc::Rc;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use unshare;
 use regex;
@@ -41,9 +41,21 @@ quick_error! {
         CommandFailed(cmd: Box<unshare::Command>, status: unshare::ExitStatus) {
             display("error running {:?} {}", cmd, status)
         }
-        /// Can't open file, or similar
+        /// Can't copy file
+        Copy(src: PathBuf, dest: PathBuf, err: io::Error) {
+            display("can't copy file {:?} -> {:?}: {}", src, dest, err)
+            context(pair: (&'a Path, &'a Path), err: io::Error)
+                -> (pair.0.to_path_buf(), pair.1.to_path_buf(), err)
+            context(pair: (&'a PathBuf, &'a PathBuf), err: io::Error)
+                -> (pair.0.clone(), pair.1.clone(), err)
+        }
+        /// Can't read file
+        Read(path: PathBuf, err: io::Error) {
+            display("can't read {:?}: {}", path, err)
+        }
+        /// Can't write file
         Write(path: PathBuf, err: io::Error) {
-            display("can't write file {:?}: {}", path, err)
+            display("can't write {:?}: {}", path, err)
         }
         /// Can't read directory for copying
         ScanDir(errors: Vec<scan_dir::Error>) {

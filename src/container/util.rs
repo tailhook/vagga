@@ -39,7 +39,7 @@ pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     }
     // We temporarily change root, so that symlinks inside the dir
     // would do no harm. But note that dir itself can be a symlink
-    try!(temporary_change_root(dir, || {
+    try!(temporary_change_root::<_, _, _, String>(dir, || {
         let mut path = PathBuf::from("/");
         let diriter = try_msg!(read_dir(&path),
              "Can't read directory {d:?}: {err}", d=dir);

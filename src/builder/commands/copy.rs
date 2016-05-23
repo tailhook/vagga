@@ -1,6 +1,6 @@
 use std::io::ErrorKind;
 use std::fs::{symlink_metadata};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
 use libc::{uid_t, gid_t};
@@ -8,9 +8,11 @@ use quire::validate as V;
 use regex::Regex;
 use scan_dir::{ScanDir};
 
+use container::root::temporary_change_root;
 use file_util::{create_dir_mode, shallow_copy};
 use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use quick_error::ResultExt;
 
 
 #[derive(RustcDecodable, Debug)]
@@ -99,39 +101,41 @@ impl BuildStep for Copy {
         if !build {
             return Ok(());
         }
-        let ref src = self.source;
-        let dest = Path::new("/vagga/root").join(self.path.rel());
-        let typ = try!(symlink_metadata(src)
-            .map_err(|e| StepError::Write(src.into(), e)));
-        if typ.is_dir() {
-            try!(create_dir_mode(&dest, typ.permissions().mode())
-                .map_err(|e| StepError::Write(dest.clone(), e)));
-            let re = try!(Regex::new(&self.ignore_regex)
-                .map_err(|e| StepError::Regex(Box::new(e))));
-            try!(ScanDir::all().walk(src, |iter| {
-                for (entry, _) in iter {
-                    let fpath = entry.path();
-                    // We know that directory is inside
-                    // the source
-                    let path = fpath.rel_to(src).unwrap();
-                    // We know that it's decodable
-                    let strpath = path.to_str().unwrap();
-                    if re.is_match(strpath) {
-                        continue;
+        temporary_change_root("/vagga/root", || {
+            let ref src = self.source;
+            let dest = &self.path;
+            let typ = try!(symlink_metadata(src)
+                .map_err(|e| StepError::Read(src.into(), e)));
+            if typ.is_dir() {
+                try!(create_dir_mode(dest, typ.permissions().mode())
+                    .map_err(|e| StepError::Write(dest.clone(), e)));
+                let re = try!(Regex::new(&self.ignore_regex)
+                    .map_err(|e| StepError::Regex(Box::new(e))));
+                try!(ScanDir::all().walk(src, |iter| {
+                    for (entry, _) in iter {
+                        let fpath = entry.path();
+                        // We know that directory is inside
+                        // the source
+                        let path = fpath.rel_to(src).unwrap();
+                        // We know that it's decodable
+                        let strpath = path.to_str().unwrap();
+                        if re.is_match(strpath) {
+                            continue;
+                        }
+                        let fdest = dest.join(path);
+                        try!(shallow_copy(&fpath, &fdest,
+                                self.owner_uid, self.owner_gid)
+                            .context((&fpath, &fdest)));
                     }
-                    let fdest = dest.join(path);
-                    try!(shallow_copy(&fpath, &fdest,
-                            self.owner_uid, self.owner_gid)
-                        .map_err(|e| StepError::Write(fdest, e)));
-                }
-                Ok(())
-            }).map_err(StepError::ScanDir).and_then(|x| x));
-        } else {
-            try!(shallow_copy(&self.source, &dest,
-                              self.owner_uid, self.owner_gid)
-                 .map_err(|e| StepError::Write(dest.clone(), e)));
-        }
-        Ok(())
+                    Ok(())
+                }).map_err(StepError::ScanDir).and_then(|x| x));
+            } else {
+                try!(shallow_copy(&self.source, dest,
+                                  self.owner_uid, self.owner_gid)
+                    .context((&self.source, dest)));
+            }
+            Ok(())
+        })
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None

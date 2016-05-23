@@ -17,7 +17,6 @@ env_logger = "*"
 url = "*"
 unshare = "0.1.11"
 signal = "0.1.3"
-quick-error = "0.1.4"
 mopa = "0.2.2"
 anymap = "0.11.1"
 matches = "0.1.2"
@@ -30,7 +29,11 @@ tar = { git="git://github.com/alexcrichton/tar-rs", rev="c402adf"}
 flate2 = "0.2.13"
 bzip2 = "0.3.0"
 net2 = "0.2.23"
-humantime = "0.1.2"
+humantime = "0.1.3"
+
+[dependencies.quick-error]
+git = "git://github.com/tailhook/quick-error"
+branch = "context2"
 
 [[bin]]
 name = "vagga"

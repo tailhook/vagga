@@ -52,6 +52,15 @@ setup() {
     [[ $link = ".roots/hellomount.e7eb747f/root" ]]
 }
 
+@test "inheritance: Build copy from mount" {
+    run vagga hello-copy-from-mount
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
+    link=$(readlink .vagga/hellocopyfrommount)
+    [[ $link = ".roots/hellocopyfrommount.f4d6f6cc/root" ]]
+}
+
 @test "inheritance: Build copy" {
     run vagga hello-copy
     printf "%s\n" "${lines[@]}"

@@ -1,3 +1,5 @@
+#![recursion_limit="100"]
+
 use std::env;
 
 extern crate shaman;
