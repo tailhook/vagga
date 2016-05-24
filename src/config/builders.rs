@@ -8,6 +8,52 @@ use builder::commands as cmd;
 
 use build_step::{Step, BuildStep};
 
+const COMMANDS: [&'static str; 43] = [
+    "Alpine",
+    "Ubuntu",
+    "UbuntuRepo",
+    "UbuntuRelease",
+    "UbuntuPPA",
+    "UbuntuUniverse",
+    "AptTrust",
+    "Install",
+    "BuildDeps",
+    "Git",
+    "GitInstall",
+    "PipConfig",
+    "Py2Install",
+    "Py2Requirements",
+    "Py3Install",
+    "Py3Requirements",
+    "Tar",
+    "TarInstall",
+    "Unzip",
+    "Sh",
+    "Cmd",
+    "RunAs",
+    "Env",
+    "Text",
+    "Copy",
+    "Download",
+    "EnsureDir",
+    "CacheDirs",
+    "EmptyDir",
+    "Remove",
+    "Depends",
+    "Container",
+    "Build",
+    "SubConfig",
+    "NpmConfig",
+    "NpmDependencies",
+    "NpmInstall",
+    "GemInstall",
+    "GemBundle",
+    "GemConfig",
+    "ComposerInstall",
+    "ComposerDependencies",
+    "ComposerConfig",
+];
+
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
 pub struct PacmanRepo {
     pub name: String,
@@ -147,14 +193,9 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
 
 impl Decodable for Step {
     fn decode<D: Decoder>(d: &mut D) -> Result<Step, D::Error> {
-        // TODO(tailhook) this is just too slow
-        //                move it to lazy_static
-        let val = builder_validator();
-        let options = val.options.iter().map(|&(ref x, _)| &x[..])
-            .collect::<Vec<_>>();
         Ok(try!(d.read_enum("BuildStep", |d| {
-            d.read_enum_variant(&options, |d, index| {
-                decode_step(&options, index, d)
+            d.read_enum_variant(&COMMANDS, |d, index| {
+                decode_step(&COMMANDS, index, d)
             })
         })))
     }
