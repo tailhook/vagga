@@ -520,7 +520,7 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
                version)),
         };
         warn!("Note `!UbuntuRelease {{ version: {0:?} }}` is deprecated. \
-               Use `!UbuntuRelease {{ codename: {1:?} }}` or `!Ubuntu {1:?}`
+               Use `!UbuntuRelease {{ codename: {1:?} }}` or `!Ubuntu {1:?}` \
                instead", version, codename);
         vec![
             format!(
