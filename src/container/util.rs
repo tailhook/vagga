@@ -33,7 +33,11 @@ quick_error!{
     }
 }
 
-pub fn clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
+pub fn clean_dir<P: AsRef<Path>>(dir: P, remove_dir_itself: bool) -> Result<(), String> {
+    _clean_dir(dir.as_ref(), remove_dir_itself)
+}
+
+fn _clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     if !dir.exists() {
         return Ok(());
     }

@@ -18,6 +18,7 @@ use builder::commands::generic::{command, run};
 use builder::distrib::{Distribution, Named, DistroBox};
 use file_util::{copy, create_dir, copy_utime};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use container::util::clean_dir;
 
 const DEFAULT_MIRROR: &'static str = "http://archive.ubuntu.com/ubuntu/";
 
@@ -245,6 +246,7 @@ impl Distribution for Distro {
         self.copy_apt_lists_to_cache()
             .map_err(|e| error!("error when caching apt-lists: {}. Ignored.",
                 e)).ok();
+        try!(clean_dir("/vagga/root/var/lib/apt/lists", false));
         Ok(())
     }
 }
