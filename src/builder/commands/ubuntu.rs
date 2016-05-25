@@ -3,6 +3,7 @@ use std::os::unix::fs::{PermissionsExt, symlink};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::collections::btree_map::Entry::{Vacant, Occupied};
 
 use quire::validate as V;
 use unshare::Stdio;
@@ -27,6 +28,12 @@ const DEFAULT_MIRROR: &'static str = "http://archive.ubuntu.com/ubuntu/";
 pub struct Ubuntu(String);
 tuple_struct_decode!(Ubuntu);
 
+struct EMDParams {
+    needs_universe: bool,
+    package: &'static str,
+    preload: &'static str,
+}
+
 impl Ubuntu {
     pub fn config() -> V::Scalar {
         V::Scalar::new()
@@ -40,6 +47,7 @@ pub struct UbuntuRelease {
     pub url: Option<String>,
     pub arch: String,
     pub keep_chfn_command: bool,
+    pub eatmydata: bool,
 }
 
 impl UbuntuRelease {
@@ -50,6 +58,7 @@ impl UbuntuRelease {
         .member("url", V::Scalar::new().optional())
         .member("arch", V::Scalar::new().default("amd64"))
         .member("keep_chfn_command", V::Scalar::new().default(false))
+        .member("eatmydata", V::Scalar::new().default(true))
     }
 }
 
@@ -109,6 +118,7 @@ pub struct Distro {
     apt_update: bool,
     has_indices: bool,
     has_universe: bool,
+    do_eatmydata: bool,
 }
 
 impl Named for Distro {
@@ -138,6 +148,7 @@ impl Distribution for Distro {
     fn install(&mut self, ctx: &mut Context, pkgs: &[String])
         -> Result<(), StepError>
     {
+        let mut eatmy = None;
         if self.apt_update {
             if !self.has_indices {
                 try!(self.ensure_codename(ctx));
@@ -145,6 +156,19 @@ impl Distribution for Distro {
                 .map_err(|e| error!("Error copying apt-lists cache: {}. \
                     Ignored.", e)).ok();
                 self.has_indices = true;
+            }
+            if self.do_eatmydata {
+                eatmy = EMDParams::by_name(self.codename.as_ref().unwrap());
+                if let Some(ref params) = eatmy {
+                    if params.needs_universe {
+                        debug!("Add Universe for eat my data");
+                        try!(self.enable_universe());
+                        try!(self.add_universe(ctx));
+                    }
+                } else {
+                    info!("Unsupported distribution for eatmydata. Ingoring");
+                    self.do_eatmydata = false;
+                }
             }
             self.apt_update = false;
             let mut cmd = try!(command(ctx, "apt-get"));
@@ -166,6 +190,27 @@ impl Distribution for Distro {
                     error
                 }));
         }
+        if let Some(ref params) = eatmy {
+            let mut cmd = try!(command(ctx, "apt-get"));
+            cmd.arg("install");
+            cmd.arg("-y");
+            cmd.arg(params.package);
+            try!(run(cmd));
+            match ctx.environ.entry("LD_PRELOAD".to_string()) {
+                Vacant(v) => {
+                    v.insert(params.preload.to_string());
+                }
+                Occupied(ref mut o) => {
+                    let mut m = o.get_mut();
+                    if m.len() > 0 {
+                        m.push(':');
+                        m.push_str(params.preload);
+                    } else {
+                        m.push_str(params.preload);
+                    }
+                }
+            }
+        }
         let mut cmd = try!(command(ctx, "apt-get"));
         cmd.arg("install");
         cmd.arg("-y");
@@ -178,7 +223,7 @@ impl Distribution for Distro {
         -> Result<Vec<packages::Package>, StepError>
     {
         if !self.has_universe {
-            debug!("Add Universe");
+            debug!("Add Universe for ensure packages");
             try!(self.enable_universe());
             try!(self.add_universe(ctx));
         }
@@ -653,6 +698,7 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
     -> Result<(), StepError>
 {
     try!(guard.distro.set(Distro {
+        do_eatmydata: config.eatmydata,
         config: config,
         codename: None, // unknown yet
         apt_update: true,
@@ -693,6 +739,7 @@ impl BuildStep for Ubuntu {
             url: None,
             arch: String::from("amd64"),  // TODO(tailhook) detect
             keep_chfn_command: false,
+            eatmydata: true,
         }));
         if build {
             try!(guard.distro.bootstrap(&mut guard.ctx));
@@ -825,3 +872,27 @@ impl BuildStep for UbuntuRelease {
         None
     }
 }
+
+impl EMDParams {
+    fn by_name(name: &str) -> Option<EMDParams> {
+        match name {
+            "xenial" => Some(EMDParams {
+                needs_universe: false,
+                package: "libeatmydata1",
+                preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
+            }),
+            "trusty" => Some(EMDParams {
+                needs_universe: true,
+                package: "eatmydata",
+                preload: "/usr/lib/libeatmydata/libeatmydata.so",
+            }),
+            "precise" => Some(EMDParams {
+                needs_universe: true,
+                package: "eatmydata",
+                preload: "/usr/lib/libeatmydata/libeatmydata.so",
+            }),
+            _ => None,
+        }
+    }
+}
+

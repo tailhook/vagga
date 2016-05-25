@@ -37,14 +37,18 @@ Ubuntu Commands
    Example::
 
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
 
-   The value is single string having the codename of release ``trusty`` or
-   ``precise`` known to work at the time of writing.
+   The value is single string having the codename of release ``xenial``,
+   ``trusty`` and ``precise`` known to work at the time of writing.
 
    The Ubuntu images are updated on daily basis. But vagga downloads and
    caches the image. To update the image that was downloaded by vagga you need
    to clean the cache.
+
+   .. note:: This is shortcut install that enables all the default that are
+      enabled in :step:`UbuntuRelease`. You can switch to ``UbuntuRelease`` if
+      you need fine-grained control of things.
 
 .. step:: UbuntuRelease
 
@@ -86,9 +90,30 @@ Ubuntu Commands
      command is very rarely useful, so the option here is for completeness
      only.
 
+   eatmydata
+     (default ``true``) Install and enable ``libeatmydata``. This does **not**
+     literally eat your data, but disables all ``fsync`` and ``fdatasync``
+     operations during container build. This works only on distributions
+     where we have tested it: ``xenial``, ``trusty``, ``precise``. On other
+     distributions the option is ignored (but may be implemented in future).
+
+     The ``fsync`` system calls are used by ubuntu package management tools to
+     secure installing each package, so that on subsequent power failure your
+     system can boot. When building containers it's both the risk is much
+     smaller and build starts from scratch on any kind of failure anyway, so
+     partially written files and directories do not matter.
+
+     I.e. don't disable this flag unless you really want slow processing, or
+     you have some issues with LD_PRELOAD'ing the library.
+
+     .. note:: On ``trusty`` and ``precise`` this also enables ``universe``
+        repository by default.
+
    version
      The verison of ubuntu to install. This must be digital ``YY.MM`` form,
-     not a code name. **Deprecated**. Supported versions: ``12.04``,
+     not a code name.
+
+     **Deprecated**. Supported versions: ``12.04``,
      ``14.04``, ``14.10``, ``15.10``, ``16.04``. Other version will not work.
      This field will also be removed at some point in future.
 
