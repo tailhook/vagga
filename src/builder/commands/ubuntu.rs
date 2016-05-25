@@ -288,10 +288,23 @@ impl Distribution for Distro {
                Where CC is a two-letter country code where you currently are.\
                ");
         }
+
         self.copy_apt_lists_to_cache()
             .map_err(|e| error!("error when caching apt-lists: {}. Ignored.",
                 e)).ok();
+        // Remove lists after copying to cache, for two reasons:
+        // 1. It occupies space that is useless after installation
+        // 2. `partial` subdir has limited permissions, so you need to deal
+        //    with it when rsyncing directory to production
         try!(clean_dir("/vagga/root/var/lib/apt/lists", false));
+
+        // This is the only directory in standard distribution that has
+        // permissions of 0o700. While it's find for vagga itself it keeps
+        // striking us when rsyncing containers to production (i.e. need to
+        // remove the directory everywhere). But the directory is just useless
+        // in 99.9% cases because nobody wants to run rsyslog in container.
+        try!(clean_dir("/vagga/root/var/spool/rsyslog", true));
+
         Ok(())
     }
 }
