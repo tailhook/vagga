@@ -12,7 +12,7 @@ containers:
       PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates]
     - !Install [file]  # dependency of checkinstall (bug #46)
@@ -36,10 +36,10 @@ containers:
         make -j2
         cp lib/libunwind.a /musl/lib
     - !TarInstall
-      url: "http://static.rust-lang.org/dist/rust-1.8.0-x86_64-unknown-linux-gnu.tar.gz"
+      url: "http://static.rust-lang.org/dist/rust-1.9.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
     - !TarInstall
-      url: "http://static.rust-lang.org/dist/rust-std-1.8.0-x86_64-unknown-linux-musl.tar.gz"
+      url: "http://static.rust-lang.org/dist/rust-std-1.9.0-x86_64-unknown-linux-musl.tar.gz"
       script: "./install.sh --prefix=/musl \
                --components=rust-std-x86_64-unknown-linux-musl"
     - !Sh 'ln -s /musl/lib/rustlib/x86_64-unknown-linux-musl /usr/lib/rustlib/x86_64-unknown-linux-musl'
@@ -49,7 +49,7 @@ containers:
 
   testbase:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !BuildDeps [wget, git]
     - !Install [make, curl, zip]
