@@ -106,6 +106,6 @@ The legitimate reasons to run vagga as root are:
 * If your project dir is owned by root (for whatever crazy reason)
 
 Both cases should inhibit the warning automatically, but as a last resort
-you may try ``vagga --no-owner-check``. If you have good case where this
+you may try ``vagga --ignore-owner-check``. If you have good case where this
 works, please file an issue and we might make the check better.
 
