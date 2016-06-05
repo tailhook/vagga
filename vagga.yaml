@@ -52,7 +52,7 @@ containers:
     - !Ubuntu xenial
     - !UbuntuUniverse
     - !BuildDeps [wget, git]
-    - !Install [make, curl, zip]
+    - !Install [make, curl, zip, file]
     - !Sh |
         set -ex
         cd /tmp
