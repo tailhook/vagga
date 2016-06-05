@@ -3,10 +3,72 @@ Release Notes
 =============
 
 
-Vagga 0.5.0
+Vagga 0.6.0
 ===========
 
 :Release Date: future
+
+* vagga uses rust 1.9 and ubuntu xenial for building
+* Refactored internals to use traits for commands instead of large enum. This
+  makes adding more commands much easier.
+* Ubuntu images are now fetched from ``http://partner-images.ubuntu.com``
+  rather than ``http://cdimage.ubuntu.com``
+* vagga now uses single level of uid mappings and doesn't use the actual
+  mapping as part of container hash. This allows to use ``mount`` in container
+  more easily and also means we have reproducible containers hashes across
+  machines
+* ``!Copy``: fixed crash on absent directories, fix copying paths outside of
+  the ``/work``
+* Uses ``libmount`` for many mount operations (not all yet)
+* Added ``keep-composer`` and ``vendor-dir`` options to ``!ComposerSettings``
+* New command ``!Unzip`` similar to ``!Tar``
+* Implement (optional) checksum checking in ``!Tar`` and ``!TarInstall``
+* The ``minimum-vagga`` now works even when it doesn't know all the commands
+  in the config (still YAML syntax must be correct)
+* Add support for ``volumes`` in commands (not only in containers)
+* Vagga now uses ``tar-rs`` library for unpacking archives instead of busybox,
+  this may mean some features are new, and some archives could fail (please
+  report if you find one)
+* Add ``!Container`` volume type, which allows to mount other container as a
+  volume, mostly useful for deployment tools
+* Vagga now runs ``id -u -n`` for finding out username, previously was using
+  long names which aren't supported by some distributions (alpine == busybox)
+* Root user may now run vagga without ``/etc/subuid`` this makes container in
+  container scenario easier
+* Failed remount read-only is now a warning, this has two implications: you can
+  run vagga on tmpfs and in this case your root image is writable
+* Add ``vagga -m`` which allows to run multiple vagga commands in sequence
+* Add ``prerequsites`` option, which allows to run sequences of commands in
+  different containers
+* Add ``pass-tcp-port`` which allows to test systemd-like socket activation and
+  other scenarios that need passing tcp socket as file descriptor
+* Add ``image-cache-url`` option which allows to fetch cached image from
+  somewhere instead of building it locally
+* ``!Tar`` command now supports getting tar from ``/volumes/``
+* Add ``!RunAs`` command which allows to get rid of ``sudo`` and ``su`` in
+  build steps
+* Add ``--at-least`` option for ``vagga _clean --unused``
+* ``!Build`` command can copy file (previoulsy could only directory)
+* Add ``build-lock-wait`` setting to allow simultaneous builds of containers
+* Package lists from ``apt-get`` are now cached for each distribution and
+  doesn't fail on concurrent builds
+* Add ``--allow-multiple`` option to ``_init_storage_dir``
+* Commands with name starting with underscore are not listed in ``vagga``
+  and ``vagga _list`` by default (like built-in ones)
+* Ubuntu commands now use ``libeatmydata`` by default, which makes installing
+  packages about 3x faster
+* We remove ``/var/spool/rsyslog`` in ubuntu, this is only folder that makes
+  issues when rsyncing image because of permissions (it's not useful in
+  container anyway)
+* ``BuildDeps`` now don't try to ``apt-mark`` in subcontainer
+* Updated ``quire`` requires you need to write ``!*Unpack`` instead
+  of ``!Unpack``
+
+
+Vagga 0.5.0
+===========
+
+:Release Date: 03.04.2016
 
 * ``!Depends`` doesn't resolve symlinks but depends on the link itself
 * Pseudo-terminals in vagga containers now work
