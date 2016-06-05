@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::fs::File;
 
 use libmount::BindMount;
 
@@ -100,9 +101,14 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     if build {
         let version = try!(short_version(&cont, &guard.ctx.config)
             .map_err(|(s, e)| format!("step {}: {}", s, e)));
-        let path = Path::new("/vagga/base/.roots")
-            .join(format!("{}.{}", name, version)).join("root")
-            .join(binfo.source.rel());
+        let container = Path::new("/vagga/base/.roots")
+            .join(format!("{}.{}", name, version));
+        let path = container.join("root").join(binfo.source.rel());
+
+        // Update container use when using it as subcontainer (fixes #267)
+        File::create(Path::new(&container).join("last_use"))
+            .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
+
         if let Some(ref dest_rel) = binfo.path {
             let dest = Path::new("/vagga/root")
                 .join(dest_rel.rel());
@@ -126,16 +132,21 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     Ok(())
 }
 
-fn real_build(name: &String, cont: &Cont, guard: &mut Guard)
+fn real_copy(name: &String, cont: &Cont, guard: &mut Guard)
     -> Result<(), StepError>
 {
     let version = try!(short_version(&cont, &guard.ctx.config)
         .map_err(|(s, e)| format!("step {}: {}", s, e)));
-    let path = Path::new("/vagga/base/.roots")
-        .join(format!("{}.{}", name, version)).join("root");
-    try_msg!(copy_dir(&path, &Path::new("/vagga/root"),
+    let container = format!("/vagga/base/.roots/{}.{}", name, version);
+
+    // Update container use when using it as subcontainer (fixes #267)
+    File::create(Path::new(&container).join("last_use"))
+        .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
+
+    let root = Path::new(&container).join("root");
+    try_msg!(copy_dir(&root, &Path::new("/vagga/root"),
                       None, None),
-        "Error copying dir {p:?}: {err}", p=path);
+        "Error copying dir {p:?}: {err}", p=root);
     Ok(())
 }
 
@@ -149,7 +160,7 @@ pub fn clone(name: &String, guard: &mut Guard, build: bool)
             .map_err(|e| E::SubStep(b.0.clone(), Box::new(e))));
     }
     if build {
-        try!(real_build(name, cont, guard));
+        try!(real_copy(name, cont, guard));
     }
     Ok(())
 }
@@ -163,9 +174,15 @@ fn find_config(cfg: &SubConfig, guard: &mut Guard)
                 .expect("Subcontainer not found");  // TODO
             let version = try!(short_version(&cont, &guard.ctx.config)
                 .map_err(|(s, e)| format!("step {}: {}", s, e)));
-            Path::new("/vagga/base/.roots")
-                .join(format!("{}.{}", container, version))
-                .join("root").join(&cfg.path)
+            let container = Path::new("/vagga/base/.roots")
+                .join(format!("{}.{}", container, version));
+
+            // Update container use when using it as subcontainer (fixes #267)
+            File::create(Path::new(&container).join("last_use"))
+                .map_err(|e| warn!("Can't write image usage info: {}", e))
+                .ok();
+
+            container.join("root").join(&cfg.path)
         }
         Source::Git(ref _git) => {
             unimplemented!();
