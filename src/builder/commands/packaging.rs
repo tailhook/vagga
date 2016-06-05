@@ -58,12 +58,12 @@ impl BuildStep for BuildDeps {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        for i in self.0.iter() {
-            if !guard.ctx.packages.contains(i) {
-                guard.ctx.build_deps.insert(i.clone());
-            }
-        }
         if build {
+            for i in self.0.iter() {
+                if !guard.ctx.packages.contains(i) {
+                    guard.ctx.build_deps.insert(i.clone());
+                }
+            }
             try!(guard.distro.install(&mut guard.ctx, &self.0));
         }
         Ok(())
