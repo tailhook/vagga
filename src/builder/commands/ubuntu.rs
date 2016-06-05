@@ -21,7 +21,7 @@ use file_util::{copy, create_dir, copy_utime};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use container::util::clean_dir;
 
-const DEFAULT_MIRROR: &'static str = "http://archive.ubuntu.com/ubuntu/";
+const DEFAULT_MIRROR: &'static str = "mirror://mirrors.ubuntu.com/mirrors.txt";
 
 // Build Steps
 #[derive(Debug)]
@@ -633,7 +633,7 @@ pub fn init_ubuntu_core(ctx: &mut Context) -> Result<(), String> {
 fn set_mirror(ctx: &mut Context) -> Result<(), String> {
     let mirror = match ctx.settings.ubuntu_mirror {
         Some(ref mirror) => mirror,
-        None => return Ok(()),
+        None => DEFAULT_MIRROR,
     };
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
     let source = BufReader::new(try!(File::open(&sources_list)

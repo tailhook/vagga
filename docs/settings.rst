@@ -142,13 +142,14 @@ not to do so.
 
 .. opt:: ubuntu-mirror
 
-    Set to your preferred ubuntu mirror. By default it's
-    ``http://archive.ubuntu.com/ubuntu/``. You are encouraged to set this
-    setting to ``http://<COUNTRY_CODE>.archive.ubuntu.com/ubuntu/``,
-    to have faster download speed.
+    Set to your preferred ubuntu mirror. Default is currently a special
+    url ``mirror://mirrors.ubuntu.com/mirrors.txt`` which choses local mirror
+    for you. But it sometimes fails. Therefore we reserve an option to change
+    the default later.
 
-    You may also set special url ``mirror://mirrors.ubuntu.com/mirrors.txt``,
-    but it works very unreliably.
+    The best value for this settings is probably
+    ``http://<COUNTRY_CODE>.archive.ubuntu.com/ubuntu/``.
+
 
 .. opt:: alpine-mirror
 
