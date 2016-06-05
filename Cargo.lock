@@ -7,7 +7,7 @@ dependencies = [
  "bzip2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "humantime 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "libmount 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -15,7 +15,7 @@ dependencies = [
  "mopa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "net2 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "quick-error 1.0.0 (git+git://github.com/tailhook/quick-error?branch=context2)",
+ "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=41d7e94)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.67 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -115,10 +115,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "humantime"
-version = "0.1.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "quick-error 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -249,12 +249,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "quick-error"
-version = "1.0.0"
-source = "git+git://github.com/tailhook/quick-error?branch=context2#d7d01f9f474205d97af2604bb7dc95b929f3b3c7"
-
-[[package]]
-name = "quick-error"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -263,7 +258,7 @@ version = "0.1.8"
 source = "git+git://github.com/tailhook/rust-quire?rev=41d7e94#41d7e946814131b2fbbbc489e11d424e969e6ec1"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "quick-error 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -302,7 +297,7 @@ name = "scan_dir"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "quick-error 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

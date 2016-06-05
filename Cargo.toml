@@ -4,16 +4,16 @@ version = "0.5.0"
 authors = ["Paul Colomiets"]
 
 [dependencies]
-libc = "*"
-nix = "*"
-shaman = "*"
-rand = "*"
+libc = "0.2.10"
+nix = "0.5.0"
+shaman = "0.1.0"
+rand = "0.3.14"
 argparse = "0.2.1"
-rustc-serialize = "*"
-log = "*"
-time = "*"
-env_logger = "*"
-url = "*"
+rustc-serialize = "0.3.19"
+log = "0.3.6"
+time = "0.1.35"
+env_logger = "0.3.3"
+url = "1.0.0"
 unshare = "0.1.11"
 signal = "0.1.3"
 mopa = "0.2.2"
@@ -28,15 +28,12 @@ tar = { git="git://github.com/alexcrichton/tar-rs", rev="c402adf"}
 flate2 = "0.2.13"
 bzip2 = "0.3.0"
 net2 = "0.2.23"
-humantime = "0.1.3"
+humantime = "1.0.0"
+quick-error = "1.1.0"
 
 [dependencies.quire]
 git = "git://github.com/tailhook/rust-quire"
 rev = "41d7e94"
-
-[dependencies.quick-error]
-git = "git://github.com/tailhook/quick-error"
-branch = "context2"
 
 [[bin]]
 name = "vagga"
