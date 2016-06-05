@@ -17,6 +17,15 @@ containers:
     volumes:
       /etc: !Snapshot
 
+  tmpfs-subdirs:
+    setup:
+    - !Alpine v3.1
+    volumes:
+      /tmp: !Tmpfs
+        subdirs:
+          x:
+          y: { mode: 0o700 }
+
   snoop_shakespeare:
     setup:
     - !Alpine v3.3

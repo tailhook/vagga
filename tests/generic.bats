@@ -285,3 +285,16 @@ setup() {
     [[ -O .vagga/run_as/ids-110 ]]
     [[ ! -G .vagga/run_as/ids-110 ]]
 }
+
+@test "generic: Tmpfs Subdirs" {
+    vagga _build tmpfs-subdirs
+    run vagga _run tmpfs-subdirs stat -c "%A" /tmp
+    printf "%s\n", "${lines[@]}"
+    [[ $output = "drwxrwxrwt" ]]
+    run vagga _run tmpfs-subdirs stat -c "%A" /tmp/x
+    printf "%s\n", "${lines[@]}"
+    [[ $output = "drwxr-xr-x" ]]
+    run vagga _run tmpfs-subdirs stat -c "%A" /tmp/y
+    printf "%s\n", "${lines[@]}"
+    [[ $output = "drwx------" ]]
+}
