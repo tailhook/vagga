@@ -16,7 +16,7 @@ use container::mount::{unmount};
 use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
-use file_util::{read_visible_entries, create_dir, copy_stream};
+use file_util::{read_visible_entries, create_dir, create_dir_mode, copy_stream};
 use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -121,10 +121,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
         let write_err = |e| format!("Error writing {:?}: {}", path, e);
         let entry = src.header().entry_type();
         if entry.is_dir() {
-            try!(create_dir(&path, true).map_err(&write_err));
             let mode = try!(src.header().mode().map_err(&read_err));
-            try!(set_permissions(&path, Permissions::from_mode(mode))
-                .map_err(&write_err));
+            try!(create_dir_mode(&path, mode).map_err(&write_err));
         } else if entry.is_symlink() {
             let src = try!(try!(src.header().link_name().map_err(&read_err))
                 .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
