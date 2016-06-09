@@ -68,7 +68,6 @@ pub struct SubConfig {
     pub path: PathBuf,
     pub container: String,
     pub cache: Option<bool>,
-    pub change_dir: Option<bool>,
 }
 
 impl SubConfig {
@@ -88,7 +87,6 @@ impl SubConfig {
             .default("vagga.yaml"))
         .member("container", V::Scalar::new())
         .member("cache", V::Scalar::new().optional())
-        .member("change_dir", V::Scalar::new().optional())
     }
 }
 

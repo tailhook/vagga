@@ -63,6 +63,8 @@ Vagga 0.6.0
 * ``BuildDeps`` now don't try to ``apt-mark`` in subcontainer
 * Updated ``quire`` requires you need to write ``!*Unpack`` instead
   of ``!Unpack``
+* Remove ``change-dir`` option from ``SubConfig`` that never worked and was
+  never documented
 
 
 Vagga 0.5.0
