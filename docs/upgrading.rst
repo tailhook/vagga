@@ -2,6 +2,43 @@
 Upgrading
 =========
 
+Upgrading 0.5.0 -> 0.6.0
+========================
+
+This release doesn't introduce any severe incompatibilities. The bump of
+version is motivated mostly by the change of container hashes because of
+refactoring internals.
+
+Minor incompatibilities are:
+
+* Vagga now uses images from partner-images.ubuntu.com rather
+  than cdimage.ubuntu.com
+* Vagga now uses single level of uid mappings and doesn't use the actual
+  mapping as part of container hash. This allows to use ``mount`` in container
+  more easily and also means we have reproducible containers hashes across
+  machines
+* ``!Copy`` command now uses paths inside the container as the ``source``,
+  previously was inside the capsule (because of a mistake), however using
+  source ouside of the ``/work`` has not been documented
+* Checksum checking in ``!Tar`` and ``!TarInstall`` now works (previously you
+  could use an archive with wrong ``sha256`` parameter)
+* Vagga now uses ``tar-rs`` library for unpacking archives instead of busybox,
+  this may mean some features are new, and some archives could fail (please
+  report if you find one)
+* Vagga now runs ``id -u -n`` for finding out username, previously was using
+  long names which aren't supported by some distributions (alpine == busybox).
+* Commands with name starting with underscore are not listed in ``vagga``
+  and ``vagga _list`` by default (like built-in ones)
+* Ubuntu commands now use ``libeatmydata`` by default, which makes installing
+  packages about 3x faster
+* We remove ``/var/spool/rsyslog`` in ubuntu, this is only folder that makes
+  issues when rsyncing image because of permissions (it's not useful in
+  container anyway)
+* Updated ``quire`` requires you need to write ``!*Unpack`` instead
+  of ``!Unpack``
+* Remove ``change-dir`` option from ``SubConfig`` that never worked and was
+  never documented
+
 
 Upgrading 0.4.1 -> 0.5.0
 ========================
