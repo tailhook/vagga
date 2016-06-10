@@ -158,7 +158,8 @@ impl Distribution for Distro {
                 self.has_indices = true;
             }
             if self.do_eatmydata {
-                eatmy = EMDParams::by_name(self.codename.as_ref().unwrap());
+                eatmy = EMDParams::find(
+                    self.codename.as_ref().unwrap(), &self.config.arch);
                 if let Some(ref params) = eatmy {
                     if params.needs_universe {
                         debug!("Add Universe for eat my data");
@@ -887,19 +888,24 @@ impl BuildStep for UbuntuRelease {
 }
 
 impl EMDParams {
-    fn by_name(name: &str) -> Option<EMDParams> {
-        match name {
-            "xenial" => Some(EMDParams {
+    fn find(codename: &str, arch: &str) -> Option<EMDParams> {
+        match (codename, arch) {
+            ("xenial", "amd64") => Some(EMDParams {
                 needs_universe: false,
                 package: "libeatmydata1",
                 preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
             }),
-            "trusty" => Some(EMDParams {
+            ("xenial", "i386") => Some(EMDParams {
+                needs_universe: false,
+                package: "libeatmydata1",
+                preload: "/usr/lib/i386-linux-gnu/libeatmydata.so",
+            }),
+            ("trusty", _) => Some(EMDParams {
                 needs_universe: true,
                 package: "eatmydata",
                 preload: "/usr/lib/libeatmydata/libeatmydata.so",
             }),
-            "precise" => Some(EMDParams {
+            ("precise", _) => Some(EMDParams {
                 needs_universe: true,
                 package: "eatmydata",
                 preload: "/usr/lib/libeatmydata/libeatmydata.so",

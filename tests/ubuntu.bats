@@ -9,9 +9,9 @@ setup() {
 }
 
 @test "Ubuntu i386 builds" {
-    vagga _build trusty-i386
-    link=$(readlink .vagga/trusty-i386)
-    [[ $link = ".roots/trusty-i386.022c677e/root" ]]
+    vagga _build xenial-i386
+    link=$(readlink .vagga/xenial-i386)
+    [[ $link = ".roots/xenial-i386.58d98fb0/root" ]]
 }
 
 @test "Run echo command" {

@@ -4,11 +4,12 @@ containers:
     setup:
     - !Ubuntu trusty
 
-  trusty-i386:
+  xenial-i386:
     setup:
     - !UbuntuRelease
-      version: 14.04.4
+      codename: xenial
       arch: i386
+    - !Install [bc]
 
   trusty-calc:
     setup:
