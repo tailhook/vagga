@@ -234,16 +234,10 @@ If output is empty, you have to modify these files. Command should be similar to
 Building From Source
 ====================
 
-The only supported way to build from source is to build with vagga. It's as
-easy as installing vagga and running ``vagga make`` inside the the clone of a
-vagga repository.
+The recommended way to is to build with vagga. It's as easy as installing vagga
+and running ``vagga make`` inside the the clone of a vagga repository.
 
-.. note:: First build of vagga is **very slow** because it needs to build
-   rust with musl standard library. When I say slow, I mean it takes about
-   1 (on fast i7) to 4 hours and more on a laptop. Subsequent builds are much
-   faster (less than minute on my laptop).
-
-   Alternatively you can run ``vagga cached-make`` instead of ``vagga make``.
+.. note:: Alternatively you can run ``vagga cached-make`` instead of ``vagga make``.
    This downloads pre-built image that we use to run in Travis CI. This may be
    changed in future.
 
@@ -260,7 +254,16 @@ or just (in case you don't have ``make`` in host system)::
 
 Both support ``PREFIX`` and ``DESTDIR`` environment variables.
 
-.. note:: We stopped supporting out-of-container build because rust with musl
-   is just too hard to build. In case you are brave enough, just look at
-   ``vagga.yaml`` in the repository. It's pretty easy to follow and there is
-   everything needed to build rust-musl with dependencies.
+You can also build vagga out-of-container by using rustup.rs. Make sure you
+have the musl target installed::
+
+    $ rustup target add x86_64-unknown-linux-musl
+
+Also make sure you have musl-gcc in your path::
+
+    $ which musl-gcc
+    /usr/bin/musl-gcc
+
+Then just build using cargo and the appropriate target::
+
+    $ cargo build --target x86_64-unknown-linux-musl
