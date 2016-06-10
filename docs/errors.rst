@@ -109,3 +109,25 @@ Both cases should inhibit the warning automatically, but as a last resort
 you may try ``vagga --ignore-owner-check``. If you have good case where this
 works, please file an issue and we might make the check better.
 
+.. _virtualbox:
+
+Don't run vagga on shared folders
+---------------------------------
+
+If you are testing or using vagga using an OS X machine, you might be tempted
+to set up a Linux virtual machine and share your definitions into the machine. Sadly, this leads to the shared folder implementation lying to you: it pretends all files are owned by the user you use on the guest system, but this is not fully true. This manifests in errors such as this:
+
+    vagrant@vagrant-ubuntu-trusty-64:/vagrant/vagga$ vagga doc
+    (1/1) Installing alpine-keys (1.1-r0)
+    OK: 0 MiB in 1 packages
+    fetch http://dl-2.alpinelinux.org/alpine/v3.2/main/x86_64/APKINDEX.tar.gz
+    (1/15) Installing musl (1.1.11-r2)
+    (2/15) Installing busybox (1.23.2-r0)
+    ERROR: Failed to set ownership on bin/bbsuid.apk-new: Operation not permitted
+    ERROR: Failed to set file permissions on bin/bbsuid.apk-new: Operation not permitted
+    ERROR: Failed to preserve modification time on bin/bbsuid.apk-new: Operation not permitted
+    Executing busybox-1.23.2-r0.post-install
+
+and subsequent errors, including vagga not being allowed to clean up after itself.
+
+Don't use shared folders as your cache dir or storage dir, see :ref:`settings` for ways to change them.
