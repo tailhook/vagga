@@ -6,7 +6,7 @@ Release Notes
 Vagga 0.6.0
 ===========
 
-:Release Date: future
+:Release Date: 11.06.2016
 
 * vagga uses rust 1.9 and ubuntu xenial for building
 * Refactored internals to use traits for commands instead of large enum. This

@@ -16,8 +16,8 @@ Binary Installation
 Visit http://files.zerogw.com/vagga/latest.html to find out latest
 tarball version. Then run the following::
 
-    $ wget http://files.zerogw.com/vagga/vagga-0.5.0.tar.xz
-    $ tar -xJf vagga-0.5.0.tar.xz
+    $ wget http://files.zerogw.com/vagga/vagga-0.6.0.tar.xz
+    $ tar -xJf vagga-0.6.0.tar.xz
     $ cd vagga
     $ sudo ./install.sh
 
