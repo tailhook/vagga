@@ -2,7 +2,7 @@ use std::path::Path;
 
 use libmount::{BindMount, Tmpfs};
 
-use config::containers::SnapshotInfo;
+use config::volumes::SnapshotInfo;
 use file_util::create_dir;
 use container::mount::{unmount};
 use container::util::{copy_dir};

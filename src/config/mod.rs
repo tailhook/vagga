@@ -12,3 +12,4 @@ pub mod config;
 pub mod command;
 pub mod validate;
 pub mod version;
+pub mod volumes;

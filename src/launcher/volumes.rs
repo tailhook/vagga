@@ -1,4 +1,4 @@
-use config::containers::Volume::{self, Container};
+use config::volumes::Volume::{self, Container};
 use launcher::build::build_container;
 use launcher::Context;
 

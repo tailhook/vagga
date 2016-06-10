@@ -11,8 +11,8 @@ use libc::pid_t;
 use libmount::{BindMount, Tmpfs};
 
 use config::{Container, Settings};
-use config::containers::Volume;
-use config::containers::Volume as V;
+use config::volumes::Volume;
+use config::volumes::Volume as V;
 use container::root::{change_root};
 use container::mount::{unmount, mount_system_dirs, remount_ro};
 use container::mount::{mount_proc, mount_dev};

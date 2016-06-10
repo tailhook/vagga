@@ -8,7 +8,7 @@ use quire::ast::Ast;
 use quire::ast::Tag::{NonSpecific};
 use quire::ast::ScalarKind::{Plain};
 
-use super::containers::{Volume, volume_validator};
+use super::volumes::{Volume, volume_validator};
 
 type PortNumValidator = V::Numeric;
 
