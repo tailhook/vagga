@@ -237,10 +237,6 @@ Building From Source
 The recommended way to is to build with vagga. It's as easy as installing vagga
 and running ``vagga make`` inside the the clone of a vagga repository.
 
-.. note:: Alternatively you can run ``vagga cached-make`` instead of ``vagga make``.
-   This downloads pre-built image that we use to run in Travis CI. This may be
-   changed in future.
-
 There is also a ``vagga build-packages`` command which builds ubuntu and binary
 package and puts them into ``dist/``.
 
