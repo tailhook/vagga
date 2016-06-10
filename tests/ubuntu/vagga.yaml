@@ -50,7 +50,7 @@ commands:
     run: echo "$@"
 
   check-arch: !Command
-    container: trusty-i386
+    container: xenial-i386
     run: dpkg --print-architecture
 
   trusty-calc: !Command
