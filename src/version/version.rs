@@ -1,5 +1,4 @@
-use shaman::sha2::Sha256;
-use shaman::digest::Digest as ShamanDigest;
+use sha2::{Sha256, Digest as Sha2Digest};
 
 use config::{Config, Container};
 use super::error::Error;

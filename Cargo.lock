@@ -21,7 +21,7 @@ dependencies = [
  "regex 0.1.67 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "scan_dir 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "shaman 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sha2 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.5 (git+git://github.com/alexcrichton/tar-rs?rev=c402adf)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -301,11 +301,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "shaman"
-version = "0.1.0"
+name = "sha2"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

@@ -8,8 +8,7 @@ use std::collections::btree_map::Entry::{Vacant, Occupied};
 use quire::validate as V;
 use unshare::Stdio;
 use scan_dir::ScanDir;
-use shaman::sha2::Sha256;
-use shaman::digest::Digest as ShamanDigest;
+use sha2::{Sha256, Digest as Sha2Digest};
 
 use super::super::context::{Context};
 use super::super::download::download_file;
