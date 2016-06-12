@@ -2,7 +2,7 @@
 
 use std::env;
 
-extern crate shaman;
+extern crate sha2;
 extern crate libc;
 extern crate nix;
 extern crate rand;

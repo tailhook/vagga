@@ -4,8 +4,7 @@ use std::fs::{File, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
-use shaman::digest::Digest;
-use shaman::sha2::Sha256;
+use sha2::{Digest, Sha256};
 use unshare::{Command, Stdio};
 
 use super::capsule;

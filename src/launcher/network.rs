@@ -19,8 +19,7 @@ use libmount::BindMount;
 use container::uidmap::get_max_uidmap;
 use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
-use shaman::sha2::Sha256;
-use shaman::digest::Digest;
+use sha2::{Sha256, Digest};
 use file_util::{create_dir_mode};
 use process_util::{set_uidmap, env_command};
 

@@ -11,9 +11,6 @@ use nix;
 use libc::{uid_t, gid_t, c_int, utime, utimbuf};
 use nix::fcntl::{flock, FlockArg};
 
-use digest::Digest;
-
-
 extern "C" {
     fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;
 }
@@ -192,7 +189,8 @@ impl Drop for Lock {
 
 pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String) -> Result<(), String>
 {
-    use shaman::digest::Digest as ShamanDigest;
+    use digest::Digest;
+    use sha2::Digest as Sha2Digest;
 
     let mut hash = Digest::new();
     try_msg!(hash.stream(&mut reader),

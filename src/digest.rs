@@ -6,18 +6,18 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
 use libc::{uid_t, gid_t};
-use shaman::sha2;
-use shaman::digest::Digest as DigestTrait;
+use sha2::Sha256;
+use sha2::Digest as DigestTrait;
 
-pub struct Digest(sha2::Sha256);
+pub struct Digest(Sha256);
 
 
 impl Digest {
     pub fn new() -> Digest {
-        Digest(sha2::Sha256::new())
+        Digest(Sha256::new())
     }
     // TODO(tailhook) get rid of the method
-    pub fn unwrap(self) -> sha2::Sha256 {
+    pub fn unwrap(self) -> Sha256 {
         return self.0
     }
     pub fn item<V: AsRef<[u8]>>(&mut self, value: V) {
