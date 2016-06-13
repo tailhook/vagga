@@ -93,7 +93,7 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
                 clean_unused(wrapper, global, duration, dry_run)
             }
             Action::Transient => clean_transient(wrapper, global, dry_run),
-            _ => unimplemented!(),
+            Action::Everything => clean_everything(wrapper, global, dry_run),
         };
         match res {
             Ok(()) => {}
@@ -106,7 +106,8 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     return Ok(0);
 }
 
-fn clean_dir_wrapper(path: &Path, dry_run: bool) -> Result<(), String> {
+fn clean_dir_wrapper(path: &Path,
+        remove_dir_itself: bool, dry_run: bool) -> Result<(), String> {
     // TODO(tailhook) chroot to dir for removing
     if dry_run {
         println!("Would remove {:?}", path);
@@ -126,7 +127,7 @@ fn clean_dir_wrapper(path: &Path, dry_run: bool) -> Result<(), String> {
             None
         };
         debug!("Removing {:?}", path);
-        try!(clean_dir(path, true));
+        try!(clean_dir(path, remove_dir_itself));
         if let Some(_lock) = lock_guard {
             try!(remove_file(lock_name)
                 .map_err(|e| format!("Error removing lock file {:?}: {}",
@@ -134,6 +135,36 @@ fn clean_dir_wrapper(path: &Path, dry_run: bool) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
+    -> Result<(), String>
+{
+    if global {
+        if let Some(ref cache_dir) = wrapper.ext_settings.cache_dir {
+            try!(clean_dir_wrapper(&cache_dir, false, dry_run));
+        }
+        if let Some(ref storage_dir) = wrapper.ext_settings.storage_dir {
+            try!(clean_dir_wrapper(&storage_dir, false, dry_run));
+        }
+    } else {
+        let base = match try!(setup::get_vagga_base(
+            wrapper.project_root, wrapper.ext_settings))
+        {
+            Some(base) => base,
+            None => {
+                warn!("No vagga directory exists");
+                return Ok(());
+            }
+        };
+        try!(clean_dir_wrapper(&base, true, dry_run));
+        let inner = wrapper.project_root.join(".vagga");
+        if base != inner {
+            try!(clean_dir_wrapper(&inner, true, dry_run));
+        }
+
+    }
+    return Ok(());
 }
 
 fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
@@ -162,7 +193,7 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
            entry.file_name()[..].to_str().map(|n| n.starts_with(".tmp"))
                                          .unwrap_or(false)
         {
-            try!(clean_dir_wrapper(&entry.path(), dry_run));
+            try!(clean_dir_wrapper(&entry.path(), true, dry_run));
         }
     }
 
@@ -233,7 +264,7 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
                 }
             }
         }
-        try!(clean_dir_wrapper(&entry.path(), dry_run));
+        try!(clean_dir_wrapper(&entry.path(), true, dry_run));
     }
 
     return Ok(());
@@ -265,7 +296,7 @@ fn clean_dirs_except<P: AsRef<Path>>(roots: P, useful: &HashSet<String>,
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
-            try!(clean_dir_wrapper(&entry.path(), dry_run));
+            try!(clean_dir_wrapper(&entry.path(), true, dry_run));
         }
     }
     Ok(())
