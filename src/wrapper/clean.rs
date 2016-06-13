@@ -93,7 +93,7 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
                 clean_unused(wrapper, global, duration, dry_run)
             }
             Action::Transient => clean_transient(wrapper, global, dry_run),
-            _ => unimplemented!(),
+            Action::Everything => clean_everything(wrapper, global, dry_run),
         };
         match res {
             Ok(()) => {}
@@ -134,6 +134,23 @@ fn clean_dir_wrapper(path: &Path, dry_run: bool) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
+    -> Result<(), String>
+{
+    if global {
+        if let Some(ref cache_dir) = wrapper.ext_settings.cache_dir {
+            try!(clean_dir_wrapper(cache_dir.as_path(), dry_run));
+        }
+        if let Some(ref storage_dir) = wrapper.ext_settings.storage_dir {
+            try!(clean_dir_wrapper(storage_dir.as_path(), dry_run));
+        }
+    } else {
+        try!(clean_dir_wrapper(&wrapper.project_root.join(".vagga").as_path(),
+                               dry_run));
+    }
+    return Ok(());
 }
 
 fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
