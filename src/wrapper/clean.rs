@@ -147,8 +147,16 @@ fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
             try!(clean_dir_wrapper(storage_dir.as_path(), dry_run));
         }
     } else {
-        try!(clean_dir_wrapper(&wrapper.project_root.join(".vagga").as_path(),
-                               dry_run));
+        let base = match try!(setup::get_vagga_base(
+            wrapper.project_root, wrapper.ext_settings))
+        {
+            Some(base) => base,
+            None => {
+                warn!("No vagga directory exists");
+                return Ok(());
+            }
+        };
+        try!(clean_dir_wrapper(base.as_path(), dry_run));
     }
     return Ok(());
 }
