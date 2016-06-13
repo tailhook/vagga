@@ -371,7 +371,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     // Stopping loop
     if children.len() > 0 {
         let timeo = sup.kill_unresponsive_after;
-        let mut deadline = Instant::now() + Duration::new(timeo.into(), 0);
+        let mut deadline = Instant::now() + Duration::from_secs(timeo as u64);
         loop {
             match trap.wait(deadline) {
                 Some(SIGINT) => {}
@@ -404,7 +404,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                         child.signal(SIGKILL).ok();
                     }
                     // Basically this deadline should never happen
-                    deadline = Instant::now() + Duration::new(3600, 0);
+                    deadline = Instant::now() + Duration::from_secs(3600);
                 }
             }
         }
