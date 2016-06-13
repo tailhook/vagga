@@ -142,10 +142,10 @@ fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
 {
     if global {
         if let Some(ref cache_dir) = wrapper.ext_settings.cache_dir {
-            try!(clean_dir_wrapper(cache_dir.as_path(), false, dry_run));
+            try!(clean_dir_wrapper(&cache_dir, false, dry_run));
         }
         if let Some(ref storage_dir) = wrapper.ext_settings.storage_dir {
-            try!(clean_dir_wrapper(storage_dir.as_path(), false, dry_run));
+            try!(clean_dir_wrapper(&storage_dir, false, dry_run));
         }
     } else {
         let base = match try!(setup::get_vagga_base(
@@ -157,7 +157,12 @@ fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
                 return Ok(());
             }
         };
-        try!(clean_dir_wrapper(base.as_path(), false, dry_run));
+        try!(clean_dir_wrapper(&base, true, dry_run));
+        let inner = wrapper.project_root.join(".vagga");
+        if base != inner {
+            try!(clean_dir_wrapper(&inner, true, dry_run));
+        }
+
     }
     return Ok(());
 }
