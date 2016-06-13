@@ -1,0 +1,27 @@
+containers:
+  elasticsearch:
+    setup:
+    - !UbuntuRelease { version: 15.10 }
+    - !UbuntuUniverse
+    - !Install
+      - unzip
+      - openjdk-8-jdk
+      - openjdk-8-jre-headless
+      - ca-certificates
+      - ca-certificates-java
+    - !Download
+      url: https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/zip/elasticsearch/2.3.3/elasticsearch-2.3.3.zip
+      path: /root/elasticsearch-2.3.3.zip
+    - !Sh |
+        update-ca-certificates -f
+        unzip -q /root/elasticsearch-2.3.3.zip
+
+
+commands:
+  run: &elasticsearch !Command
+    description: Run elasticsearch
+    container: elasticsearch
+    work-dir: /work/elasticsearch-2.3.3/
+    user-id: 1
+    external-user-id: 0
+    run: ./bin/elasticsearch
