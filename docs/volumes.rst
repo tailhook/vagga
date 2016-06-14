@@ -162,3 +162,33 @@ Available volume types:
       ``/dev``, ``/proc`` and ``/sys`` directories are empty. So you probably
       can't chroot into the filesystem in any sensible way. But having that
       folders empty is actually what is useful for use cases like deploying.
+
+
+.. volume:: Persistent
+
+   Makes a writable directory just for this container. It's similar to
+   :volume:`BindRW` but creates a volume inside `.vagga/.volumes`
+
+   Example:;
+
+     commands:
+       postgres: !Volume
+         volumes:
+           /var/lib/postgres: !Persistent { name: "postgres" }
+         run: ...
+
+   There are a few reasons to use :volume:`Persistent` over :volume:`BindRW`:
+
+   1. User don't need to create the directories
+   2. When running vagga in VM it's a common practice to use more efficient
+      (or more featureful, like supporting hardlinks) filesystem for `.vagga`
+   3. It may be a little bit clearer than throwing all that writable stuff
+      into workdir (for example your `.vagga` is already in `.gitignore`)
+
+   Options:
+
+   name
+     **(required)** Name of the volume. Multiple containers using same name
+     will mount same volume (same instance of volume). Multiple volumes in
+     single container may reference same volume too. We currently don't
+     support mounting subvolumes but we may do in future.

@@ -440,6 +440,13 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     "mount !Container: {err}");
                 try!(remount_ro(&dest));
             }
+            &V::Persistent(ref info) => {
+                let path = Path::new("/vagga/base/.volumes/").join(&info.name);
+                try_msg!(create_dir(&path, true),
+                    "error creating dir for volume {p:?}: {err}", p=path);
+                try_msg!(BindMount::new(&path, &dest).mount(),
+                    "mount !BindRW: {err}");
+            }
         }
     }
     if let Ok(_) = env::var("VAGGA_NAMESPACE_DIR") {

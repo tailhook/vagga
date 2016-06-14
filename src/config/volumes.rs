@@ -13,6 +13,11 @@ pub struct SnapshotInfo {
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
+pub struct PersistentInfo {
+    pub name: String,
+}
+
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub enum Volume {
     Tmpfs(TmpfsInfo),
     BindRW(PathBuf),
@@ -21,6 +26,7 @@ pub enum Volume {
     VaggaBin,
     Snapshot(SnapshotInfo),
     Container(String),
+    Persistent(PersistentInfo),
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
@@ -59,4 +65,7 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
         .member("owner_gid", V::Numeric::new().min(0).optional())
         )
     .option("Container",  V::Scalar::new())
+    .option("Persistent",  V::Structure::new()
+        .member("name",  V::Scalar::new())
+        )
 }
