@@ -10,7 +10,6 @@ use builder::context::Context;
 use builder::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use file_util::{copy_stream, create_dir};
-use path_util::ToRelative;
 
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -101,7 +100,8 @@ impl BuildStep for Unzip {
         if build {
             info!("Unzipping file: {}", self.url);
 
-            let fpath = PathBuf::from("/vagga/root").join(self.path.rel());
+            let fpath = PathBuf::from("/vagga/root")
+                .join(self.path.strip_prefix("/").unwrap());
             let filename = try!(maybe_download_and_check_hashsum(
                 &mut guard.ctx, &self.url, self.sha256.clone()));
 

@@ -17,7 +17,6 @@ use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
 use file_util::{read_visible_entries, create_dir, create_dir_mode, copy_stream};
-use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -205,7 +204,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
 
 pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
-    let fpath = PathBuf::from("/vagga/root").join(tar.path.rel());
+    let fpath = PathBuf::from("/vagga/root")
+        .join(tar.path.strip_prefix("/").unwrap());
     let filename = try!(maybe_download_and_check_hashsum(
         ctx, &tar.url, tar.sha256.clone()));
 
@@ -263,7 +263,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
         items.into_iter().next().unwrap()
     };
     let workdir = PathBuf::from("/").join(
-        workdir.rel_to(&Path::new("/vagga/root")).unwrap());
+        workdir.strip_prefix("/vagga/root").unwrap());
     return run_command_at(ctx, &[
         "/bin/sh".to_string(),
         "-exc".to_string(),

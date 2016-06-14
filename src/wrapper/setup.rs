@@ -20,7 +20,6 @@ use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode, copy, safe_ensure_dir};
-use path_util::ToRelative;
 use wrapper::snapshot::make_snapshot;
 use container::util::version_from_symlink;
 
@@ -396,7 +395,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     }
 
     for (path, vol) in setup_info.volumes.iter() {
-        let dest = tgtroot.join(path.rel());
+        let dest = tgtroot.join(path.strip_prefix("/").unwrap());
         match *vol {
             &V::Tmpfs(ref params) => {
                 try!(Tmpfs::new(&dest)
@@ -452,12 +451,12 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     }
 
     if let Some(path) = setup_info.resolv_conf_path {
-        let path = tgtroot.join(path.rel());
+        let path = tgtroot.join(path.strip_prefix("/").unwrap());
         try!(copy(&Path::new("/etc/resolv.conf"), &path)
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
     }
     if let Some(path) = setup_info.hosts_file_path {
-        let path = tgtroot.join(path.rel());
+        let path = tgtroot.join(path.strip_prefix("/").unwrap());
         try!(copy(&Path::new("/etc/hosts"), &path)
             .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
     }
