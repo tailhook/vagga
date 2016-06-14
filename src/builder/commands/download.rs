@@ -5,7 +5,6 @@ use std::os::unix::ffi::OsStrExt;
 
 use quire::validate as V;
 use file_util::copy;
-use path_util::ToRelative;
 use builder::download::download_file;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -40,7 +39,8 @@ impl BuildStep for Download {
         -> Result<(), StepError>
     {
         if build {
-            let fpath = PathBuf::from("/vagga/root").join(self.path.rel());
+            let fpath = PathBuf::from("/vagga/root")
+                .join(self.path.strip_prefix("/").unwrap());
             let filename = if self.url.starts_with(".") {
                 PathBuf::from("/work").join(&self.url)
             } else {

@@ -6,7 +6,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::ffi::OsStrExt;
 
 use quire::validate as V;
-use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -37,7 +36,7 @@ impl BuildStep for Text {
         if build {
             for (path, text) in self.0.iter() {
                 let realpath = Path::new("/vagga/root")
-                    .join(path.rel());
+                    .join(path.strip_prefix("/").unwrap());
                 try!(File::create(&realpath)
                     .and_then(|mut f| f.write_all(text.as_bytes()))
                     .map_err(|e| format!("Can't create file: {}", e)));

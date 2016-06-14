@@ -6,7 +6,6 @@ use unshare::{Command};
 use quire::validate as V;
 
 use super::super::context::Context;
-use super::super::super::path_util::ToRelative;
 use process_util::{capture_stdout, set_fake_uidmap};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -84,14 +83,17 @@ fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
     if let Some(paths) = ctx.environ.get("PATH") {
         for dir in paths[..].split(':') {
             let path = Path::new(dir);
-            if !path.is_absolute() {
-                warn!("All items in PATH must be absolute, not {}",
-                      path.display());
-                continue;
-            }
-            if chroot.join(path.rel()).join(cmd).exists()
-            {
-                return Ok(path.join(cmd));
+            match path.strip_prefix("/") {
+                Ok(rel_path) => {
+                    if chroot.join(rel_path).join(cmd).exists() {
+                        return Ok(path.join(cmd));
+                    }
+                },
+                Err(_) => {
+                    warn!("All items in PATH must be absolute, not {}",
+                        path.display());
+                    continue;
+                }
             }
         }
         return Err(StepError::CommandNotFound(cmd.to_path_buf(), paths.clone()));

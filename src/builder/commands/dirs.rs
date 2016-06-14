@@ -6,7 +6,6 @@ use std::collections::BTreeMap;
 use quire::validate as V;
 
 use std::path::{Path, PathBuf};
-use path_util::ToRelative;
 use container::util::{clean_dir};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -56,7 +55,9 @@ impl CacheDirs {
 pub fn remove(path: &PathBuf, guard: &mut Guard)
     -> Result<(), StepError>
 {
-    let fpath = Path::new("/vagga/root").join(path.rel());
+    let fpath = Path::new("/vagga/root")
+        .join(try!(path.strip_prefix("/")
+            .map_err(|_| format!("Must be absolute: {:?}", path))));
     if fpath.is_dir() {
         try!(clean_dir(&fpath, true));
     } else if fpath.exists() {
@@ -64,14 +65,16 @@ pub fn remove(path: &PathBuf, guard: &mut Guard)
             .map_err(|e| format!("Error removing file {:?}: {}",
                                  &fpath, e)));
     }
-    guard.ctx.add_remove_dir(&path);
+    try!(guard.ctx.add_remove_dir(&path));
     Ok(())
 }
 
 pub fn ensure(path: &PathBuf, guard: &mut Guard)
     -> Result<(), StepError>
 {
-    let fpath = Path::new("/vagga/root").join(path.rel());
+    let fpath = Path::new("/vagga/root")
+        .join(try!(path.strip_prefix("/")
+            .map_err(|_| format!("Must be absolute: {:?}", path))));
     try!(create_dir_all(&fpath)
         .map_err(|e| format!("Error creating dir: {}", e)));
     try!(set_permissions(&fpath, Permissions::from_mode(0o755))
@@ -84,7 +87,7 @@ pub fn ensure(path: &PathBuf, guard: &mut Guard)
                 mount_point);
         }
     }
-    guard.ctx.add_ensure_dir(path);
+    try!(guard.ctx.add_ensure_dir(path));
     Ok(())
 }
 
@@ -116,7 +119,7 @@ impl BuildStep for EmptyDir {
         -> Result<(), StepError>
     {
         try!(clean_dir(&self.0, false));
-        guard.ctx.add_empty_dir(&self.0);
+        try!(guard.ctx.add_empty_dir(&self.0));
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {

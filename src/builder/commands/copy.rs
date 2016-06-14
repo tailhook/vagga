@@ -10,7 +10,6 @@ use scan_dir::{ScanDir};
 
 use container::root::temporary_change_root;
 use file_util::{create_dir_mode, shallow_copy};
-use path_util::ToRelative;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
 
@@ -53,7 +52,7 @@ impl BuildStep for Copy {
                             let strpath = {
                                 // We know that directory is inside
                                 // the source
-                                let path = fpath.rel_to(src).unwrap();
+                                let path = fpath.strip_prefix(src).unwrap();
                                 // We know that it's decodable
                                 let strpath = path.to_str().unwrap();
                                 if !re.is_match(strpath) {
@@ -116,7 +115,7 @@ impl BuildStep for Copy {
                         let fpath = entry.path();
                         // We know that directory is inside
                         // the source
-                        let path = fpath.rel_to(src).unwrap();
+                        let path = fpath.strip_prefix(src).unwrap();
                         // We know that it's decodable
                         let strpath = path.to_str().unwrap();
                         if re.is_match(strpath) {

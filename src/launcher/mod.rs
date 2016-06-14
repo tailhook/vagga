@@ -11,7 +11,6 @@ use options::build_mode::{build_mode, BuildMode};
 use config::{Config, Settings, find_config};
 use config::read_settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
-use super::path_util::ToRelative;
 use self::wrap::Wrapper;
 
 mod list;
@@ -153,7 +152,7 @@ pub fn run() -> i32 {
             return 126;
         }
     };
-    let int_workdir = workdir.rel_to(&cfg_dir)
+    let int_workdir = workdir.strip_prefix(&cfg_dir)
                              .unwrap_or(&Path::new("."));
 
     for k in propagate_env.into_iter() {

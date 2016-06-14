@@ -16,7 +16,6 @@ use builder::commands::npm::NpmConfig;
 use super::capsule;
 use super::packages;
 use super::timer;
-use path_util::ToRelative;
 use file_util::create_dir;
 use process_util::PROXY_ENV_VARS;
 
@@ -110,8 +109,8 @@ impl<'a> Context<'a> {
     pub fn add_cache_dir(&mut self, path: &Path, name: String)
         -> Result<(), String>
     {
-        assert!(path.is_absolute());
-        let path = path.rel();
+        let path = try!(path.strip_prefix("/")
+            .map_err(|_| format!("cache_dir must be absolute: {:?}", path)));
         if self.cache_dirs.insert(path.to_path_buf(), name.clone()).is_none() {
             let cache_dir = Path::new("/vagga/cache").join(&name);
             if !cache_dir.exists() {
@@ -129,19 +128,31 @@ impl<'a> Context<'a> {
         return Ok(());
     }
 
-    pub fn add_remove_dir(&mut self, path: &Path) {
-        assert!(path.is_absolute());
-        self.remove_dirs.insert(path.rel().to_path_buf());
+    pub fn add_remove_dir(&mut self, path: &Path)
+        -> Result<(), String>
+    {
+        let rel_path = try!(path.strip_prefix("/")
+            .map_err(|_| format!("remove_dir must be absolute: {:?}", path)));
+        self.remove_dirs.insert(rel_path.to_path_buf());
+        Ok(())
     }
 
-    pub fn add_empty_dir(&mut self, path: &Path) {
-        assert!(path.is_absolute());
-        self.empty_dirs.insert(path.rel().to_path_buf());
+    pub fn add_empty_dir(&mut self, path: &Path)
+        -> Result<(), String>
+    {
+        let rel_path = try!(path.strip_prefix("/")
+            .map_err(|_| format!("empty_dir must be absolute: {:?}", path)));
+        self.empty_dirs.insert(rel_path.to_path_buf());
+        Ok(())
     }
 
-    pub fn add_ensure_dir(&mut self, path: &Path) {
-        assert!(path.is_absolute());
-        self.ensure_dirs.insert(path.rel().to_path_buf());
+    pub fn add_ensure_dir(&mut self, path: &Path)
+        -> Result<(), String>
+    {
+        let rel_path = try!(path.strip_prefix("/")
+            .map_err(|_| format!("ensure_dir must be absolute: {:?}", path)));
+        self.ensure_dirs.insert(rel_path.to_path_buf());
+        Ok(())
     }
 
 }
