@@ -62,7 +62,7 @@ pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
     let (cfg_dir, filename) = match find_config_path(work_dir) {
         Some(pair) => pair,
         None => return Err(format!(
-            "Config not found in path {}", work_dir.display())),
+            "Config not found in path {:?}", work_dir)),
     };
     assert!(cfg_dir.is_absolute());
     let cfg = try!(read_config(&filename));
@@ -76,8 +76,8 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
     {
         Ok(cfg) => cfg,
         Err(e) => {
-            return Err(format!("Config {} cannot be read: {}",
-                filename.display(), e));
+            return Err(format!("Config {:?} cannot be read: {}",
+                filename, e));
         }
     };
     for (_, ref mut container) in config.containers.iter_mut() {

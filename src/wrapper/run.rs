@@ -88,8 +88,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             }
         }
         if !cpath.is_absolute() {
-            return Err(format!("Command {} not found in {:?}",
-                cpath.display(), &paths));
+            return Err(format!("Command {:?} not found in {:?}",
+                cpath, &paths));
         }
     }
 

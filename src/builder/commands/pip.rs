@@ -190,7 +190,8 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
     try!(packages::ensure_packages(distro, ctx, &features));
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.push("--requirement".to_string());
-    pip_cli.push(reqtxt.display().to_string()); // TODO(tailhook) fix conversion
+    pip_cli.push(try!(reqtxt.to_str()
+        .ok_or("Incorrect path for requirements file")).to_string());
     run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }

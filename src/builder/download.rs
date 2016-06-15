@@ -47,7 +47,7 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     }
     for url in urls {
         let url = url.as_ref();
-        info!("Downloading image {} -> {}", url, filename.display());
+        info!("Downloading image {} -> {:?}", url, filename);
         let tmpfilename = filename.with_file_name(name.clone() + ".part");
         let mut cmd = Command::new(
             if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });

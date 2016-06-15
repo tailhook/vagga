@@ -90,8 +90,8 @@ fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
                     }
                 },
                 Err(_) => {
-                    warn!("All items in PATH must be absolute, not {}",
-                        path.display());
+                    warn!("All items in PATH must be absolute, not {:?}",
+                        path);
                     continue;
                 }
             }

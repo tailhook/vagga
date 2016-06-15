@@ -40,7 +40,7 @@ pub fn change_root(new_root: &Path, put_old: &Path) -> Result<(), String>
 {
     if unsafe { pivot_root(CString::new(new_root.to_str().unwrap()).unwrap().as_ptr(),
                            CString::new(put_old.to_str().unwrap()).unwrap().as_ptr()) } != 0 {
-        return Err(format!("Error pivot_root to {}: {}", new_root.display(),
+        return Err(format!("Error pivot_root to {:?}: {}", new_root,
                            IoError::last_os_error()));
     }
     if unsafe { chdir(CString::new("/").unwrap().as_ptr()) } != 0 {

@@ -222,8 +222,7 @@ pub fn _build_container(container: &str,
                         rebuilt container to make sure it has proper \
                         permissions");
                     } else {
-                        debug!("Path {} is already built",
-                               finalpath.display());
+                        debug!("Path {:?} is already built", finalpath);
                         return Ok(name);
                     }
                 }
@@ -311,8 +310,7 @@ pub fn _build_container(container: &str,
     let name = format!("{}.{}", container,
         &ver[..8]);
     let finalpath = Path::new("/vagga/base/.roots").join(&name);
-    debug!("Committing {} -> {}", tmppath.display(),
-                                  finalpath.display());
+    debug!("Committing {:?} -> {:?}", tmppath, finalpath);
     match commit_root(&tmppath, &finalpath) {
         Ok(()) => {}
         Err(x) => {

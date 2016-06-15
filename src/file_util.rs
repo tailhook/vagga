@@ -61,22 +61,22 @@ pub fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
 pub fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
     match fs::symlink_metadata(dir) {
         Ok(ref stat) if stat.file_type().is_symlink() => {
-            return Err(format!(concat!("The `{0}` dir can't be a symlink. ",
-                               "Please run `unlink {0}`"), dir.display()));
+            return Err(format!(concat!("The `{0:?}` dir can't be a symlink. ",
+                               "Please run `unlink {0:?}`"), dir));
         }
         Ok(ref stat) if stat.file_type().is_dir() => {
             // ok
         }
         Ok(_) => {
-            return Err(format!(concat!("The `{0}` must be a directory. ",
-                               "Please run `unlink {0}`"), dir.display()));
+            return Err(format!(concat!("The {0:?} must be a directory. ",
+                               "Please run `unlink {0:?}`"), dir));
         }
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
             try_msg!(create_dir(dir, false),
                 "Can't create {dir:?}: {err}", dir=dir);
         }
         Err(ref e) => {
-            return Err(format!("Can't stat `{}`: {}", dir.display(), e));
+            return Err(format!("Can't stat {:?}: {}", dir, e));
         }
     }
     return Ok(());

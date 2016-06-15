@@ -36,8 +36,8 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
     let name = match project_root.file_name().and_then(|x| x.to_str()) {
         Some(name) => name,
         None => return Err(format!(
-            "Project dir `{}` is either root or has bad characters",
-            project_root.display())),
+            "Project dir {:?} is either root or has bad characters",
+            project_root)),
     };
     let path = storage_dir.join(name);
     if !path.exists() {
@@ -50,8 +50,8 @@ fn create_storage_dir(storage_dir: &Path, project_root: &Path)
             return Ok(path);
         }
     }
-    return Err(format!("Too many similar paths named {} in {}",
-        name, storage_dir.display()));
+    return Err(format!("Too many similar paths named {} in {:?}",
+        name, storage_dir));
 }
 
 
@@ -62,9 +62,9 @@ fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
     match settings.cache_dir {
         Some(ref dir) if settings.shared_cache => {
             if !dir.exists() {
-                return Err(format!(concat!("Cache directory `{}` must exists.",
+                return Err(format!(concat!("Cache directory {:?} must exists.",
                     " Please either create it or remove that configuration",
-                    " setting"), dir.display()));
+                    " setting"), dir));
             }
             return Ok(dir.clone());
         }
@@ -104,14 +104,14 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
                     if !lnkdir.exists() {
                         return Err(format!("Your .vagga/.lnk points to a \
                             non-existent directory. Presumably you deleted \
-                            dir {}. Just remove .vagga/.lnk now.",
-                            lnk.display()));
+                            dir {:?}. Just remove .vagga/.lnk now.",
+                            lnk));
                     }
                     return Ok(Ok(target));
                 } else {
-                    return Err(format!(concat!("Bad link .vagga/.lnk: {}.",
+                    return Err(format!(concat!("Bad link .vagga/.lnk: {:?}.",
                         " You are pobably need to remove it now"),
-                        lnk.display()));
+                        lnk));
                 }
             }
             Err(ref e) if e.kind() == ErrorKind::NotFound => {
@@ -284,17 +284,17 @@ pub fn get_environment(container: &Container, settings: &Settings)
     if let Some(ref filename) = container.environ_file {
         let f = BufReader::new(try!(
                 File::open(filename)
-                .map_err(|e| format!("Error reading environment file {}: {}",
-                    filename.display(), e))));
+                .map_err(|e| format!("Error reading environment file {:?}: {}",
+                    filename, e))));
         for line_read in f.lines() {
             let line = try!(line_read
-                .map_err(|e| format!("Error reading environment file {}: {}",
-                    filename.display(), e)));
+                .map_err(|e| format!("Error reading environment file {:?}: {}",
+                    filename, e)));
             let mut pair = line[..].splitn(2, '=');
             let key = pair.next().unwrap();
             let mut value = try!(pair.next()
-                .ok_or(format!("Error reading environment file {}: bad format",
-                    filename.display())));
+                .ok_or(format!("Error reading environment file {:?}: bad format",
+                    filename)));
             if value.len() > 0 && value.starts_with("\"") {
                 value = value.trim_matches('"');
             }

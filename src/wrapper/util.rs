@@ -11,8 +11,8 @@ pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
             for dir in paths[..].split(':') {
                 let path = Path::new(dir);
                 if !path.is_absolute() {
-                    warn!("All items in PATH must be absolute, not {}",
-                          path.display());
+                    warn!("All items in PATH must be absolute, not {:?}",
+                          path);
                     continue;
                 }
                 let path = path.join(cmd);

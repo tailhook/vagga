@@ -136,7 +136,7 @@ pub fn unmount(target: &Path) -> Result<(), String> {
         return Ok(());
     } else {
         let err = IoError::last_os_error();
-        return Err(format!("Can't unmount {} : {}", target.display(), err));
+        return Err(format!("Can't unmount {:?} : {}", target, err));
     }
 }
 

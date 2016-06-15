@@ -720,8 +720,8 @@ impl PortForwardGuard {
 impl Drop for PortForwardGuard {
     fn drop(&mut self) {
         if let Err(e) = set_namespace(&self.nspath, Namespace::Net) {
-            error!("Can't set namespace {}: {}. \
-                    Unable to clean firewall rules", self.nspath.display(), e);
+            error!("Can't set namespace {:?}: {}. \
+                    Unable to clean firewall rules", self.nspath, e);
             return;
         }
         for port in self.ports.iter() {
