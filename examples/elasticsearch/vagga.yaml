@@ -1,4 +1,3 @@
-minimum-vagga: v0.6.1-15-g1c32760
 containers:
   elastic:
     setup:
@@ -16,7 +15,7 @@ containers:
       - ca-certificates
       - ca-certificates-java
       - openjdk-8-jre-headless
-      - elasticsearch
+      - elasticsearch=2.3.3
     - !EnsureDir /var/elastic
     volumes:
       /var/elastic: !Persistent { name: elastic }
