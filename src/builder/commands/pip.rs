@@ -313,24 +313,37 @@ impl BuildStep for Py3Install {
     }
 }
 
+fn parse_req_filename(line: &str) -> Option<&str> {
+    if line.starts_with("-r") {
+        return Some(line[2..].trim())
+    } else if line.starts_with("--requirement ") ||
+              line.starts_with("--requirement=") {
+        return Some(line[14..].trim())
+    } else {
+        return None
+    }
+}
+
 fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
     let path = Path::new("/work").join(fname);
-    let err = |e| VersionError::Io(e, path.clone());
-    File::open(&path)
-    .and_then(|f| {
-            let f = BufReader::new(f);
-            for line in f.lines() {
-                let line = try!(line);
-                let chunk = line[..].trim();
-                // Ignore empty lines and comments
-                if chunk.len() == 0 || chunk.starts_with("#") {
-                    continue;
-                }
-                // Should we also ignore the order?
-                hash.item(chunk);
-            }
-            Ok(())
-    }).map_err(err)
+    let f = try!(File::open(&path)
+                      .map_err(|e| VersionError::Io(e, path.clone())));
+
+    let f = BufReader::new(f);
+    for line in f.lines() {
+        let line = try!(line.map_err(|e| VersionError::Io(e, path.clone())));
+        let chunk = line[..].trim();
+        // Ignore empty lines and comments
+        if chunk.len() == 0 || chunk.starts_with("#") {
+            continue;
+        }
+        if let Some(req) = parse_req_filename(chunk) {
+            try!(version_req(hash, &fname.parent().unwrap().join(req)));
+        }
+        // Should we also ignore the order?
+        hash.item(chunk);
+    }
+    Ok(())
 }
 
 impl BuildStep for Py2Requirements {
