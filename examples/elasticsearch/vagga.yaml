@@ -1,0 +1,35 @@
+minimum-vagga: v0.6.1-15-g1c32760
+containers:
+  elastic:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    # elastic PGP & Repo
+    - !AptTrust
+      server: pgp.mit.edu
+      keys: [D88E42B4]
+    - !UbuntuRepo
+      url: http://packages.elastic.co/elasticsearch/2.x/debian
+      suite: stable
+      components: [main]
+    - !Install
+      - ca-certificates
+      - ca-certificates-java
+      - openjdk-8-jre-headless
+      - elasticsearch
+    - !EnsureDir /var/elastic
+    volumes:
+      /var/elastic: !Persistent { name: elastic }
+
+commands:
+  elastic: !Command
+    description: Run elasticsearch
+    container: elastic
+    user-id: 1
+    external-user-id: 0
+    run:
+    - /usr/share/elasticsearch/bin/elasticsearch
+    - -Des.path.conf=/etc/elasticsearch
+    - -Des.path.logs=/tmp
+    - -Des.path.work=/tmp
+    - -Des.path.data=/var/elastic/data
