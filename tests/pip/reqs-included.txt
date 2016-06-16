@@ -1,3 +1,0 @@
--r temp1.txt
---requirement=temp2.txt
-setuptools

@@ -71,7 +71,7 @@ containers:
   py3req-recursive-reqs:
     setup:
     - !Alpine v3.2
-    - !Py3Requirements reqs-included.txt
+    - !Py3Requirements include-nested.txt
 
   py3req-inherit:
     setup:

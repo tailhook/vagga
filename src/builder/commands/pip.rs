@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::collections::HashMap;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
@@ -314,14 +315,18 @@ impl BuildStep for Py3Install {
 }
 
 fn parse_req_filename(line: &str) -> Option<&str> {
-    if line.starts_with("-r") {
-        return Some(line[2..].trim())
-    } else if line.starts_with("--requirement ") ||
-              line.starts_with("--requirement=") {
-        return Some(line[14..].trim())
-    } else {
-        return None
+    let res =
+        vec!["-r", "--requirement ", "--requirement=",
+             "-c", "--constraint ", "--constraint="]
+            .into_iter()
+            .map(|x| (x, x.len()))
+            .collect::<HashMap<_, _>>();
+    for (prefix, pos) in res {
+        if line.starts_with(prefix) {
+            return Some(line[pos..].trim());
+        }
     }
+    return None;
 }
 
 fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
