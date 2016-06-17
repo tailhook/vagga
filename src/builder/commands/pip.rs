@@ -335,7 +335,8 @@ fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
 
     let name = format!("{:?}", path);
     if used.contains(&name[..]) {
-        return Ok(())
+        return Err(VersionError::String(
+            format!("Cyclic requirement: {}", name)))
     }
 
     used.insert(name);
@@ -355,6 +356,7 @@ fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
             try!(version_req(hash,
                              &fname.parent().unwrap().join(req),
                              used));
+            continue;
         }
         // Should we also ignore the order?
         hash.item(chunk);
