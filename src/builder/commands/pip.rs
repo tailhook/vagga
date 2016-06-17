@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::collections::HashSet;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
@@ -314,31 +315,61 @@ impl BuildStep for Py3Install {
     }
 }
 
-fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
-    let path = Path::new("/work").join(fname);
-    let err = |e| VersionError::Io(e, path.clone());
-    File::open(&path)
-    .and_then(|f| {
-            let f = BufReader::new(f);
-            for line in f.lines() {
-                let line = try!(line);
-                let chunk = line[..].trim();
-                // Ignore empty lines and comments
-                if chunk.len() == 0 || chunk.starts_with("#") {
-                    continue;
-                }
-                // Should we also ignore the order?
-                hash.item(chunk);
-            }
-            Ok(())
-    }).map_err(err)
+fn parse_req_filename(line: &str) -> Option<&str> {
+    let res = vec!["-r", "--requirement ", "--requirement=",
+                   "-c", "--constraint ", "--constraint="];
+    for prefix in res.iter() {
+        if line.starts_with(prefix) {
+            return Some(line[prefix.len()..].trim());
+        }
+    }
+    return None;
+}
+
+fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
+               Result<(), VersionError> {
+
+    let path = try!(Path::new("/work")
+                       .join(fname)
+                       .canonicalize()
+                       .map_err(|e| VersionError::Io(e, fname.to_path_buf())));
+
+    let name = format!("{:?}", path);
+    if used.contains(&name[..]) {
+        return Err(VersionError::String(
+            format!("Cyclic requirement: {}", name)))
+    }
+
+    used.insert(name);
+
+    let f = try!(File::open(&path)
+                      .map_err(|e| VersionError::Io(e, path.clone())));
+
+    let f = BufReader::new(f);
+    for line in f.lines() {
+        let line = try!(line.map_err(|e| VersionError::Io(e, path.clone())));
+        let chunk = line[..].trim();
+        // Ignore empty lines and comments
+        if chunk.len() == 0 || chunk.starts_with("#") {
+            continue;
+        }
+        if let Some(req) = parse_req_filename(chunk) {
+            try!(version_req(hash,
+                             &fname.parent().unwrap().join(req),
+                             used));
+            continue;
+        }
+        // Should we also ignore the order?
+        hash.item(chunk);
+    }
+    Ok(())
 }
 
 impl BuildStep for Py2Requirements {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        version_req(hash, &self.0)
+        version_req(hash, &self.0, &mut HashSet::new())
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
@@ -359,7 +390,7 @@ impl BuildStep for Py3Requirements {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        version_req(hash, &self.0)
+        version_req(hash, &self.0, &mut HashSet::new())
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>

@@ -134,3 +134,19 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = $'pty_copy\r' ]]
 }
+
+@test "py3: recursive requirements files" {
+    run sh -c 'vagga _version_hash py3req-recursive-reqs -s'
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    result="${lines[@]}"
+    echo 'injections' >> /work/tests/pip/include-short.txt
+    run sh -c 'vagga _version_hash py3req-recursive-reqs -s'
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[@]} != "$result" ]]
+    run vagga _run py3req-recursive-reqs python3 -m urp -Q key=val http://example.com
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
+}
