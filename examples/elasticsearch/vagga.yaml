@@ -1,0 +1,31 @@
+containers:
+  elasticsearch:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install
+      - openjdk-8-jdk
+      - openjdk-8-jre-headless
+      - ca-certificates
+      - ca-certificates-java
+    - !Sh update-ca-certificates -f
+    - !Tar
+      url: https://download.elastic.co/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/2.3.3/elasticsearch-2.3.3.tar.gz
+      path: /opt
+    - !EnsureDir /opt/elasticsearch-2.3.3/data
+    - !EnsureDir /opt/elasticsearch-2.3.3/logs
+    - !EnsureDir /opt/elasticsearch-2.3.3/plugins
+    - !EnsureDir /opt/elasticsearch-2.3.3/config/scripts
+    volumes:
+      /opt/elasticsearch-2.3.3/logs: !BindRW /work/es/logs
+      /opt/elasticsearch-2.3.3/plugins: !BindRW /work/es/plugins
+      /opt/elasticsearch-2.3.3/data: !BindRW /work/es/data
+
+
+commands:
+  run: &elasticsearch !Command
+    description: Run elasticsearch
+    container: elasticsearch
+    work-dir: /opt/elasticsearch-2.3.3/
+    user-id: 1
+    run: ./bin/elasticsearch
