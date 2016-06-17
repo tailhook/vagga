@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
@@ -315,15 +315,11 @@ impl BuildStep for Py3Install {
 }
 
 fn parse_req_filename(line: &str) -> Option<&str> {
-    let res =
-        vec!["-r", "--requirement ", "--requirement=",
-             "-c", "--constraint ", "--constraint="]
-            .into_iter()
-            .map(|x| (x, x.len()))
-            .collect::<HashMap<_, _>>();
-    for (prefix, pos) in res {
+    let res = vec!["-r", "--requirement ", "--requirement=",
+                   "-c", "--constraint ", "--constraint="];
+    for prefix in res.iter() {
         if line.starts_with(prefix) {
-            return Some(line[pos..].trim());
+            return Some(line[prefix.len()..].trim());
         }
     }
     return None;
