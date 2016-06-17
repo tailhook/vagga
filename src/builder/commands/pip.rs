@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
@@ -329,8 +329,21 @@ fn parse_req_filename(line: &str) -> Option<&str> {
     return None;
 }
 
-fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
-    let path = Path::new("/work").join(fname);
+fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
+               Result<(), VersionError> {
+
+    let path = try!(Path::new("/work")
+                       .join(fname)
+                       .canonicalize()
+                       .map_err(|e| VersionError::Io(e, fname.to_path_buf())));
+
+    let name = format!("{:?}", path);
+    if used.contains(&name[..]) {
+        return Ok(())
+    }
+
+    used.insert(name);
+
     let f = try!(File::open(&path)
                       .map_err(|e| VersionError::Io(e, path.clone())));
 
@@ -343,7 +356,9 @@ fn version_req(hash: &mut Digest, fname: &Path) -> Result<(), VersionError> {
             continue;
         }
         if let Some(req) = parse_req_filename(chunk) {
-            try!(version_req(hash, &fname.parent().unwrap().join(req)));
+            try!(version_req(hash,
+                             &fname.parent().unwrap().join(req),
+                             used));
         }
         // Should we also ignore the order?
         hash.item(chunk);
@@ -355,7 +370,7 @@ impl BuildStep for Py2Requirements {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        version_req(hash, &self.0)
+        version_req(hash, &self.0, &mut HashSet::new())
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
@@ -376,7 +391,7 @@ impl BuildStep for Py3Requirements {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        version_req(hash, &self.0)
+        version_req(hash, &self.0, &mut HashSet::new())
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
