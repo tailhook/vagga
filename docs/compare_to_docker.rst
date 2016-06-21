@@ -71,7 +71,7 @@ owner. While it's possible to specify your uid as a user for running a
 process in container, it's not possible to do it portable. I.e. your uid
 in docker container should have ``passwd`` entry. And somebody else may
 have another uid so must have a different entry in ``/etc/passwd``. Also if
-some process realy needs to be root inside the container (e.g. it must spawn
+some process really needs to be root inside the container (e.g. it must spawn
 processes by different users) you just can't fix it.
 
 .. note:: In fact you can specify `uid` without adding a ``passwd`` entry, and
@@ -91,7 +91,7 @@ have such (yet).
 
 However, Vagga runs nothing with root privileges. So even running root process
 in guest system is at least as secure as running any unprivileged program in
-host sytem. It also uses chroot and linux namespaces for more isolation.
+host system. It also uses chroot and linux namespaces for more isolation.
 Compare it to docker which doesn't consider running as root inside a container
 secure.
 

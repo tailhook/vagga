@@ -65,7 +65,7 @@ newer release (the following version works fine on 12.04)::
     $ wget http://gr.archive.ubuntu.com/ubuntu/pool/main/s/shadow/uidmap_4.1.5.1-1ubuntu9_amd64.deb
     $ sudo dpkg -i uidmap_4.1.5.1-1ubuntu9_amd64.deb
 
-Most distributions (known: Nix, Archlinux, Fedora) have binaries as
+Most distributions (known: Nix, Arch Linux, Fedora) have binaries as
 part of "shadow" package, so have them installed on every system.
 
 .. _root:

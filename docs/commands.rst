@@ -183,7 +183,7 @@ Parameters of `!Command`
 .. opt:: pid1mode
 
    This denotes what is run as pid 1 in container. It may be ``wait``,
-   ``wait-all-children`` or ``exec``. The default ``wait`` is ok for most
+   ``wait-all-children`` or ``exec``. The default ``wait`` is okay for most
    regular processes. See :ref:`pid1mode` for more info.
 
 .. opt:: write-mode

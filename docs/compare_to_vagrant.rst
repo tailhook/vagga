@@ -2,7 +2,7 @@
 Vagga vs Vagrant
 ================
 
-Both products do development enviroments easy to setup. However, there is a big
+Both products do development environments easy to setup. However, there is a big
 difference on how they do their work.
 
 

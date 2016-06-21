@@ -97,7 +97,7 @@ Supported settings:
        push-image-script: "scp ${image_path} \
           user@example.org:/target/path/${container_name}.${short_hash}.tar.xz"
 
-   The FTP(s) (for exxample, using `lftp` utility) or S3 (using `s3cmd`) are
+   The FTP(s) (for example, using `lftp` utility) or S3 (using `s3cmd`) are
    also valid choices.
 
    .. note:: This is that rare case where command is run by vagga in your host

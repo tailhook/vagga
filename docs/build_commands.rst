@@ -206,7 +206,7 @@ containers. Use ``!CacheDirs`` for that:
    # ...
    - !CacheDirs { "/var/cache/apt": "apt-cache" }
 
-Mutliple directories may be specified at once.
+Multiple directories may be specified at once.
 
 .. warning:: In this example, "apt-cache" is the name of the directory on your host.
    Unless changed in the :ref:`settings`,
@@ -336,7 +336,7 @@ no distribution is specified before the ``!NpmInstall`` command, the implicit
    - !NpmInstall [react-tools]
 
 So above should just work as expected if you don't need any special needs. E.g.
-it's usually perfectly ok if you only use node to build static scripts.
+it's usually perfectly okay if you only use node to build static scripts.
 
 The following ``npm`` features are supported:
 
