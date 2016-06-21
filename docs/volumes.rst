@@ -169,10 +169,10 @@ Available volume types:
    Makes a writable directory just for this container. It's similar to
    :volume:`BindRW` but creates a volume inside `.vagga/.volumes`
 
-   Example:;
+   Example::
 
      commands:
-       postgres: !Volume
+       postgres: !Command
          volumes:
            /var/lib/postgres: !Persistent { name: "postgres" }
          run: ...
