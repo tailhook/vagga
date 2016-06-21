@@ -107,6 +107,6 @@ Container Parameters
 
    .. note:: Similarly to :step:`Tar` command we allow paths starting with
       `.` and `/volumes/` here. It's of limited usage. And we still consider
-      this expreminental. This may be useful for keeping image cache on network
+      this experimental. This may be useful for keeping image cache on network
       file system, presumably on non-public projects.
 

@@ -40,7 +40,7 @@ Docker_ we know that snapshotting each step is not zero-cost.
 Setup
 =====
 
-This section describes quircks on variuos systems that are needed to enable
+This section describes quirks on various systems that are needed to enable
 this feature.
 
 To check this run::

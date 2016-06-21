@@ -40,14 +40,14 @@ Runtime Dependencies
 
 Vagga is compiled as static binary, so it doesn't have many runtime
 dependencies. It does require user namespaces to be properly set up, which
-allows Vagga to create and administer containers without having root privlege.
+allows Vagga to create and administer containers without having root privilege.
 This is increasingly available in modern distributions but may need to be
 enabled manually.
 
 * the ``newuidmap``, ``newgidmap`` binaries are required (either from
   ``shadow`` or ``uidmap`` package)
 
-* known exception for Archlinux: ensure ``CONFIG_USER_NS=y`` enabled in kernel. Default kernel doesn't contain it, you can check it with::
+* known exception for Arch Linux: ensure ``CONFIG_USER_NS=y`` enabled in kernel. Default kernel doesn't contain it, you can check it with::
 
     $ zgrep CONFIG_USER_NS /proc/config.gz
 

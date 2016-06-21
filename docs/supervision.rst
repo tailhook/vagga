@@ -98,7 +98,7 @@ This is a supervision mode that most other supervisors obey. If one of the
 processes is dead, it will be restarted without messing with other processes.
 
 It's not recommended mode for workstations but may be useful for staging
-server (Currenly, we do not recommend running vagga in production at all).
+server (Currently, we do not recommend running vagga in production at all).
 
 .. note:: The whole container is restarted on process failure, so ``/tmp`` is
    clean, all daemonized processes are killed, etc. See also :ref:`pid1mode`.

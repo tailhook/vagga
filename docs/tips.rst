@@ -106,7 +106,7 @@ How to Find Out Versions of Installed Packages?
 
 You can use typical ``dpkg -l`` or similar command. But since we usually
 deinstall ``npm`` and ``pip`` after setting up container for space efficiency
-we put package list in contianer metadata. In particular there are following
+we put package list in container metadata. In particular there are following
 lists:
 
 * ``alpine-packages.txt`` -- list of packages for Alpine linux
@@ -115,7 +115,7 @@ lists:
   format directly usable for ``requirements.txt``
 * ``npm-list.txt`` -- a tree of npm packages
 
-The files contain list of all packages incuding ones installed implicitly
+The files contain list of all packages including ones installed implicitly
 or as a dependency. All packages have version. Unfortunately format of files
 differ.
 

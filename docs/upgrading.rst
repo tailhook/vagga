@@ -19,7 +19,7 @@ Minor incompatibilities are:
   machines
 * ``!Copy`` command now uses paths inside the container as the ``source``,
   previously was inside the capsule (because of a mistake), however using
-  source ouside of the ``/work`` has not been documented
+  source outside of the ``/work`` has not been documented
 * Checksum checking in ``!Tar`` and ``!TarInstall`` now works (previously you
   could use an archive with wrong ``sha256`` parameter)
 * Vagga now uses ``tar-rs`` library for unpacking archives instead of busybox,
@@ -193,7 +193,7 @@ Previously type of :ref:`command<commands>` was differentiated by existence
 of ``supervise`` and ``command``/``run`` key.
 
 Now first kind of command is marked by ``!Command`` yaml tag. The ``command``
-and ``run`` differentation is removed. When ``run`` is a list it's treated as
+and ``run`` differentiation is removed. When ``run`` is a list it's treated as
 a command with arguments, if ``run`` is a string then it's run by shell.
 
 The ``!Supervise`` command contains the processes to run in ``children`` key.

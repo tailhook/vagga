@@ -4,7 +4,7 @@
 Command Line
 ============
 
-When runnin ``vagga``, it  finds the ``vagga.yaml`` or ``.vagga/vagga.yaml``
+When running ``vagga``, it  finds the ``vagga.yaml`` or ``.vagga/vagga.yaml``
 file in current working directory or any of its parents and uses that as a
 project root directory.
 
@@ -68,7 +68,7 @@ vagga _build CONTAINER
 
       $ vagga _build --force container_name
 
-  To rebuid container that has previously been built.
+  To rebuild a container that has previously been built.
 
 vagga _clean
   Removes images and temporary files created by vagga.
@@ -99,7 +99,7 @@ vagga _clean
   of the two commands should probably be treated as a historical accident
   and ``--unused`` variant preferred.
 
-  For other operations and paremeters see ``vagga _clean --help``
+  For other operations and parameters see ``vagga _clean --help``
 
 vagga _list
   List of commands (similar to running vagga without command)
