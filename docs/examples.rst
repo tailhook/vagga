@@ -30,6 +30,7 @@ Databases
    examples/db/postgres
    examples/db/redis
    examples/db/consul
+   examples/db/elastic
 
 
 Miscellaneous
