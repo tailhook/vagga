@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{Read, Write, BufReader, BufRead};
+use std::os::unix::ffi::OsStrExt;
 
 use regex::Regex;
 use quire::validate as V;
@@ -341,12 +342,15 @@ impl BuildStep for GemBundle {
     {
         let path = Path::new("/work").join(&self.gemfile);
 
+        hash.item(&self.gemfile.as_os_str().as_bytes());
         let gemlock = try!(path.parent()
             .map(|dir| dir.join("Gemfile.lock"))
             .ok_or("Gemfile should be under /work".to_owned()));
         if gemlock.exists() {
-            try!(hash.file(&gemlock, None, None)
-                .map_err(|e| VersionError::Io(e, gemlock)));
+            let mut lockfile = try!(File::open(&path)
+                .map_err(|e| VersionError::Io(e, gemlock.clone())));
+            try!(hash.stream(&mut lockfile)
+                .map_err(|e| VersionError::Io(e, gemlock.clone())));
         }
 
         let f = try!(File::open(&path)
