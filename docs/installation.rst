@@ -263,3 +263,19 @@ Also make sure you have musl-gcc in your path::
 Then just build using cargo and the appropriate target::
 
     $ cargo build --target x86_64-unknown-linux-musl
+
+
+OS X / Windows
+==============
+
+We have proof of concept vagga-docker_ which leverages docker for mac to
+run vagga on OS X.
+
+For more conventional uses you may use use vagrant with specific settings
+
+* `vagrant-vagga <https://github.com/rrader/vagrant-vagga>`_ (recommended)
+* `vagga-barge <https://github.com/ailispaw/vagga-barge>`_
+* Or just your own vagrant config (but see `this FAQ entry`_)
+
+.. _vagga-docker: https://github.com/tailhook/vagga-docker
+.. _this faq entry: http://vagga.readthedocs.io/en/latest/errors.html#don-t-run-vagga-on-shared-folders
