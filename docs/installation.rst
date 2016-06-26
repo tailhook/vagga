@@ -7,6 +7,10 @@ Installation
 ============
 
 
+.. contents:: Contents
+   :local:
+
+
 Binary Installation
 ===================
 
@@ -271,7 +275,7 @@ OS X / Windows
 We have proof of concept vagga-docker_ which leverages docker for mac to
 run vagga on OS X.
 
-For more conventional uses you may use use vagrant with specific settings
+If you'd like something more stable, try:
 
 * `vagrant-vagga <https://github.com/rrader/vagrant-vagga>`_ (recommended)
 * `vagga-barge <https://github.com/ailispaw/vagga-barge>`_
