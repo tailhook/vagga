@@ -16,7 +16,7 @@ use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-pub static LATEST_VERSION: &'static str = "v3.3";
+pub static LATEST_VERSION: &'static str = "v3.4";
 static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
