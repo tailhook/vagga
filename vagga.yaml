@@ -127,14 +127,11 @@ commands:
       rm -rf tests/*/.vagga
       export HOME=/work/tmp/home
       mkdir -p $HOME /work/tmp/cache || true
-      echo "cache-dir: /work/tmp/cache" > $HOME/.vagga.yaml
-      if [ -n "$UBUNTU_MIRROR" ]; then
-          echo "ubuntu-mirror: $UBUNTU_MIRROR" >> $HOME/.vagga.yaml
-      fi
-      if [ -n "$ALPINE_MIRROR" ]; then
-          echo "alpine-mirror: $ALPINE_MIRROR" >> $HOME/.vagga.yaml
-      fi
-      echo 'push-image-script: curl -T ${image_path} http://localhost:8000/upload/images/${container_name}.${short_hash}.tar.xz' >> $HOME/.vagga.yaml
+      export VAGGA_SETTINGS="
+        cache-dir: /work/tmp/cache
+        ubuntu-mirror: $UBUNTU_MIRROR
+        alpine-mirror: $ALPINE_MIRROR
+        push-image-script: "'curl -T ${image_path} http://localhost:8000/upload/images/${container_name}.${short_hash}.tar.xz'
       if [ -n "$*" ]; then
         bats "$@"
       else

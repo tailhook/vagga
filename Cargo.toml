@@ -33,7 +33,7 @@ quick-error = "1.1.0"
 
 [dependencies.quire]
 git = "git://github.com/tailhook/rust-quire"
-rev = "41d7e94"
+rev = "8a9bb1d"
 
 [[bin]]
 name = "vagga"

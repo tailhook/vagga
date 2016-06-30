@@ -4,7 +4,7 @@ use libc::{uid_t, gid_t};
 use rustc_serialize::json;
 
 
-#[derive(RustcDecodable, RustcEncodable, Default, Clone)]
+#[derive(RustcDecodable, RustcEncodable, Default, Clone, Debug)]
 pub struct Settings {
     pub version_check: bool,
     pub proxy_env_vars: bool,

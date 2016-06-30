@@ -48,6 +48,9 @@ impl Wrapper for Command {
         if let Some(x) = env::var_os("RUST_BACKTRACE") {
             cmd.env("RUST_BACKTRACE", x);
         }
+        if let Some(x) = env::var_os("VAGGA_SETTINGS") {
+            cmd.env("VAGGA_SETTINGS", x);
+        }
         if let Some(x) = env::var_os("HOME") {
             cmd.env("_VAGGA_HOME", x);
         }

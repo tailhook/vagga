@@ -3,7 +3,7 @@ use std::default::Default;
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
-use quire::parse_config;
+use quire::{parse_config, parse_string};
 use quire::validate as V;
 
 use config::Settings;
@@ -73,6 +73,72 @@ pub struct MergedSettings {
     pub shared_cache: bool,
 }
 
+fn merge_settings(cfg: SecureSettings, project_root: &Path,
+    ext_settings: &mut MergedSettings, int_settings: &mut Settings)
+    -> Result<(), String>
+{
+    if let Some(dir) = cfg.storage_dir {
+        ext_settings.storage_dir = Some(try!(dir.expand_home()
+            .map_err(|()| format!("Can't expand tilde `~` in storage dir \
+                no HOME found"))));
+    }
+    if let Some(dir) = cfg.cache_dir {
+        ext_settings.cache_dir = Some(try!(dir.expand_home()
+            .map_err(|()| format!("Can't expand tilde `~` in cache dir \
+                no HOME found"))));
+        ext_settings.shared_cache = true;
+    }
+    if let Some(val) = cfg.version_check {
+        int_settings.version_check = val;
+    }
+    if let Some(val) = cfg.proxy_env_vars {
+        int_settings.proxy_env_vars = val;
+    }
+    if let Some(ref val) = cfg.ubuntu_mirror {
+        int_settings.ubuntu_mirror = Some(val.clone());
+    }
+    if let Some(ref val) = cfg.alpine_mirror {
+        int_settings.alpine_mirror = Some(val.clone());
+    }
+    for (k, v) in &cfg.external_volumes {
+        ext_settings.external_volumes.insert(k.clone(), v.clone());
+    }
+    if let Some(ref val) = cfg.push_image_script {
+        int_settings.push_image_script = Some(val.clone());
+    }
+    if let Some(val) = cfg.build_lock_wait {
+        int_settings.build_lock_wait = val;
+    }
+    if let Some(cfg) = cfg.site_settings.get(project_root) {
+        if let Some(ref dir) = cfg.storage_dir {
+            ext_settings.storage_dir = Some(dir.clone());
+        }
+        if let Some(ref dir) = cfg.cache_dir {
+            ext_settings.cache_dir = Some(dir.clone());
+            ext_settings.shared_cache = true;
+        }
+        if let Some(val) = cfg.version_check {
+            int_settings.version_check = val;
+        }
+        if let Some(ref val) = cfg.ubuntu_mirror {
+            int_settings.ubuntu_mirror = Some(val.clone());
+        }
+        if let Some(ref val) = cfg.alpine_mirror {
+            int_settings.alpine_mirror = Some(val.clone());
+        }
+        for (k, v) in &cfg.external_volumes {
+            ext_settings.external_volumes.insert(k.clone(), v.clone());
+        }
+        if let Some(ref val) = cfg.push_image_script {
+            int_settings.push_image_script = Some(val.clone());
+        }
+        if let Some(val) = cfg.build_lock_wait {
+            int_settings.build_lock_wait = val;
+        }
+    }
+    Ok(())
+}
+
 pub fn read_settings(project_root: &Path)
     -> Result<(MergedSettings, Settings), String>
 {
@@ -105,65 +171,18 @@ pub fn read_settings(project_root: &Path)
         }
         let cfg: SecureSettings = try!(parse_config(filename,
             &secure_settings_validator(true), Default::default()));
-        if let Some(dir) = cfg.storage_dir {
-            ext_settings.storage_dir = Some(try!(dir.expand_home()
-                .map_err(|()| format!("Can't expand tilde `~` in storage dir \
-                    no HOME found"))));
-        }
-        if let Some(dir) = cfg.cache_dir {
-            ext_settings.cache_dir = Some(try!(dir.expand_home()
-                .map_err(|()| format!("Can't expand tilde `~` in cache dir \
-                    no HOME found"))));
-            ext_settings.shared_cache = true;
-        }
-        if let Some(val) = cfg.version_check {
-            int_settings.version_check = val;
-        }
-        if let Some(val) = cfg.proxy_env_vars {
-            int_settings.proxy_env_vars = val;
-        }
-        if let Some(ref val) = cfg.ubuntu_mirror {
-            int_settings.ubuntu_mirror = Some(val.clone());
-        }
-        if let Some(ref val) = cfg.alpine_mirror {
-            int_settings.alpine_mirror = Some(val.clone());
-        }
-        for (k, v) in &cfg.external_volumes {
-            ext_settings.external_volumes.insert(k.clone(), v.clone());
-        }
-        if let Some(ref val) = cfg.push_image_script {
-            int_settings.push_image_script = Some(val.clone());
-        }
-        if let Some(val) = cfg.build_lock_wait {
-            int_settings.build_lock_wait = val;
-        }
-        if let Some(cfg) = cfg.site_settings.get(project_root) {
-            if let Some(ref dir) = cfg.storage_dir {
-                ext_settings.storage_dir = Some(dir.clone());
-            }
-            if let Some(ref dir) = cfg.cache_dir {
-                ext_settings.cache_dir = Some(dir.clone());
-                ext_settings.shared_cache = true;
-            }
-            if let Some(val) = cfg.version_check {
-                int_settings.version_check = val;
-            }
-            if let Some(ref val) = cfg.ubuntu_mirror {
-                int_settings.ubuntu_mirror = Some(val.clone());
-            }
-            if let Some(ref val) = cfg.alpine_mirror {
-                int_settings.alpine_mirror = Some(val.clone());
-            }
-            for (k, v) in &cfg.external_volumes {
-                ext_settings.external_volumes.insert(k.clone(), v.clone());
-            }
-            if let Some(ref val) = cfg.push_image_script {
-                int_settings.push_image_script = Some(val.clone());
-            }
-            if let Some(val) = cfg.build_lock_wait {
-                int_settings.build_lock_wait = val;
-            }
-        }
+        try!(merge_settings(cfg, &project_root,
+            &mut ext_settings, &mut int_settings))
+    }
+    if let Ok(settings) = env::var("VAGGA_SETTINGS") {
+        let cfg: SecureSettings = try!(parse_string("<env:VAGGA_SETTINGS>",
+                &settings,
+                &secure_settings_validator(true), Default::default())
+            .map_err(|lst| lst.iter()
+                           .map(ToString::to_string).collect::<Vec<_>>()[..]
+                           .join("\n")));
+        try!(merge_settings(cfg, &project_root,
+            &mut ext_settings, &mut int_settings))
     }
     let mut insecure_files = vec!();
     insecure_files.push(project_root.join(".vagga.settings.yaml"));

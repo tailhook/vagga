@@ -36,6 +36,7 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
     cmd.arg(name);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &context.settings);
+    // TODO(tailhook) move these to copy_env_vars, or at least reuse in build?
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -44,6 +45,9 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
     }
     if let Ok(x) = env::var("HOME") {
         cmd.env("_VAGGA_HOME", x);
+    }
+    if let Some(x) = env::var_os("VAGGA_SETTINGS") {
+        cmd.env("VAGGA_SETTINGS", x);
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
@@ -67,6 +71,7 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     cmd.args(&args);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &context.settings);
+    // TODO(tailhook) move these to copy_env_vars, or at least reuse in ver?
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }
@@ -75,6 +80,9 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     }
     if let Ok(x) = env::var("HOME") {
         cmd.env("_VAGGA_HOME", x);
+    }
+    if let Some(x) = env::var_os("VAGGA_SETTINGS") {
+        cmd.env("VAGGA_SETTINGS", x);
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
