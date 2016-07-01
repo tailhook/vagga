@@ -14,7 +14,7 @@ use config::command::WriteMode;
 use super::setup;
 use super::Wrapper;
 use super::util::find_cmd;
-use process_util::{run_and_wait, convert_status};
+use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap};
 
 
@@ -79,6 +79,8 @@ pub fn commandline_cmd(command: &CommandInfo,
 
     let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
+    cmd.env_clear();
+    copy_env_vars(&mut cmd, &wrapper.settings);
     if let Some(euid) = command.external_user_id {
         try!(set_fake_uidmap(&mut cmd, command.user_id, euid));
     }
