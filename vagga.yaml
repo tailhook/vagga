@@ -2,7 +2,7 @@ containers:
 
   docs:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Install [alpine-base, py-sphinx, make]
     - !Py2Requirements docs/requirements.txt
 
