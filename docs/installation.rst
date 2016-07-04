@@ -101,13 +101,13 @@ Ubuntu
 
 To install from vagga's repository just add the following to `sources.list`::
 
-    deb http://ubuntu.zerogw.com vagga main
+    deb [arch=amd64, trusted=yes] http://ubuntu.zerogw.com vagga main
 
 The process of installation looks like the following:
 
 .. code-block:: console
 
-    $ echo 'deb http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
+    $ echo 'deb [arch=amd64, trusted=yes] http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
     deb http://ubuntu.zerogw.com vagga main
     $ sudo apt-get update
     [.. snip ..]
@@ -140,7 +140,7 @@ Now vagga is ready to go.
 .. note:: If you are courageous enough, you may try to use ``vagga-testing``
    repository to get new versions faster::
 
-       deb http://ubuntu.zerogw.com vagga-testing main
+       deb [arch=amd64, trusted=yes] http://ubuntu.zerogw.com vagga-testing main
 
    It's build right from git "master" branch and we are trying to keep "master"
    branch stable.
@@ -159,7 +159,7 @@ Then run same sequence of commands, you run for more recent releases:
 
 .. code-block:: console
 
-    $ echo 'deb http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
+    $ echo 'deb [arch=amd64, trusted=yes] http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
     $ sudo apt-get update
     $ sudo apt-get install vagga
 
