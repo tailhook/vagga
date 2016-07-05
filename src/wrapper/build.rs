@@ -18,7 +18,7 @@ use libmount::BindMount;
 
 use container::util::clean_dir;
 use container::mount::{unmount};
-use file_util::{create_dir, Lock};
+use file_util::{create_dir, create_dir_mode, Lock};
 use process_util::{capture_fd3_status, copy_env_vars};
 use super::Wrapper;
 use super::setup;
@@ -54,6 +54,10 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     try_msg!(create_dir(&tgtroot.join("sys"), false),
          "Error creating directory: {err}");
     try_msg!(create_dir(&tgtroot.join("proc"), false),
+         "Error creating directory: {err}");
+    try_msg!(create_dir(&tgtroot.join("run"), false),
+         "Error creating directory: {err}");
+    try_msg!(create_dir_mode(&tgtroot.join("tmp"), 0o1777),
          "Error creating directory: {err}");
     try_msg!(create_dir(&tgtroot.join("work"), false),
          "Error creating directory: {err}");

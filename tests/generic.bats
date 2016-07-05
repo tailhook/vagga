@@ -194,6 +194,25 @@ setup() {
     [[ $link = ".roots/vagga.6f593ff8/root" ]]
 }
 
+@test "generic: test system dirs" {
+    rm -rf tmp tmp.tar.gz
+    mkdir tmp
+    tar czf tmp.tar.gz tmp
+
+    run vagga _build sys-dirs
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/sys-dirs)
+    [[ $link = ".roots/sys-dirs.308799a9/root" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/dev") = "755" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/etc") = "755" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/proc") = "755" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/run") = "755" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/sys") = "755" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/tmp") = "1777" ]]
+    [[ $(stat -c "%a" ".vagga/sys-dirs/work") = "755" ]]
+    [[ $(ls -1 ".vagga/sys-dirs/" | wc -l) = "7" ]]
+}
+
 @test "generic: unpack zip archive" {
     curl -o test-file.zip http://files.zerogw.com/test-files/test-file.zip
     hash=($(sha256sum test-file.zip))
