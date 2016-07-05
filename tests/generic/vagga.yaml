@@ -119,6 +119,11 @@ containers:
       subdir: vagga
       path: /usr/lib/vagga
 
+  sys-dirs:
+    setup:
+    - !Tar
+      url: ./tmp.tar.gz
+
   run_as:
     setup:
     - !Alpine v3.1
