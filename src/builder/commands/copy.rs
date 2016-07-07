@@ -38,26 +38,30 @@ impl Copy {
         .member("owner_gid", V::Numeric::new().min(0).optional())
     }
 
-    fn compile_ignore_regex(&self) -> Result<Option<Regex>, RegexError> {
-        Ok(Some(try!(Regex::new(&self.ignore_regex))))
-    }
-
-    fn compile_include_regex(&self) -> Result<Option<Regex>, RegexError> {
-        match self.include_regex {
-            Some(ref include_regex) => {
-                Ok(Some(try!(Regex::new(include_regex))))
+    fn get_filter(&self) -> Result<Filter, RegexError> {
+        Ok(Filter {
+            ignore_re: Some(try!(Regex::new(&self.ignore_regex))),
+            include_re: match self.include_regex {
+                Some(ref include_regex) => {
+                    Some(try!(Regex::new(include_regex)))
+                },
+                None => None,
             },
-            None => Ok(None),
-        }
+        })
     }
 }
 
-fn check_path(path: &str,
-    ignore_regex: Option<&Regex>, include_regex: Option<&Regex>)
-    -> bool
-{
-    ignore_regex.map_or(true, |r| !r.is_match(path))
-        && include_regex.map_or(true, |r| r.is_match(path))
+struct Filter {
+    ignore_re: Option<Regex>,
+    include_re: Option<Regex>,
+}
+
+impl Filter {
+    fn is_match(&self, s: &str) -> bool
+    {
+        self.ignore_re.as_ref().map_or(true, |r| !r.is_match(s))
+            && self.include_re.as_ref().map_or(true, |r| r.is_match(s))
+    }
 }
 
 impl BuildStep for Copy {
@@ -68,8 +72,7 @@ impl BuildStep for Copy {
         if src.starts_with("/work") {
             match symlink_metadata(src) {
                 Ok(ref meta) if meta.file_type().is_dir() => {
-                    let ignore_re = try!(self.compile_ignore_regex());
-                    let include_re = try!(self.compile_include_regex());
+                    let filter = try!(self.get_filter());
                     try!(ScanDir::all().walk(src, |iter| {
                         let mut all_paths = BTreeSet::new();
                         for (entry, _) in iter {
@@ -79,9 +82,7 @@ impl BuildStep for Copy {
                             let path = fpath.strip_prefix(src).unwrap();
                             // We know that path is decodable
                             let strpath = path.to_str().unwrap();
-                            if check_path(strpath,
-                                ignore_re.as_ref(), include_re.as_ref())
-                            {
+                            if filter.is_match(strpath) {
                                 for parent in path.iter_self_and_parents() {
                                     if all_paths.contains(parent) {
                                         break;
@@ -134,8 +135,7 @@ impl BuildStep for Copy {
             if typ.is_dir() {
                 try!(create_dir_mode(dest, typ.permissions().mode())
                     .map_err(|e| StepError::Write(dest.clone(), e)));
-                let ignore_re = try!(self.compile_ignore_regex());
-                let include_re = try!(self.compile_include_regex());
+                let filter = try!(self.get_filter());
                 let mut processed_paths = BTreeSet::new();
                 try!(ScanDir::all().walk(src, |iter| {
                     for (entry, _) in iter {
@@ -145,9 +145,7 @@ impl BuildStep for Copy {
                         let path = fpath.strip_prefix(src).unwrap();
                         // We know that it's decodable
                         let strpath = path.to_str().unwrap();
-                        if check_path(strpath,
-                            ignore_re.as_ref(), include_re.as_ref())
-                        {
+                        if filter.is_match(strpath) {
                             let mut parents: Vec<_> = path
                                 .iter_self_and_parents()
                                 .take_while(|p| !processed_paths.contains(*p))
