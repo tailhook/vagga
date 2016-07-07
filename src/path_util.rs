@@ -40,3 +40,32 @@ impl Expand for PathBuf {
         }
     }
 }
+
+pub struct SelfAndParentsIterator<'a> {
+    path: &'a Path,
+}
+
+impl<'a> Iterator for SelfAndParentsIterator<'a> {
+    type Item = &'a Path;
+    fn next(&mut self) -> Option<&'a Path> {
+        if self.path == Path::new("") {
+            None
+        } else {
+            let path = self.path;
+            self.path = path.parent().unwrap_or(Path::new(""));
+            Some(path)
+        }
+    }
+}
+
+pub trait IterSelfAndParents {
+    fn iter_self_and_parents(&self) -> SelfAndParentsIterator;
+}
+
+impl IterSelfAndParents for Path {
+    fn iter_self_and_parents(&self) -> SelfAndParentsIterator {
+        SelfAndParentsIterator {
+            path: self,
+        }
+    }
+}

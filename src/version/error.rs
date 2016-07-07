@@ -20,7 +20,8 @@ quick_error! {
             description("error versioning dependencies")
             display("version error: {}", s)
         }
-        Regex(e: Box<regex::Error>) {
+        Regex(e: regex::Error) {
+            from()
             description("can't compile regex")
             display("regex compilation error: {}", e)
         }

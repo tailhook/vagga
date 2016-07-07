@@ -17,6 +17,18 @@ containers:
     - !Copy
       source: /work/something
       path: /var/somewhere
+  copy-with-include:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      include-regex: "(^hello|(^|.*/)file)$"
+  copy-with-include-subdir:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      include-regex: "(^hello|subdir|(^|.*/)file)$"
 
 commands:
 
@@ -27,4 +39,3 @@ commands:
   test-file: !Command
     container: file-copy
     run: [cat, /var/file]
-
