@@ -64,7 +64,8 @@ quick_error! {
             display("error reading directory: {:?}", errors)
         }
         /// Can't compile regex
-        Regex(e: Box<regex::Error>) {
+        Regex(e: regex::Error) {
+            from()
             description("can't compile regex")
             display("error compiling regex: {}", e)
         }

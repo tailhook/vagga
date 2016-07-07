@@ -38,7 +38,7 @@ setup() {
     find dir -type f -print0 | xargs -0 chmod 0644
     chmod 0750 dir/subdir
 
-    run vagga _build copy-with-include
+    run env RUST_LOG=info vagga _build copy-with-include
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/copy-with-include)
     [[ $link = ".roots/copy-with-include.624cf815/root" ]]

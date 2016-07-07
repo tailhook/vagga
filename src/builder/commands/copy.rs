@@ -1,6 +1,6 @@
 use std::io::ErrorKind;
 use std::fs::{symlink_metadata};
-use std::path::{PathBuf, Component};
+use std::path::PathBuf;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use std::collections::BTreeSet;
 
@@ -11,6 +11,7 @@ use scan_dir::ScanDir;
 
 use container::root::temporary_change_root;
 use file_util::{create_dir_mode, shallow_copy};
+use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
 
@@ -51,35 +52,12 @@ impl Copy {
     }
 }
 
-fn generate_paths(path: &str,
+fn check_path(path: &str,
     ignore_regex: Option<&Regex>, include_regex: Option<&Regex>)
-    -> Option<Vec<PathBuf>>
+    -> bool
 {
-    if ignore_regex.map_or(false, |r| r.is_match(path))
-        || include_regex.map_or(false, |r| !r.is_match(path))
-    {
-        return None;
-    }
-
-    let mut result = vec!();
-    let fpath = PathBuf::from(path);
-    match fpath.parent() {
-        Some(parent) => {
-            let mut cur_dir_path = PathBuf::new();
-            for dir_component in parent.components() {
-                match dir_component {
-                    Component::RootDir => cur_dir_path.push("/"),
-                    Component::Normal(dir_name) => cur_dir_path.push(dir_name),
-                    _ => unreachable!(),
-                }
-                result.push(cur_dir_path.clone());
-            }
-        },
-        None => {},
-    }
-
-    result.push(fpath);
-    Some(result)
+    ignore_regex.map_or(true, |r| !r.is_match(path))
+        && include_regex.map_or(true, |r| r.is_match(path))
 }
 
 impl BuildStep for Copy {
@@ -90,31 +68,33 @@ impl BuildStep for Copy {
         if src.starts_with("/work") {
             match symlink_metadata(src) {
                 Ok(ref meta) if meta.file_type().is_dir() => {
-                    let ignore_re = try!(self.compile_ignore_regex()
-                        .map_err(|e| VersionError::Regex(Box::new(e))));
-                    let include_re = try!(self.compile_include_regex()
-                        .map_err(|e| VersionError::Regex(Box::new(e))));
+                    let ignore_re = try!(self.compile_ignore_regex());
+                    let include_re = try!(self.compile_include_regex());
                     try!(ScanDir::all().walk(src, |iter| {
-                        let all_paths: BTreeSet<_> = iter
-                            .filter_map(|(entry, _)| {
-                                let fpath = entry.path();
-                                // We know that directory is inside
-                                // the source
-                                let path = fpath.strip_prefix(src).unwrap();
-                                // We know that path is decodable
-                                let strpath = path.to_str().unwrap();
-                                generate_paths(strpath,
-                                    ignore_re.as_ref(), include_re.as_ref())
-                            })
-                            .flat_map(|x| x)
-                            .collect();
-                        let mut all_paths: Vec<_> = all_paths.iter().collect();
-                        all_paths.sort();
+                        let mut all_paths = BTreeSet::new();
+                        for (entry, _) in iter {
+                            let fpath = entry.path();
+                            // We know that directory is inside
+                            // the source
+                            let path = fpath.strip_prefix(src).unwrap();
+                            // We know that path is decodable
+                            let strpath = path.to_str().unwrap();
+                            if check_path(strpath,
+                                ignore_re.as_ref(), include_re.as_ref())
+                            {
+                                for parent in path.iter_self_and_parents() {
+                                    if all_paths.contains(parent) {
+                                        break;
+                                    }
+                                    all_paths.insert(PathBuf::from(parent));
+                                }
+                            }
+                        }
                         for cur_path in all_paths {
                             hash.field("filename", cur_path.to_str().unwrap());
                             try!(hash.file(&src.join(&cur_path),
                                      self.owner_uid, self.owner_gid)
-                                 .map_err(|e| VersionError::Io(e, cur_path.clone())));
+                                 .map_err(|e| VersionError::Io(e, PathBuf::from(cur_path))));
                         }
                         Ok(())
                     }).map_err(VersionError::ScanDir).and_then(|x| x));
@@ -154,10 +134,8 @@ impl BuildStep for Copy {
             if typ.is_dir() {
                 try!(create_dir_mode(dest, typ.permissions().mode())
                     .map_err(|e| StepError::Write(dest.clone(), e)));
-                let ignore_re = try!(self.compile_ignore_regex()
-                    .map_err(|e| StepError::Regex(Box::new(e))));
-                let include_re = try!(self.compile_include_regex()
-                    .map_err(|e| StepError::Regex(Box::new(e))));
+                let ignore_re = try!(self.compile_ignore_regex());
+                let include_re = try!(self.compile_include_regex());
                 let mut processed_paths = BTreeSet::new();
                 try!(ScanDir::all().walk(src, |iter| {
                     for (entry, _) in iter {
@@ -167,18 +145,20 @@ impl BuildStep for Copy {
                         let path = fpath.strip_prefix(src).unwrap();
                         // We know that it's decodable
                         let strpath = path.to_str().unwrap();
-                        if let Some(all_paths) = generate_paths(strpath,
+                        if check_path(strpath,
                             ignore_re.as_ref(), include_re.as_ref())
                         {
-                            for cur_path in all_paths {
-                                if processed_paths.contains(&cur_path) {
-                                    continue;
-                                }
-                                let fdest = dest.join(&cur_path);
-                                try!(shallow_copy(&src.join(&cur_path), &fdest,
+                            let mut parents: Vec<_> = path
+                                .iter_self_and_parents()
+                                .take_while(|p| !processed_paths.contains(*p))
+                                .collect();
+                            parents.reverse();
+                            for parent in parents {
+                                let fdest = dest.join(parent);
+                                try!(shallow_copy(&src.join(parent), &fdest,
                                         self.owner_uid, self.owner_gid)
                                     .context((&fpath, &fdest)));
-                                processed_paths.insert(cur_path);
+                                processed_paths.insert(PathBuf::from(parent));
                             }
                         }
                     }
