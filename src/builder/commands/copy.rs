@@ -2,7 +2,7 @@ use std::io::ErrorKind;
 use std::fs::{symlink_metadata};
 use std::path::PathBuf;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
 use libc::{uid_t, gid_t};
 use quire::validate as V;
@@ -136,7 +136,7 @@ impl BuildStep for Copy {
                 try!(create_dir_mode(dest, typ.permissions().mode())
                     .map_err(|e| StepError::Write(dest.clone(), e)));
                 let filter = try!(self.get_filter());
-                let mut processed_paths = BTreeSet::new();
+                let mut processed_paths = HashSet::new();
                 try!(ScanDir::all().walk(src, |iter| {
                     for (entry, _) in iter {
                         let fpath = entry.path();
