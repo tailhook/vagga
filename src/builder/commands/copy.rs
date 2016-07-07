@@ -146,12 +146,11 @@ impl BuildStep for Copy {
                         // We know that it's decodable
                         let strpath = path.to_str().unwrap();
                         if filter.is_match(strpath) {
-                            let mut parents: Vec<_> = path
+                            let parents: Vec<_> = path
                                 .iter_self_and_parents()
                                 .take_while(|p| !processed_paths.contains(*p))
                                 .collect();
-                            parents.reverse();
-                            for parent in parents {
+                            for parent in parents.iter().rev() {
                                 let fdest = dest.join(parent);
                                 try!(shallow_copy(&src.join(parent), &fdest,
                                         self.owner_uid, self.owner_gid)
