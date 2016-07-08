@@ -12,7 +12,7 @@ Build commands are tagged values in your container definition. For example:
     containers:
       ubuntu:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Install [python]
 
 This contains two build commands ``!Ubuntu`` and ``!Install``. They mostly
@@ -32,15 +32,15 @@ To run arbitrary shell command use ``!Sh``:
 .. code-block:: yaml
 
    setup:
-   - !Ubuntu trusty
-   - !Sh "apt-get install -y python"
+   - !Ubuntu xenial
+   - !Sh "apt-get update && apt-get install -y python"
 
 If you have more than one-liner you may use YAMLy *literal* syntax for it:
 
 .. code-block:: yaml
 
    setup:
-   - !Ubuntu trusty
+   - !Ubuntu xenial
    - !Sh |
       wget somepackage.tar.gz
       tar -xzf somepackage.tar.gz
@@ -70,17 +70,17 @@ To install a package of any (supported) linux distribution just use
 
      ubuntu:
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !Install [python]
 
-     ubuntu-precise:
+     ubuntu-trusty:
        setup:
-       - !Ubuntu precise
+       - !Ubuntu trusty
        - !Install [python]
 
      alpine:
        setup:
-       - !Alpine v3.1
+       - !Alpine v3.4
        - !Install [python]
 
 Occasionally you need some additional packages to use for container building,
@@ -89,7 +89,7 @@ but not on final machine. Use ``!BuildDeps`` for them:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install [python]
     - !BuildDeps [python-dev, gcc]
     - !Sh "make && make install"
@@ -152,9 +152,9 @@ which is ``!TarInstall``:
 
    setup:
    - !TarInstall
-     url: http://static.rust-lang.org/dist/rust-0.12.0-x86_64-unknown-linux-gnu.tar.gz
+     url: https://static.rust-lang.org/dist/rust-1.10.0-x86_64-unknown-linux-gnu.tar.gz
      sha256: abcd1234...
-     subdir: rust-0.12.0-x86_64-unknown-linux-gnu
+     subdir: rust-1.10.0-x86_64-unknown-linux-gnu
      script: ./install.sh --prefix=/usr
 
 Only the ``url`` is mandatory here too. Similarly, if ``url`` starts with dot
@@ -240,22 +240,22 @@ To install base ubuntu system use:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
 
-Potentially any ubuntu long term support release instead of ``trusty`` should
+Potentially any ubuntu long term support release instead of ``xenial`` should
 work. To install a non LTS release, use:
 
 .. code-block:: yaml
 
     setup:
-    - !UbuntuRelease { version: 14.10 }
+    - !UbuntuRelease { codename: wily }
 
 To install any ubuntu package use generic ``!Install`` command:
 
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install python
 
 Many interesting ubuntu packages are in the "universe" repository, you may add
@@ -265,7 +265,7 @@ it by series of ``!UbuntuRepo`` commands (see below), but there is shortcut
 .. code-block:: yaml
 
    setup:
-   - !Ubuntu trusty
+   - !Ubuntu xenial
    - !UbuntuUniverse
    - !Install [checkinstall]
 
@@ -276,10 +276,10 @@ marathon_ repository you may write:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuRepo
       url: http://repos.mesosphere.io/ubuntu
-      suite: trusty
+      suite: xenial
       components: [main]
     - !Install [mesos, marathon]
 
@@ -301,16 +301,16 @@ To install base alpine system use:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
 
-Potentially any alpine version instead of ``v3.1`` should work.
+Potentially any alpine version instead of ``v3.4`` should work.
 
 To install any alpine package use generic ``!Install`` command:
 
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Install [python]
 
 
@@ -323,17 +323,17 @@ command. For example:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
-    - !NpmInstall [react-tools]
+    - !Ubuntu xenial
+    - !NpmInstall [babel]
 
 All node packages are installed as ``--global`` which should be expected. If
 no distribution is specified before the ``!NpmInstall`` command, the implicit
-``!Alpine v3.1`` (in fact the latest version) will be executed.
+``!Alpine v3.4`` (in fact the latest version) will be executed.
 
 .. code-block:: yaml
 
    setup:
-   - !NpmInstall [react-tools]
+   - !NpmInstall [babel]
 
 So above should just work as expected if you don't need any special needs. E.g.
 it's usually perfectly okay if you only use node to build static scripts.
@@ -362,7 +362,7 @@ python3. Here is a brief example:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Py2Install [sphinx]
 
 We always fetch latest pip for installing dependencies. The ``python-dev``
@@ -384,7 +384,7 @@ directive. In the example there are full list of parameters:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !PipConfig
       index-urls: ["http://internal.pypi.local"]
       find-links: ["http://internal.additional-packages.local"]
@@ -408,7 +408,7 @@ Better way to specify python dependencies is to use "requirements.txt":
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Py3Requirements "requirements.txt"
 
 This works the same as ``Py3Install`` including auto-installing of version
@@ -437,7 +437,7 @@ For example:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !ComposerInstall [laravel/installer]
 
 The packages will be installed using Composer's ``global require`` at
@@ -448,7 +448,7 @@ Laravel installer, for instance):
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !ComposerInstall [laravel/installer]
     - !Sh laravel new src
 
@@ -457,7 +457,7 @@ Alternatively, you can use Composer's ``crate-project`` command:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !ComposerInstall # just to have composer available
     - !Sh composer create-project --prefer-dist laravel/laravel src
 
@@ -471,7 +471,7 @@ For your project dependencies, you should install packages from your
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !ComposerDependencies
 
 This command will install packages (including dev) from ``composer.json`` into
@@ -492,7 +492,7 @@ example:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !ComposerDependencies
       working_dir: src # run command inside src directory
       dev: false # do not install dev dependencies
@@ -504,7 +504,7 @@ runtime:
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !ComposerConfig
       install_runtime: false
       runtime_exe: hhvm
@@ -514,12 +514,12 @@ Note that you will have to manually `install hhvm`_ and set the ``include_path``
 .. code-block:: yaml
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !AptTrust keys: ["hhvm apt key here"]
     - !UbuntuRepo
       url: http://dl.hhvm.com/ubuntu
-      suite: trusty
+      suite: xenial
       components: [main]
     - !Install [hhvm]
     - !ComposerConfig
@@ -536,8 +536,8 @@ Note that you will have to manually `install hhvm`_ and set the ``include_path``
 .. _install hhvm: https://docs.hhvm.com/hhvm/installation/linux
 
 
-.. warning:: PHP/Composer support is recently added to the vagga some things
-   may change as we gain experience with the tool.
+.. warning:: PHP/Composer support was recently added to vagga, some things may
+   change as we gain experience with the tool.
 
 
 Ruby Installer
@@ -549,7 +549,7 @@ Ruby gems can be installed either by providing a list of gems or from a
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemInstall [rake]
 
 We will update ``gem`` to the latest version (unless specified not to) for
@@ -564,7 +564,7 @@ The following ``gem`` package specification formats are supported:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Install [libxml2, libxslt, zlib, sqlite-libs]
     - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev, sqlite-dev]
     - !Env
@@ -578,7 +578,7 @@ Bundler is also available for installing gems from ``Gemfile``. For example:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemBundle
 
 You can also specify some options to Bundler, for example:
@@ -586,7 +586,7 @@ You can also specify some options to Bundler, for example:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemBundle
       gemfile: src/Gemfile # use this Gemfile
       without: [development, test] # groups to exclude when installing gems
@@ -597,14 +597,14 @@ It is possible to avoid installing ruby if you are providing it yourself:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemSettings
       install_ruby: false
       gem_exe: /usr/bin/gem
 
 
-.. warning:: Ruby support is recently added to the vagga some things
-   may change as we gain experience with the tool.
+.. warning:: Ruby/Gem support was recently added to vagga, some things may
+   change as we gain experience with the tool.
 
 
 Dependent Containers
@@ -616,27 +616,27 @@ test utils. Use ``!Container`` command for that:
 
 .. code-block:: yaml
 
-   container:
+   containers:
      base:
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !Py3Install [django]
      test:
        setup:
        - !Container base
-       - !Py3Install [nosetests]
+       - !Py3Install [nose]
 
 It's also sometimes useful to freeze some part of container and test next build
 steps on top of it. For example:
 
 .. code-block:: yaml
 
-   container:
+   containers:
      temporary:
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !TarInstall
-         url: http://download.zeromq.org/zeromq-4.1.0-rc1.tar.gz
+         url: http://download.zeromq.org/zeromq-4.1.4.tar.gz
      web:
        setup:
        - !Container temporary
@@ -654,7 +654,7 @@ you may just use shell scripting. For example:
 
     container:
       setup:
-      - !Ubuntu trusty
+      - !Ubuntu xenial
       - !Env { VERSION: 0.1.0 }
       - !Sh "apt-get install somepackage==$VERSION"
 
@@ -670,7 +670,7 @@ config:
 
   docker-parser: ❶
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Install [python]
     - !Depends Dockerfile ❷
     - !Depends docker2vagga.py ❷
@@ -721,13 +721,13 @@ the base distribution) can be set by original container:
     containers:
       ubuntu:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !SubConfig
           path: packages.yaml
           container: packages
       alpine:
         setup:
-        - !Alpine v3.1
+        - !Alpine v3.4
         - !SubConfig
           path: packages.yaml
           container: packages
