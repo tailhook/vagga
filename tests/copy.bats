@@ -48,4 +48,5 @@ setup() {
     [[ -f ".vagga/copy-with-include/dir/subdir/file" ]]
     [[ ! -f ".vagga/copy-with-include/dir/second" ]]
     [[ $(vagga _version_hash copy-with-include) = $(vagga _version_hash copy-with-include-subdir) ]]
+    [[ $(vagga _version_hash copy-with-include) = $(vagga _version_hash depends-with-include) ]]
 }
