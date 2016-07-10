@@ -437,7 +437,7 @@ impl Distro {
             packages::Npm => Some(vec!()),
             // PHP
             packages::Php if self.has_php7() => {
-                Some(vec!("php-common", "php-cli"))
+                Some(vec!("php-common", "php-cli", "php-json", "php-zip"))
             }
             packages::Php => Some(vec!("php5-common", "php5-cli")),
             packages::PhpDev => Some(vec!()),
@@ -913,4 +913,3 @@ impl EMDParams {
         }
     }
 }
-

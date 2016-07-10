@@ -300,6 +300,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
         try!(file_util::create_dir(&conf_d, true)
         .map_err(|e| format!("Error creating directory {:?}: {}", conf_d, e)));
     }
+
     // create vagga.ini file
     try!(create_vagga_ini(&conf_d, &vagga_ini_content));
 
@@ -316,7 +317,7 @@ fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
         iter.filter(|&(_, ref name)| name.starts_with("php"))
         .flat_map(|(ref entry, _)| {
-            ScanDir::dirs().read(entry.path(), |iter| {
+            ScanDir::dirs().walk(entry.path(), |iter| {
                 iter.filter(|&(ref entry, ref name)| {
                     name == "conf.d" ||
                     entry.path().join("conf.d").exists()
