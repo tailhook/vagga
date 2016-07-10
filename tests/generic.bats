@@ -25,6 +25,16 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
+
+    run vagga _build snapshot-check-mode
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    run vagga _run snapshot-check-mode stat -c "%a %U" /home/hemingway
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "700 hemingway" ]]
+    run vagga _run snapshot-check-mode stat -c "%a %U" /home/hemingway/quote.txt
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "644 root" ]]
 }
 
 @test "generic: Overriding container volumes" {

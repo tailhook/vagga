@@ -17,6 +17,19 @@ containers:
     volumes:
       /etc: !Snapshot
 
+  snapshot-check-mode:
+    setup:
+    - !Alpine v3.4
+    - !Sh |
+        adduser -u 1000 -h /home/hemingway -D hemingway
+        chmod -R 0700 /home/hemingway
+    - !Text
+      /home/hemingway/quote.txt: |
+          The best way to find out
+          if you can trust somebody is to trust them.
+    volumes:
+      /home/hemingway: !Snapshot
+
   tmpfs-subdirs:
     setup:
     - !Alpine v3.1
