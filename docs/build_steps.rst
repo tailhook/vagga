@@ -157,7 +157,7 @@ Ubuntu Commands
 
        - !UbuntuRepo
          url: http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu
-         suite: trusty
+         suite: xenial
          components: [main]
        - !Install [python3.5]
 
@@ -170,7 +170,7 @@ Ubuntu Commands
 
    suite
      Suite of the repository. The common practice is that the suite is named just
-     like the codename of the ubuntu release. For example ``trusty``. **Required**.
+     like the codename of the ubuntu release. For example ``xenial``. **Required**.
 
    components
      List of the components to fetch packages from. Common practice to have a
@@ -182,17 +182,17 @@ Ubuntu Commands
    A shortcut to :step:`UbuntuRepo` that adds named PPA. For example, the
    following::
 
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !AptTrust keys: [5BB92C09DB82666C]
        - !UbuntuPPA fkrull/deadsnakes
        - !Install [python3.5]
 
    Is equivalent to::
 
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !UbuntuRepo
          url: http://ppa.launchpad.net/fkrull/deadsnakes/ubuntu
-         suite: trusty
+         suite: xenial
          components: [main]
        - !Install [python3.5]
 
@@ -200,7 +200,7 @@ Ubuntu Commands
 
    The singleton step. Just enables an "universe" repository::
 
-   - !Ubuntu trusty
+   - !Ubuntu xenial
    - !UbuntuUniverse
    - !Install [checkinstall]
 
@@ -213,7 +213,7 @@ Alpine Commands
 ::
 
    setup:
-   - !Alpine v3.2
+   - !Alpine v3.4
 
 
 Distribution Commands
@@ -229,7 +229,7 @@ config if you use :step:`SubConfig` or :step:`Container`)
 ::
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install [gcc, gdb]        # On Ubuntu, equivalent to `apt-get install gcc gdb -y`
     - !Install [build-essential] # `apt-get install build-essential -y`
     # Note that `apt-get install` is run 2 times in this example
@@ -240,7 +240,7 @@ config if you use :step:`SubConfig` or :step:`Container`)
 ::
 
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !BuildDeps [wget]
     - !Sh echo "We can use wget here, but no curl"
     - !BuildDeps [curl]
@@ -255,13 +255,13 @@ Generic Commands
 
     Runs arbitrary shell command, for example::
 
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Sh "apt-get install -y package"
 
     If you have more than one-liner you may use YAMLy *literal* syntax for it::
 
         setup:
-        - !Alpine v3.2
+        - !Alpine v3.4
         - !Sh |
            if [ ! -z "$(which apk)" ] && [ ! -z "$(which lbu)" ]; then
              echo "Alpine"
@@ -283,7 +283,7 @@ Generic Commands
    a YAML list. For example::
 
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !Cmd ["apt-get", "install", "-y", "python"]
 
    You may use YAMLy features to get complex things. To run complex python
@@ -310,7 +310,7 @@ Generic Commands
 
    Runs arbitrary shell command as specified user (and/or group), for example::
 
-      - !Ubuntu trusty
+      - !Ubuntu xenial
       - !RunAs
          user-id: 1
          script: |
@@ -416,7 +416,7 @@ Generic Commands
 
        setup:
        - !TarInstall
-         url: http://static.rust-lang.org/dist/rust-1.4.0-x86_64-unknown-linux-gnu.tar.gz
+         url: https://static.rust-lang.org/dist/rust-1.10.0-x86_64-unknown-linux-gnu.tar.gz
          script: ./install.sh --prefix=/usr
 
 
@@ -448,8 +448,8 @@ Generic Commands
    Example::
 
         setup:
-        - !Alpine v3.1
-        - !Install [python]
+        - !Alpine v3.4
+        - !Install [python3]
         - !Git
           url: git://github.com/tailhook/injections
           path: /usr/lib/python3.5/site-packages/injections
@@ -485,7 +485,7 @@ Generic Commands
    Example::
 
         setup:
-        - !Alpine v3.1
+        - !Alpine v3.4
         - !Install [python, py-setuptools]
         - !GitInstall
           url: git://github.com/tailhook/injections
@@ -694,12 +694,12 @@ Sub-Containers
        container:
          base:
            setup:
-           - !Ubuntu trusty
+           - !Ubuntu xenial
            - !Py3Install [django]
          test:
            setup:
            - !Container base
-           - !Py3Install [nosetests]
+           - !Py3Install [nose]
 
    There two known use cases of functionality:
 
@@ -733,7 +733,7 @@ Sub-Containers
 
       docker-parser: ❶
         setup:
-        - !Alpine v3.1
+        - !Alpine v3.4
         - !Install [python]
         - !Depends Dockerfile ❷
         - !Depends docker2vagga.py ❷
@@ -784,13 +784,13 @@ Sub-Containers
         containers:
           ubuntu:
             setup:
-            - !Ubuntu trusty
+            - !Ubuntu xenial
             - !SubConfig
               path: packages.yaml
               container: packages
           alpine:
             setup:
-            - !Alpine v3.1
+            - !Alpine v3.4
             - !SubConfig
               path: packages.yaml
               container: packages
@@ -824,7 +824,7 @@ Sub-Containers
             auto-clean: true ❸
           nginx:
             setup:
-            - !Alpine v3.3
+            - !Alpine v3.4
             - !Install [nginx]
             - !Build
               container: jsstatic
@@ -852,7 +852,7 @@ Sub-Containers
         containers:
           pkg:
             setup:
-            - !Ubuntu trusty
+            - !Ubuntu xenial
             - !Install [build-essential]
             - !EnsureDir /packages
             - !Sh |
@@ -860,7 +860,7 @@ Sub-Containers
             auto-clean: true
           nginx:
             setup:
-            - !Ubuntu trusty
+            - !Ubuntu xenial
             - !Build
               container: pkg
               source: /packages
@@ -1100,7 +1100,7 @@ Python Commands
    .. code-block:: yaml
 
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Py2Install [sphinx]
 
    We always fetch latest pip for installing dependencies. The ``python-dev``
@@ -1136,7 +1136,7 @@ Python Commands
    .. code-block:: yaml
 
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Py2Requirements "requirements.txt"
 
    See :step:`Py2Install` for more details on package installation and
@@ -1149,7 +1149,7 @@ Python Commands
    .. code-block:: yaml
 
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Install [sphinx]
 
    See :step:`Py2Install` for more details on package installation and
@@ -1163,7 +1163,7 @@ Python Commands
    .. code-block:: yaml
 
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Requirements "requirements.txt"
 
    See :step:`Py2Install` for more details on package installation and
@@ -1183,7 +1183,7 @@ Python Commands
        Example::
 
             setup:
-            - !Ubuntu trusty
+            - !Ubuntu xenial
             - !PyFreeze
               freeze-file: "requirements.txt"
               packages: [flask]
@@ -1221,7 +1221,7 @@ Python Commands
 PHP/Composer Commands
 =====================
 
-.. note:: PHP/Composer support is recently added to the vagga some things may
+.. note:: PHP/Composer support was recently added to vagga, some things may
    change as we gain experience with the tool.
 
 .. step:: ComposerInstall
@@ -1229,7 +1229,7 @@ PHP/Composer Commands
    Example::
 
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !ComposerInstall ["phpunit/phpunit:~5.2.0"]
 
    Install a list of php packages using ``composer global require --prefer-dist
@@ -1300,9 +1300,9 @@ PHP/Composer Commands
    For example, you may want to use hhvm instead of php::
 
       - !ComposerConfig
-           install_runtime: false
-           runtime_exe: hhvm
-       - !ComposerInstall [phpunit/phpunit]
+        install_runtime: false
+        runtime_exe: hhvm
+      - !ComposerInstall [phpunit/phpunit]
 
    .. note:: Every time :step:`ComposerConfig` is specified, options are
       **replaced** rather than *augmented*. In other words, if you start a
@@ -1351,7 +1351,7 @@ Ruby Commands
    Example::
 
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !GemInstall [rake]
 
    Install a list of ruby gems using ``gem install --bindir /usr/local/bin
