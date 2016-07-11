@@ -11,8 +11,6 @@ extern crate env_logger;
 extern crate argparse;
 extern crate quire;
 extern crate time;
-extern crate unshare;
-extern crate libmount;
 extern crate signal;
 extern crate regex;
 extern crate scan_dir;
@@ -28,6 +26,11 @@ extern crate humantime;
 #[macro_use] extern crate log;
 #[macro_use] extern crate quick_error;
 
+#[cfg(feature="containers")]
+extern crate unshare;
+#[cfg(feature="containers")]
+extern crate libmount;
+
 #[macro_use] mod macros;
 mod config;
 mod container;
@@ -38,6 +41,11 @@ mod tty_util;
 mod options;
 mod digest;
 mod build_step;
+
+#[cfg(not(feature="containers"))]
+mod unshare;
+#[cfg(not(feature="containers"))]
+mod libmount;
 
 // Commands
 mod launcher;

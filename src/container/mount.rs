@@ -129,6 +129,12 @@ pub fn mount_pseudo(target: &Path, name: &str, options: &str)
     }
 }
 
+#[cfg(not(feature="containers"))]
+pub fn unmount(target: &Path) -> Result<(), String> {
+    unimplemented!();
+}
+
+#[cfg(feature="containers")]
 pub fn unmount(target: &Path) -> Result<(), String> {
     let c_target = target.to_cstring();
     let rc = unsafe { umount2(c_target.as_bytes().as_ptr(), MNT_DETACH) };

@@ -13,11 +13,20 @@ static O_CLOEXEC: c_int = 0o2000000;
 
 
 
+#[cfg(feature="containers")]
 extern {
     fn setns(fd: c_int, nstype: c_int) -> c_int;
     fn unshare(flags: c_int) -> c_int;
 }
 
+#[cfg(not(feature="containers"))]
+pub fn set_namespace<P:AsRef<Path>>(path: P, ns: Namespace)
+    -> Result<(), IoError>
+{
+    unimplemented!();
+}
+
+#[cfg(feature="containers")]
 pub fn set_namespace<P:AsRef<Path>>(path: P, ns: Namespace)
     -> Result<(), IoError>
 {
@@ -34,6 +43,12 @@ pub fn set_namespace<P:AsRef<Path>>(path: P, ns: Namespace)
     return Ok(());
 }
 
+#[cfg(not(feature="containers"))]
+pub fn unshare_namespace(ns: Namespace) -> Result<(), IoError> {
+    unimplemented!();
+}
+
+#[cfg(feature="containers")]
 pub fn unshare_namespace(ns: Namespace) -> Result<(), IoError> {
     let rc = unsafe { unshare(ns.to_clone_flag() as i32) };
     if rc < 0 {
