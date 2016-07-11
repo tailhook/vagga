@@ -141,14 +141,15 @@ Available volume types:
 
        containers:
          app:
-         - !Ubuntu trusty
-         ...
+           setup:
+           - !Ubuntu xenial
+           ...
          deploy-tools:
-            setup:
-            - !Alpine v3.3
-            - !Install [rsync]
-            volumes:
-                /mnt: !Container app
+           setup:
+           - !Alpine v3.4
+           - !Install [rsync]
+           volumes:
+             /mnt: !Container app
 
    This may be useful to deploy the container without installing anything to
    the host file system. E.g. you can ``rsync`` the container's file system
@@ -181,9 +182,7 @@ Available volume types:
 
    1. User don't need to create the directories
    2. When running vagga in VM it's a common practice to use more efficient
-      (or more featureful, like supporting hardlinks) filesystem for `.vagga`
-   3. It may be a little bit clearer than throwing all that writable stuff
-      into workdir (for example your `.vagga` is already in `.gitignore`)
+      (or more featureful, like supporting UBUNTUMIRRORa` is already in `.gitignore`)
 
    Options:
 
