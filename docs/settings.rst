@@ -115,6 +115,22 @@ Supported settings:
        to detect whether container configuration changed and is needed to
        be rebuilt. And the same hash used in directory name `.vagga/.roots`.
 
+.. opt:: auto-apply-sysctl
+
+    Set sysctls required by command. We do our best to only apply "safe"
+    sysctls by vagga automatically. Still it may exhaust resources of your
+    system, so use this option on your own risk.
+
+    We apply settings with ``sudo -k`` which means it will prompt for password
+    each time setting is tuned (probably only after system reboot).
+
+    Settings currently exists:
+
+    ============================= ============================= ===============
+    Key in vagga.yaml             Sysctl Name                   Hardcoded Limit
+    ============================= ============================= ===============
+    :opt:`expect-inotify-limit`   fs.inotify.max_user_watches   524288
+    ============================= ============================= ===============
 
 All project-local settings are also allowed here.
 
@@ -167,3 +183,4 @@ not to do so.
     prints a message when some other process have already started to build the
     image. When this flag is set to ``true`` vagga will wait instead. This
     is mostly useful for CI systems.
+

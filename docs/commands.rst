@@ -101,13 +101,19 @@ These parameters work for both kinds of commands:
    of a ``!Supervise`` command, but you can write prerequisites for the whole
    command group.
 
+.. opt:: expect-inotify-limit
+
+   Check the sysctl ``fs.inotify.max_user_watches`` and print a warning
+   or set it automatically if :opt:`auto-apply-sysctl` is enabled.
+   :ref:`More info about max_user_watches <sysctl-max-user-watches>`
+
 
 Parameters of `!Command`
 ========================
 
 .. opt:: container
 
-   The container to run command in
+   The container to run command in.
 
 .. opt:: tags
 

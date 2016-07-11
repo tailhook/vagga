@@ -22,6 +22,7 @@ struct SecureSettings {
     external_volumes: HashMap<String, PathBuf>,
     push_image_script: Option<String>,
     build_lock_wait: Option<bool>,
+    auto_apply_sysctl: Option<bool>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -38,7 +39,8 @@ pub fn secure_settings_validator<'a>(has_children: bool)
             V::Directory::new().is_absolute(false),
             V::Directory::new().is_absolute(true)))
         .member("push_image_script", V::Scalar::new().optional())
-        .member("build_lock_wait", V::Scalar::new().optional());
+        .member("build_lock_wait", V::Scalar::new().optional())
+        .member("auto_apply_sysctl", V::Scalar::new().optional());
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -109,6 +111,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.build_lock_wait {
         int_settings.build_lock_wait = val;
     }
+    if let Some(val) = cfg.auto_apply_sysctl {
+        int_settings.auto_apply_sysctl = val;
+    }
     if let Some(cfg) = cfg.site_settings.get(project_root) {
         if let Some(ref dir) = cfg.storage_dir {
             ext_settings.storage_dir = Some(dir.clone());
@@ -135,6 +140,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.build_lock_wait {
             int_settings.build_lock_wait = val;
         }
+        if let Some(val) = cfg.auto_apply_sysctl {
+            int_settings.auto_apply_sysctl = val;
+        }
     }
     Ok(())
 }
@@ -157,6 +165,7 @@ pub fn read_settings(project_root: &Path)
         alpine_mirror: None,
         push_image_script: None,
         build_lock_wait: false,
+        auto_apply_sysctl: false,
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {
