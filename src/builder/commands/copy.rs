@@ -95,15 +95,16 @@ impl BuildStep for Copy {
         let ref src = self.source;
         if src.starts_with("/work") {
             let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
-            hash_path(hash, src, &filter, self.owner_uid, self.owner_gid)
+            try!(hash_path(hash, src, &filter, self.owner_uid, self.owner_gid));
         } else {
             // We don't version the files outside of the /work because
             // we believe they are result of the commands run above
             //
             // And we need already built container to version the files
             // inside the container which is ugly
-            Ok(())
         }
+        hash.field("path", self.path.to_str().unwrap());
+        Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)
         -> Result<(), StepError>
