@@ -29,6 +29,11 @@ containers:
       source: /work/dir
       path: /dir
       include-regex: "(^hello|subdir|(^|.*/)file)$"
+  depends-with-include:
+    setup:
+    - !Depends
+      path: dir
+      include-regex: "(^hello|(^|.*/)file)$"
 
 commands:
 

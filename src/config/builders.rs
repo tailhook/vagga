@@ -101,7 +101,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("EmptyDir", cmd::dirs::EmptyDir::config())
     .option("CacheDirs", cmd::dirs::CacheDirs::config())
     .option("Env", cmd::generic::Env::config())
-    .option("Depends", cmd::generic::Depends::config())
+    .option("Depends", cmd::copy::Depends::config())
     .option("Git", cmd::vcs::Git::config())
     .option("GitInstall", cmd::vcs::GitInstall::config())
     .option("Tar", cmd::tarcmd::Tar::config())
@@ -173,7 +173,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "CacheDirs" => step(cmd::dirs::CacheDirs::decode(d)),
         "EmptyDir" => step(cmd::dirs::EmptyDir::decode(d)),
         "Remove" => step(cmd::dirs::Remove::decode(d)),
-        "Depends" => step(cmd::generic::Depends::decode(d)),
+        "Depends" => step(cmd::copy::Depends::decode(d)),
         "Container" => step(cmd::subcontainer::Container::decode(d)),
         "Build" => step(cmd::subcontainer::Build::decode(d)),
         "SubConfig" => step(cmd::subcontainer::SubConfig::decode(d)),
