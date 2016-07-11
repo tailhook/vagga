@@ -129,11 +129,6 @@ impl Distribution for Distro {
 }
 
 impl Distro {
-    // fn version_as_f32(&self) -> f32 {
-    //     let version: &str = self.version.as_ref();
-    //     version.trim_left_matches('v').parse().expect("Invalid version")
-    // }
-
     fn php_build_deps(&self) -> Vec<&'static str> {
         let parsed_version: f32 = self.version
             .trim_left_matches('v').parse().expect("Invalid version");
