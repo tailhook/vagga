@@ -14,7 +14,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine)
-    [[ $link = ".roots/pkg-alpine.ff6f6347/root" ]]
+    [[ $link = ".roots/pkg-alpine.a1aa32d6/root" ]]
 }
 
 @test "gem/bundler: alpine pkg no update gem" {
@@ -23,7 +23,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine-no-update-gem)
-    [[ $link = ".roots/pkg-alpine-no-update-gem.57da6fd9/root" ]]
+    [[ $link = ".roots/pkg-alpine-no-update-gem.642f317e/root" ]]
 }
 
 @test "gem/bundler: ubuntu trusty pkg" {
@@ -67,19 +67,19 @@ teardown() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
-    [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.2.0/gems/cuba-3.5.0 ]]
+    [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.3.0/gems/cuba-3.5.0 ]]
     link=$(readlink .vagga/bundle-alpine)
-    [[ $link = ".roots/bundle-alpine.8ff64ca4/root" ]]
+    [[ $link = ".roots/bundle-alpine.ea8ae891/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle without dev" {
     run vagga _build bundle-alpine-no-dev
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.2.0/gems/cuba-3.5.0 ]]
-    [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.2.0/gems/rake-11.1.1 ]]
+    [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/cuba-3.5.0 ]]
+    [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/rake-11.1.1 ]]
     link=$(readlink .vagga/bundle-alpine-no-dev)
-    [[ $link = ".roots/bundle-alpine-no-dev.8ff64ca4/root" ]]
+    [[ $link = ".roots/bundle-alpine-no-dev.ea8ae891/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle" {

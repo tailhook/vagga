@@ -1,7 +1,7 @@
 containers:
   text:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Text
       /etc/shakespeare: |
           Sir, in my heart there was a kind of fighting
@@ -9,7 +9,7 @@ containers:
 
   moretext:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Text
       /etc/shakespeare: |
           Sir, in my heart there was a kind of fighting
@@ -32,7 +32,7 @@ containers:
 
   tmpfs-subdirs:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     volumes:
       /tmp: !Tmpfs
         subdirs:
@@ -41,19 +41,19 @@ containers:
 
   snoop_shakespeare:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !EnsureDir /mnt
     volumes:
       /mnt: !Container text
 
   cache_dirs:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !CacheDirs /var/cache: var-cache
 
   ensure_dir:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !EnsureDir /var/lib/mount_point
     - !EnsureDir /var/lib/mount_point/subdir
     volumes:
@@ -61,16 +61,16 @@ containers:
 
   busybox:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
 
   printenv:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Sh env
 
   unzip-local:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !EnsureDir /root/test/1/dir
     - !Text
       /root/test/1/dir/file.txt: Hello world!
@@ -96,7 +96,7 @@ containers:
 
   unzip-downloaded:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Unzip
       url: http://files.zerogw.com/test-files/test-file.zip
       path: /root/test
@@ -104,7 +104,7 @@ containers:
 
   unzip-no-subdir:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Unzip
       url: ./test-file.zip
       path: /root/test/
@@ -112,7 +112,7 @@ containers:
 
   unzip-mismatch-hashsum:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Unzip
       url: ./test-file.zip
       path: /root/test/
@@ -120,7 +120,7 @@ containers:
 
   vagga:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Install [wget]
     # Download file to workdir specifically
     - !Download
@@ -139,7 +139,7 @@ containers:
 
   run_as:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !RunAs
       user_id: 1
       group_id: 1

@@ -2,7 +2,7 @@ containers:
 
   docker-parser:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Install [python]
     - !Depends Dockerfile
     - !Depends docker2vagga.py

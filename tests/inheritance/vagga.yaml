@@ -2,7 +2,7 @@ containers:
 
   base:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
 
   calc:
     setup:
@@ -70,7 +70,7 @@ containers:
 
   deep:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Sh |
          abc=a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/t/u/v/w/x/y/z
          ten=$abc/$abc/$abc/$abc/$abc/$abc/$abc/$abc/$abc/$abc
@@ -83,7 +83,7 @@ containers:
     setup:
     - !Container deep
 
-  c01: { setup: [!Alpine v3.1] }
+  c01: { setup: [!Alpine v3.4] }
   c02: { setup: [!Container c01] }
   c03: { setup: [!Container c02] }
   c04: { setup: [!Container c03] }
