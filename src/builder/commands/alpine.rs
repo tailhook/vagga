@@ -14,6 +14,7 @@ use super::super::packages;
 use process_util::capture_stdout;
 use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use config::version::Version;
 
 
 pub static LATEST_VERSION: &'static str = "v3.4";
@@ -21,7 +22,7 @@ static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
 
-const VERSION_WITH_PHP5: f32 = 3.4;
+const VERSION_WITH_PHP5: &'static str = "v3.4";
 
 
 // Build Steps
@@ -130,12 +131,12 @@ impl Distribution for Distro {
 
 impl Distro {
     fn php_build_deps(&self) -> Vec<&'static str> {
-        let parsed_version: f32 = self.version
-            .trim_left_matches('v').parse().expect("Invalid version");
+        let version_with_php5 = Version(VERSION_WITH_PHP5);
+        let current_version = Version(self.version.as_ref());
 
-        if parsed_version < VERSION_WITH_PHP5 {
+        if current_version < version_with_php5 {
             vec!("php")
-        } else if parsed_version == VERSION_WITH_PHP5 {
+        } else if current_version == version_with_php5 {
             vec!("php5")
         } else {
             vec!("php7")
@@ -143,15 +144,15 @@ impl Distro {
     }
 
     fn php_system_deps(&self) -> Vec<&'static str> {
-        let parsed_version: f32 = self.version
-            .trim_left_matches('v').parse().expect("Invalid version");
+        let version_with_php5 = Version(VERSION_WITH_PHP5);
+        let current_version = Version(self.version.as_ref());
 
-        if parsed_version < VERSION_WITH_PHP5 {
+        if current_version < version_with_php5 {
             vec!(
                 "php", "php-cli", "php-openssl", "php-phar",
                 "php-json", "php-pdo", "php-dom", "php-zip"
             )
-        } else if parsed_version == VERSION_WITH_PHP5 {
+        } else if current_version == version_with_php5 {
             vec!(
                 "php5", "php5-cli", "php5-openssl", "php5-phar",
                 "php5-json", "php5-pdo", "php5-dom", "php5-zip"
