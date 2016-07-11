@@ -5,9 +5,9 @@
 containers:
   ubuntu:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install
-      - postgresql-9.3
+      - postgresql-9.5
     - !EnsureDir /data
     environ:
       PG_PORT: 5433   # Port of host to use
@@ -15,7 +15,7 @@ containers:
       PG_USER: vagga
       PG_PASSWORD: vagga
       PGDATA: /data
-      PG_BIN: /usr/lib/postgresql/9.3/bin
+      PG_BIN: /usr/lib/postgresql/9.5/bin
     volumes:
       /data: !Tmpfs
         size: 100M
