@@ -30,6 +30,7 @@ The error is manifested as:
 
 * ``inotify watch limit reached``
 * ``ENOSPC`` / ``No space left on device`` (yes, this is not a typo)
+* ``Internal watch failed: watch ENOSPC``
 * Some programs just crash (see `#291`_)
 
 .. _#291: https://github.com/tailhook/vagga/issues/291
