@@ -1,5 +1,5 @@
 containers:
   bundle-lock:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemBundle

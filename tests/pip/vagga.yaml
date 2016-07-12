@@ -7,7 +7,7 @@ containers:
 
   py2-alpine:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Py2Install [setuptools, urp]
 
   py2-git-ubuntu:
@@ -17,7 +17,7 @@ containers:
 
   py2-git-alpine:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Py2Install [setuptools, "git+git://github.com/jdp/urp"]
 
   py3-ubuntu:
@@ -55,7 +55,7 @@ containers:
 
   py2req-alpine:
     setup:
-    - !Alpine v3.1
+    - !Alpine v3.4
     - !Py2Requirements requirements.txt
 
   py3req-https-ubuntu:
@@ -65,12 +65,12 @@ containers:
 
   py3req-https-alpine:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Py3Requirements req-https.txt
 
   py3req-recursive-reqs:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Py3Requirements include-nested.txt
 
   py3req-inherit:
@@ -80,14 +80,13 @@ containers:
   ubuntu-lxml:
     setup:
     - !Ubuntu trusty
-    # - !Alpine v3.2
     - !Install [libxml2-dev, libxslt1-dev, zlib1g-dev]
     - !Env
     - !Py3Install [lxml]
 
   alpine-lxml:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Install [libxml2-dev, libxslt-dev, zlib-dev]
     - !Env { CFLAGS: "-I/usr/include/libxml2 -I/usr/include/libxslt" }
     - !Py3Install [lxml]

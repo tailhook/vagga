@@ -35,7 +35,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-alpine)
-    [[ $link = ".roots/pkg-alpine.1ee6c4c2/root" ]]
+    [[ $link = ".roots/pkg-alpine.d2132f1a/root" ]]
 }
 
 @test "npm: default git" {
@@ -62,7 +62,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-alpine)
-    [[ $link = ".roots/git-alpine.5f4e7aee/root" ]]
+    [[ $link = ".roots/git-alpine.43611672/root" ]]
 }
 
 @test "npm: NpmDependencies" {
@@ -71,7 +71,7 @@ setup() {
     [[ $status = 124 ]]  # no resolve but has classnames --v
     [[ -f .vagga/npm-deps/usr/lib/node_modules/classnames/index.js ]]
     link=$(readlink .vagga/npm-deps)
-    [[ $link = ".roots/npm-deps.4ab4a1f9/root" ]]
+    [[ $link = ".roots/npm-deps.ae17e04b/root" ]]
 }
 @test "npm: NpmDependencies dev" {
     run vagga _run npm-dev-deps resolve .
@@ -79,5 +79,5 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/npm-dev-deps)
-    [[ $link = ".roots/npm-dev-deps.92d950fc/root" ]]
+    [[ $link = ".roots/npm-dev-deps.ebd5e264/root" ]]
 }

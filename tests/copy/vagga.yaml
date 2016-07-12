@@ -1,19 +1,19 @@
 containers:
   dir-copy:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Copy
       source: /work/dir
       path: /var/dir
   file-copy:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Copy
       source: /work/file
       path: /var/file
   nonexistent-copy:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Copy
       source: /work/something
       path: /var/somewhere
