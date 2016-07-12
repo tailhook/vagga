@@ -302,7 +302,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
     }
 
     // create vagga.ini file
-    try!(create_vagga_ini(&conf_d, &vagga_ini_content));
+    try!(create_vagga_ini(&conf_d.join("vagga.ini"), &vagga_ini_content));
 
     Ok(())
 }
@@ -314,24 +314,60 @@ fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
 }
 
 fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
-    ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
-        iter.filter(|&(_, ref name)| name.starts_with("php"))
-        .flat_map(|(ref entry, _)| {
-            ScanDir::dirs().walk(entry.path(), |iter| {
-                iter.filter(|&(ref entry, ref name)| {
-                    name == "conf.d" ||
-                    entry.path().join("conf.d").exists()
-                })
-                .map(|(ref entry, _)| {
-                    let path = entry.path();
-                    if path.ends_with("conf.d") { path }
-                    else { path.join("conf.d") }
-                })
-                .collect()
-            })
+    let mut dirs = Vec::new();
+
+    // find php main config directory (/etc/php or /etc/php5)
+    let etc_php: Vec<PathBuf> = try!(
+        ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
+            iter.filter(|&(_, ref name)| name.starts_with("php"))
+            .map(|(ref entry, _)| entry.path())
+            .collect()
         })
-        .collect()
-    })
+    );
+
+    // get subdirectories of main php config directory
+    let mut etc_php_dirs = Vec::new();
+    for path in etc_php.iter() {
+        try!(ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
+            for (ref entry, _) in iter {
+                etc_php_dirs.push(entry.path())
+            }
+        }));
+    }
+
+    // In ubuntu xenial, /etc/php directory structure was changed, now it's like:
+    // /etc/php
+    // └── 7.0
+    //     ├── cli
+    //     ├── fpm
+    //     └── mods-available
+    // instead of:
+    // /etc/php5
+    // ├── cli
+    // ├── fpm
+    // └── mods-available
+    // because of the extra directory for the php version, we need to search one more
+    // level down the directory tree, otherwise the `conf.d` directory would not be
+    // found in ubuntu xenial
+    for path in etc_php_dirs.iter() {
+        try!(ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
+            for (ref entry, _) in iter {
+                dirs.push(entry.path())
+            }
+        }));
+    }
+
+    dirs.append(&mut etc_php_dirs);
+
+    Ok(dirs.into_iter().filter_map(|path| {
+        if path.ends_with("conf.d") {
+            Some(path)
+        } else if path.join("conf.d").exists() {
+            Some(path.join("conf.d"))
+        } else {
+            None
+        }
+    }).collect())
 }
 
 fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
