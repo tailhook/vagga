@@ -2,26 +2,32 @@ containers:
   # test composer is available in PATH and removed after container is built
   composer-lifecycle:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !ComposerInstall
     - !Sh composer --version
 
   keep-composer:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !ComposerConfig
       keep_composer: true
     - !ComposerInstall
 
   change-vendor-dir:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !EnsureDir /usr/local/dependencies/vendor
     - !ComposerConfig
       vendor_dir: /usr/local/dependencies/vendor
     - !ComposerInstall [nette/tester:1.7.0]
 
   # php
+
+  php-ubuntu-xenial:
+    setup:
+    - !Ubuntu xenial
+    - !ComposerInstall ["laravel/installer:1.3.0"]
+
   php-ubuntu-trusty:
     setup:
     - !Ubuntu trusty
@@ -33,62 +39,72 @@ containers:
     - !Install [php5-cgi]
     - !ComposerInstall ["nette/tester:1.7.0"]
 
-  php-alpine-3-3:
+  php-alpine-3_4:
+    setup:
+    - !Alpine v3.4
+    - !ComposerInstall ["laravel/installer:1.3.0"]
+
+  php-alpine-3_3:
     setup:
     - !Alpine v3.3
     - !ComposerInstall ["laravel/installer:1.3.0"]
 
-  php-alpine-3-2:
+  php-alpine-3_2:
     setup:
     - !Alpine v3.2
     - !ComposerInstall ["laravel/installer:1.3.0"]
 
   php-composer-deps:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
+    - !ComposerDependencies { dev: false }
+
+  php-composer-deps-ubuntu-xenial:
+    setup:
+    - !Ubuntu xenial
+    - !ComposerDependencies { dev: false }
+
+  php-composer-deps-ubuntu-trusty:
+    setup:
+    - !Ubuntu trusty
     - !ComposerDependencies { dev: false }
 
   php-composer-dev-deps:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !ComposerDependencies
 
-  php-composer-dev-deps-ubuntu:
+  php-composer-dev-deps-ubuntu-xenial:
+    setup:
+    - !Ubuntu xenial
+    - !ComposerDependencies
+
+  php-composer-dev-deps-ubuntu-trusty:
     setup:
     - !Ubuntu trusty
     - !ComposerDependencies
 
   php-composer-deps-prefer-dist:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !ComposerDependencies
       prefer: dist
 
   php-composer-deps-wrong-prefer:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !ComposerDependencies
       prefer: wrong
 
   # hhvm
-  hhvm-base:
+  hhvm-ubuntu-xenial:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
-    - !AptTrust keys: [5a16e7281be7a449]
-    - !UbuntuRepo
-      url: http://dl.hhvm.com/ubuntu
-      suite: trusty
-      components: [main]
     - !Install [hhvm]
     - !ComposerConfig
       install_runtime: false
-      runtime_exe: /usr/bin/hhvm
     - !Sh echo 'include_path=.:/usr/local/lib/composer' >> /etc/hhvm/php.ini
-
-  hhvm-ubuntu-trusty:
-    setup:
-    - !Container hhvm-base
     - !ComposerInstall ["laravel/installer:1.3.0"]
     environ:
       HHVM_REPO_CENTRAL_PATH: /run/hhvm.hhbc

@@ -14,11 +14,15 @@ use super::super::packages;
 use process_util::capture_stdout;
 use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use config::version::Version;
 
 
 pub static LATEST_VERSION: &'static str = "v3.4";
 static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
+
+
+const VERSION_WITH_PHP5: &'static str = "v3.4";
 
 
 // Build Steps
@@ -70,7 +74,7 @@ impl Distribution for Distro {
         let mut to_install = vec!();
         let mut unsupp = vec!();
         for i in features.iter() {
-            if let Some(lst) = build_deps(*i) {
+            if let Some(lst) = self.build_deps(*i) {
                 for i in lst.into_iter() {
                     if !ctx.packages.contains(i) {
                         if ctx.build_deps.insert(i.to_string()) {
@@ -82,7 +86,7 @@ impl Distribution for Distro {
                 unsupp.push(*i);
                 continue;
             }
-            if let Some(lst) = system_deps(*i) {
+            if let Some(lst) = self.system_deps(*i) {
                 for i in lst.into_iter() {
                     let istr = i.to_string();
                     ctx.build_deps.remove(&istr);
@@ -122,6 +126,101 @@ impl Distribution for Distro {
                 .map_err(|e| format!("Error dumping package list: {}", e))
             }));
         Ok(())
+    }
+}
+
+impl Distro {
+    fn php_build_deps(&self) -> Vec<&'static str> {
+        let version_with_php5 = Version(VERSION_WITH_PHP5);
+        let current_version = Version(self.version.as_ref());
+
+        if current_version < version_with_php5 {
+            vec!("php")
+        } else if current_version == version_with_php5 {
+            vec!("php5")
+        } else {
+            vec!("php7")
+        }
+    }
+
+    fn php_system_deps(&self) -> Vec<&'static str> {
+        let version_with_php5 = Version(VERSION_WITH_PHP5);
+        let current_version = Version(self.version.as_ref());
+
+        if current_version < version_with_php5 {
+            vec!(
+                "php", "php-cli", "php-openssl", "php-phar",
+                "php-json", "php-pdo", "php-dom", "php-zip"
+            )
+        } else if current_version == version_with_php5 {
+            vec!(
+                "php5", "php5-cli", "php5-openssl", "php5-phar",
+                "php5-json", "php5-pdo", "php5-dom", "php5-zip"
+            )
+        } else {
+            vec!(
+                "php7", "php7-cli", "php7-openssl", "php7-phar",
+                "php7-json", "php7-pdo", "php7-dom", "php7-zip"
+            )
+        }
+    }
+
+    fn build_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
+        match pkg {
+            packages::BuildEssential => Some(vec!("build-base")),
+            packages::Https => Some(vec!("ca-certificates")),
+            // Python
+            packages::Python2 => Some(vec!()),
+            packages::Python2Dev => Some(vec!("python-dev")),
+            packages::Python3 => Some(vec!()),
+            packages::Python3Dev => Some(vec!("python3-dev")),
+            packages::PipPy2 => None,
+            packages::PipPy3 => None,
+            // Node.js
+            packages::NodeJs => Some(vec!()),
+            packages::NodeJsDev => Some(vec!("nodejs-dev")),
+            packages::Npm => Some(vec!()),
+            // PHP
+            packages::Php => Some(vec!()),
+            packages::PhpDev => Some(self.php_build_deps()),
+            packages::Composer => None,
+            // Ruby
+            packages::Ruby => Some(vec!()),
+            packages::RubyDev => Some(vec!("ruby-dev")),
+            packages::Bundler => None,
+            // VCS
+            packages::Git => Some(vec!("git")),
+            packages::Mercurial => Some(vec!("mercurial")),
+        }
+    }
+
+    fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
+        match pkg {
+            packages::BuildEssential => Some(vec!()),
+            packages::Https => Some(vec!()),
+            // Python
+            packages::Python2 => Some(vec!("python")),
+            packages::Python2Dev => Some(vec!()),
+            packages::Python3 => Some(vec!("python3")),
+            packages::Python3Dev => Some(vec!()),
+            packages::PipPy2 => None,
+            packages::PipPy3 => None,
+            // Node.js
+            packages::NodeJs => Some(vec!("nodejs")),
+            packages::NodeJsDev => Some(vec!()),
+            packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
+            // PHP
+            packages::Php => Some(self.php_system_deps()),
+            packages::PhpDev => Some(vec!()),
+            packages::Composer => None,
+            // Ruby
+            packages::Ruby => Some(vec!("ruby", "ruby-io-console")),
+            packages::RubyDev => Some(vec!()),
+            packages::Bundler => None,
+            // VCS
+            packages::Git => Some(vec!()),
+            packages::Mercurial => Some(vec!()),
+        }
     }
 }
 
@@ -178,67 +277,6 @@ pub fn remove(_ctx: &mut Context, pkgs: &Vec<String>)
         "--root", "/vagga/root",
         "del",
         ], &pkgs[..])
-}
-
-fn build_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
-    match pkg {
-        packages::BuildEssential => Some(vec!("build-base")),
-        packages::Https => Some(vec!("ca-certificates")),
-        // Python
-        packages::Python2 => Some(vec!()),
-        packages::Python2Dev => Some(vec!("python-dev")),
-        packages::Python3 => Some(vec!()),
-        packages::Python3Dev => Some(vec!("python3-dev")),
-        packages::PipPy2 => None,
-        packages::PipPy3 => None,
-        // Node.js
-        packages::NodeJs => Some(vec!()),
-        packages::NodeJsDev => Some(vec!("nodejs-dev")),
-        packages::Npm => Some(vec!()),
-        // PHP
-        packages::Php => Some(vec!()),
-        packages::PhpDev => Some(vec!("php-dev")),
-        packages::Composer => None,
-        // Ruby
-        packages::Ruby => Some(vec!()),
-        packages::RubyDev => Some(vec!("ruby-dev")),
-        packages::Bundler => None,
-        // VCS
-        packages::Git => Some(vec!("git")),
-        packages::Mercurial => Some(vec!("mercurial")),
-    }
-}
-
-fn system_deps(pkg: packages::Package) -> Option<Vec<&'static str>> {
-    match pkg {
-        packages::BuildEssential => Some(vec!()),
-        packages::Https => Some(vec!()),
-        // Python
-        packages::Python2 => Some(vec!("python")),
-        packages::Python2Dev => Some(vec!()),
-        packages::Python3 => Some(vec!("python3")),
-        packages::Python3Dev => Some(vec!()),
-        packages::PipPy2 => None,
-        packages::PipPy3 => None,
-        // Node.js
-        packages::NodeJs => Some(vec!("nodejs")),
-        packages::NodeJsDev => Some(vec!()),
-        packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
-        // PHP
-        packages::Php => Some(vec!(
-            "php", "php-cli", "php-openssl", "php-phar",
-            "php-json", "php-pdo", "php-dom", "php-zip"
-        )),
-        packages::PhpDev => Some(vec!()),
-        packages::Composer => None,
-        // Ruby
-        packages::Ruby => Some(vec!("ruby", "ruby-io-console")),
-        packages::RubyDev => Some(vec!()),
-        packages::Bundler => None,
-        // VCS
-        packages::Git => Some(vec!()),
-        packages::Mercurial => Some(vec!()),
-    }
 }
 
 pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,

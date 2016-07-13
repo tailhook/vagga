@@ -437,7 +437,9 @@ impl Distro {
             packages::Npm => Some(vec!()),
             // PHP
             packages::Php if self.has_php7() => {
-                Some(vec!("php-common", "php-cli"))
+                // In ubuntu xenial, php package does not bundles the json and zip modules required
+                // by Composer
+                Some(vec!("php-common", "php-cli", "php-json", "php-zip"))
             }
             packages::Php => Some(vec!("php5-common", "php5-cli")),
             packages::PhpDev => Some(vec!()),
@@ -913,4 +915,3 @@ impl EMDParams {
         }
     }
 }
-
