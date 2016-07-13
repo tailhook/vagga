@@ -1,8 +1,8 @@
 containers:
   app-freezer:
     setup:
-    - !Alpine v3.3
-    - !BuildDeps
+    - !Alpine v3.4
+    - &builddeps !BuildDeps
       - libmemcached-dev
       - zlib-dev
       - postgresql-dev
@@ -16,7 +16,8 @@ containers:
     - !Sh pip freeze > requirements.txt
   django:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
+    - *builddeps
     - !Install
       - libmemcached
       - zlib
@@ -27,11 +28,11 @@ containers:
       DATABASE_URL: sqlite:///db.sqlite3
   memcached:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Install [memcached]
   postgres:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install [postgresql]
     - !EnsureDir /data
     # uncomment the line below to make postgres data persistent
@@ -42,7 +43,7 @@ containers:
       PG_DB: django
       PG_USER: vagga
       PG_PASSWORD: vagga
-      PG_BIN: /usr/lib/postgresql/9.3/bin
+      PG_BIN: /usr/lib/postgresql/9.5/bin
     volumes:
       /data: !Tmpfs
         size: 100M

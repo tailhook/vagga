@@ -28,7 +28,7 @@ Now create the ``vagga.yaml`` file and add the following to it:
     containers:
       django:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Install ['Django >=1.9,<1.10']
 
 and then run::
@@ -69,14 +69,14 @@ output the requirements file.
     containers:
       app-freezer: ❶
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Install
           - pip ❷
           - 'Django >=1.9,<1.10'
         - !Sh pip freeze > requirements.txt ❸
       django:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Requirements requirements.txt ❹
 
 * ❶ -- our new container
@@ -129,7 +129,7 @@ Add ``dj-database-url`` to our ``app-freezer`` container:
     containers:
       app-freezer:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Install
           - pip
           - 'Django >=1.9,<1.10'
@@ -150,7 +150,7 @@ Set the environment variable:
         environ:
           DATABASE_URL: sqlite:///db.sqlite3 ❶
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Py3Requirements requirements.txt
 
 * ❶ -- will point to /work/db.sqlite3
@@ -352,7 +352,7 @@ build dependencies of ``pylibmc``:
     containers:
       app-freezer:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !BuildDeps
           - libmemcached-dev ❶
           - zlib-dev ❶
@@ -379,7 +379,7 @@ Add the ``pylibmc`` runtime dependencies to our ``django`` container:
       # ...
       django:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Install
           - libmemcached ❶
           - zlib ❶
@@ -398,7 +398,7 @@ Crate a new container called ``memcached``:
       # ...
       memcached:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Install [memcached]
 
 Create the command to run with caching:
@@ -471,7 +471,7 @@ First add ``psycopg2`` and its build dependencies to ``app-freezer``:
     containers:
       app-freezer:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !BuildDeps
           - libmemcached-dev
           - zlib-dev
@@ -499,7 +499,7 @@ Add the runtime dependencies of ``psycopg2``:
     containers:
       django:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Install
           - libmemcached
           - zlib
@@ -567,7 +567,7 @@ Create the database container:
       #..
       postgres:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Install [postgresql]
         - !EnsureDir /data
         environ:
@@ -576,7 +576,7 @@ Create the database container:
           PG_DB: test
           PG_USER: vagga
           PG_PASSWORD: vagga
-          PG_BIN: /usr/lib/postgresql/9.3/bin
+          PG_BIN: /usr/lib/postgresql/9.5/bin
         volumes:
           /data: !Tmpfs
             size: 100M
@@ -629,7 +629,7 @@ so, change our ``postgres`` container as follows:
     containers:
       postgres:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Install [postgresql]
         - !EnsureDir /data
         - !EnsureDir /work/.db/data ❶
@@ -639,7 +639,7 @@ so, change our ``postgres`` container as follows:
           PG_DB: test
           PG_USER: vagga
           PG_PASSWORD: vagga
-          PG_BIN: /usr/lib/postgresql/9.3/bin
+          PG_BIN: /usr/lib/postgresql/9.5/bin
         volumes:
           /data: !BindRW /work/.db/data ❷
 
