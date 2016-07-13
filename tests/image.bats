@@ -86,6 +86,9 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ ${output} = *"GET /images/${image_name} HTTP/1.1\" 200"* ]]
 
+    # check there is no image in local cache
+    [[ $(ls -1 /work/tmp/cache/downloads/*-${image_name} | wc -l) = 0 ]]
+
     run vagga _run alpine stat -c "%U" /var/lib/nobody
     printf "%s\n" "${lines[@]}"
     [[ $output = "nobody" ]]

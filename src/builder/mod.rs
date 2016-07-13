@@ -1,6 +1,7 @@
 use std::default::Default;
 use std::path::Path;
 use std::process::exit;
+use std::fs::remove_file;
 use rand;
 
 use config::read_config;
@@ -132,8 +133,8 @@ fn _build_from_image(container_name: &String, container: &Container,
     let mut ctx = Context::new(config, container_name.clone(),
                                container, settings);
 
-    let filename = try!(maybe_download_and_check_hashsum(&mut ctx,
-        image_cache_url, None));
+    let (filename, downloaded) = try!(maybe_download_and_check_hashsum(
+        &mut ctx, image_cache_url, None));
     match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
         Ok(_) => {
             info!("Succesfully unpack image {}", image_cache_url);
@@ -143,6 +144,13 @@ fn _build_from_image(container_name: &String, container: &Container,
                 .map_err(|e| format!("Error copying uid_map: {}", e)));
             try!(copy("/proc/self/gid_map", "/vagga/container/gid_map")
                 .map_err(|e| format!("Error copying gid_map: {}", e)));
+            // Remove image from local cache after unpacking
+            if downloaded {
+                remove_file(&filename)
+                    .map_err(|e| error!(
+                        "Error unlinking cache file: {}", e)).ok();
+
+            }
         },
         Err(e) => {
             return Err(format!("Error unpacking image {}: {}",
