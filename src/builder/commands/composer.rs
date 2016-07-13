@@ -38,6 +38,8 @@ const LOCKFILE_RELEVANT_KEYS: &'static [&'static str] = &[
     "autoload",
 ];
 
+const CONF_D: &'static str = "conf.d";
+
 #[derive(RustcDecodable, Debug, Clone)]
 pub struct ComposerConfig {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
@@ -314,9 +316,7 @@ fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
 }
 
 fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
-    let mut dirs = Vec::new();
-
-    // find php main config directory (/etc/php or /etc/php5)
+    // find php main config directory (/etc/php or /etc/php5 or both)
     let etc_php: Vec<PathBuf> = try!(
         ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
             iter.filter(|&(_, ref name)| name.starts_with("php"))
@@ -349,25 +349,26 @@ fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     // because of the extra directory for the php version, we need to search one more
     // level down the directory tree, otherwise the `conf.d` directory would not be
     // found in ubuntu xenial
+    let mut etc_php_subdirs = Vec::new();
     for path in etc_php_dirs.iter() {
         try!(ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
             for (ref entry, _) in iter {
-                dirs.push(entry.path())
+                let path = entry.path();
+                if path.ends_with(CONF_D) {
+                    etc_php_subdirs.push(entry.path());
+                } else if path.join(CONF_D).exists() {
+                    etc_php_subdirs.push(path.join(CONF_D));
+                }
             }
         }));
     }
 
-    dirs.append(&mut etc_php_dirs);
-
-    Ok(dirs.into_iter().filter_map(|path| {
-        if path.ends_with("conf.d") {
-            Some(path)
-        } else if path.join("conf.d").exists() {
-            Some(path.join("conf.d"))
-        } else {
-            None
-        }
-    }).collect())
+    Ok(
+        etc_php_dirs.into_iter()
+            .filter(|path| path.ends_with(CONF_D))
+            .chain(etc_php_subdirs.into_iter())
+            .collect()
+    )
 }
 
 fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
