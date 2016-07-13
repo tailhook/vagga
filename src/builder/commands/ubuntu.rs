@@ -620,7 +620,7 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
           Path::new("sys"),
           Path::new("proc"),
           Path::new("etc/resolv.conf"),
-          Path::new("etc/hosts")]));
+          Path::new("etc/hosts")], false));
 
     Ok(())
 }

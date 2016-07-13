@@ -1,5 +1,5 @@
 use std::default::Default;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::exit;
 use rand;
 
@@ -9,7 +9,8 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 
 use file_util::copy;
 use self::context::{Context};
-use self::commands::tarcmd::{Tar, tar_command};
+use self::commands::tarcmd::unpack_file;
+use self::download::maybe_download_and_check_hashsum;
 use build_step::BuildStep;
 pub use self::guard::Guard;
 pub use self::error::StepError;
@@ -131,13 +132,9 @@ fn _build_from_image(container_name: &String, container: &Container,
     let mut ctx = Context::new(config, container_name.clone(),
                                container, settings);
 
-    let tar = Tar {
-        url: image_cache_url.clone(),
-        sha256: None,
-        path: PathBuf::from("/"),
-        subdir: PathBuf::from(""),
-    };
-    match tar_command(&mut ctx, &tar) {
+    let filename = try!(maybe_download_and_check_hashsum(&mut ctx,
+        image_cache_url, None));
+    match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
         Ok(_) => {
             info!("Succesfully unpack image {}", image_cache_url);
             // If container is okay, we need to store uid_map used for

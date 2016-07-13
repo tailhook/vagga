@@ -35,8 +35,7 @@ setup() {
 }
 
 @test "image: push & pull" {
-    hash="02a0d1c1"
-    container_dir="alpine.${hash}"
+    container_dir="alpine.cb6ceadc"
     image_name="${container_dir}.tar.xz"
 
     rm -rf /work/tmp/cache/downloads/*-${image_name}
@@ -61,7 +60,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     access_log_output=${output}
 
-    # test download
+    # test downloading from cache
     rm -rf .vagga/alpine
     rm -rf .vagga/.roots/${container_dir}
     run vagga _build alpine
@@ -86,4 +85,11 @@ setup() {
     run tail -n 1 nginx/logs/access.log
     printf "%s\n" "${lines[@]}"
     [[ ${output} = *"GET /images/${image_name} HTTP/1.1\" 200"* ]]
+
+    run vagga _run alpine stat -c "%U" /var/lib/nobody
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "nobody" ]]
+    run vagga _run alpine stat -c "%U" /var/lib/someone
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "nobody" ]]
 }
