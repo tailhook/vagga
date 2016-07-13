@@ -1,14 +1,32 @@
-sudo: required
-dist: trusty
+language: rust
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+    - os: osx
 install:
-- "curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh"
 - "echo ubuntu-mirror: http://mirrors.us.kernel.org/ubuntu/ > ~/.vagga.yaml"
 - "echo alpine-mirror: http://mirrors.gigenet.com/alpinelinux/ >> ~/.vagga.yaml"
-- vagga make
-- vagga _build test
+- |
+  if [[ $TRAVIS_OS_NAME != osx ]]; then
+    echo "$(id -un):100000:65536" | sudo tee /etc/subuid | sudo tee /etc/subgid
+    sudo apt-get install uidmap
+    curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
+    vagga make
+    vagga _build test
+  else
+    brew install md5sha1sum
+    make osx
+  fi
 script:
-- "vagga -E VAGGA_VERSION=v0.0.0-test _run rust-musl cargo test"
-- "vagga \
-    -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
-    -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
-    test tests --tap"
+- |
+  if [[ $TRAVIS_OS_NAME != osx ]]; then
+    vagga -E VAGGA_VERSION=v0.0.0-test _run rust-musl cargo test
+    vagga \
+        -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
+        -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
+        test tests --tap
+  else
+    ./target/debug/vagga _list
+  fi

@@ -14,6 +14,7 @@ pub struct Settings {
                          Vec<(gid_t, gid_t, gid_t)>)>,
     pub push_image_script: Option<String>,
     pub build_lock_wait: bool,
+    pub auto_apply_sysctl: bool,
 }
 
 impl FromStr for Settings {

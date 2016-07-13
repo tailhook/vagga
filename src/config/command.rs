@@ -9,6 +9,7 @@ use quire::ast::Tag::{NonSpecific};
 use quire::ast::ScalarKind::{Plain};
 
 use super::volumes::{Volume, volume_validator};
+use launcher::system::SystemInfo;
 
 type PortNumValidator = V::Numeric;
 
@@ -52,6 +53,7 @@ pub struct CommandInfo {
     pub epilog: Option<String>,
     pub pass_tcp_socket: Option<String>,
     pub prerequisites: Vec<String>,  // Only for toplevel
+    pub expect_inotify_limit: Option<usize>,
 
     // Command
     pub tags: Vec<String>,  // Only for supervise chidlren
@@ -78,6 +80,7 @@ pub struct SuperviseInfo {
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
     pub prerequisites: Vec<String>,
+    pub expect_inotify_limit: Option<usize>,
 
     // Supervise
     pub mode: SuperviseMode,
@@ -102,6 +105,16 @@ impl MainCommand {
         match *self {
             MainCommand::Command(ref cmd) => cmd.prerequisites.as_ref(),
             MainCommand::Supervise(ref cmd) => cmd.prerequisites.as_ref(),
+        }
+    }
+    pub fn system<'x>(&'x self) -> SystemInfo {
+        match *self {
+            MainCommand::Command(ref cmd) => SystemInfo {
+                expect_inotify_limit: cmd.expect_inotify_limit,
+            },
+            MainCommand::Supervise(ref cmd) => SystemInfo {
+                expect_inotify_limit: cmd.expect_inotify_limit,
+            },
         }
     }
 }
@@ -198,7 +211,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("banner_delay", V::Numeric::new().optional().min(0))
         .member("epilog", V::Scalar::new().optional())
         .member("tags", V::Sequence::new(V::Scalar::new()))
-        .member("pass_tcp_socket", V::Scalar::new().optional());
+        .member("pass_tcp_socket", V::Scalar::new().optional())
+        .member("expect_inotify_limit", V::Scalar::new().optional());
     if toplevel {
         cmd = cmd.member("prerequisites", V::Sequence::new(V::Scalar::new()))
     }

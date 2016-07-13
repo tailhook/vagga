@@ -1,7 +1,7 @@
 containers:
   only:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
 
 commands:
   one: !Command

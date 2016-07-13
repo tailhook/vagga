@@ -1,12 +1,12 @@
 containers:
   pkg-alpine:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemInstall [rake:11.1.1]
 
   pkg-alpine-no-update-gem:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemConfig
       update_gem: false
     - !GemInstall [rake:11.1.1]
@@ -37,12 +37,12 @@ containers:
 
   bundle-alpine:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemBundle
 
   bundle-alpine-no-dev:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemBundle
       without: [development]
 
@@ -59,6 +59,6 @@ containers:
 
   bundle-invalid-trust-policy:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !GemBundle
       trust_policy: invalid

@@ -576,6 +576,14 @@ Files and Directories
      Regular expression of paths to ignore. Default regexp ignores common
      revision control folders and editor backup files.
 
+   include-regex
+     (default ``None``)
+     Regular expression of paths to include. When path matches both ignore and
+     include expressions it will be ignored. Also note that if
+     ``include-regex`` matches only the folder, no contents will be included.
+     For example ``patches/.*\.sql$`` will copy all ``patches`` directories with
+     all ``.sql`` files inside them.
+
    owner-uid, owner-gid
      (preserved by default) Override uid and gid of files and directories when
      copying. It's expected that most useful case is ``owner-uid: 0`` and

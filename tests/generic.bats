@@ -6,7 +6,7 @@ setup() {
     run vagga _run text cat /etc/shakespeare
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/text)
-    [[ $link = ".roots/text.fa850b7b/root" ]]
+    [[ $link = ".roots/text.c6c04e71/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
@@ -25,6 +25,16 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
+
+    run vagga _build snapshot-check-mode
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    run vagga _run snapshot-check-mode stat -c "%a %U" /home/hemingway
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "700 hemingway" ]]
+    run vagga _run snapshot-check-mode stat -c "%a %U" /home/hemingway/quote.txt
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "644 root" ]]
 }
 
 @test "generic: Overriding container volumes" {
@@ -45,7 +55,7 @@ setup() {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/cache_dirs)
-    [[ $link = ".roots/cache_dirs.63a632f3/root" ]]
+    [[ $link = ".roots/cache_dirs.80aeea07/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
 
@@ -53,7 +63,7 @@ setup() {
     run vagga _run ensure_dir echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ensure_dir)
-    [[ $link = ".roots/ensure_dir.1bef5403/root" ]]
+    [[ $link = ".roots/ensure_dir.36e6289a/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
     [[ -d ".vagga/ensure_dir/var/lib/mount_point/subdir" ]]
     [[ $output =~ "\"/var/lib/mount_point/subdir\" directory is in the volume: \"/var/lib/mount_point\"" ]]
@@ -64,7 +74,7 @@ setup() {
     run vagga two-lines
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.3bbd8dfc/root" ]]
+    [[ $link = ".roots/busybox.4ed6a479/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
@@ -191,7 +201,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
-    [[ $link = ".roots/vagga.6f593ff8/root" ]]
+    [[ $link = ".roots/vagga.70efbe78/root" ]]
 }
 
 @test "generic: test system dirs" {
@@ -223,7 +233,7 @@ setup() {
     run vagga _build unzip-local
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-local)
-    [[ $link = ".roots/unzip-local.8a1bcf6d/root" ]]
+    [[ $link = ".roots/unzip-local.9217ec07/root" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) = "2" ]]
     [[ -x .vagga/unzip-local/root/test/1/install.sh ]]
@@ -246,7 +256,7 @@ setup() {
     run vagga _build unzip-downloaded
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-downloaded)
-    [[ $link = ".roots/unzip-downloaded.b4156b72/root" ]]
+    [[ $link = ".roots/unzip-downloaded.1de0c4d8/root" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
     [[ -f $cached_file ]]

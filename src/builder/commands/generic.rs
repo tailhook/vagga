@@ -53,16 +53,6 @@ impl RunAs {
 }
 
 #[derive(Debug)]
-pub struct Depends(PathBuf);
-tuple_struct_decode!(Depends);
-
-impl Depends {
-    pub fn config() -> V::Scalar {
-        V::Scalar::new()
-    }
-}
-
-#[derive(Debug)]
 pub struct Env(BTreeMap<String, String>);
 tuple_struct_decode!(Env);
 
@@ -231,25 +221,6 @@ impl BuildStep for Sh {
         None
     }
 }
-
-impl BuildStep for Depends {
-    fn hash(&self, _cfg: &Config, hash: &mut Digest)
-        -> Result<(), VersionError>
-    {
-        let path = Path::new("/work").join(&self.0);
-        hash.file(&path, None, None)
-        .map_err(|e| VersionError::Io(e, path))
-    }
-    fn build(&self, _guard: &mut Guard, _build: bool)
-        -> Result<(), StepError>
-    {
-        Ok(())
-    }
-    fn is_dependent_on(&self) -> Option<&str> {
-        None
-    }
-}
-
 
 impl BuildStep for Cmd {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)

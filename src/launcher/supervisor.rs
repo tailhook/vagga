@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 use std::collections::{HashMap};
 use std::io::{self, stdout, stderr, Write};
+use std::time::{Instant, Duration};
 
-use time::{SteadyTime, Duration};
 use libmount::Tmpfs;
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
@@ -145,7 +145,15 @@ pub fn prepare_containers(sup: &SuperviseInfo, args: &Args, context: &Context)
     })
 }
 
+#[cfg(not(feature="containers"))]
+pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
+    context: &Context)
+    -> Result<i32, String>
+{
+    unimplemented!();
+}
 
+#[cfg(feature="containers")]
 pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     context: &Context)
     -> Result<i32, String>
@@ -357,7 +365,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     // Stopping loop
     if children.len() > 0 {
         let timeo = sup.kill_unresponsive_after;
-        let mut deadline = SteadyTime::now() + Duration::seconds(timeo as i64);
+        let mut deadline = Instant::now() + Duration::new(timeo.into(), 0);
         loop {
             match trap.wait(deadline) {
                 Some(SIGINT) => {}
@@ -390,7 +398,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                         child.signal(SIGKILL).ok();
                     }
                     // Basically this deadline should never happen
-                    deadline = SteadyTime::now() + Duration::seconds(3600);
+                    deadline = Instant::now() + Duration::new(3600, 0);
                 }
             }
         }

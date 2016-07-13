@@ -8,7 +8,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/subdir)
-    [[ $link = ".roots/subdir.b6b8705b/root" ]]
+    [[ $link = ".roots/subdir.27091713/root" ]]
 }
 
 @test "subconfig: docker-raw" {

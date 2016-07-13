@@ -13,7 +13,17 @@ extern {
     fn pivot_root(new_root: *const c_char, put_old: *const c_char) -> c_int;
 }
 
+#[cfg(not(feature="containers"))]
+pub fn temporary_change_root<P, T, F, E>(path: P, mut fun: F) -> Result<T, E>
+    where F: FnMut() -> Result<T, E>,
+          E: From<String>,
+          P: AsRef<Path>,
+{
+    unimplemented!();
+}
 
+
+#[cfg(feature="containers")]
 pub fn temporary_change_root<P, T, F, E>(path: P, mut fun: F) -> Result<T, E>
     where F: FnMut() -> Result<T, E>,
           E: From<String>,
@@ -36,6 +46,13 @@ pub fn temporary_change_root<P, T, F, E>(path: P, mut fun: F) -> Result<T, E>
     return res;
 }
 
+#[cfg(not(feature="containers"))]
+pub fn change_root(new_root: &Path, put_old: &Path) -> Result<(), String>
+{
+    unimplemented!();
+}
+
+#[cfg(feature="containers")]
 pub fn change_root(new_root: &Path, put_old: &Path) -> Result<(), String>
 {
     if unsafe { pivot_root(CString::new(new_root.to_str().unwrap()).unwrap().as_ptr(),

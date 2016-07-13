@@ -1,7 +1,7 @@
 containers:
   py:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Install [python3]
 
 commands:

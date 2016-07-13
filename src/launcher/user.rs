@@ -1,5 +1,6 @@
 use config::command::{MainCommand, CommandInfo, SuperviseInfo};
 use launcher::prerequisites;
+use launcher::system;
 use launcher::{supervisor, simple};
 use launcher::Context;
 
@@ -51,10 +52,14 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
              })
         });
     for (cmd, args) in iter {
-        let arg = match context.config.commands.get(&cmd) {
+        let cinfo = match context.config.commands.get(&cmd) {
+            Some(x) => x,
             None => return Err(format!("Command {} not found. \
                         Run vagga without arguments to see the list.", cmd)),
-            Some(&MainCommand::Command(ref info)) => {
+        };
+        try!(system::check(&cinfo.system(), context));
+        let arg = match *cinfo {
+            MainCommand::Command(ref info) => {
                 let a = match simple::parse_args(info, context, cmd, args) {
                     Ok(a) => a,
                     Err(Exit(x)) => return Ok(x),
@@ -62,7 +67,7 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
                 };
                 Args::Simple(info, a)
             }
-            Some(&MainCommand::Supervise(ref info)) => {
+            MainCommand::Supervise(ref info) => {
                 let a = match supervisor::parse_args(info, context, cmd, args)
                 {
                     Ok(a) => a,
