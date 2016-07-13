@@ -16,7 +16,8 @@ use container::mount::{unmount};
 use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
-use file_util::{read_visible_entries, create_dir, create_dir_mode, copy_stream};
+use file_util::{read_visible_entries, create_dir, create_dir_mode,
+    copy_stream, set_owner_group};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -61,7 +62,7 @@ impl TarInstall {
 
 
 pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
-    includes: &[&Path], excludes: &[&Path])
+    includes: &[&Path], excludes: &[&Path], preserve_owner: bool)
     -> Result<(), String>
 {
 
@@ -77,15 +78,15 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     if magic.len() >= 2 && magic[..2] == [0x1f, 0x8b] {
         return unpack_stream(
             try!(file.gz_decode().map_err(&read_err)),
-            src, tgt, includes, excludes);
+            src, tgt, includes, excludes, preserve_owner);
     } else if magic.len() >= 6 && magic[..6] ==
         [ 0xFD, b'7', b'z', b'X', b'Z', 0x00]
     {
         return unpack_stream(XzDecoder::new(file),
-            src, tgt, includes, excludes);
+            src, tgt, includes, excludes, preserve_owner);
     } else if magic.len() >= 3 && magic[..3] == [ b'B', b'Z', b'h'] {
         return unpack_stream(BzDecoder::new(file),
-            src, tgt, includes, excludes);
+            src, tgt, includes, excludes, preserve_owner);
     } else {
         return Err(format!("unpacking {:?}: unexpected compression", src));
     }
@@ -93,7 +94,7 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
 }
 
 fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
-    includes: &[&Path], excludes: &[&Path])
+    includes: &[&Path], excludes: &[&Path], preserve_owner: bool)
     -> Result<(), String>
 {
     let read_err = |e| format!("Error reading {:?}: {}", srcpath, e);
@@ -119,9 +120,14 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
         let path = tgt.join(orig_path);
         let write_err = |e| format!("Error writing {:?}: {}", path, e);
         let entry = src.header().entry_type();
+        let uid = try!(src.header().uid().map_err(&read_err));
+        let gid = try!(src.header().gid().map_err(&read_err));
         if entry.is_dir() {
             let mode = try!(src.header().mode().map_err(&read_err));
             try!(create_dir_mode(&path, mode).map_err(&write_err));
+            if preserve_owner {
+                try!(set_owner_group(&path, uid, gid).map_err(&write_err));
+            }
         } else if entry.is_symlink() {
             let src = try!(try!(src.header().link_name().map_err(&read_err))
                 .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
@@ -177,6 +183,9 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
             let mode = try!(src.header().mode().map_err(&read_err));
             try!(set_permissions(&path, Permissions::from_mode(mode))
                 .map_err(&write_err));
+            if preserve_owner {
+                try!(set_owner_group(&path, uid, gid).map_err(&write_err));
+            }
         }
     }
     for (src, dst) in hardlinks.into_iter() {
@@ -206,11 +215,11 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root")
         .join(tar.path.strip_prefix("/").unwrap());
-    let filename = try!(maybe_download_and_check_hashsum(
+    let (filename, _) = try!(maybe_download_and_check_hashsum(
         ctx, &tar.url, tar.sha256.clone()));
 
     if &Path::new(&tar.subdir) == &Path::new(".") {
-        try!(unpack_file(ctx, &filename, &fpath, &[], &[]));
+        try!(unpack_file(ctx, &filename, &fpath, &[], &[], false));
     } else {
         let tmppath = PathBuf::from("/vagga/root/tmp")
             .join(filename.file_name().unwrap());
@@ -222,10 +231,10 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
         try_msg!(BindMount::new(&fpath, &tmpsub).mount(),
             "temporary tar mount: {err}");
         let res = if tar.subdir.as_path() == Path::new("") {
-            unpack_file(ctx, &filename, &tmppath, &[], &[])
+            unpack_file(ctx, &filename, &tmppath, &[], &[], false)
         } else {
             unpack_file(ctx, &filename, &tmppath,
-                &[&tar.subdir.clone()], &[])
+                &[&tar.subdir.clone()], &[], false)
         };
         try!(unmount(&tmpsub));
         try!(res);
@@ -236,7 +245,7 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
-    let filename = try!(maybe_download_and_check_hashsum(
+    let (filename, _) = try!(maybe_download_and_check_hashsum(
         ctx, &tar.url, tar.sha256.clone()));
 
     let tmppath = PathBuf::from("/vagga/root/tmp")
@@ -245,7 +254,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
          .map_err(|e| format!("Error making dir: {}", e)));
     try!(set_permissions(&tmppath, Permissions::from_mode(0o755))
          .map_err(|e| format!("Error setting permissions: {}", e)));
-    try!(unpack_file(ctx, &filename, &tmppath, &[], &[]));
+    try!(unpack_file(ctx, &filename, &tmppath, &[], &[], false));
     let workdir = if let Some(ref subpath) = tar.subdir {
         tmppath.join(subpath)
     } else {

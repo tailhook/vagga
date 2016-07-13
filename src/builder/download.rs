@@ -123,13 +123,10 @@ fn check_if_local(url: &str, sha256: &Option<String>)
 
 pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
     url: &str, sha256: Option<String>)
-    -> Result<PathBuf, String>
+    -> Result<(PathBuf, bool), String>
 {
-    let filename = if let Some(path) = try!(check_if_local(url, &sha256)) {
-        path
-    } else {
-        try!(download_file(ctx, &[url], sha256))
-    };
-
-    Ok(filename)
+    Ok(match try!(check_if_local(url, &sha256)) {
+        Some(path) => (path, false),
+        None => (try!(download_file(ctx, &[url], sha256)), true),
+    })
 }
