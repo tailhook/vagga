@@ -4,6 +4,10 @@ containers:
     setup:
     - !Alpine v3.4
     - !Install [bc]
+    - !Sh mkdir -p /var/lib/nobody
+    - !Text
+      /var/lib/someone: Who am I?
+    - !Sh chown -R nobody:nobody /var/lib/nobody /var/lib/someone
 
   nginx:
     volumes:
