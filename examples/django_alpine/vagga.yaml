@@ -2,7 +2,7 @@ containers:
   app-freezer:
     setup:
     - !Alpine v3.4
-    - &builddeps !BuildDeps
+    - &build_deps !BuildDeps
       - libmemcached-dev
       - zlib-dev
       - postgresql-dev
@@ -17,7 +17,7 @@ containers:
   django:
     setup:
     - !Alpine v3.4
-    - *builddeps
+    - *build_deps
     - !Install
       - libmemcached
       - zlib

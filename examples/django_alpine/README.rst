@@ -93,7 +93,7 @@ Now, build the ``app-freezer`` container::
 
 You will notice the new ``requirements.txt`` file holding a content similar to::
 
-    Django==1.9.2
+    Django==1.9.7
 
 And now let's run our project. Edit ``vagga.yaml`` to add the ``run`` command:
 
@@ -179,9 +179,7 @@ Let's another shortcut command for ``manage.py``:
       manage.py: !Command
         description: Shortcut to manage.py
         container: django
-        run:
-        - python3
-        - manage.py
+        run: [python3, manage.py]
 
 .. note:: This command accept arguments by default, so
    instead of writing it long ``vagga _run django python3 manage.py runserver``
@@ -353,19 +351,31 @@ build dependencies of ``pylibmc``:
       app-freezer:
         setup:
         - !Alpine v3.4
-        - !BuildDeps
-          - libmemcached-dev ❶
-          - zlib-dev ❶
+        - &build_deps !BuildDeps ❶
+          - libmemcached-dev ❷
+          - zlib-dev ❷
         - !Py3Install
           - pip
           - 'Django >=1.9,<1.10'
           - 'dj-database-url >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
-          - 'django-cache-url >=1.0,<1.1' ❷
+          - 'django-cache-url >=1.0,<1.1' ❸
         - !Sh pip freeze > requirements.txt
+      django:
+        environ:
+          DATABASE_URL: sqlite:///db.sqlite3
+        setup:
+        - !Alpine v3.4
+        - *build_deps ❹
+        - !Py3Requirements requirements.txt
 
-* ❶ -- libraries needed to build pylibmc
-* ❷ -- used to configure the cache through an url
+* ❶ -- we used an YAML anchor (``&build_deps``) to avoid repetition of the
+  build dependencies
+* ❷ -- libraries needed to build pylibmc
+* ❸ -- used to configure the cache through an url
+* ❹ -- the YAML alias ``*build_deps`` references the anchor declared in the
+  ``app-freezer`` container, so we don't need to repeat the build dependencies
+  on both containers
 
 And rebuild the container::
 
@@ -380,6 +390,7 @@ Add the ``pylibmc`` runtime dependencies to our ``django`` container:
       django:
         setup:
         - !Alpine v3.4
+        - *build_deps
         - !Install
           - libmemcached ❶
           - zlib ❶
@@ -500,6 +511,7 @@ Add the runtime dependencies of ``psycopg2``:
       django:
         setup:
         - !Alpine v3.4
+        - *build_deps
         - !Install
           - libmemcached
           - zlib
