@@ -302,9 +302,15 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         for &(_, ref child) in children.values() {
             child.signal(SIGTERM).ok();
         }
+    } else if children.len() == 0 {
+        writeln!(&mut stderr(),
+            "This supervise command has no children matching conditions. \
+             Either your `children` is empty, or your `--only` arguments \
+             don't match anything, or your `--exclude` arguments do \
+             exclude all the processes.").ok();
+        errcode = 127;
     } else {
         // Normal loop
-        assert!(children.len() > 0);
         'signal_loop: for signal in trap.by_ref() {
             match signal {
                 SIGINT => {
