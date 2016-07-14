@@ -289,8 +289,15 @@ fn clean_dirs_except<P: AsRef<Path>>(roots: P, useful: &HashSet<String>,
             {
                 debug!("Skipping lock file {:?}", path);
             } else {
-                try_msg!(remove_file(&path),
-                    "Can't remove file {p:?}: {err}", p=path);
+                match remove_file(&path) {
+                    Ok(()) => {}
+                    // File is deleted while we were scanning
+                    Err(ref e) if e.kind() == io::ErrorKind::NotFound => {}
+                    Err(ref e) => {
+                        return Err(
+                            format!("Can't remove file {:?}: {}", path, e));
+                    }
+                }
             }
         } else if !typ.is_dir() || entry.file_name()[..].to_str()
             .map(|n| !useful.contains(&n.to_string()))
