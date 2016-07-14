@@ -39,12 +39,12 @@ This will create a project named ``MyProject`` in the current directory. It will
 look like::
 
     ~/projects/vagga-django-tutorial
-    ├── manage.py
     ├── MyProject
     │   ├── __init__.py
     │   ├── settings.py
     │   ├── urls.py
     │   └── wsgi.py
+    ├── manage.py
     └── vagga.yaml
 
 Notice that we used ``'Django >=1.9,<1.10'`` instead of just ``Django``. It is a
@@ -119,10 +119,10 @@ Let's add a dependency
 
 By default, Django is configured to use sqlite as its database, but we want to
 use a database url from an environment variable, since it's more flexible.
-However, Django does not understand database urls, so we need ``dj-database-url``
-to convert the database url into what Django understand.
+However, Django does not understand database urls, so we need django-environ_
+to parse configuration urls into the format Django understands.
 
-Add ``dj-database-url`` to our ``app-freezer`` container:
+Add ``django-environ`` to our ``app-freezer`` container:
 
 .. code-block:: yaml
 
@@ -130,11 +130,16 @@ Add ``dj-database-url`` to our ``app-freezer`` container:
       app-freezer:
         setup:
         - !Alpine v3.4
+        - !PipConfig
+          dependencies: true ❶
         - !Py3Install
           - pip
           - 'Django >=1.9,<1.10'
-          - 'dj-database-url >=0.4,<0.5'
+          - 'django-environ >=0.4,<0.5'
         - !Sh pip freeze > requirements.txt
+
+* ❶ -- ``django-environ`` have a dependency on the package ``six`` which would
+  not be installed unless we tell pip to do so
 
 Rebuild the ``app-freezer`` container to update ``requirements.txt``::
 
@@ -161,16 +166,17 @@ Now let's change our project's settings by editing ``MyProject/settings.py``:
 
     # MyProject/settings.py
     import os
-    import dj_database_url
+    import environ
+    env = environ.Env()
 
     # other settings
 
     DATABASES = {
         # will read DATABASE_URL from environment
-        'default': dj_database_url.config()
+        'default': env.db()
     }
 
-Let's another shortcut command for ``manage.py``:
+Let's add a shortcut command for ``manage.py``:
 
 .. code-block:: yaml
 
@@ -196,6 +202,8 @@ After creating the superuser, run our project::
     $ vagga run
 
 visit ``localhost:8000/admin`` and log into the Django admin.
+
+.. _django-environ: http://django-environ.readthedocs.io/
 
 Adding some code
 ================
@@ -342,8 +350,7 @@ Trying out memcached
 Many projects use `memcached <http://memcached.org/>`_ to speed up things, so
 let's try it out.
 
-Add ``pylibmc`` and ``django-cache-url`` to our ``app-freezer``, as well as the
-build dependencies of ``pylibmc``:
+Add ``pylibmc`` to our ``app-freezer``, as well as its build dependencies:
 
 .. code-block:: yaml
 
@@ -354,26 +361,26 @@ build dependencies of ``pylibmc``:
         - &build_deps !BuildDeps ❶
           - libmemcached-dev ❷
           - zlib-dev ❷
+        - !PipConfig
+          dependencies: true
         - !Py3Install
           - pip
           - 'Django >=1.9,<1.10'
-          - 'dj-database-url >=0.4,<0.5'
+          - 'django-environ >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
-          - 'django-cache-url >=1.0,<1.1' ❸
         - !Sh pip freeze > requirements.txt
       django:
         environ:
           DATABASE_URL: sqlite:///db.sqlite3
         setup:
         - !Alpine v3.4
-        - *build_deps ❹
+        - *build_deps ❸
         - !Py3Requirements requirements.txt
 
 * ❶ -- we used an YAML anchor (``&build_deps``) to avoid repetition of the
   build dependencies
 * ❷ -- libraries needed to build pylibmc
-* ❸ -- used to configure the cache through an url
-* ❹ -- the YAML alias ``*build_deps`` references the anchor declared in the
+* ❸ -- the YAML alias ``*build_deps`` references the anchor declared in the
   ``app-freezer`` container, so we don't need to repeat the build dependencies
   on both containers
 
@@ -427,7 +434,7 @@ Create the command to run with caching:
           app: !Command
             container: django
             environ:
-              CACHE_URL: memcached://127.0.0.1:11211 ❷
+              CACHE_URL: pymemcache://127.0.0.1:11211 ❷
             run: python3 manage.py runserver
 
 * ❶ -- run memcached as verbose so we see can see the cache working
@@ -438,12 +445,15 @@ Change ``MyProject/settings.py`` to use our ``memcached`` container:
 .. code-block:: python
 
     import os
-    import dj_database_url
-    import django_cache_url
-    # ...
+    import environ
+    env = environ.Env()
+
+    # other settings
+
     CACHES = {
         # will read CACHE_URL from environment
-        'default': django_cache_url.config()
+        # defaults to memory cache if environment is not set
+        'default': env.cache(default='locmemcache://')
     }
 
 Configure our view to cache its response:
@@ -487,12 +497,13 @@ First add ``psycopg2`` and its build dependencies to ``app-freezer``:
           - libmemcached-dev
           - zlib-dev
           - postgresql-dev ❶
+        - !PipConfig
+          dependencies: true
         - !Py3Install
           - pip
           - 'Django >=1.9,<1.10'
-          - 'dj-database-url >=0.4,<0.5'
+          - 'django-environ >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
-          - 'django-cache-url >=1.0,<1.1'
           - 'psycopg2 >=2.6,<2.7' ❷
         - !Sh pip freeze > requirements.txt
 

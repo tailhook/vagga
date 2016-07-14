@@ -6,12 +6,13 @@ containers:
       - libmemcached-dev
       - zlib-dev
       - postgresql-dev
+    - !PipConfig
+      dependencies: true
     - !Py3Install
       - pip
       - 'Django >=1.9,<1.10'
-      - 'dj-database-url >=0.4,<0.5'
+      - 'django-environ >=0.4,<0.5'
       - 'pylibmc >=1.5,<1.6'
-      - 'django-cache-url >=1.0,<1.1'
       - 'psycopg2 >=2.6,<2.7'
     - !Sh pip freeze > requirements.txt
   django:

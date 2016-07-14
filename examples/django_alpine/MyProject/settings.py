@@ -11,8 +11,10 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 
 import os
-import dj_database_url
-import django_cache_url
+
+import environ
+
+env = environ.Env()
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -80,12 +82,12 @@ WSGI_APPLICATION = 'MyProject.wsgi.application'
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config()
+    'default': env.db()
 }
 
 
 CACHES = {
-    'default': django_cache_url.config()
+    'default': env.cache(default='locmemcache://')
 }
 
 
