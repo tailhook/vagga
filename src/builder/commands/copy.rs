@@ -1,5 +1,5 @@
 use std::io::ErrorKind;
-use std::fs::{symlink_metadata};
+use std::fs::{symlink_metadata, Metadata};
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -11,6 +11,7 @@ use regex::{Regex, Error as RegexError};
 use scan_dir::ScanDir;
 
 use container::root::temporary_change_root;
+use file_util::{DIR_MODE, EXE_CHECK_MASK};
 use file_util::{create_dir_mode, shallow_copy};
 use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -53,7 +54,7 @@ impl BuildStep for Depends {
     {
         let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
         let path = Path::new("/work").join(&self.path);
-        hash_path(hash, &path, &filter, None, None)
+        hash_path(hash, &path, &filter)
     }
     fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
@@ -71,6 +72,7 @@ pub struct Copy {
     pub path: PathBuf,
     pub owner_uid: Option<uid_t>,
     pub owner_gid: Option<gid_t>,
+    pub umask: Option<u32>,
     pub ignore_regex: String,
     pub include_regex: Option<String>,
 }
@@ -85,6 +87,7 @@ impl Copy {
         .member("include_regex", V::Scalar::new().optional())
         .member("owner_uid", V::Numeric::new().min(0).optional())
         .member("owner_gid", V::Numeric::new().min(0).optional())
+        .member("umask", V::Numeric::new().min(0).max(0o777).optional())
     }
 }
 
@@ -95,7 +98,7 @@ impl BuildStep for Copy {
         let ref src = self.source;
         if src.starts_with("/work") {
             let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
-            try!(hash_path(hash, src, &filter, self.owner_uid, self.owner_gid));
+            try!(hash_path(hash, src, &filter));
         } else {
             // We don't version the files outside of the /work because
             // we believe they are result of the commands run above
@@ -104,6 +107,15 @@ impl BuildStep for Copy {
             // inside the container which is ugly
         }
         hash.field("path", self.path.to_str().unwrap());
+        if let Some(uid) = self.owner_uid {
+            hash.field("owner_uid", uid.to_string());
+        }
+        if let Some(gid) = self.owner_gid {
+            hash.field("owner_gid", gid.to_string());
+        }
+        if let Some(umask) = self.umask {
+            hash.field("umask", umask.to_string());
+        }
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)
@@ -118,7 +130,11 @@ impl BuildStep for Copy {
             let typ = try!(symlink_metadata(src)
                 .map_err(|e| StepError::Read(src.into(), e)));
             if typ.is_dir() {
-                try!(create_dir_mode(dest, typ.permissions().mode())
+                let mode = match self.umask {
+                    Some(umask) => DIR_MODE & !umask,
+                    None => typ.permissions().mode(),
+                };
+                try!(create_dir_mode(dest, mode)
                     .map_err(|e| StepError::Write(dest.clone(), e)));
                 let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
                 let mut processed_paths = HashSet::new();
@@ -138,7 +154,7 @@ impl BuildStep for Copy {
                             for parent in parents.iter().rev() {
                                 let fdest = dest.join(parent);
                                 try!(shallow_copy(&src.join(parent), &fdest,
-                                        self.owner_uid, self.owner_gid)
+                                        self.owner_uid, self.owner_gid, self.umask)
                                     .context((&fpath, &fdest)));
                                 processed_paths.insert(PathBuf::from(parent));
                             }
@@ -148,7 +164,7 @@ impl BuildStep for Copy {
                 }).map_err(StepError::ScanDir).and_then(|x| x));
             } else {
                 try!(shallow_copy(&self.source, dest,
-                                  self.owner_uid, self.owner_gid)
+                                  self.owner_uid, self.owner_gid, self.umask)
                     .context((&self.source, dest)));
             }
             Ok(())
@@ -159,8 +175,7 @@ impl BuildStep for Copy {
     }
 }
 
-fn hash_path(hash: &mut Digest, path: &Path,
-    filter: &Filter, owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
+fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)
     -> Result<(), VersionError>
 {
     match symlink_metadata(path) {
@@ -184,17 +199,16 @@ fn hash_path(hash: &mut Digest, path: &Path,
                     }
                 }
                 for cur_path in all_paths {
-                    hash.field("filename", cur_path.to_str().unwrap());
-                    try!(hash.file(&path.join(&cur_path),
-                                   owner_uid, owner_gid)
-                         .map_err(|e| VersionError::Io(e, PathBuf::from(cur_path))));
+                    let full_path = path.join(&cur_path);
+                    let stat = try!(full_path.symlink_metadata()
+                        .map_err(|e| VersionError::Io(e, PathBuf::from(&full_path))));
+                    try!(hash_file_and_exe_mode(hash, &full_path, &stat));
                 }
                 Ok(())
             }).map_err(VersionError::ScanDir).and_then(|x| x));
         }
-        Ok(_) => {
-            try!(hash.file(path, owner_uid, owner_gid)
-                 .map_err(|e| VersionError::Io(e, path.into())));
+        Ok(ref meta) => {
+            try!(hash_file_and_exe_mode(hash, path, meta));
         }
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
             return Err(VersionError::New);
@@ -203,6 +217,18 @@ fn hash_path(hash: &mut Digest, path: &Path,
             return Err(VersionError::Io(e, path.into()));
         }
     }
+    Ok(())
+}
+
+fn hash_file_and_exe_mode(hash: &mut Digest, path: &Path, stat: &Metadata)
+    -> Result<(), VersionError>
+{
+    if stat.is_file() {
+        let exe_mode = stat.permissions().mode() & EXE_CHECK_MASK;
+        hash.field("exe_mode", exe_mode.to_string());
+    }
+    try!(hash.file(path, stat)
+        .map_err(|e| VersionError::Io(e, path.into())));
     Ok(())
 }
 
