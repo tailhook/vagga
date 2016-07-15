@@ -26,24 +26,32 @@ Create the ``vagga.yaml`` file and add the following to it:
     containers:
       laravel:
         setup:
-        - !Ubuntu trusty
-        - !ComposerInstall [laravel/installer]
+        - !Ubuntu xenial
+        - !ComposerInstall
+        - !ComposerConfig
+          keep-composer: true
+        environ:
+          HOME: /tmp
 
 Here we are building a container from Ubuntu and and telling it to install PHP,
 setup Composer and install the Laravel installer. Now create our new project::
 
-    $ vagga _run laravel laravel new src
+    $ vagga _run laravel composer create-project \
+        --prefer-dist --no-install --no-scripts \
+        laravel/laravel src 5.2.*
     $ mv src/* src/.* .
     $ rmdir src
+
+The first command is quite big! It tells composer to create a new project from
+``laravel/laravel`` version 5.2 and place it into the ``src`` directory. The three
+flags tell composer to: ``--prefer-disr`` install packages from dist when
+available; ``--no-install`` do not run ``composer install``; ``--no-scripts``
+do not run scripts defined in the root package.
 
 We want our project's files to be in the current directory (the one containing
 ``vagga.yaml``) but Laravel installer only accepts an empty directory, so we
 tell it to create the project into ``src``, move its contents into the current
 directory and remove ``src``.
-
-You may see in the console ``sh: composer: not found`` because Laravel installer
-is trying to run ``composer install``, but don't worry about it, vagga will take
-care of that for us.
 
 Now that we have our project created, change our container as follows:
 
@@ -57,16 +65,21 @@ Now that we have our project created, change our container as follows:
           APP_DEBUG: true ❸
           APP_KEY: YourRandomGeneratedEncryptionKey ❹
         setup:
-        - !Ubuntu trusty
-        - !Env { <<: *env } ❺
-        - !ComposerDependencies ❻
+        - !Ubuntu xenial
+        - !UbuntuUniverse
+        - !Install
+          - php-dom ❺
+          - php-mbstring ❺
+        - !Env { <<: *env } ❻
+        - !ComposerDependencies ❼
 
 * ❶ -- tell our application we are running on a container.
 * ❷ -- the "environment" our application will run (development, testing, production).
 * ❸ -- enable debug mode.
 * ❹ -- a random, 32 character string used by encryption service.
-* ❺ -- inherit environment during build.
-* ❻ -- install dependencies from ``composer.json``.
+* ❺ -- php modules needed by laravel
+* ❻ -- inherit environment during build.
+* ❼ -- install dependencies from ``composer.json``.
 
 Laravel uses `dotenv`_ to load configuration into environment automatically from
 a ``.env`` file, but we won't use that. Instead, we tell vagga to set the
@@ -143,12 +156,12 @@ container for our database:
       # ...
       mysql:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Install
           - mariadb ❶
           - mariadb-client
-          - php-cli ❷
-          - php-pdo_mysql ❷
+          - php5-cli ❷
+          - php5-pdo_mysql ❷
         - !EnsureDir /data
         - !EnsureDir /opt/adminer
         - !Download ❷
@@ -223,20 +236,18 @@ Adding some code
 
 Now that we have our project working and our database is ready, let's add some.
 
-.. note:: Let's add a shortcut command for running artisan
+Let's add a shortcut command for running artisan
 
-   .. code-block:: yaml
+.. code-block:: yaml
 
-      commands:
-        # ...
-        artisan: !Command
-          description: Shortcut for running php artisan
-          container: laravel
-          run:
-          - php
-          - artisan
+    commands:
+      # ...
+      artisan: !Command
+        description: Shortcut for running php artisan
+        container: laravel
+        run: [php, artisan]
 
-First, we need a layout. Fortunately, Laravel can give us one, we just have to
+Now, we need a layout. Fortunately, Laravel can give us one, we just have to
 scaffold authentication::
 
     $ vagga artisan make:auth
@@ -279,7 +290,7 @@ to the database table for our Article model:
         }
     }
 
-Open ``app/routes.php`` and setup routing:
+Open ``app/Http/routes.php`` and setup routing:
 
 .. code-block:: php
 
@@ -499,6 +510,8 @@ Create the views for our controller:
     </div>
     @endsection
 
+And the view for the common errors:
+
 .. code-block:: html
 
     <!-- resources/views/common/errors.blade.php -->
@@ -574,10 +587,13 @@ Add a the php mysql module to our container:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Ubuntu trusty
-        - !Env { <<: *env }
+        - !Ubuntu xenial
+        - !UbuntuUniverse
         - !Install
-          - php5-mysql
+          - php-dom
+          - php-mbstring
+          - php-mysql
+        - !Env { <<: *env }
         - !ComposerDependencies
 
 Change the ``run`` command to execute the migrations and seed our database:
@@ -624,12 +640,14 @@ Activate Universe repository and add ``php5-memcached``, to our container:
           APP_DEBUG: true
           APP_KEY: YourRandomGeneratedEncryptionKey
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !UbuntuUniverse
-        - !Env { <<: *env }
         - !Install
-          - php5-mysql
-          - php5-memcached
+          - php-dom
+          - php-mbstring
+          - php-mysql
+          - php-memcached
+        - !Env { <<: *env }
         - !ComposerDependencies
 
 Create a container for ``memcached``:
@@ -640,7 +658,7 @@ Create a container for ``memcached``:
       # ...
       memcached:
         setup:
-        - !Alpine v3.3
+        - !Alpine v3.4
         - !Install [memcached]
 
 Add some yaml anchors on the ``run`` command so we can avoid repetition:
@@ -803,7 +821,9 @@ Before going to the command part, we will need a new container for this task:
       # ...
       exporter:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
+        - !UbuntuUniverse
+        - !Install [php-mbstring, php-dom]
         - !Depends composer.json ❶
         - !Depends composer.lock ❶
         - !EnsureDir /usr/local/src/

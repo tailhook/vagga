@@ -6,32 +6,34 @@ containers:
       APP_DEBUG: true
       APP_KEY: YourRandomGeneratedEncryptionKey
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !Env { <<: *env }
     - !Install
-      - php5-mysql
-      - php5-memcached
+      - php-mysql
+      - php-memcached
+      - php-dom
+      - php-mbstring
     - !ComposerDependencies
 
   memcached:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Install [memcached]
 
   mysql:
     setup:
-    - !Alpine v3.3
+    - !Alpine v3.4
     - !Install
       - mariadb
       - mariadb-client
-      - php-cli
-      - php-pdo_mysql
+      - php5-cli
+      - php5-pdo_mysql
     - !Remove /var/lib/mysql
     - !EnsureDir /data
     - !EnsureDir /opt/adminer
     - !Download
-      url: https://www.adminer.org/static/download/4.2.4/adminer-4.2.4-mysql.php
+      url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5-mysql.php
       path: /opt/adminer/index.php
     - !Download
       url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
@@ -50,7 +52,7 @@ containers:
 
   exporter:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Depends composer.json
     - !Depends composer.lock
     - !EnsureDir /usr/local/src/
