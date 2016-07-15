@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::fs::File;
 
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
@@ -98,6 +99,9 @@ impl<'a> Guard<'a> {
             try_msg!(create_dir(&fulldir, true),
                 "Error creating dir: {err}");
         }
+
+        File::create("/vagga/container/last_use")
+            .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
 
         try!(self.ctx.timelog.mark(format_args!("Finish"))
             .map_err(|e| format!("Can't write timelog: {}", e)));
