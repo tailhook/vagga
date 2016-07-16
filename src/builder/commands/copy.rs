@@ -19,6 +19,7 @@ use quick_error::ResultExt;
 
 const DIR_MODE: u32 = 0o777;
 const FILE_MODE: u32 = 0o666;
+const EXE_FILE_MODE: u32 = 0o777;
 const EXE_CHECK_MASK: u32 = 0o100;
 
 
@@ -197,7 +198,7 @@ fn reset_permissions(path: &Path, umask: u32)
     } else if stat.is_file() {
         let orig_mode = stat.permissions().mode();
         let mode = if orig_mode & EXE_CHECK_MASK > 0 {
-            DIR_MODE
+            EXE_FILE_MODE
         } else {
             FILE_MODE
         };
@@ -257,8 +258,8 @@ fn hash_file_and_exe_mode(hash: &mut Digest, path: &Path, stat: &Metadata)
     -> Result<(), VersionError>
 {
     if stat.is_file() {
-        let exe_mode = stat.permissions().mode() & EXE_CHECK_MASK;
-        hash.field("exe_mode", exe_mode.to_string());
+        let is_exe = (stat.permissions().mode() & EXE_CHECK_MASK) > 0;
+        hash.bool("is_executable", is_exe);
     }
     try!(hash.file(path, stat)
         .map_err(|e| VersionError::Io(e, path.into())));
