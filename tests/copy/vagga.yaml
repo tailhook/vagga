@@ -34,7 +34,7 @@ containers:
     - !Copy
       source: /work/dir
       path: /dir
-      umask: 0o007
+      umask: 0o077
   depends-with-include:
     setup:
     - !Depends

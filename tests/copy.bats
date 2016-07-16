@@ -38,17 +38,17 @@ setup() {
 }
 
 @test "copy: with umask" {
-    run vagga _build copy-umask
+    run env RUST_LOG=info vagga _build copy-umask
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-umask)
-    [[ $link = ".roots/copy-umask.fae6ab4f/root" ]]
+    [[ $link = ".roots/copy-umask.49a62827/root" ]]
 
-    [[ $(stat -c "%a" ".vagga/copy-umask/dir") = "770" ]]
-    [[ $(stat -c "%a" ".vagga/copy-umask/dir/hello") = "660" ]]
-    [[ $(stat -c "%a" ".vagga/copy-umask/dir/exe.sh") = "770" ]]
-    [[ $(stat -c "%a" ".vagga/copy-umask/dir/subdir") = "770" ]]
-    [[ $(stat -c "%a" ".vagga/copy-umask/dir/subdir/file") = "660" ]]
+    [[ $(stat -c "%a" ".vagga/copy-umask/dir") = "700" ]]
+    [[ $(stat -c "%a" ".vagga/copy-umask/dir/hello") = "600" ]]
+    [[ $(stat -c "%a" ".vagga/copy-umask/dir/exe.sh") = "700" ]]
+    [[ $(stat -c "%a" ".vagga/copy-umask/dir/subdir") = "700" ]]
+    [[ $(stat -c "%a" ".vagga/copy-umask/dir/subdir/file") = "600" ]]
 }
 
 @test "copy: clean _unused (non-existent)" {

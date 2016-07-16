@@ -101,7 +101,7 @@ pub fn copy_dir(old: &Path, new: &Path,
             oldp.push(&filename);
             newp.push(&filename);
 
-            let copy_rc = try!(shallow_copy(&oldp, &newp, owner_uid, owner_gid, None)
+            let copy_rc = try!(shallow_copy(&oldp, &newp, owner_uid, owner_gid)
                 .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
             if !copy_rc {
                 stack.push(dir);  // Return dir to stack

@@ -11,11 +11,6 @@ use nix;
 use libc::{uid_t, gid_t, c_int, utime, utimbuf};
 use nix::fcntl::{flock, FlockArg};
 
-
-pub const DIR_MODE: u32 = 0o777;
-pub const FILE_MODE: u32 = 0o666;
-pub const EXE_CHECK_MASK: u32 = 0o100;
-
 extern "C" {
     fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;
 }
@@ -238,7 +233,7 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
 ///
 /// Returns false if path is a directory
 pub fn shallow_copy(src: &Path, dest: &Path,
-    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>, umask: Option<u32>)
+    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
     -> Result<bool, io::Error>
 {
     let stat = try!(fs::symlink_metadata(src));
@@ -258,11 +253,7 @@ pub fn shallow_copy(src: &Path, dest: &Path,
         //    can't change the permissions
         if nstat.is_err() {
             try!(fs::create_dir(dest));
-            let perms = match umask {
-                Some(umask) => fs::Permissions::from_mode(DIR_MODE & !umask),
-                None => stat.permissions(),
-            };
-            try!(fs::set_permissions(dest, perms));
+            try!(fs::set_permissions(dest, stat.permissions()));
             try!(set_owner_group(dest,
                 owner_uid.unwrap_or(stat.uid()),
                 owner_gid.unwrap_or(stat.gid())));
@@ -275,16 +266,6 @@ pub fn shallow_copy(src: &Path, dest: &Path,
             owner_gid.unwrap_or(stat.gid())));
     } else {
         try!(copy(src, dest));
-        if let Some(umask) = umask {
-            let orig_mode = try!(src.metadata()).permissions().mode();
-            let mode = if orig_mode & EXE_CHECK_MASK > 0 {
-                DIR_MODE
-            } else {
-                FILE_MODE
-            };
-            let perms = fs::Permissions::from_mode(mode & !umask);
-            try!(fs::set_permissions(dest, perms));
-        };
         try!(set_owner_group(dest,
             owner_uid.unwrap_or(stat.uid()),
             owner_gid.unwrap_or(stat.gid())));

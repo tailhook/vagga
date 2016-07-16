@@ -114,7 +114,7 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
                 try_msg!(copy_dir(&path, &dest, None, None),
                     "Error copying dir {p:?}: {err}", p=path);
             } else {
-                try_msg!(shallow_copy(&path, &dest, None, None, None),
+                try_msg!(shallow_copy(&path, &dest, None, None),
                     "Error copying file {p:?}: {err}", p=path);
             }
         } else if let Some(ref dest_rel) = binfo.temporary_mount {

@@ -1,5 +1,5 @@
 use std::io::ErrorKind;
-use std::fs::{symlink_metadata, Metadata};
+use std::fs::{set_permissions, Metadata, Permissions};
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -11,11 +11,15 @@ use regex::{Regex, Error as RegexError};
 use scan_dir::ScanDir;
 
 use container::root::temporary_change_root;
-use file_util::{DIR_MODE, EXE_CHECK_MASK};
 use file_util::{create_dir_mode, shallow_copy};
 use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
+
+
+const DIR_MODE: u32 = 0o777;
+const FILE_MODE: u32 = 0o666;
+const EXE_CHECK_MASK: u32 = 0o100;
 
 
 #[derive(RustcDecodable, Debug)]
@@ -127,7 +131,7 @@ impl BuildStep for Copy {
         temporary_change_root("/vagga/root", || {
             let ref src = self.source;
             let dest = &self.path;
-            let typ = try!(symlink_metadata(src)
+            let typ = try!(src.symlink_metadata()
                 .map_err(|e| StepError::Read(src.into(), e)));
             if typ.is_dir() {
                 let mode = match self.umask {
@@ -154,9 +158,12 @@ impl BuildStep for Copy {
                             for parent in parents.iter().rev() {
                                 let fdest = dest.join(parent);
                                 try!(shallow_copy(&src.join(parent), &fdest,
-                                        self.owner_uid, self.owner_gid, self.umask)
+                                        self.owner_uid, self.owner_gid)
                                     .context((&fpath, &fdest)));
                                 processed_paths.insert(PathBuf::from(parent));
+                                if let Some(umask) = self.umask {
+                                    try!(reset_permissions(&fdest, umask));
+                                }
                             }
                         }
                     }
@@ -164,8 +171,11 @@ impl BuildStep for Copy {
                 }).map_err(StepError::ScanDir).and_then(|x| x));
             } else {
                 try!(shallow_copy(&self.source, dest,
-                                  self.owner_uid, self.owner_gid, self.umask)
+                                  self.owner_uid, self.owner_gid)
                     .context((&self.source, dest)));
+                if let Some(umask) = self.umask {
+                    try!(reset_permissions(dest, umask));
+                }
             }
             Ok(())
         })
@@ -175,10 +185,33 @@ impl BuildStep for Copy {
     }
 }
 
+fn reset_permissions(path: &Path, umask: u32)
+    -> Result<(), StepError>
+{
+    let stat = try!(path.symlink_metadata()
+        .map_err(|e| StepError::Read(PathBuf::from(path), e)));
+    if stat.is_dir() {
+        let perms = Permissions::from_mode(DIR_MODE & !umask);
+        try!(set_permissions(path, perms)
+            .map_err(|e| StepError::Write(PathBuf::from(path), e)));
+    } else if stat.is_file() {
+        let orig_mode = stat.permissions().mode();
+        let mode = if orig_mode & EXE_CHECK_MASK > 0 {
+            DIR_MODE
+        } else {
+            FILE_MODE
+        };
+        let perms = Permissions::from_mode(mode & !umask);
+        try!(set_permissions(path, perms)
+            .map_err(|e| StepError::Write(PathBuf::from(path), e)));
+    }
+    Ok(())
+}
+
 fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)
     -> Result<(), VersionError>
 {
-    match symlink_metadata(path) {
+    match path.symlink_metadata() {
         Ok(ref meta) if meta.file_type().is_dir() => {
             try!(ScanDir::all().walk(path, |iter| {
                 let mut all_paths = BTreeSet::new();
