@@ -1,5 +1,5 @@
 use std::io::ErrorKind;
-use std::fs::{set_permissions, Metadata, Permissions};
+use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -16,6 +16,8 @@ use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
 
+
+const DEFAULT_UMASK: u32 = 0o002;
 
 const DIR_MODE: u32 = 0o777;
 const FILE_MODE: u32 = 0o666;
@@ -77,7 +79,7 @@ pub struct Copy {
     pub path: PathBuf,
     pub owner_uid: Option<uid_t>,
     pub owner_gid: Option<gid_t>,
-    pub umask: Option<u32>,
+    pub umask: u32,
     pub ignore_regex: String,
     pub include_regex: Option<String>,
 }
@@ -92,7 +94,8 @@ impl Copy {
         .member("include_regex", V::Scalar::new().optional())
         .member("owner_uid", V::Numeric::new().min(0).optional())
         .member("owner_gid", V::Numeric::new().min(0).optional())
-        .member("umask", V::Numeric::new().min(0).max(0o777).optional())
+        .member("umask", V::Numeric::new().min(0).max(0o777).default(
+            DEFAULT_UMASK as i64))
     }
 }
 
@@ -118,9 +121,7 @@ impl BuildStep for Copy {
         if let Some(gid) = self.owner_gid {
             hash.field("owner_gid", gid.to_string());
         }
-        if let Some(umask) = self.umask {
-            hash.field("umask", umask.to_string());
-        }
+        hash.field("umask", format!("{:o}", self.umask));
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)
@@ -135,11 +136,7 @@ impl BuildStep for Copy {
             let typ = try!(src.symlink_metadata()
                 .map_err(|e| StepError::Read(src.into(), e)));
             if typ.is_dir() {
-                let mode = match self.umask {
-                    Some(umask) => DIR_MODE & !umask,
-                    None => typ.permissions().mode(),
-                };
-                try!(create_dir_mode(dest, mode)
+                try!(create_dir_mode(dest, DIR_MODE & !self.umask)
                     .map_err(|e| StepError::Write(dest.clone(), e)));
                 let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
                 let mut processed_paths = HashSet::new();
@@ -158,13 +155,12 @@ impl BuildStep for Copy {
                                 .collect();
                             for parent in parents.iter().rev() {
                                 let fdest = dest.join(parent);
-                                try!(shallow_copy(&src.join(parent), &fdest,
-                                        self.owner_uid, self.owner_gid)
+                                let fsrc = &src.join(parent);
+                                try!(shallow_copy(&fsrc, &fdest,
+                                        self.owner_uid, self.owner_gid,
+                                        try!(calc_mode(&fsrc, self.umask)))
                                     .context((&fpath, &fdest)));
                                 processed_paths.insert(PathBuf::from(parent));
-                                if let Some(umask) = self.umask {
-                                    try!(reset_permissions(&fdest, umask));
-                                }
                             }
                         }
                     }
@@ -172,11 +168,9 @@ impl BuildStep for Copy {
                 }).map_err(StepError::ScanDir).and_then(|x| x));
             } else {
                 try!(shallow_copy(&self.source, dest,
-                                  self.owner_uid, self.owner_gid)
+                        self.owner_uid, self.owner_gid,
+                        try!(calc_mode(&self.source, self.umask)))
                     .context((&self.source, dest)));
-                if let Some(umask) = self.umask {
-                    try!(reset_permissions(dest, umask));
-                }
             }
             Ok(())
         })
@@ -186,27 +180,24 @@ impl BuildStep for Copy {
     }
 }
 
-fn reset_permissions(path: &Path, umask: u32)
-    -> Result<(), StepError>
+fn calc_mode(path: &Path, umask: u32)
+    -> Result<Option<u32>, StepError>
 {
     let stat = try!(path.symlink_metadata()
         .map_err(|e| StepError::Read(PathBuf::from(path), e)));
-    if stat.is_dir() {
-        let perms = Permissions::from_mode(DIR_MODE & !umask);
-        try!(set_permissions(path, perms)
-            .map_err(|e| StepError::Write(PathBuf::from(path), e)));
+    let mode = if stat.is_dir() {
+        Some(DIR_MODE & !umask)
     } else if stat.is_file() {
         let orig_mode = stat.permissions().mode();
-        let mode = if orig_mode & EXE_CHECK_MASK > 0 {
-            EXE_FILE_MODE
+        if orig_mode & EXE_CHECK_MASK > 0 {
+            Some(EXE_FILE_MODE & !umask)
         } else {
-            FILE_MODE
-        };
-        let perms = Permissions::from_mode(mode & !umask);
-        try!(set_permissions(path, perms)
-            .map_err(|e| StepError::Write(PathBuf::from(path), e)));
-    }
-    Ok(())
+            Some(FILE_MODE & !umask)
+        }
+    } else {
+        None
+    };
+    Ok(mode)
 }
 
 fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)

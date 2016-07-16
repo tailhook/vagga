@@ -102,10 +102,16 @@ pub fn ensure_symlink(target: &Path, linkpath: &Path) -> Result<(), io::Error>
 
 pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<()>
 {
-    _copy(from.as_ref(), to.as_ref())
+    _copy(from.as_ref(), to.as_ref(), None)
 }
 
-fn _copy(from: &Path, to: &Path) -> io::Result<()> {
+pub fn copy_with_mode<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q, mode: u32)
+    -> io::Result<()>
+{
+    _copy(from.as_ref(), to.as_ref(), Some(mode))
+}
+
+fn _copy(from: &Path, to: &Path, mode: Option<u32>) -> io::Result<()> {
     if !from.is_file() {
         return Err(io::Error::new(io::ErrorKind::InvalidInput,
                               "the source path is not an existing regular file"))
@@ -113,10 +119,17 @@ fn _copy(from: &Path, to: &Path) -> io::Result<()> {
 
     let mut reader = try!(fs::File::open(from));
     let mut writer = try!(fs::File::create(to));
-    let perm = try!(reader.metadata()).permissions();
 
     try!(copy_stream(&mut reader, &mut writer));
 
+    let perm = match mode {
+        Some(mode) => {
+            fs::Permissions::from_mode(mode)
+        },
+        None => {
+            try!(reader.metadata()).permissions()
+        }
+    };
     try!(fs::set_permissions(to, perm));
     Ok(())
 }
@@ -233,7 +246,8 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
 ///
 /// Returns false if path is a directory
 pub fn shallow_copy(src: &Path, dest: &Path,
-    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
+    owner_uid: Option<uid_t>, owner_gid: Option<gid_t>,
+    mode: Option<u32>)
     -> Result<bool, io::Error>
 {
     let stat = try!(fs::symlink_metadata(src));
@@ -252,8 +266,15 @@ pub fn shallow_copy(src: &Path, dest: &Path,
         // 3. Some directories (/proc, /sys, /dev) are mount points and we
         //    can't change the permissions
         if nstat.is_err() {
-            try!(fs::create_dir(dest));
-            try!(fs::set_permissions(dest, stat.permissions()));
+            match mode {
+                Some(mode) => {
+                    try!(create_dir_mode(dest, mode));
+                },
+                None => {
+                    try!(fs::create_dir(dest));
+                    try!(fs::set_permissions(dest, stat.permissions()));
+                },
+            }
             try!(set_owner_group(dest,
                 owner_uid.unwrap_or(stat.uid()),
                 owner_gid.unwrap_or(stat.gid())));
@@ -265,7 +286,10 @@ pub fn shallow_copy(src: &Path, dest: &Path,
             owner_uid.unwrap_or(stat.uid()),
             owner_gid.unwrap_or(stat.gid())));
     } else {
-        try!(copy(src, dest));
+        match mode {
+            Some(mode) => try!(copy_with_mode(src, dest, mode)),
+            None => try!(copy(src, dest)),
+        }
         try!(set_owner_group(dest,
             owner_uid.unwrap_or(stat.uid()),
             owner_gid.unwrap_or(stat.gid())));
