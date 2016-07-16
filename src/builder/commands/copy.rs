@@ -156,9 +156,11 @@ impl BuildStep for Copy {
                             for parent in parents.iter().rev() {
                                 let fdest = dest.join(parent);
                                 let fsrc = &src.join(parent);
+                                let fsrc_stat = try!(fsrc.symlink_metadata()
+                                    .map_err(|e| StepError::Read(src.into(), e)));
                                 try!(shallow_copy(&fsrc, &fdest,
                                         self.owner_uid, self.owner_gid,
-                                        try!(calc_mode(&fsrc, self.umask)))
+                                        calc_mode(&fsrc_stat, self.umask))
                                     .context((&fpath, &fdest)));
                                 processed_paths.insert(PathBuf::from(parent));
                             }
@@ -169,7 +171,7 @@ impl BuildStep for Copy {
             } else {
                 try!(shallow_copy(&self.source, dest,
                         self.owner_uid, self.owner_gid,
-                        try!(calc_mode(&self.source, self.umask)))
+                        calc_mode(&typ, self.umask))
                     .context((&self.source, dest)));
             }
             Ok(())
@@ -180,12 +182,10 @@ impl BuildStep for Copy {
     }
 }
 
-fn calc_mode(path: &Path, umask: u32)
-    -> Result<Option<u32>, StepError>
+fn calc_mode(stat: &Metadata, umask: u32)
+    -> Option<u32>
 {
-    let stat = try!(path.symlink_metadata()
-        .map_err(|e| StepError::Read(PathBuf::from(path), e)));
-    let mode = if stat.is_dir() {
+    if stat.is_dir() {
         Some(DIR_MODE & !umask)
     } else if stat.is_file() {
         let orig_mode = stat.permissions().mode();
@@ -196,8 +196,7 @@ fn calc_mode(path: &Path, umask: u32)
         }
     } else {
         None
-    };
-    Ok(mode)
+    }
 }
 
 fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)
