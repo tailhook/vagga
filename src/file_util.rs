@@ -2,6 +2,7 @@ use std::io;
 use std::io::{Read, Write, Error};
 use std::path::{Path, PathBuf};
 use std::fs;
+use std::fs::Metadata;
 use std::ffi::CString;
 use std::os::unix::fs::{PermissionsExt, MetadataExt, symlink};
 use std::os::unix::io::AsRawFd;
@@ -245,17 +246,16 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
 /// The owner_uid/owner_gid parameters optionally override the owner
 ///
 /// Returns false if path is a directory
-pub fn shallow_copy(src: &Path, dest: &Path,
+pub fn shallow_copy(src: &Path, src_stat: &Metadata, dest: &Path,
     owner_uid: Option<uid_t>, owner_gid: Option<gid_t>,
     mode: Option<u32>)
     -> Result<bool, io::Error>
 {
-    let stat = try!(fs::symlink_metadata(src));
-    let typ = stat.file_type();
+    let src_type = src_stat.file_type();
     let mut is_dir = false;
-    if typ.is_dir() {
+    if src_type.is_dir() {
         is_dir = true;
-        let nstat = fs::symlink_metadata(dest);
+        let nstat = dest.symlink_metadata();
         // We don't change permissions and owner of already created directories
         //
         // There are couple of reasons:
@@ -272,27 +272,27 @@ pub fn shallow_copy(src: &Path, dest: &Path,
                 },
                 None => {
                     try!(fs::create_dir(dest));
-                    try!(fs::set_permissions(dest, stat.permissions()));
+                    try!(fs::set_permissions(dest, src_stat.permissions()));
                 },
             }
             try!(set_owner_group(dest,
-                owner_uid.unwrap_or(stat.uid()),
-                owner_gid.unwrap_or(stat.gid())));
+                owner_uid.unwrap_or(src_stat.uid()),
+                owner_gid.unwrap_or(src_stat.gid())));
         }
-    } else if typ.is_symlink() {
+    } else if src_type.is_symlink() {
         let value = try!(fs::read_link(&src));
         try!(force_symlink(&value, dest));
         try!(set_owner_group(dest,
-            owner_uid.unwrap_or(stat.uid()),
-            owner_gid.unwrap_or(stat.gid())));
+            owner_uid.unwrap_or(src_stat.uid()),
+            owner_gid.unwrap_or(src_stat.gid())));
     } else {
         match mode {
             Some(mode) => try!(copy_with_mode(src, dest, mode)),
             None => try!(copy(src, dest)),
         }
         try!(set_owner_group(dest,
-            owner_uid.unwrap_or(stat.uid()),
-            owner_gid.unwrap_or(stat.gid())));
+            owner_uid.unwrap_or(src_stat.uid()),
+            owner_gid.unwrap_or(src_stat.gid())));
     }
     Ok(!is_dir)
 }

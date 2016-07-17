@@ -158,7 +158,7 @@ impl BuildStep for Copy {
                                 let fsrc = &src.join(parent);
                                 let fsrc_stat = try!(fsrc.symlink_metadata()
                                     .map_err(|e| StepError::Read(src.into(), e)));
-                                try!(shallow_copy(&fsrc, &fdest,
+                                try!(shallow_copy(&fsrc, &fsrc_stat, &fdest,
                                         self.owner_uid, self.owner_gid,
                                         calc_mode(&fsrc_stat, self.umask))
                                     .context((&fpath, &fdest)));
@@ -169,7 +169,7 @@ impl BuildStep for Copy {
                     Ok(())
                 }).map_err(StepError::ScanDir).and_then(|x| x));
             } else {
-                try!(shallow_copy(&self.source, dest,
+                try!(shallow_copy(&self.source, &typ, dest,
                         self.owner_uid, self.owner_gid,
                         calc_mode(&typ, self.umask))
                     .context((&self.source, dest)));
