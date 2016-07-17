@@ -122,7 +122,7 @@ impl BuildStep for Copy {
         if let Some(gid) = self.owner_gid {
             hash.field("owner_gid", gid.to_string());
         }
-        hash.field("umask", format!("{:o}", self.umask));
+        hash.field("umask", self.umask.to_string());
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)

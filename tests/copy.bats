@@ -42,7 +42,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-umask)
-    [[ $link = ".roots/copy-umask.91be8687/root" ]]
+    [[ $link = ".roots/copy-umask.77e4b926/root" ]]
 
     [[ $(stat -c "%a" ".vagga/copy-umask/dir") = "700" ]]
     [[ $(stat -c "%a" ".vagga/copy-umask/dir/hello") = "600" ]]
