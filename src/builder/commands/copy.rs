@@ -1,7 +1,8 @@
-use std::io::ErrorKind;
-use std::fs::Metadata;
+use std::io::{self, ErrorKind};
+use std::fs::{File, Metadata, read_link};
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
+use std::os::unix::ffi::OsStrExt;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use libc::{uid_t, gid_t};
@@ -226,13 +227,15 @@ fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)
                     let full_path = path.join(&cur_path);
                     let stat = try!(full_path.symlink_metadata()
                         .map_err(|e| VersionError::Io(e, PathBuf::from(&full_path))));
-                    try!(hash_file_and_exe_mode(hash, &full_path, &stat));
+                    try!(hash_file(hash, &full_path, &stat)
+                        .map_err(|e| VersionError::Io(e, PathBuf::from(&full_path))));
                 }
                 Ok(())
             }).map_err(VersionError::ScanDir).and_then(|x| x));
         }
         Ok(ref meta) => {
-            try!(hash_file_and_exe_mode(hash, path, meta));
+            try!(hash_file(hash, path, meta)
+                .map_err(|e| VersionError::Io(e, path.into())));
         }
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
             return Err(VersionError::New);
@@ -244,15 +247,19 @@ fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)
     Ok(())
 }
 
-fn hash_file_and_exe_mode(hash: &mut Digest, path: &Path, stat: &Metadata)
-    -> Result<(), VersionError>
+pub fn hash_file(hash: &mut Digest, path: &Path, stat: &Metadata)
+    -> Result<(), io::Error>
 {
-    if stat.is_file() {
+    hash.field("filename", path.as_os_str().as_bytes());
+    if stat.file_type().is_symlink() {
         let is_exe = (stat.permissions().mode() & EXE_CHECK_MASK) > 0;
         hash.bool("is_executable", is_exe);
+        let data = try!(read_link(path));
+        hash.input(data.as_os_str().as_bytes());
+    } else if stat.file_type().is_file() {
+        let mut file = try!(File::open(&path));
+        try!(hash.stream(&mut file));
     }
-    try!(hash.file(path, stat)
-        .map_err(|e| VersionError::Io(e, path.into())));
     Ok(())
 }
 
