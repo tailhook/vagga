@@ -72,9 +72,8 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
     if !command.contains("/") {
-        let paths: Vec<_> = DEFAULT_PATH.split(':').collect();
-        for path in paths.iter() {
-            let path = Path::new(*path).join(&cpath);
+        for path in DEFAULT_PATH.split(':') {
+            let path = Path::new(path).join(&cpath);
             if path.exists() {
                 cpath = path;
                 break;
@@ -82,7 +81,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         }
         if !cpath.is_absolute() {
             return Err(format!("Command {:?} not found in {:?}",
-                cpath, &paths));
+                cpath, DEFAULT_PATH));
         }
     }
 
