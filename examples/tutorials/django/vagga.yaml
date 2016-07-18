@@ -36,8 +36,6 @@ containers:
     - !Ubuntu xenial
     - !Install [postgresql]
     - !EnsureDir /data
-    # uncomment the line below to make postgres data persistent
-    # - !EnsureDir /work/.db/data
     environ:
       PGDATA: /data
       PG_PORT: 5433
@@ -50,7 +48,7 @@ containers:
         size: 100M
         mode: 0o700
       # replace the volume above with the one below to make postgres data persistent
-      # /data: !BindRW /work/.db/data
+      # /data: !Persistent { name: postgres.data }
 
 commands:
   run: !Command

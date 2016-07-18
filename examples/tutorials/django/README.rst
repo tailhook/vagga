@@ -655,7 +655,6 @@ so, change our ``postgres`` container as follows:
         - !Ubuntu xenial
         - !Install [postgresql]
         - !EnsureDir /data
-        - !EnsureDir /work/.db/data ❶
         environ:
           PGDATA: /data
           PG_PORT: 5433
@@ -664,10 +663,9 @@ so, change our ``postgres`` container as follows:
           PG_PASSWORD: vagga
           PG_BIN: /usr/lib/postgresql/9.5/bin
         volumes:
-          /data: !BindRW /work/.db/data ❷
+          /data: !Persistent { name: postgres.data } ❶
 
-* ❶ -- we will persist postgres data in ``.db/data``, so ensure it exists
-* ❷ -- bind ``/data`` to our persistent directory instead of "!Tmpfs"
+* ❶ -- bind ``/data`` to a ``!Persistent`` directory instead of ``!Tmpfs``
 
 And also change the ``run-postgres`` command:
 
@@ -697,12 +695,6 @@ And also change the ``run-postgres`` command:
 * ❶ -- check if there is already a database created
 * ❷ -- otherwise just start the database
 
-These changes will persist the database files inside ``.db/data`` on the project
-directory. We will not have any permission on that directory, so we would not be
-able to list its contents nor delete it, unless we are root.
-
-Note that if we delete the ``.db/data`` directory, we will get the error::
-
-    Can't mount bind "/work/.db/data" to "/vagga/root/data": No such file or directory
-
-To solve that, simply recreate ``.db/data``.
+These changes will persist the database files inside ``.vagga/.volumes/postgres.data``
+on the project directory. We will not have any permission on that directory, so
+we would not be able to list its contents nor delete it, unless we are root.
