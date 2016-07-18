@@ -41,9 +41,16 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
         command_validator()))
 }
 
-fn find_config_path(work_dir: &PathBuf) -> Option<(PathBuf, PathBuf)> {
+fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
+    -> Option<(PathBuf, PathBuf)>
+{
     let mut dir = work_dir.clone();
     loop {
+        if show_warnings {
+            maybe_print_typo_warning(&dir.join(".vagga"));
+            maybe_print_typo_warning(&dir);
+        }
+
         let fname = dir.join(".vagga/vagga.yaml");
         if fname.exists() {
             return Some((dir, fname));
@@ -52,14 +59,19 @@ fn find_config_path(work_dir: &PathBuf) -> Option<(PathBuf, PathBuf)> {
         if fname.exists() {
             return Some((dir, fname));
         }
+
         if !dir.pop() {
             return None;
         }
     }
 }
 
-pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
-    let (cfg_dir, filename) = match find_config_path(work_dir) {
+pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
+    -> Result<(Config, PathBuf), String>
+{
+    let (cfg_dir, filename) = match find_config_path(
+        work_dir, show_warnings)
+    {
         Some(pair) => pair,
         None => return Err(format!(
             "Config not found in path {:?}", work_dir)),
@@ -89,4 +101,13 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
         }
     }
     return Ok(config);
+}
+
+fn maybe_print_typo_warning(dir: &Path) {
+    if dir.join("vagga.yml").exists() {
+        warn!("There is vagga.yml file in the {:?}, \
+               possibly it is a typo. \
+               Correct configuration file name is vagga.yaml",
+            dir);
+    }
 }

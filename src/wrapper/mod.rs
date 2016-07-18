@@ -64,7 +64,7 @@ pub fn run() -> i32 {
 
     let workdir = current_dir().unwrap();
 
-    let (config, project_root) = match find_config(&workdir) {
+    let (config, project_root) = match find_config(&workdir, false) {
         Ok(tup) => tup,
         Err(e) => {
             writeln!(&mut err, "{}", e).ok();
