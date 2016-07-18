@@ -1359,7 +1359,7 @@ Ruby Commands
    Example::
 
         setup:
-        - !Alpine v3.4
+        - !Ubuntu xenial
         - !GemInstall [rake]
 
    Install a list of ruby gems using ``gem install --bindir /usr/local/bin

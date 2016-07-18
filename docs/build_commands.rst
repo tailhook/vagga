@@ -549,7 +549,7 @@ Ruby gems can be installed either by providing a list of gems or from a
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
+    - !Ubuntu xenial
     - !GemInstall [rake]
 
 We will update ``gem`` to the latest version (unless specified not to) for
@@ -564,11 +564,11 @@ The following ``gem`` package specification formats are supported:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
-    - !Install [libxml2, libxslt, zlib, sqlite-libs]
-    - !BuildDeps [libxml2-dev, libxslt-dev, zlib-dev, sqlite-dev]
+    - !Ubuntu xenial
+    - !Install [zlib1g]
+    - !BuildDeps [zlib1g-dev]
     - !Env
-      HOME: /root
+      HOME: /tmp
     - !GemInstall [rails]
     - !Sh rails new . --skip-bundle
 
@@ -577,7 +577,7 @@ Bundler is also available for installing gems from ``Gemfile``. For example:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
+    - !Ubuntu xenial
     - !GemBundle
 
 You can also specify some options to Bundler, for example:
@@ -585,7 +585,7 @@ You can also specify some options to Bundler, for example:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
+    - !Ubuntu xenial
     - !GemBundle
       gemfile: src/Gemfile # use this Gemfile
       without: [development, test] # groups to exclude when installing gems
@@ -596,7 +596,7 @@ It is possible to avoid installing ruby if you are providing it yourself:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
+    - !Ubuntu xenial
     - !GemSettings
       install_ruby: false
       gem_exe: /usr/bin/gem
