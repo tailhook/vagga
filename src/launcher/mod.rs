@@ -108,7 +108,7 @@ pub fn run() -> i32 {
 
     let workdir = env::current_dir().unwrap();
 
-    let (config, cfg_dir) = match find_config(&workdir) {
+    let (config, cfg_dir) = match find_config(&workdir, true) {
         Ok(tup) => tup,
         Err(e) => {
             writeln!(&mut err, "{}", e).ok();

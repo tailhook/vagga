@@ -1,3 +1,4 @@
+use std::io::{stderr, Write};
 use std::default::Default;
 use std::path::{PathBuf, Path};
 
@@ -41,25 +42,45 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
         command_validator()))
 }
 
-fn find_config_path(work_dir: &PathBuf) -> Option<(PathBuf, PathBuf)> {
+fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
+    -> Option<(PathBuf, PathBuf)>
+{
+    fn maybe_print_warning(dir: &Path) {
+        if dir.join("vagga.yml").exists() {
+            writeln!(&mut stderr(), "There is vagga.yml file in the {:?}, \
+                    possibly it is a typo. \
+                    Correct configuration file name is vagga.yaml",
+                dir).ok();
+        }
+    }
+    
     let mut dir = work_dir.clone();
     loop {
         let fname = dir.join(".vagga/vagga.yaml");
         if fname.exists() {
             return Some((dir, fname));
+        } else if show_warnings {
+            maybe_print_warning(&dir.join(".vagga"));
         }
         let fname = dir.join("vagga.yaml");
         if fname.exists() {
             return Some((dir, fname));
+        } else if show_warnings {
+            maybe_print_warning(&dir);
         }
+
         if !dir.pop() {
             return None;
         }
     }
 }
 
-pub fn find_config(work_dir: &PathBuf) -> Result<(Config, PathBuf), String> {
-    let (cfg_dir, filename) = match find_config_path(work_dir) {
+pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
+    -> Result<(Config, PathBuf), String>
+{
+    let (cfg_dir, filename) = match find_config_path(
+        work_dir, show_warnings)
+    {
         Some(pair) => pair,
         None => return Err(format!(
             "Config not found in path {:?}", work_dir)),
