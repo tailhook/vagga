@@ -141,14 +141,15 @@ Available volume types:
 
        containers:
          app:
-         - !Ubuntu trusty
-         ...
+           setup:
+           - !Ubuntu xenial
+           ...
          deploy-tools:
-            setup:
-            - !Alpine v3.3
-            - !Install [rsync]
-            volumes:
-                /mnt: !Container app
+           setup:
+           - !Alpine v3.4
+           - !Install [rsync]
+           volumes:
+             /mnt: !Container app
 
    This may be useful to deploy the container without installing anything to
    the host file system. E.g. you can ``rsync`` the container's file system

@@ -1,10 +1,15 @@
 containers:
   selenium:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !UbuntuUniverse
-    - !Install [phantomjs]
+    - !Install [libfontconfig1]
     - !Py3Install [selenium, py, pytest]
+    # The phantomjs from Ubuntu repository seems to have problems with headless
+    # environments, so we fetch the binary providd by the developers
+    - !TarInstall
+      url: https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-2.1.1-linux-x86_64.tar.bz2
+      script: cp bin/phantomjs /usr/local/bin/phantomjs
 
 commands:
   test: !Command

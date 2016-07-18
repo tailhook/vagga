@@ -1,1 +1,1 @@
-.. include:: ../../../examples/rails_alpine/README.rst
+.. include:: ../../../examples/tutorials/ruby_on_rails/README.rst

@@ -23,7 +23,7 @@ following in ``vagga.yaml``:
     containers:
       flask: ❶
         setup:
-        - !Ubuntu trusty ❷
+        - !Ubuntu xenial ❷
         - !UbuntuUniverse ❸
         - !Install [python3-flask] ❹
     commands:
@@ -45,8 +45,8 @@ To run command just run ``vagga command_name``:
 
     $ vagga py3
     [ .. snipped container build log .. ]
-    Python 3.4.0 (default, Apr 11 2014, 13:05:11)
-    [GCC 4.8.2] on linux
+    Python 3.5.1+ (default, Mar 30 2016, 22:46:26)
+    [GCC 5.3.1 20160330] on linux
     Type "help", "copyright", "credits" or "license" for more information.
     >>> import flask
     >>>
@@ -59,7 +59,7 @@ use some specific version of flask and some other dependencies:
     containers:
       flask:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Py3Install
           - werkzeug==0.9.4
           - MarkupSafe==0.23
@@ -76,8 +76,8 @@ environment without any additional effort:
 
     $ vagga py3
     [ .. snipped container build log .. ]
-    Python 3.4.0 (default, Apr 11 2014, 13:05:11)
-    [GCC 4.8.2] on linux
+    Python 3.5.1+ (default, Mar 30 2016, 22:46:26)
+    [GCC 5.3.1 20160330] on linux
     Type "help", "copyright", "credits" or "license" for more information.
     >>> import flask, sqlalchemy
     >>>
@@ -93,7 +93,7 @@ You probably want to move python dependencies into ``requirements.txt``:
     containers:
       flask:
         setup:
-        - !Ubuntu trusty
+        - !Ubuntu xenial
         - !Py3Requirements "requirements.txt"
 
 And vagga is smart enough to rebuild if ``requirements.txt`` change.
@@ -126,4 +126,3 @@ More Reading
 
 * `Evaluating Mesos <https://medium.com/@paulcolomiets/evaluating-mesos-4a08f85473fb>`_
   discuss how to run network tolerance tests.
-

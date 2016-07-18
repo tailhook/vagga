@@ -1,17 +1,17 @@
 #
 # Sample Vagga config for installing and running Redis Server v3.0
-# in Ubuntu 15.04 box.
+# in Ubuntu xenial box.
 #
 
 containers:
   ubuntu:
     setup:
-    - !UbuntuRelease {version: 15.04}
+    - !Ubuntu xenial
     - !UbuntuUniverse
     - !Sh apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C7917B12
     - !UbuntuRepo
       url: http://ppa.launchpad.net/chris-lea/redis-server/ubuntu
-      suite: vivid
+      suite: xenial
       components: [main]
     - !Install
       - redis-server

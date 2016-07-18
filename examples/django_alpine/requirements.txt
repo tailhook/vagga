@@ -1,5 +1,0 @@
-dj-database-url==0.4.0
-Django==1.9.2
-django-cache-url==1.0.0
-psycopg2==2.6.1
-pylibmc==1.5.0

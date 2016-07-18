@@ -1,7 +1,7 @@
 containers:
   travis:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !GemInstall [travis]
 
 commands:

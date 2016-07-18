@@ -7,7 +7,7 @@
 containers:
   python:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install [libpq-dev]
     - !PipConfig {dependencies: true}
     - !Py3Install [Flask-SQLAlchemy, alembic, psycopg2]
@@ -16,7 +16,7 @@ containers:
 
   postgres:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install [postgresql]
     - !EnsureDir /data
     environ:
@@ -25,7 +25,7 @@ containers:
       PG_USER: vagga
       PG_PASSWORD: vagga
       PGDATA: /data
-      PG_BIN: /usr/lib/postgresql/9.3/bin
+      PG_BIN: /usr/lib/postgresql/9.5/bin
     volumes:
       /data: !Tmpfs
         size: 100M

@@ -1,18 +1,18 @@
 containers:
   flask:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !PipConfig { dependencies: true }
     - !Py3Install [flask]
 
   nginx:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !Install [nginx]
 
   test:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Install [iptables]
     - !EnsureDir /vagga
     volumes:
@@ -22,7 +22,7 @@ containers:
 
   bench:
     setup:
-    - !Alpine v3.2
+    - !Alpine v3.4
     - !Sh |
         echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" \
           >> /etc/apk/repositories

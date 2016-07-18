@@ -88,12 +88,12 @@ Let's declare that with vagga. Just define two containers:
 
      build:
        setup:
-       - !Ubuntu trusty
-       - !Install [make, nodejs, uglifyjs]
+       - !Ubuntu xenial
+       - !Install [make, nodejs, node-uglify]
 
      serve:
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !UbuntuUniverse
        - !Install [python-django]
 
@@ -119,9 +119,9 @@ Similarly might be defined test container and command:
 
      testing:
        setup:
-       - !Ubuntu trusty
+       - !Ubuntu xenial
        - !UbuntuUniverse
-       - !Install [make, nodejs, uglifyjs, python-django, nosetests]
+       - !Install [make, nodejs, node-uglify, python-django, python-nose]
 
    commands:
 
@@ -351,5 +351,3 @@ down. If it hangs for some reason (may be you created a bug), you repeat or
 press ``Ctrl+/`` (which is ``SIGQUIT``), or just do ``kill -9`` from another
 shell. In any case vagga will not exit until all processes are shut down and
 no hanging processes are left ever (Yes, even with ``kill -9``).
-
-

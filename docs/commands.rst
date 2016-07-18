@@ -24,10 +24,10 @@ and ``!Supervise`` illustrated by the following example:
         children:
           amd64: !Command
             container: ubuntu
-            run: wget http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-amd64.tar.gz
+            run: wget https://partner-images.canonical.com/core/xenial/current/ubuntu-xenial-core-cloudimg-amd64-root.tar.gz
           i386: !Command
             container: ubuntu
-            run: wget http://cdimage.ubuntu.com/ubuntu-core/trusty/daily/current/trusty-core-i386.tar.gz
+            run: wget https://partner-images.canonical.com/core/xenial/current/ubuntu-xenial-core-cloudimg-i386-root.tar.gz
 
 
 Common Parameters

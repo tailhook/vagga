@@ -1,1 +1,1 @@
-.. include:: ../../../examples/django_alpine/README.rst
+.. include:: ../../../examples/tutorials/django/README.rst
