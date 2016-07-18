@@ -1,4 +1,3 @@
-use std::io::{stderr, Write};
 use std::default::Default;
 use std::path::{PathBuf, Path};
 
@@ -45,28 +44,20 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
 fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
     -> Option<(PathBuf, PathBuf)>
 {
-    fn maybe_print_warning(dir: &Path) {
-        if dir.join("vagga.yml").exists() {
-            writeln!(&mut stderr(), "There is vagga.yml file in the {:?}, \
-                    possibly it is a typo. \
-                    Correct configuration file name is vagga.yaml",
-                dir).ok();
-        }
-    }
-    
     let mut dir = work_dir.clone();
     loop {
+        if show_warnings {
+            maybe_print_typo_warning(&dir.join(".vagga"));
+            maybe_print_typo_warning(&dir);
+        }
+
         let fname = dir.join(".vagga/vagga.yaml");
         if fname.exists() {
             return Some((dir, fname));
-        } else if show_warnings {
-            maybe_print_warning(&dir.join(".vagga"));
         }
         let fname = dir.join("vagga.yaml");
         if fname.exists() {
             return Some((dir, fname));
-        } else if show_warnings {
-            maybe_print_warning(&dir);
         }
 
         if !dir.pop() {
@@ -110,4 +101,13 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
         }
     }
     return Ok(config);
+}
+
+fn maybe_print_typo_warning(dir: &Path) {
+    if dir.join("vagga.yml").exists() {
+        warn!("There is vagga.yml file in the {:?}, \
+               possibly it is a typo. \
+               Correct configuration file name is vagga.yaml",
+            dir);
+    }
 }
