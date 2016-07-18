@@ -53,6 +53,10 @@ containers:
   exporter:
     setup:
     - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install
+      - php-dom
+      - php-mbstring
     - !Depends composer.json
     - !Depends composer.lock
     - !EnsureDir /usr/local/src/
