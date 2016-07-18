@@ -327,3 +327,11 @@ setup() {
     printf "%s\n", "${lines[@]}"
     [[ $output = "drwx------" ]]
 }
+
+@test "generic: Path precedence" {
+    run vagga _run path-precedence hello
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/path-precedence)
+    [[ $link = ".roots/path-precedence.c3ea6f51/root" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Hello world!" ]]
+}
