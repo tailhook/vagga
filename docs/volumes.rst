@@ -182,7 +182,9 @@ Available volume types:
 
    1. User don't need to create the directories
    2. When running vagga in VM it's a common practice to use more efficient
-      (or more featureful, like supporting UBUNTUMIRRORa` is already in `.gitignore`)
+      (or more featureful, like supporting hardlinks) filesystem for `.vagga`
+   3. It may be a little bit clearer than throwing all that writable stuff
+      into workdir (for example your `.vagga` is already in `.gitignore`)
 
    Options:
 
