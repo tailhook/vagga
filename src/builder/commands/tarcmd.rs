@@ -120,8 +120,12 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
         let path = tgt.join(orig_path);
         let write_err = |e| format!("Error writing {:?}: {}", path, e);
         let entry = src.header().entry_type();
-        let uid = try!(src.header().uid().map_err(&read_err));
-        let gid = try!(src.header().gid().map_err(&read_err));
+
+        // Some archives don't have uids
+        // TODO(tailhook) should this be handled in tar-rs?
+        let uid = src.header().uid().unwrap_or(0);
+        let gid = src.header().gid().unwrap_or(0);
+
         if entry.is_dir() {
             let mode = try!(src.header().mode().map_err(&read_err));
             try!(create_dir_mode(&path, mode).map_err(&write_err));
