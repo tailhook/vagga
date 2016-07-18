@@ -672,11 +672,11 @@ Add some yaml anchors on the ``run`` command so we can avoid repetition:
           app: !Command
             container: laravel
             environ: *db_config
-            run: &run_app | ❶
+            run: &run_app | # ❶
                 # ...
           db: !Command
             container: mysql
-            run: &run_db | ❷
+            run: &run_db | # ❷
                 # ...
 
 * ❶ -- set an anchor at the ``app`` child command

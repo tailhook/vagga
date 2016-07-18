@@ -1,1 +1,1 @@
-.. include:: ../../../examples/laravel_ubuntu/README.rst
+.. include:: ../../../examples/tutorials/laravel/README.rst
