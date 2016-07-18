@@ -167,6 +167,20 @@ containers:
     - !Sh |
         cp -a /tmp/ids-* /
 
+  path-precedence:
+    setup:
+    - !Alpine v3.4
+    - !Text
+      /usr/bin/hello: |
+          #!/bin/sh
+          echo "Goodbye world!"
+      /usr/local/bin/hello: |
+          #!/bin/sh
+          echo "Hello world!"
+    - !Sh |
+        chmod +x /usr/bin/hello
+        chmod +x /usr/local/bin/hello
+
 commands:
   two-lines: !Supervise
     children:

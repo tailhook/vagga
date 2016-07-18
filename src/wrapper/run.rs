@@ -10,6 +10,7 @@ use unshare::{Command};
 
 use super::setup;
 use super::Wrapper;
+use process_util::DEFAULT_PATH;
 use process_util::{copy_env_vars, run_and_wait, convert_status};
 
 
@@ -70,18 +71,9 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     let env = try!(setup::get_environment(cconfig, &wrapper.settings));
     let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
-    if command.contains("/") {
-    } else {
-        let paths = [
-            "/bin",
-            "/usr/bin",
-            "/usr/local/bin",
-            "/sbin",
-            "/usr/sbin",
-            "/usr/local/sbin",
-        ];
-        for path in paths.iter() {
-            let path = Path::new(*path).join(&cpath);
+    if !command.contains("/") {
+        for path in DEFAULT_PATH.split(':') {
+            let path = Path::new(path).join(&cpath);
             if path.exists() {
                 cpath = path;
                 break;
@@ -89,7 +81,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         }
         if !cpath.is_absolute() {
             return Err(format!("Command {:?} not found in {:?}",
-                cpath, &paths));
+                cpath, DEFAULT_PATH));
         }
     }
 
