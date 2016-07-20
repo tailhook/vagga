@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
+use quire::ast::{Ast, Tag};
 use libc::{uid_t, gid_t};
 
 
@@ -67,5 +68,17 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
     .option("Container",  V::Scalar::new())
     .option("Persistent",  V::Structure::new()
         .member("name",  V::Scalar::new())
-        )
+        .parser(persistent_volume_string))
+}
+
+fn persistent_volume_string(ast: Ast) -> BTreeMap<String, Ast> {
+    match ast {
+        Ast::Scalar(pos, _, style, value) => {
+            let mut map = BTreeMap::new();
+            map.insert("name".to_string(),
+                Ast::Scalar(pos.clone(), Tag::NonSpecific, style, value));
+            map
+        },
+        _ => unreachable!(),
+    }
 }
