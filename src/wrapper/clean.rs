@@ -14,6 +14,8 @@ use humantime;
 use super::setup;
 use super::Wrapper;
 use container::util::clean_dir;
+use config::volumes::Volume::Persistent;
+use config::command::MainCommand::{Supervise, Command};
 use file_util::{read_visible_entries, Lock};
 use wrapper::build::get_version_hash;
 
@@ -25,6 +27,8 @@ enum Action {
     Unused,
     Everything,
     Transient,
+    Volumes,
+    UnusedVolumes,
 }
 
 
@@ -58,6 +62,12 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
           .add_option(&["--everything"], PushConst(Action::Everything),
                 "Clean whole `.vagga` folder. Useful when deleting a project.
                  With ``--global`` cleans whole storage-dir and cache-dir")
+          .add_option(&["--unused-volumes"], PushConst(Action::UnusedVolumes),
+                "Remove `!Persistent` volumes that are not used by any \
+                 command or container of the current config")
+          .add_option(&["--volumes"], PushConst(Action::Volumes),
+                "Remove all `!Persistent` volumes. So they are reinitialized \
+                 on the next start of the command")
           .required();
         ap.refer(&mut global)
           .add_option(&["--global"], StoreTrue,
@@ -94,6 +104,12 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             }
             Action::Transient => clean_transient(wrapper, global, dry_run),
             Action::Everything => clean_everything(wrapper, global, dry_run),
+            Action::UnusedVolumes => {
+                clean_volumes(wrapper, global, dry_run, false)
+            }
+            Action::Volumes => {
+                clean_volumes(wrapper, global, dry_run, true)
+            }
         };
         match res {
             Ok(()) => {}
@@ -350,6 +366,58 @@ fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
     }
     info!("Useful images {:?}", useful);
     try!(clean_dirs_except("/vagga/base/.roots", &useful, dry_run));
+
+    return Ok(());
+}
+
+fn clean_volumes(wrapper: &Wrapper, global: bool, dry_run: bool, all: bool)
+    -> Result<(), String>
+{
+    if global {
+        panic!("Global cleanup is not implemented yet");
+    }
+    let base = match try!(setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings))
+    {
+        Some(base) => base,
+        None => {
+            warn!("No vagga directory exists");
+            return Ok(());
+        }
+    };
+    let volume_dir = base.join(".volumes");
+    let mut useful = HashSet::new();
+    if !all {
+        for (_, container) in &wrapper.config.containers {
+            for (_, vol) in &container.volumes {
+                if let Persistent(ref p) = *vol {
+                    useful.insert(p.name.clone());
+                }
+            }
+        }
+        for (_, command) in &wrapper.config.commands {
+            match *command {
+                Command(ref cmd) => {
+                    for (_, vol) in &cmd.volumes {
+                        if let Persistent(ref p) = *vol {
+                            useful.insert(p.name.clone());
+                        }
+                    }
+                }
+                Supervise(ref cmd) => {
+                    for (_, child) in &cmd.children {
+                        for (_, vol) in child.get_volumes() {
+                            if let Persistent(ref p) = *vol {
+                                useful.insert(p.name.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    info!("Useful volumes {:?}", useful);
+    try!(clean_dirs_except(volume_dir, &useful, dry_run));
 
     return Ok(());
 }
