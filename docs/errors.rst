@@ -17,12 +17,21 @@ The full error might look like::
     WARN:vagga::container::uidmap: Could not read /etc/subuid or /etc/subgid (see http://bit.ly/err_subuid)
     error setting uid/gid mappings: Operation not permitted (os error 1)
 
-This means there is no ``/etc/subuid`` file. It probably means you need to
-create one. The recommended contents are following::
+Or it might look like::
+
+
+    WARN:vagga::container::uidmap: Could not find the user "your_user_name" in /etc/subuid or /etc/subgid (see http://bit.ly/err_subuid)
+    Command <Command "/proc/self/exe" ("vagga_wrapper") "_build" "rust-musl"; environ: {"RUST_LOG"="warn","TERM"="screen","_VAGGA_HOME"="/var/empty",}; uid_map=[UidMap { inside_uid: 65534, outside_uid: 0, count: 1 }]; gid_map=[GidMap { inside_gid: 65534, outside_gid: 0, count: 1 }]>: error setting uid/gid mappings: Operation not permitted (os error 1)
+
+The first message above means there is no ``/etc/subuid`` file.
+It probably means you need to create one. The second option means there is
+a ``/etc/subuid`` file but your user is absent in the file.
+
+The recommended contents of ``/etc/subuid`` are following::
 
     your_user_name:100000:65536
 
-You should also check ``/etc/subgid``, add presumably the same contents to
+You should **also** check ``/etc/subgid``, add presumably the same contents to
 ``/etc/subgid`` (In subgid file the first field still contains your user name
 not a group name).
 

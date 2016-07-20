@@ -122,14 +122,21 @@ fn make_uidmap<F>(fun: F) -> Result<Uidmap, String>
         .map_err(|e| error!("Error reading gidmap: {}", e));
 
     if let (Ok(uid_map), Ok(gid_map)) = (uid_map, gid_map) {
-        if uid_map.len() == 0 && gid_map.len() == 0 && uid == 0 {
-            // For root user we may use all available user ids
-            // This is useful mostly for running vagga in vagga
-                let uid_rng = try!(read_id_ranges(
-                    "/proc/self/uid_map", true));
-                let gid_rng = try!(read_id_ranges(
-                    "/proc/self/gid_map", true));
-                return fun(uid, gid, &uid_rng, &gid_rng);
+        if uid_map.len() == 0 && gid_map.len() == 0 {
+            if uid == 0 {
+                // For root user we may use all available user ids
+                // This is useful mostly for running vagga in vagga
+                    let uid_rng = try!(read_id_ranges(
+                        "/proc/self/uid_map", true));
+                    let gid_rng = try!(read_id_ranges(
+                        "/proc/self/gid_map", true));
+                    return fun(uid, gid, &uid_rng, &gid_rng);
+            } else {
+                warn!("Could not find the user {:?} in \
+                    /etc/subuid or /etc/subgid \
+                    (see http://bit.ly/err_subuid)", username);
+                return Ok(Singleton(uid, gid));
+            }
         }
         return fun(uid, gid, &uid_map, &gid_map);
     } else {
