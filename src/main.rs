@@ -55,11 +55,16 @@ mod version;
 mod wrapper;
 mod builder;
 
-fn main() {
+fn init_logging() {
     if let Err(_) = env::var("RUST_LOG") {
         env::set_var("RUST_LOG", "warn");
     }
     env_logger::init().unwrap();
+}
+
+#[cfg(feature="containers")]
+fn main() {
+    init_logging();
     match env::args().next().as_ref().map(|x| &x[..]) {
         Some("vagga") => launcher::main(),
         Some("vagga_launcher") => launcher::main(),
@@ -70,4 +75,10 @@ fn main() {
         Some("vagga_build") => builder::main(),
         _ => launcher::main(),
     }
+}
+
+#[cfg(feature="docker_runner")]
+fn main() {
+    init_logging();
+    unimplemented!();
 }

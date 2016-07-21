@@ -17,7 +17,7 @@ install:
     vagga _build test
   else
     brew install md5sha1sum
-    make osx
+    make with-docker
   fi
 script:
 - |

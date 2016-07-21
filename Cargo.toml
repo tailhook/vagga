@@ -38,6 +38,7 @@ rev = "72ec8fc"
 [features]
 default = ["containers"]
 containers = ["unshare", "libmount"]
+docker_runner = []
 
 [[bin]]
 name = "vagga"

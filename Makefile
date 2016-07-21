@@ -11,8 +11,8 @@ PACKAGE_FILES = vagga apk busybox alpine-keys.apk install.sh vagga-completion.sh
 
 all: downloads vagga
 
-osx: downloads
-	cargo build --no-default-features
+with-docker: downloads
+	cargo build --no-default-features --features docker_runner
 
 release: downloads vagga-release
 
