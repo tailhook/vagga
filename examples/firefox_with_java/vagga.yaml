@@ -1,0 +1,39 @@
+containers:
+  browser:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install [firefox, icedtea-plugin]
+    # Java can't see HOME environment variable, so we create a special user
+    - !Sh "useradd myself --home-dir /home/myself --gid 100 -M --uid 1000"
+    - !EnsureDir /home/myself
+    volumes:
+      /home/myself: !Persistent home
+      /tmp: !Tmpfs
+        size: 100Mi
+        mode: 0o1777
+        subdirs:
+          .X11-unix:
+      /tmp/.X11-unix: !BindRW /volumes/X11
+    environ:
+      DISPLAY: ":0"
+      XDG_RUNTIME_DIR: /tmp
+
+commands:
+
+  firefox: !Command
+    container: browser
+    external-user-id: 0
+    user-id: 1000
+    run: [firefox, --no-remote]
+
+    # We need to create a mountpoint with a separate command
+    # so mount a volume just here
+    prerequisites: [_touch-file]
+    volumes:
+      /home/myself/.Xauthority: !BindRO /volumes/x-authority
+
+  # This is needed to create a mountpoint
+  _touch-file: !Command
+    container: browser
+    run: [touch, /home/myself/.Xauthority]
