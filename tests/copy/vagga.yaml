@@ -11,6 +11,31 @@ containers:
     - !Copy
       source: /work/file
       path: /var/file
+  copy-non-work:
+    setup:
+    - !Alpine v3.4
+    - !EnsureDir /dir
+    - !Text
+      /dir/file: Hello
+    - !Sh |
+        chmod 700 /dir
+        chmod 600 /dir/file
+    - !Copy
+      source: /dir
+      path: /dir.bak
+  copy-non-work-preserve-perms:
+    setup:
+    - !Alpine v3.4
+    - !EnsureDir /dir
+    - !Text
+      /dir/file: Hello
+    - !Sh |
+        chmod 700 /dir
+        chmod 600 /dir/file
+    - !Copy
+      source: /dir
+      path: /dir.bak
+      preserve-permissions: true
   nonexistent-copy:
     setup:
     - !Alpine v3.4
@@ -35,6 +60,12 @@ containers:
       source: /work/dir
       path: /dir
       umask: 0o077
+  copy-preserve-perms:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      preserve-permissions: true
   depends-with-include:
     setup:
     - !Depends
