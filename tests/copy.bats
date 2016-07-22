@@ -3,9 +3,11 @@ setup() {
 }
 
 @test "copy: directory" {
-    vagga _build dir-copy
+    run vagga _build dir-copy
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
     link=$(readlink .vagga/dir-copy)
-    [[ $link = ".roots/dir-copy.5d6fc0cd/root" ]]
+    [[ $link = ".roots/dir-copy.38028b92/root" ]]
 
     run vagga test-dir
     printf "%s\n" "${lines[@]}"
@@ -27,7 +29,7 @@ setup() {
 @test "copy: file" {
     vagga _build file-copy
     link=$(readlink .vagga/file-copy)
-    [[ $link = ".roots/file-copy.ac5601b3/root" ]]
+    [[ $link = ".roots/file-copy.1d502439/root" ]]
 
     run vagga test-file
     printf "%s\n" "${lines[@]}"
@@ -38,11 +40,11 @@ setup() {
 }
 
 @test "copy: with umask" {
-    run env RUST_LOG=info vagga _build copy-umask
+    run vagga _build copy-umask
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-umask)
-    [[ $link = ".roots/copy-umask.77e4b926/root" ]]
+    [[ $link = ".roots/copy-umask.6f14342c/root" ]]
 
     [[ $(stat -c "%a" ".vagga/copy-umask/dir") = "700" ]]
     [[ $(stat -c "%a" ".vagga/copy-umask/dir/hello") = "600" ]]
@@ -61,7 +63,7 @@ setup() {
     run vagga _build copy-with-include
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/copy-with-include)
-    [[ $link = ".roots/copy-with-include.b601121d/root" ]]
+    [[ $link = ".roots/copy-with-include.e2c7385c/root" ]]
     [[ -f ".vagga/copy-with-include/dir/hello" ]]
     [[ -d ".vagga/copy-with-include/dir/subdir" ]]
     [[ -f ".vagga/copy-with-include/dir/subdir/file" ]]
@@ -72,10 +74,10 @@ setup() {
 @test "depends: include regex" {
     run vagga _version_hash --short depends-with-include
     printf "%s\n" "${lines[@]}"
-    [[ $output = "8abc830c" ]]
+    [[ $output = "3c638a9a" ]]
 
     chmod 0755 dir/subdir
     run vagga _version_hash --short depends-with-include
     printf "%s\n" "${lines[@]}"
-    [[ $output = "8abc830c" ]]
+    [[ $output = "3c638a9a" ]]
 }

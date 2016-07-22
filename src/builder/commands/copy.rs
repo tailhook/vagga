@@ -54,6 +54,19 @@ impl Depends {
             .member("include_regex", V::Scalar::new().optional())
             .parser(depends_parser)
     }
+
+    fn hash_file(&self, hash: &mut Digest, path: &Path, stat: &Metadata)
+        -> Result<(), io::Error>
+    {
+        hash.field("filename", path.as_os_str().as_bytes());
+        if stat.is_file() {
+            let mode = stat.permissions().mode();
+            let is_executable = mode & EXE_CHECK_MASK > 0;
+            hash.bool("is_executable", is_executable);
+        }
+        try!(hash_file_content(hash, path, stat));
+        Ok(())
+    }
 }
 
 impl BuildStep for Depends {
@@ -62,7 +75,14 @@ impl BuildStep for Depends {
     {
         let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
         let path = Path::new("/work").join(&self.path);
-        hash_path(hash, &path, &filter)
+        let all_paths = try!(get_sorted_paths(&path, &filter));
+        for p in &all_paths {
+            let stat = try!(p.symlink_metadata()
+                .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+            try!(self.hash_file(hash, p, &stat)
+                .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+        }
+        Ok(())
     }
     fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
@@ -98,6 +118,19 @@ impl Copy {
         .member("umask", V::Numeric::new().min(0).max(0o777).default(
             DEFAULT_UMASK as i64))
     }
+
+    fn hash_file(&self, hash: &mut Digest, path: &Path, stat: &Metadata)
+        -> Result<(), io::Error>
+    {
+        hash.field("filename", path.as_os_str().as_bytes());
+        if let Some(mode) = calc_mode(stat, self.umask) {
+            hash.text("mode", mode);
+        }
+        hash.text("uid", self.owner_uid.unwrap_or(stat.uid()));
+        hash.text("gid", self.owner_gid.unwrap_or(stat.gid()));
+        try!(hash_file_content(hash, path, stat));
+        Ok(())
+    }
 }
 
 impl BuildStep for Copy {
@@ -107,22 +140,29 @@ impl BuildStep for Copy {
         let ref src = self.source;
         if src.starts_with("/work") {
             let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
-            try!(hash_path(hash, src, &filter));
+            let all_paths = try!(get_sorted_paths(src, &filter));
+            for p in &all_paths {
+                let stat = try!(p.symlink_metadata()
+                    .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+                try!(self.hash_file(hash, p, &stat)
+                    .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+            }
+            hash.field("path", self.path.to_str().unwrap());
         } else {
             // We don't version the files outside of the /work because
             // we believe they are result of the commands run above
             //
             // And we need already built container to version the files
             // inside the container which is ugly
+            hash.field("path", self.path.to_str().unwrap());
+            if let Some(uid) = self.owner_uid {
+                hash.field("owner_uid", uid.to_string());
+            }
+            if let Some(gid) = self.owner_gid {
+                hash.field("owner_gid", gid.to_string());
+            }
+            hash.field("umask", self.umask.to_string());
         }
-        hash.field("path", self.path.to_str().unwrap());
-        if let Some(uid) = self.owner_uid {
-            hash.field("owner_uid", uid.to_string());
-        }
-        if let Some(gid) = self.owner_gid {
-            hash.field("owner_gid", gid.to_string());
-        }
-        hash.field("umask", self.umask.to_string());
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)
@@ -200,65 +240,52 @@ fn calc_mode(stat: &Metadata, umask: u32)
     }
 }
 
-fn hash_path(hash: &mut Digest, path: &Path, filter: &Filter)
-    -> Result<(), VersionError>
+fn get_sorted_paths(path: &Path, filter: &Filter)
+    -> Result<Vec<PathBuf>, VersionError>
 {
     match path.symlink_metadata() {
         Ok(ref meta) if meta.file_type().is_dir() => {
-            try!(ScanDir::all().walk(path, |iter| {
-                let mut all_paths = BTreeSet::new();
+            ScanDir::all().walk(path, |iter| {
+                let mut all_rel_paths = BTreeSet::new();
                 for (entry, _) in iter {
                     let fpath = entry.path();
                     // We know that directory is inside
-                    // the source
+                    // the path
                     let rel_path = fpath.strip_prefix(path).unwrap();
-                    // We know that path is decodable
+                    // We know that rel_path is decodable
                     let strpath = rel_path.to_str().unwrap();
                     if filter.is_match(strpath) {
                         for parent in rel_path.iter_self_and_parents() {
-                            if all_paths.contains(parent) {
-                                break;
+                            if !all_rel_paths.contains(parent) {
+                                all_rel_paths.insert(PathBuf::from(parent));
                             }
-                            all_paths.insert(PathBuf::from(parent));
                         }
                     }
                 }
-                for cur_path in all_paths {
-                    let full_path = path.join(&cur_path);
-                    let stat = try!(full_path.symlink_metadata()
-                        .map_err(|e| VersionError::Io(e, PathBuf::from(&full_path))));
-                    try!(hash_file(hash, &full_path, &stat)
-                        .map_err(|e| VersionError::Io(e, PathBuf::from(&full_path))));
-                }
-                Ok(())
-            }).map_err(VersionError::ScanDir).and_then(|x| x));
+                all_rel_paths.iter().map(|p| path.join(p)).collect()
+            }).map_err(VersionError::ScanDir)
         }
-        Ok(ref meta) => {
-            try!(hash_file(hash, path, meta)
-                .map_err(|e| VersionError::Io(e, path.into())));
+        Ok(_) => {
+            Ok(vec!(PathBuf::from(path)))
         }
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
-            return Err(VersionError::New);
+            Err(VersionError::New)
         }
         Err(e) => {
-            return Err(VersionError::Io(e, path.into()));
+            Err(VersionError::Io(e, path.into()))
         }
     }
-    Ok(())
 }
 
-pub fn hash_file(hash: &mut Digest, path: &Path, stat: &Metadata)
+fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     -> Result<(), io::Error>
 {
-    hash.field("filename", path.as_os_str().as_bytes());
-    if stat.file_type().is_symlink() {
-        let is_exe = (stat.permissions().mode() & EXE_CHECK_MASK) > 0;
-        hash.bool("is_executable", is_exe);
-        let data = try!(read_link(path));
-        hash.input(data.as_os_str().as_bytes());
-    } else if stat.file_type().is_file() {
+    if stat.file_type().is_file() {
         let mut file = try!(File::open(&path));
         try!(hash.stream(&mut file));
+    } else if stat.file_type().is_symlink() {
+        let data = try!(read_link(path));
+        hash.input(data.as_os_str().as_bytes());
     }
     Ok(())
 }
