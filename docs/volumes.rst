@@ -29,15 +29,20 @@ Available volume types:
 
 .. volume:: Tmpfs
 
-    Mounts ``tmpfs`` filesystem. There are two parameters for this kind of
-    volume:
+    Mounts a ``tmpfs`` filesystem.
 
-      * ``size`` -- limit for filesystem size in bytes. You may use
-        suffixes ``k, M, G, ki, Mi, Gi`` for bigger units. The ones with ``i``
-        are for power of two units, the other ones are for power of ten;
-      * ``mode`` -- filesystem mode.
-      * ``subdirs`` -- a mapping for subdirectories to create inside tmpfs,
-        for example::
+    Options:
+
+    size
+      Limit for filesystem size in bytes. You may use suffixes
+      ``k, M, G, ki, Mi, Gi`` for bigger units. The ones with ``i``
+      are for power of two units, the other ones are for power of ten
+
+    mode
+      The mode (permission bits) of the root directory for a new filesystem
+
+    subdirs
+      A mapping for subdirectories to create inside tmpfs, for example::
 
          volumes:
             /var: !Tmpfs
@@ -47,7 +52,7 @@ Available volume types:
                     lib/tmp: { mode: 0o1777 }
                     lib/postgres: { mode: 0o700 }
 
-        The only property currently supported on a directory is ``mode``.
+      The only property currently supported on a directory is ``mode``
 
 .. volume:: VaggaBin
 
