@@ -237,11 +237,16 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let volume_dir = mnt_dir.join("volumes");
     try_msg!(create_dir(&volume_dir, false),
         "Error creating /volumes: {err}");
-    for (name, dir) in &settings.external_volumes {
+    for (name, source_path) in &settings.external_volumes {
         let dest = volume_dir.join(name);
-        try_msg!(create_dir(&dest, false),
-            "Error creating {p:?}: {err}", p=dest);
-        try_msg!(BindMount::new(dir, &dest).mount(),
+        if source_path.is_dir() {
+            try_msg!(create_dir(&dest, false),
+                "Error creating {p:?}: {err}", p=dest);
+        } else {
+            try_msg!(File::create(&dest),
+                "Error creating {p:?}: {err}", p=dest);
+        }
+        try_msg!(BindMount::new(source_path, &dest).mount(),
             "volume: {err}");
     }
 
