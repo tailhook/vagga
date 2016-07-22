@@ -178,6 +178,11 @@ Available volume types:
            /var/lib/postgres: !Persistent { name: "postgres" }
          run: ...
 
+   Or the shorter form::
+
+     volumes:
+       /var/lib/postgres: !Persistent "postgres"
+
    There are a few reasons to use :volume:`Persistent` over :volume:`BindRW`:
 
    1. User don't need to create the directories
@@ -193,3 +198,11 @@ Available volume types:
      will mount same volume (same instance of volume). Multiple volumes in
      single container may reference same volume too. We currently don't
      support mounting subvolumes but we may do in future.
+
+   To remove volumes that were created but had been removed since than run::
+
+     vagga _clean --unused-volumes
+
+   To remove all volumes (they will be created on the next run)::
+
+     vagga _clean --volumes
