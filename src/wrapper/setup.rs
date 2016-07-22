@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::env;
 use std::env::{current_exe};
-use std::io::{BufRead, BufReader, ErrorKind};
+use std::io::{BufRead, BufReader, ErrorKind, Write};
 use std::fs::{read_link};
 use std::fs::File;
 use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
@@ -410,6 +410,13 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 for (subpath, info) in &params.subdirs {
                     try_msg!(create_dir_mode(&dest.join(&subpath), info.mode),
                         "Error creating subdir {sub:?} of {vol:?}: {err}",
+                        sub=subpath, vol=path);
+                }
+                for (subpath, text) in &params.files {
+                    let text = text.as_ref().map(|x| &x[..]).unwrap_or("");
+                    try_msg!(File::create(&dest.join(&subpath))
+                        .and_then(|mut f| f.write_all(text.as_bytes())),
+                        "Error creating file {sub:?} of {vol:?}: {err}",
                         sub=subpath, vol=path);
                 }
             }

@@ -54,6 +54,23 @@ Available volume types:
 
       The only property currently supported on a directory is ``mode``
 
+    files
+      A mapping of a file to it's contents to write into tmpfs filesystem.
+      This is similar to :step:`Text` build step. Directories for files
+      are not created automatically. Use ``subdirs`` to create one.
+
+      Example::
+
+        volumes:
+          /run: !Tmpfs
+            size: 100Mi
+            files:
+              docker.sock: ""
+          /run/docker.sock: !BindRO /volumes/docker.sock
+
+    Both ``subdirs`` and ``files`` are often used as mountpoints for some
+    :volume:`BindRW` and :volume:`BindRO` directories.
+
 .. volume:: VaggaBin
 
     Mounts vagga binary directory inside the container (usually it's contained

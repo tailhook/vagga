@@ -40,6 +40,7 @@ pub struct TmpfsInfo {
     pub size: usize,
     pub mode: u32,
     pub subdirs: BTreeMap<PathBuf, Dir>,
+    pub files: BTreeMap<PathBuf, Option<String>>,
 }
 
 pub fn volume_validator<'x>() -> V::Enum<'x> {
@@ -55,6 +56,11 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
                 V::Structure::new()
                     .member("mode", V::Numeric::new()
                         .min(0).max(0o1777).default(0o755))
+            ))
+        .member("files",
+            V::Mapping::new(
+                V::Directory::new().is_absolute(false),
+                V::Scalar::new().optional(),
             )))
     .option("VaggaBin",  V::Nothing)
     .option("BindRW",  V::Scalar::new())
