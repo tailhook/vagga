@@ -80,5 +80,5 @@ fn main() {
 #[cfg(feature="docker_runner")]
 fn main() {
     init_logging();
-    unimplemented!();
+    launcher::main();
 }
