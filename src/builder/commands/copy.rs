@@ -174,6 +174,7 @@ impl BuildStep for Copy {
                 }
                 hash.field("umask", self.umask.to_string());
             }
+            hash.bool("preserve_permissions", self.preserve_permissions);
         }
         Ok(())
     }

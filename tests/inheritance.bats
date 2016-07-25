@@ -60,7 +60,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopyfrommount)
-    [[ $link = ".roots/hellocopyfrommount.f1485348/root" ]]
+    [[ $link = ".roots/hellocopyfrommount.b90da85f/root" ]]
 }
 
 @test "inheritance: Build copy" {

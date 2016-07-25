@@ -44,7 +44,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-non-work)
-    [[ $link = ".roots/copy-non-work.afdf13c1/root" ]]
+    [[ $link = ".roots/copy-non-work.7a6d8038/root" ]]
 
     [[ $(stat -c "%a" ".vagga/copy-non-work/dir.bak") = "775" ]]
     [[ $(stat -c "%a" ".vagga/copy-non-work/dir.bak/file") = "664" ]]
@@ -55,7 +55,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-non-work-preserve-perms)
-    [[ $link = ".roots/copy-non-work-preserve-perms.b5697a71/root" ]]
+    [[ $link = ".roots/copy-non-work-preserve-perms.37a30fe3/root" ]]
 
     [[ $(stat -c "%a" ".vagga/copy-non-work-preserve-perms/dir.bak") = \
         $(stat -c "%a" ".vagga/copy-non-work-preserve-perms/dir") ]]
