@@ -1,20 +1,29 @@
-use std::io::ErrorKind;
-use std::fs::{symlink_metadata};
+use std::io::{self, ErrorKind};
+use std::fs::{File, Metadata, read_link};
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
+use std::os::unix::ffi::OsStrExt;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use libc::{uid_t, gid_t};
 use quire::ast::{Ast, Tag};
 use quire::validate as V;
 use regex::{Regex, Error as RegexError};
-use scan_dir::ScanDir;
+use scan_dir::{ScanDir, Error as ScanDirError};
 
 use container::root::temporary_change_root;
-use file_util::{create_dir_mode, shallow_copy};
+use file_util::shallow_copy;
 use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
+
+
+const DEFAULT_UMASK: u32 = 0o002;
+
+const DIR_MODE: u32 = 0o777;
+const FILE_MODE: u32 = 0o666;
+const EXE_FILE_MODE: u32 = 0o777;
+const EXE_CHECK_MASK: u32 = 0o100;
 
 
 #[derive(RustcDecodable, Debug)]
@@ -51,9 +60,23 @@ impl BuildStep for Depends {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
         let path = Path::new("/work").join(&self.path);
-        hash_path(hash, &path, &filter, None, None)
+        let filter = try!(Filter::new(
+            &self.ignore_regex, &self.include_regex));
+        try!(hash_path(hash, &path, &filter, |h, p, st| {
+            h.field("filename", p.as_os_str().as_bytes());
+            // We hash only executable flag for files
+            // as mode depends on the host system umask
+            if st.is_file() {
+                let mode = st.permissions().mode();
+                let is_executable = mode & EXE_CHECK_MASK > 0;
+                h.bool("is_executable", is_executable);
+            }
+            try!(hash_file_content(h, p, st)
+                .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+            Ok(())
+        }));
+        Ok(())
     }
     fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
@@ -71,6 +94,8 @@ pub struct Copy {
     pub path: PathBuf,
     pub owner_uid: Option<uid_t>,
     pub owner_gid: Option<gid_t>,
+    pub umask: u32,
+    pub preserve_permissions: bool,
     pub ignore_regex: String,
     pub include_regex: Option<String>,
 }
@@ -85,6 +110,30 @@ impl Copy {
         .member("include_regex", V::Scalar::new().optional())
         .member("owner_uid", V::Numeric::new().min(0).optional())
         .member("owner_gid", V::Numeric::new().min(0).optional())
+        .member("umask", V::Numeric::new().min(0).max(0o777).default(
+            DEFAULT_UMASK as i64))
+        .member("preserve_permissions", V::Scalar::new().default(false))
+    }
+
+    fn calc_mode(&self, stat: &Metadata) -> Option<u32> {
+        if stat.file_type().is_symlink() {
+            // ignore as we do not set permissions for symlinks
+            return None;
+        }
+        if self.preserve_permissions {
+            Some(stat.permissions().mode())
+        } else {
+            let base_mode = if stat.is_dir() {
+                DIR_MODE
+            } else {
+                if stat.permissions().mode() & EXE_CHECK_MASK > 0 {
+                    EXE_FILE_MODE
+                } else {
+                    FILE_MODE
+                }
+            };
+            Some(base_mode & !self.umask)
+        }
     }
 }
 
@@ -94,16 +143,39 @@ impl BuildStep for Copy {
     {
         let ref src = self.source;
         if src.starts_with("/work") {
-            let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
-            try!(hash_path(hash, src, &filter, self.owner_uid, self.owner_gid));
+            let filter = try!(Filter::new(
+                &self.ignore_regex, &self.include_regex));
+            try!(hash_path(hash, src, &filter, |h, p, st| {
+                h.field("filename", p.as_os_str().as_bytes());
+                if let Some(mode) = self.calc_mode(st) {
+                    h.text("mode", mode);
+                }
+                h.text("uid", self.owner_uid.unwrap_or(st.uid()));
+                h.text("gid", self.owner_gid.unwrap_or(st.gid()));
+                try!(hash_file_content(h, p, st)
+                    .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+                Ok(())
+            }));
+            hash.field("path", self.path.to_str().unwrap());
         } else {
             // We don't version the files outside of the /work because
             // we believe they are result of the commands run above
             //
             // And we need already built container to version the files
             // inside the container which is ugly
+            hash.field("source", src.to_str().unwrap());
+            hash.field("path", self.path.to_str().unwrap());
+            if !self.preserve_permissions {
+                if let Some(uid) = self.owner_uid {
+                    hash.field("owner_uid", uid.to_string());
+                }
+                if let Some(gid) = self.owner_gid {
+                    hash.field("owner_gid", gid.to_string());
+                }
+                hash.field("umask", self.umask.to_string());
+            }
+            hash.bool("preserve_permissions", self.preserve_permissions);
         }
-        hash.field("path", self.path.to_str().unwrap());
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)
@@ -114,12 +186,14 @@ impl BuildStep for Copy {
         }
         temporary_change_root("/vagga/root", || {
             let ref src = self.source;
-            let dest = &self.path;
-            let typ = try!(symlink_metadata(src)
+            let ref dest = self.path;
+            let ref typ = try!(src.symlink_metadata()
                 .map_err(|e| StepError::Read(src.into(), e)));
             if typ.is_dir() {
-                try!(create_dir_mode(dest, typ.permissions().mode())
-                    .map_err(|e| StepError::Write(dest.clone(), e)));
+                try!(shallow_copy(src, typ, dest,
+                        self.owner_uid, self.owner_gid,
+                        self.calc_mode(typ))
+                    .context((src, dest)));
                 let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
                 let mut processed_paths = HashSet::new();
                 try!(ScanDir::all().walk(src, |iter| {
@@ -136,10 +210,14 @@ impl BuildStep for Copy {
                                 .take_while(|p| !processed_paths.contains(*p))
                                 .collect();
                             for parent in parents.iter().rev() {
-                                let fdest = dest.join(parent);
-                                try!(shallow_copy(&src.join(parent), &fdest,
-                                        self.owner_uid, self.owner_gid)
-                                    .context((&fpath, &fdest)));
+                                let ref fdest = dest.join(parent);
+                                let ref fsrc = src.join(parent);
+                                let ref fsrc_stat = try!(fsrc.symlink_metadata()
+                                    .map_err(|e| StepError::Read(src.into(), e)));
+                                try!(shallow_copy(fsrc, fsrc_stat, fdest,
+                                        self.owner_uid, self.owner_gid,
+                                        self.calc_mode(fsrc_stat))
+                                     .context((fsrc, fdest)));
                                 processed_paths.insert(PathBuf::from(parent));
                             }
                         }
@@ -147,9 +225,10 @@ impl BuildStep for Copy {
                     Ok(())
                 }).map_err(StepError::ScanDir).and_then(|x| x));
             } else {
-                try!(shallow_copy(&self.source, dest,
-                                  self.owner_uid, self.owner_gid)
-                    .context((&self.source, dest)));
+                try!(shallow_copy(src, typ, dest,
+                        self.owner_uid, self.owner_gid,
+                        self.calc_mode(typ))
+                    .context((src, dest)));
             }
             Ok(())
         })
@@ -159,42 +238,23 @@ impl BuildStep for Copy {
     }
 }
 
-fn hash_path(hash: &mut Digest, path: &Path,
-    filter: &Filter, owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
+fn hash_path<F>(hash: &mut Digest, path: &Path, filter: &Filter, hash_file: F)
     -> Result<(), VersionError>
+    where F: Fn(&mut Digest, &Path, &Metadata) -> Result<(), VersionError>
 {
-    match symlink_metadata(path) {
+    match path.symlink_metadata() {
         Ok(ref meta) if meta.file_type().is_dir() => {
-            try!(ScanDir::all().walk(path, |iter| {
-                let mut all_paths = BTreeSet::new();
-                for (entry, _) in iter {
-                    let fpath = entry.path();
-                    // We know that directory is inside
-                    // the source
-                    let rel_path = fpath.strip_prefix(path).unwrap();
-                    // We know that path is decodable
-                    let strpath = rel_path.to_str().unwrap();
-                    if filter.is_match(strpath) {
-                        for parent in rel_path.iter_self_and_parents() {
-                            if all_paths.contains(parent) {
-                                break;
-                            }
-                            all_paths.insert(PathBuf::from(parent));
-                        }
-                    }
-                }
-                for cur_path in all_paths {
-                    hash.field("filename", cur_path.to_str().unwrap());
-                    try!(hash.file(&path.join(&cur_path),
-                                   owner_uid, owner_gid)
-                         .map_err(|e| VersionError::Io(e, PathBuf::from(cur_path))));
-                }
-                Ok(())
-            }).map_err(VersionError::ScanDir).and_then(|x| x));
+            try!(hash_file(hash, path, meta));
+            let all_rel_paths = try!(get_sorted_rel_paths(path, &filter));
+            for rel_path in &all_rel_paths {
+                let ref abs_path = path.join(rel_path);
+                let stat = try!(abs_path.symlink_metadata()
+                    .map_err(|e| VersionError::Io(e, PathBuf::from(abs_path))));
+                try!(hash_file(hash, abs_path, &stat));
+            }
         }
-        Ok(_) => {
-            try!(hash.file(path, owner_uid, owner_gid)
-                 .map_err(|e| VersionError::Io(e, path.into())));
+        Ok(ref meta) => {
+            try!(hash_file(hash, path, meta));
         }
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
             return Err(VersionError::New);
@@ -202,6 +262,43 @@ fn hash_path(hash: &mut Digest, path: &Path,
         Err(e) => {
             return Err(VersionError::Io(e, path.into()));
         }
+    }
+    Ok(())
+}
+
+fn get_sorted_rel_paths(path: &Path, filter: &Filter)
+    -> Result<BTreeSet<PathBuf>, Vec<ScanDirError>>
+{
+    ScanDir::all().walk(path, |iter| {
+        let mut all_rel_paths = BTreeSet::new();
+        for (entry, _) in iter {
+            let fpath = entry.path();
+            // We know that directory is inside
+            // the path
+            let rel_path = fpath.strip_prefix(path).unwrap();
+            // We know that rel_path is decodable
+            let strpath = rel_path.to_str().unwrap();
+            if filter.is_match(strpath) {
+                for parent in rel_path.iter_self_and_parents() {
+                    if !all_rel_paths.contains(parent) {
+                        all_rel_paths.insert(PathBuf::from(parent));
+                    }
+                }
+            }
+        }
+        all_rel_paths
+    })
+}
+
+fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
+    -> Result<(), io::Error>
+{
+    if stat.file_type().is_file() {
+        let mut file = try!(File::open(&path));
+        try!(hash.stream(&mut file));
+    } else if stat.file_type().is_symlink() {
+        let data = try!(read_link(path));
+        hash.input(data.as_os_str().as_bytes());
     }
     Ok(())
 }

@@ -1,11 +1,6 @@
 use std::io::{self, Write, Read};
-use std::fs;
 use std::fmt::Display;
-use std::path::Path;
-use std::os::unix::ffi::OsStrExt;
-use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
-use libc::{uid_t, gid_t};
 use sha2::Sha256;
 use sha2::Digest as DigestTrait;
 
@@ -19,6 +14,9 @@ impl Digest {
     // TODO(tailhook) get rid of the method
     pub fn unwrap(self) -> Sha256 {
         return self.0
+    }
+    pub fn input<V: AsRef<[u8]>>(&mut self, value: V) {
+        self.0.input(value.as_ref());
     }
     pub fn item<V: AsRef<[u8]>>(&mut self, value: V) {
         self.0.input(value.as_ref());
@@ -61,25 +59,6 @@ impl Digest {
             self.0.input(value.as_ref());
             self.0.input(b"\0");
         }
-    }
-    pub fn file(&mut self, path: &Path,
-        owner_uid: Option<uid_t>, owner_gid: Option<gid_t>)
-        -> Result<(), io::Error>
-    {
-        // TODO(tailhook) include permissions and ownership into the equation
-        let stat = try!(fs::symlink_metadata(path));
-        self.field("filename", path.as_os_str().as_bytes());
-        self.text("mode", stat.permissions().mode());
-        self.text("uid", owner_uid.unwrap_or(stat.uid()));
-        self.text("gid", owner_gid.unwrap_or(stat.gid()));
-        if stat.file_type().is_symlink() {
-            let data = try!(fs::read_link(path));
-            self.0.input(data.as_os_str().as_bytes());
-        } else if stat.file_type().is_file() {
-            let mut file = try!(fs::File::open(&path));
-            try!(self.stream(&mut file));
-        }
-        Ok(())
     }
     pub fn stream(&mut self, reader: &mut Read)
         -> Result<(), io::Error>
