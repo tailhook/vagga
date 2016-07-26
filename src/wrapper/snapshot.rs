@@ -24,7 +24,7 @@ pub fn make_snapshot(src: &Path, dest: &Path, info: &SnapshotInfo)
     try!(Tmpfs::new(&dest)
         .size_bytes(info.size)
         .mode(mode)
-        .uid(uid) 
+        .uid(uid)
         .gid(gid)
         .mount().map_err(|e| format!("{}", e)));
     try_msg!(copy_dir(&tmp, dest, info.owner_uid, info.owner_gid),
