@@ -1,7 +1,10 @@
 use std::path::Path;
-use std::fs::File;
+use std::path::PathBuf;
+use std::fs::{File, remove_file};
+use std::collections::HashMap;
 
 use builder::context::Context;
+use builder::context::PROTECTED_DIRS;
 use builder::distrib::{Unknown,Distribution};
 use builder::error::{Error};
 use builder::commands::{composer, gem, npm, pip};
@@ -10,6 +13,7 @@ use build_step::BuildStep;
 use container::util::clean_dir;
 use container::mount::{unmount, mount_system_dirs, mount_proc};
 use file_util::{create_dir, copy};
+use path_util::IterSelfAndParents;
 
 
 pub struct Guard<'a> {
@@ -100,6 +104,31 @@ impl<'a> Guard<'a> {
                 "Error creating dir: {err}");
         }
 
+        if !self.ctx.container_config.remove_all_except.is_empty() {
+            let root = Path::new("/vagga/root");
+            let exclude_paths = PROTECTED_DIRS.iter()
+                .map(|d| PathBuf::from(d))
+                .chain(self.ctx.container_config.remove_all_except
+                    .iter()
+                    // We validate exclude paths as absolute
+                    .map(|p| PathBuf::from(p.strip_prefix("/").unwrap())))
+                .collect::<Vec<_>>();
+            let mut keep_rel_paths = HashMap::new();
+            for exclude_path in &exclude_paths {
+                for (i, p) in exclude_path
+                    .iter_self_and_parents().enumerate()
+                {
+                    if i == 0 {
+                        keep_rel_paths.insert(p, true);
+                    } else if !keep_rel_paths.contains_key(p) {
+                        keep_rel_paths.insert(p, false);
+                    }
+                }
+            }
+            try_msg!(remove_all_except(root, &keep_rel_paths),
+                "Error removing dirs: {err}");
+        }
+
         File::create("/vagga/container/last_use")
             .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
 
@@ -108,4 +137,38 @@ impl<'a> Guard<'a> {
 
         return Ok(());
     }
+}
+
+fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
+    -> Result<(), String>
+{
+    let entries = try_msg!(root.read_dir(),
+        "Can't read dir {dir:?}: {err}", dir=root);
+    for entry in entries {
+        let ref path = try_msg!(entry,
+                "Can't iterate over dir entries {dir:?}: {err}",
+                dir=root)
+            .path();
+        let ref rel_path = path.strip_prefix("/vagga/root").unwrap();
+        match keep_rel_paths.get(rel_path) {
+            Some(&true) => {
+                continue;
+            },
+            Some(&false) => {
+                try!(remove_all_except(path, keep_rel_paths));
+            },
+            None => {
+                if path.is_dir() {
+                    try_msg!(clean_dir(path, true),
+                        "Error cleaning dir {path:?}: {err}",
+                        path=path);
+                } else {
+                    try_msg!(remove_file(path),
+                        "Error removing file {path:?}: {err}",
+                        path=path);
+                }
+            },
+        }
+    }
+    Ok(())
 }

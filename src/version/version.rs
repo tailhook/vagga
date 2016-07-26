@@ -1,3 +1,5 @@
+use std::os::unix::ffi::OsStrExt;
+
 use sha2::{Sha256, Digest as Sha2Digest};
 
 use config::{Config, Container};
@@ -24,6 +26,13 @@ fn all(container: &Container, cfg: &Config)
     for b in container.setup.iter() {
         debug!("Versioning setup: {:?}", b);
         try!(b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e)));
+    }
+
+    if !container.remove_all_except.is_empty() {
+        let remove_all_strings = container.remove_all_except.iter()
+            .map(|p| p.as_os_str().as_bytes())
+            .collect::<Vec<_>>();
+        hash.sequence("remove_all_except", &remove_all_strings);
     }
 
     Ok(hash.unwrap())

@@ -14,6 +14,7 @@ use build_step::{Step};
 #[derive(RustcDecodable, Clone)]
 pub struct Container {
     pub setup: Vec<Step>,
+    pub remove_all_except: Vec<PathBuf>,
     pub image_cache_url: Option<String>,
     pub auto_clean: bool,
 
@@ -35,6 +36,8 @@ impl PartialEq for Container {
 pub fn container_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
     .member("setup", V::Sequence::new(builder_validator()))
+    .member("remove_all_except",
+        V::Sequence::new(V::Directory::new().is_absolute(true)))
     .member("image_cache_url", V::Scalar::new().optional())
     .member("auto_clean", V::Scalar::new().default(false))
     .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
