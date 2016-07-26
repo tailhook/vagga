@@ -1,4 +1,5 @@
-use config::volumes::Volume::{self, Container};
+use config::volumes::SnapshotInfo;
+use config::volumes::Volume::{self, Container, Snapshot};
 use launcher::build::build_container;
 use launcher::Context;
 
@@ -9,7 +10,8 @@ pub fn prepare_volumes<'x, I>(volumes: I, context: &Context)
 {
     for v in volumes {
         match *v {
-            Container(ref name) => {
+            Container(ref name) |
+            Snapshot(SnapshotInfo { container: Some(ref name), .. }) => {
                 try!(build_container(context, name, context.build_mode));
             }
             _ => {}

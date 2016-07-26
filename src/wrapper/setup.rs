@@ -400,7 +400,8 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     }
 
     for (path, vol) in setup_info.volumes.iter() {
-        let dest = tgtroot.join(path.strip_prefix("/").unwrap());
+        let ref rel_path = path.strip_prefix("/").unwrap();
+        let dest = tgtroot.join(rel_path);
         match *vol {
             &V::Tmpfs(ref params) => {
                 try!(Tmpfs::new(&dest)
@@ -441,7 +442,18 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 try!(remount_ro(&dest));
             }
             &V::Snapshot(ref info) => {
-                try!(make_snapshot(&dest, info));
+                let ref src = match info.container {
+                    Some(ref src_container) => {
+                        let container_ver = try!(version_from_symlink(
+                            format!("/work/.vagga/{}", src_container)));
+                        Path::new("/vagga/base/.roots")
+                            .join(container_ver)
+                            .join("root")
+                            .join(rel_path)
+                    },
+                    None => dest.clone(),
+                };
+                try!(make_snapshot(src, &dest, info));
             }
             &V::Container(ref child_cont) => {
                 let container_ver = try!(version_from_symlink(
