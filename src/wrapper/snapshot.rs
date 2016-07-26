@@ -10,7 +10,7 @@ use container::mount::{unmount};
 use container::util::{copy_dir};
 
 
-pub fn make_snapshot(dest: &Path, info: &SnapshotInfo)
+pub fn make_snapshot(src: &Path, dest: &Path, info: &SnapshotInfo)
     -> Result<(), String>
 {
     let tmp = Path::new("/tmp/mnt");
@@ -20,7 +20,7 @@ pub fn make_snapshot(dest: &Path, info: &SnapshotInfo)
         "Error getting mountpoint metadata: {err}");
     let mode = stat.permissions().mode();
     let (uid, gid) = (stat.uid(), stat.gid());
-    try!(BindMount::new(&dest, &tmp).mount().map_err(|e| e.to_string()));
+    try!(BindMount::new(&src, &tmp).mount().map_err(|e| e.to_string()));
     try!(Tmpfs::new(&dest)
         .size_bytes(info.size)
         .mode(mode)

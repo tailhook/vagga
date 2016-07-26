@@ -37,6 +37,13 @@ setup() {
     [[ $output = "644 root" ]]
 }
 
+@test "generic: Snapshot from container" {
+    run vagga _run snapshot-container cat /etc/shakespeare
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
+    [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
+}
+
 @test "generic: Overriding container volumes" {
     rm -f etc/shakespeare
     run vagga override-volumes

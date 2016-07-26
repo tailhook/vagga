@@ -30,6 +30,12 @@ containers:
     volumes:
       /home/hemingway: !Snapshot
 
+  snapshot-container:
+    setup:
+    - !Alpine v3.4
+    volumes:
+      /etc: !Snapshot { container: text }
+
   tmpfs-subdirs:
     setup:
     - !Alpine v3.4
