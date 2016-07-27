@@ -19,9 +19,6 @@ use super::timer;
 use file_util::create_dir;
 use process_util::PROXY_ENV_VARS;
 
-pub const PROTECTED_DIRS: &'static [&'static str] = &[
-    "dev", "proc", "run", "sys", "tmp", "work",
-];
 
 pub struct Context<'a> {
     pub config: &'a Config,
@@ -76,9 +73,14 @@ impl<'a> Context<'a> {
             config: cfg,
             container_name: name,
             container_config: container,
-            ensure_dirs: PROTECTED_DIRS.iter()
-                .map(|d| PathBuf::from(d))
-                .collect(),
+            ensure_dirs: vec!(
+                PathBuf::from("dev"),
+                PathBuf::from("proc"),
+                PathBuf::from("run"),
+                PathBuf::from("sys"),
+                PathBuf::from("tmp"),
+                PathBuf::from("work"),
+                ).into_iter().collect(),
             empty_dirs: vec!(
                 PathBuf::from("tmp"),
                 PathBuf::from("var/tmp"),

@@ -153,7 +153,15 @@ pub fn mount_system_dirs() -> Result<(), String> {
     try!(mount_proc(&Path::new("/vagga/root/proc")));
     try!(BindMount::new("/work", "/vagga/root/work").mount()
         .map_err(|e| e.to_string()));
-    return Ok(());
+    return Ok(())
+}
+
+pub fn unmount_system_dirs() -> Result<(), String> {
+    try!(unmount(Path::new("/vagga/root/work")));
+    try!(unmount(Path::new("/vagga/root/proc")));
+    try!(unmount(Path::new("/vagga/root/sys")));
+    try!(unmount(Path::new("/vagga/root/dev")));
+    Ok(())
 }
 
 pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {

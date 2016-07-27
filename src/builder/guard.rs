@@ -1,17 +1,16 @@
 use std::path::Path;
-use std::path::PathBuf;
 use std::fs::{File, remove_file};
 use std::collections::HashMap;
 
 use builder::context::Context;
-use builder::context::PROTECTED_DIRS;
 use builder::distrib::{Unknown,Distribution};
 use builder::error::{Error};
 use builder::commands::{composer, gem, npm, pip};
 use builder::packages;
 use build_step::BuildStep;
 use container::util::clean_dir;
-use container::mount::{unmount, mount_system_dirs, mount_proc};
+use container::mount::{unmount, mount_system_dirs, unmount_system_dirs,
+    mount_proc};
 use file_util::{create_dir, copy};
 use path_util::IterSelfAndParents;
 
@@ -88,6 +87,7 @@ impl<'a> Guard<'a> {
         for path in self.ctx.mounted.iter().rev() {
             try!(unmount(path));
         }
+        try!(unmount_system_dirs());
 
         for dir in self.ctx.remove_dirs.iter() {
             try!(clean_dir(&base.join(dir), true)
@@ -104,14 +104,12 @@ impl<'a> Guard<'a> {
                 "Error creating dir: {err}");
         }
 
-        if !self.ctx.container_config.remove_all_except.is_empty() {
+        if !self.ctx.container_config.data_dirs.is_empty() {
             let root = Path::new("/vagga/root");
-            let exclude_paths = PROTECTED_DIRS.iter()
-                .map(|d| PathBuf::from(d))
-                .chain(self.ctx.container_config.remove_all_except
+            let exclude_paths = self.ctx.container_config.data_dirs
                     .iter()
                     // We validate exclude paths as absolute
-                    .map(|p| PathBuf::from(p.strip_prefix("/").unwrap())))
+                    .map(|p| p.strip_prefix("/").unwrap())
                 .collect::<Vec<_>>();
             let mut keep_rel_paths = HashMap::new();
             for exclude_path in &exclude_paths {

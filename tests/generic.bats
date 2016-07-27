@@ -70,27 +70,22 @@ setup() {
     [[ ! $output =~ "\"/var/lib/mount_point\" directory is in the volume: '/var/lib/mount_point'" ]]
 }
 
-@test "generic: The remove-all-except option works" {
-    run vagga _build remove-all-except
+@test "generic: The data-dirs option works" {
+    run vagga _build data-container
     printf "%s\n" "${lines[@]}"
-    link=$(readlink .vagga/remove-all-except)
-    [[ $link = ".roots/remove-all-except.d0a590b5/root" ]]
-    [[ -d ".vagga/remove-all-except/etc" ]]
-    [[ -f ".vagga/remove-all-except/etc/passwd" ]]
-    [[ -d ".vagga/remove-all-except/dev" ]]
-    [[ -d ".vagga/remove-all-except/proc" ]]
-    [[ -d ".vagga/remove-all-except/run" ]]
-    [[ -d ".vagga/remove-all-except/sys" ]]
-    [[ -d ".vagga/remove-all-except/var" ]]
-    [[ -d ".vagga/remove-all-except/var/lib" ]]
-    [[ -d ".vagga/remove-all-except/var/local" ]]
-    [[ -f ".vagga/remove-all-except/var/local/hello.txt" ]]
-    [[ ! -f ".vagga/remove-all-except/var/local/bye.txt" ]]
-    [[ -d ".vagga/remove-all-except/work" ]]
-    [[ $(ls -1 ".vagga/remove-all-except/" | wc -l) = "8" ]]
-    [[ $(ls -1 ".vagga/remove-all-except/var" | wc -l) = "2" ]]
-    [[ $(ls -1 ".vagga/remove-all-except/var/lib" | wc -l) = "3" ]]
-    [[ $(ls -1 ".vagga/remove-all-except/var/local" | wc -l) = "1" ]]
+    link=$(readlink .vagga/data-container)
+    [[ $link = ".roots/data-container.646137f9/root" ]]
+    [[ -d ".vagga/data-container/etc" ]]
+    [[ -f ".vagga/data-container/etc/passwd" ]]
+    [[ -d ".vagga/data-container/var" ]]
+    [[ -d ".vagga/data-container/var/lib" ]]
+    [[ -d ".vagga/data-container/var/local" ]]
+    [[ -f ".vagga/data-container/var/local/hello.txt" ]]
+    [[ ! -f ".vagga/data-container/var/local/bye.txt" ]]
+    [[ $(ls -1 ".vagga/data-container/" | wc -l) = "2" ]]
+    [[ $(ls -1 ".vagga/data-container/var" | wc -l) = "2" ]]
+    [[ $(ls -1 ".vagga/data-container/var/lib" | wc -l) = "3" ]]
+    [[ $(ls -1 ".vagga/data-container/var/local" | wc -l) = "1" ]]
 }
 
 @test "generic: The supervise command works" {
