@@ -115,15 +115,17 @@ impl<'a> Guard<'a> {
                 .collect::<Vec<_>>();
             let mut keep_rel_paths = HashMap::new();
             for exclude_path in &exclude_paths {
-                for (i, p) in exclude_path
-                    .iter_self_and_parents().enumerate()
+                for p in exclude_path
+                    .iter_self_and_parents().skip(1)
                 {
-                    if i == 0 {
-                        keep_rel_paths.insert(p, true);
-                    } else if !keep_rel_paths.contains_key(p) {
+                    if !keep_rel_paths.contains_key(p) {
                         keep_rel_paths.insert(p, false);
                     }
                 }
+                // true means final path
+                // so we merely keep this directory
+                // and do not process its subdirs
+                keep_rel_paths.insert(exclude_path, true);
             }
             try_msg!(remove_all_except(root, &keep_rel_paths),
                 "Error removing dirs: {err}");
@@ -151,10 +153,10 @@ fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
             .path();
         let ref rel_path = path.strip_prefix("/vagga/root").unwrap();
         match keep_rel_paths.get(rel_path) {
-            Some(&true) => {
+            Some(&is_final) if is_final => {
                 continue;
             },
-            Some(&false) => {
+            Some(_) => {
                 try!(remove_all_except(path, keep_rel_paths));
             },
             None => {
