@@ -1,0 +1,20 @@
+containers:
+  influxdb:
+    setup:
+    - !Ubuntu xenial
+    - !Download
+      url: https://dl.influxdata.com/influxdb/releases/influxdb_0.13.0_amd64.deb
+      path: /tmp/influxdb.deb
+    - !Sh dpkg -i /tmp/influxdb.deb && rm /tmp/influxdb.deb
+    - !EnsureDir /var/lib/influxdb
+    volumes:
+      /var/lib/influxdb: !Persistent { name: influxdb }
+
+commands:
+  influx: !Command
+    description: Run influxdb
+    container: influxdb
+    user-id: 1
+    external-user-id: 0
+    run:
+    - influxd
