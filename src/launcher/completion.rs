@@ -635,8 +635,20 @@ impl<'a> CompletionState<'a> {
     {
         let mut completions = Vec::new();
         if cmd.accept_container {
-            completions.extend(
-                self.containers.keys().map(|c| &c[..]));
+            if cmd.name == "_run" || cmd.name == "_run_in_netns" {
+                // Do not autocomplete data containers for _run & _run_in_netns
+                completions.extend(
+                    self.containers.iter().filter_map(|(name, cont)| {
+                        if cont.is_data_container() {
+                            None
+                        } else {
+                            Some(&name[..])
+                        }
+                    }));
+            } else {
+                completions.extend(
+                    self.containers.keys().map(|c| &c[..]));
+            }
         }
         if cur.starts_with("-") {
             for opt in cmd.options {

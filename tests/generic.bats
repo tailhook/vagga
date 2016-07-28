@@ -77,6 +77,24 @@ setup() {
     [[ ! $output =~ "\"/var/lib/mount_point\" directory is in the volume: '/var/lib/mount_point'" ]]
 }
 
+@test "generic: The data-dirs option works" {
+    run vagga _build data-container
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/data-container)
+    [[ $link = ".roots/data-container.646137f9/root" ]]
+    [[ -d ".vagga/data-container/etc" ]]
+    [[ -f ".vagga/data-container/etc/passwd" ]]
+    [[ -d ".vagga/data-container/var" ]]
+    [[ -d ".vagga/data-container/var/lib" ]]
+    [[ -d ".vagga/data-container/var/local" ]]
+    [[ -f ".vagga/data-container/var/local/hello.txt" ]]
+    [[ ! -f ".vagga/data-container/var/local/bye.txt" ]]
+    [[ $(ls -1 ".vagga/data-container/" | wc -l) = "2" ]]
+    [[ $(ls -1 ".vagga/data-container/var" | wc -l) = "2" ]]
+    [[ $(ls -1 ".vagga/data-container/var/lib" | wc -l) = "3" ]]
+    [[ $(ls -1 ".vagga/data-container/var/local" | wc -l) = "1" ]]
+}
+
 @test "generic: The supervise command works" {
     run vagga two-lines
     printf "%s\n" "${lines[@]}"

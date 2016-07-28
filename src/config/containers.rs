@@ -14,6 +14,7 @@ use build_step::{Step};
 #[derive(RustcDecodable, Clone)]
 pub struct Container {
     pub setup: Vec<Step>,
+    pub data_dirs: Vec<PathBuf>,
     pub image_cache_url: Option<String>,
     pub auto_clean: bool,
 
@@ -27,6 +28,12 @@ pub struct Container {
     pub volumes: BTreeMap<PathBuf, Volume>,
 }
 
+impl Container {
+    pub fn is_data_container(&self) -> bool {
+        !self.data_dirs.is_empty()
+    }
+}
+
 impl PartialEq for Container {
     fn eq(&self, _other: &Container) -> bool { false }
 }
@@ -35,6 +42,8 @@ impl PartialEq for Container {
 pub fn container_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
     .member("setup", V::Sequence::new(builder_validator()))
+    .member("data_dirs",
+        V::Sequence::new(V::Directory::new().is_absolute(true)))
     .member("image_cache_url", V::Scalar::new().optional())
     .member("auto_clean", V::Scalar::new().default(false))
     .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))

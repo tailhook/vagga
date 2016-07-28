@@ -50,8 +50,8 @@ impl Digest {
         self.0.input(b"\0");
         self.0.input(if value { b"0" } else { b"1" });
     }
-    pub fn sequence<K, T>(&mut self, key: K, seq: &[T])
-        where K: AsRef<[u8]>, T: AsRef<[u8]>
+    pub fn sequence<K, I: IntoIterator>(&mut self, key: K, seq: I)
+        where K: AsRef<[u8]>, I::Item: AsRef<[u8]>
     {
         self.0.input(key.as_ref());
         self.0.input(b"\0");

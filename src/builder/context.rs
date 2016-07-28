@@ -74,12 +74,12 @@ impl<'a> Context<'a> {
             container_name: name,
             container_config: container,
             ensure_dirs: vec!(
-                PathBuf::from("proc"),
-                PathBuf::from("sys"),
                 PathBuf::from("dev"),
-                PathBuf::from("work"),
-                PathBuf::from("tmp"),
+                PathBuf::from("proc"),
                 PathBuf::from("run"),
+                PathBuf::from("sys"),
+                PathBuf::from("tmp"),
+                PathBuf::from("work"),
                 ).into_iter().collect(),
             empty_dirs: vec!(
                 PathBuf::from("tmp"),

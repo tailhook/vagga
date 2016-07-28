@@ -153,7 +153,7 @@ _run_in_netns _version_hash _check_overlayfs_support" ]]
     run vagga _compgen _build --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "ubuntu" ]]
+    [[ ${lines[@]} = "data ubuntu" ]]
 
     run vagga _compgen _build -- -
     printf "%s\n" "${lines[@]}"
@@ -168,7 +168,7 @@ _run_in_netns _version_hash _check_overlayfs_support" ]]
     run vagga _compgen _build --force --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "ubuntu" ]]
+    [[ ${lines[@]} = "data ubuntu" ]]
 
     run vagga _compgen _run --
     printf "%s\n" "${lines[@]}"

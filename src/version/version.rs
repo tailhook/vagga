@@ -1,3 +1,5 @@
+use std::os::unix::ffi::OsStrExt;
+
 use sha2::{Sha256, Digest as Sha2Digest};
 
 use config::{Config, Container};
@@ -24,6 +26,12 @@ fn all(container: &Container, cfg: &Config)
     for b in container.setup.iter() {
         debug!("Versioning setup: {:?}", b);
         try!(b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e)));
+    }
+
+    if !container.data_dirs.is_empty() {
+        let str_data_dirs = container.data_dirs.iter()
+            .map(|p| p.as_os_str().as_bytes());
+        hash.sequence("data_dirs", str_data_dirs);
     }
 
     Ok(hash.unwrap())

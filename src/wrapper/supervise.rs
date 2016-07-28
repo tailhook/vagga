@@ -11,7 +11,7 @@ use unshare::Command;
 use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use super::super::config::command::ChildCommand as CC;
 use super::Wrapper;
-use super::util::find_cmd;
+use super::util::{find_cmd, warn_if_data_container};
 use super::setup;
 use super::super::file_util::create_dir;
 use process_util::{run_and_wait, convert_status, copy_env_vars};
@@ -98,6 +98,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     let mut setup_info = setup::SetupInfo::from_container(&cconfig);
     setup_info.volumes(&command.volumes)
         .write_mode(write_mode);
+    warn_if_data_container(&cconfig);
     try!(setup::setup_filesystem(&setup_info, &cont_ver));
 
     try!(_write_hosts(supervise));

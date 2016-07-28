@@ -1,6 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 
+use config::Container;
+
+
 pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
     -> Result<PathBuf, String>
 {
@@ -26,5 +29,13 @@ pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
             return Err(format!("Command {} is not absolute and no PATH set",
                 cmd));
         }
+    }
+}
+
+pub fn warn_if_data_container(container_config: &Container) {
+    if container_config.is_data_container() {
+        warn!("You are trying to run command inside the data container. \
+            Data containers is designed to use as volumes inside other \
+            containers. Usually there are no system dirs at all.");
     }
 }

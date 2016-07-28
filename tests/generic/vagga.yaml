@@ -65,6 +65,14 @@ containers:
     volumes:
       /var/lib/mount_point: !BindRW /vagga/root/tmp
 
+  data-container:
+    setup:
+    - !Alpine v3.4
+    - !Text
+      /var/local/hello.txt: Hello world!
+    - !Sh ln -s /var/local/hello.txt /var/local/bye.txt
+    data-dirs: [/etc, /var/lib, /var/lib/apk, /var/local/hello.txt]
+
   busybox:
     setup:
     - !Alpine v3.4
