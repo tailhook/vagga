@@ -31,6 +31,7 @@ Databases
    examples/db/redis
    examples/db/consul
    examples/db/elastic
+   examples/db/influx
 
 
 Miscellaneous
