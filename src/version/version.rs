@@ -30,9 +30,8 @@ fn all(container: &Container, cfg: &Config)
 
     if !container.data_dirs.is_empty() {
         let str_data_dirs = container.data_dirs.iter()
-            .map(|p| p.as_os_str().as_bytes())
-            .collect::<Vec<_>>();
-        hash.sequence("data_dirs", &str_data_dirs);
+            .map(|p| p.as_os_str().as_bytes());
+        hash.sequence("data_dirs", str_data_dirs);
     }
 
     Ok(hash.unwrap())
