@@ -115,9 +115,15 @@ impl<'a> Guard<'a> {
                 for p in exclude_path
                     .iter_self_and_parents().skip(1)
                 {
+                    if let Some(&true) = keep_rel_paths.get(p) {
+                        warn_duplicate_data_dir(p);
+                    }
                     if !keep_rel_paths.contains_key(p) {
                         keep_rel_paths.insert(p, false);
                     }
+                }
+                if keep_rel_paths.contains_key(exclude_path) {
+                    warn_duplicate_data_dir(exclude_path);
                 }
                 // true means final path
                 // so we merely keep this directory
@@ -170,4 +176,8 @@ fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
         }
     }
     Ok(())
+}
+
+fn warn_duplicate_data_dir(path: &Path) {
+    warn!("{:?} is already marked as data directory", Path::new("/").join(path));
 }
