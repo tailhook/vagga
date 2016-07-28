@@ -32,7 +32,7 @@ pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)
     }
 }
 
-pub fn check_data_container(container_config: &Container) {
+pub fn warn_if_data_container(container_config: &Container) {
     if container_config.is_data_container() {
         warn!("You are trying to run command inside the data container. \
             Data containers is designed to use as volumes inside other \

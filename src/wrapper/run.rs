@@ -10,7 +10,7 @@ use unshare::{Command};
 
 use super::setup;
 use super::Wrapper;
-use super::util::check_data_container;
+use super::util::warn_if_data_container;
 use process_util::DEFAULT_PATH;
 use process_util::{copy_env_vars, run_and_wait, convert_status};
 
@@ -67,7 +67,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     let container_ver = wrapper.root.as_ref().unwrap();
     let mut setup_info = setup::SetupInfo::from_container(&cconfig);
     setup_info.write_mode(write_mode);
-    check_data_container(&cconfig);
+    warn_if_data_container(&cconfig);
     try!(setup::setup_filesystem(&setup_info, container_ver));
 
     let env = try!(setup::get_environment(cconfig, &wrapper.settings));

@@ -9,8 +9,8 @@ use builder::commands::{composer, gem, npm, pip};
 use builder::packages;
 use build_step::BuildStep;
 use container::util::clean_dir;
-use container::mount::{unmount, mount_system_dirs, unmount_system_dirs,
-    mount_proc};
+use container::mount::{unmount, mount_system_dirs, mount_proc};
+use container::mount::unmount_system_dirs;
 use file_util::{create_dir, copy};
 use path_util::IterSelfAndParents;
 
@@ -116,14 +116,14 @@ impl<'a> Guard<'a> {
                     .iter_self_and_parents().skip(1)
                 {
                     if let Some(&true) = keep_rel_paths.get(p) {
-                        warn_duplicate_data_dir(p);
+                        warn_duplicate_data_dir(p, true);
                     }
                     if !keep_rel_paths.contains_key(p) {
                         keep_rel_paths.insert(p, false);
                     }
                 }
-                if keep_rel_paths.contains_key(exclude_path) {
-                    warn_duplicate_data_dir(exclude_path);
+                if let Some(&is_final) = keep_rel_paths.get(exclude_path) {
+                    warn_duplicate_data_dir(exclude_path, is_final);
                 }
                 // true means final path
                 // so we merely keep this directory
@@ -178,6 +178,11 @@ fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
     Ok(())
 }
 
-fn warn_duplicate_data_dir(path: &Path) {
-    warn!("{:?} is already marked as data directory", Path::new("/").join(path));
+fn warn_duplicate_data_dir(rel_path: &Path, is_final: bool) {
+    let path = Path::new("/").join(rel_path);
+    if is_final {
+        warn!("{:?} is already contained as data directory", path);
+    } else {
+        warn!("{:?} is a prefix of other directory", path);
+    }
 }
