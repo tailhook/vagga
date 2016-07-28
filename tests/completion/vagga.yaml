@@ -3,6 +3,11 @@ containers:
     setup:
     - !Ubuntu trusty
 
+  data:
+    setup:
+    - !Alpine v3.4
+    data-dirs: [/var/lib]
+
 commands:
   yes: &yes !Command
     description: Run yes

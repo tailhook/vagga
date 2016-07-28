@@ -13,7 +13,7 @@ use config::command::WriteMode;
 
 use super::setup;
 use super::Wrapper;
-use super::util::find_cmd;
+use super::util::{find_cmd, check_data_container};
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap};
 
@@ -69,6 +69,7 @@ pub fn commandline_cmd(command: &CommandInfo,
     setup_info
         .volumes(&command.volumes)
         .write_mode(write_mode);
+    check_data_container(&cconfig);
     try!(setup::setup_filesystem(&setup_info, &cont_ver));
 
     let mut env = try!(setup::get_environment(cconfig, &wrapper.settings));

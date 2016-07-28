@@ -28,6 +28,12 @@ pub struct Container {
     pub volumes: BTreeMap<PathBuf, Volume>,
 }
 
+impl Container {
+    pub fn is_data_container(&self) -> bool {
+        !self.data_dirs.is_empty()
+    }
+}
+
 impl PartialEq for Container {
     fn eq(&self, _other: &Container) -> bool { false }
 }

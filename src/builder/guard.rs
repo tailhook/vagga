@@ -104,12 +104,11 @@ impl<'a> Guard<'a> {
                 "Error creating dir: {err}");
         }
 
-        if !self.ctx.container_config.data_dirs.is_empty() {
+        if self.ctx.container_config.is_data_container() {
             let root = Path::new("/vagga/root");
-            let exclude_paths = self.ctx.container_config.data_dirs
-                    .iter()
-                    // We validate exclude paths as absolute
-                    .map(|p| p.strip_prefix("/").unwrap())
+            let exclude_paths = self.ctx.container_config.data_dirs.iter()
+                // We validate exclude paths as absolute
+                .map(|p| p.strip_prefix("/").unwrap())
                 .collect::<Vec<_>>();
             let mut keep_rel_paths = HashMap::new();
             for exclude_path in &exclude_paths {
