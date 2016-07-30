@@ -1,5 +1,6 @@
 use std::io::Write;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
+use std::fmt::{Write as WriteFmt};
 use std::path::Path;
 
 use quire::validate as V;
@@ -30,9 +31,27 @@ const VERSION_WITH_PHP5: &'static str = "v3.4";
 pub struct Alpine(String);
 tuple_struct_decode!(Alpine);
 
+#[derive(Debug, RustcDecodable)]
+pub struct AlpineRepo {
+    url: Option<String>,
+    branch: Option<String>,
+    repo: String,
+    alias: Option<String>,
+}
+
 impl Alpine {
     pub fn config() -> V::Scalar {
         V::Scalar::new()
+    }
+}
+
+impl AlpineRepo {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("url", V::Scalar::new().optional())
+        .member("branch", V::Scalar::new().optional())
+        .member("repo", V::Scalar::new())
+        .member("alias", V::Scalar::new().optional())
     }
 }
 
@@ -40,7 +59,9 @@ impl Alpine {
 #[derive(Debug)]
 pub struct Distro {
     pub version: String,
+    pub mirror: String,
     pub base_setup: bool,
+    pub apk_update: bool,
 }
 
 impl Named for Distro {
@@ -52,7 +73,7 @@ impl Distribution for Distro {
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         if !self.base_setup {
             self.base_setup = true;
-            try!(setup_base(ctx, &self.version));
+            try!(setup_base(ctx, &self.version, &self.mirror));
         }
         Ok(())
     }
@@ -60,10 +81,14 @@ impl Distribution for Distro {
         -> Result<(), StepError>
     {
         try!(self.bootstrap(ctx));
-        try!(capsule::apk_run(&[
-            "--root", "/vagga/root",
-            "add",
-            ], &pkgs[..]));
+        let mut apk_args = vec!();
+        if self.apk_update {
+            self.apk_update = false;
+            apk_args.push("--update-cache");
+        }
+        apk_args.extend(&["--root", "/vagga/root"]);
+        apk_args.push("add");
+        try!(capsule::apk_run(&apk_args, &pkgs[..]));
         Ok(())
     }
     fn ensure_packages(&mut self, ctx: &mut Context,
@@ -130,6 +155,34 @@ impl Distribution for Distro {
 }
 
 impl Distro {
+    pub fn add_repo(&mut self, _: &mut Context, repo: &AlpineRepo)
+        -> Result<(), String>
+    {
+        self.apk_update = true;
+
+        let mut repo_line = String::new();
+        if let Some(ref alias) = repo.alias {
+            write!(&mut repo_line, "@{} ", alias).unwrap();
+        }
+        let url = repo.url.as_ref().unwrap_or(&self.mirror);
+        let normalized_url = if !url.ends_with("/") {
+            format!("{}/", url)
+        } else {
+            url.to_string()
+        };
+        write!(&mut repo_line, "{}", normalized_url).unwrap();
+        write!(&mut repo_line, "{}/{}",
+            &repo.branch.as_ref().unwrap_or(&self.version),
+            &repo.repo).unwrap();
+
+        try!(OpenOptions::new().append(true)
+            .open("/vagga/root/etc/apk/repositories")
+            .and_then(|mut f| write!(&mut f, "{}\n", &repo_line))
+            .map_err(|e| format!("Can't write repositories file: {}", e)));
+
+        Ok(())
+    }
+
     fn php_build_deps(&self) -> Vec<&'static str> {
         let version_with_php5 = Version(VERSION_WITH_PHP5);
         let current_version = Version(self.version.as_ref());
@@ -245,15 +298,13 @@ fn check_version(version: &String) -> Result<(), String> {
     }
 }
 
-fn setup_base(ctx: &mut Context, version: &String)
+fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
     -> Result<(), String>
 {
     try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
     try!(check_version(version));
     try_msg!(create_dir("/vagga/root/etc/apk", true),
         "Error creating apk dir: {err}");
-    let mirror = ctx.settings.alpine_mirror.clone()
-        .unwrap_or(choose_mirror());
     try!(File::create("/vagga/root/etc/apk/repositories")
         .and_then(|mut f| write!(&mut f, "{}{}/main\n",
             mirror, version))
@@ -283,9 +334,13 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: &str)
     -> Result<(), StepError>
 {
+    let mirror = ctx.settings.alpine_mirror.clone()
+        .unwrap_or(choose_mirror());
     try!(distro.set(Distro {
         version: ver.to_string(),
+        mirror: mirror,
         base_setup: false,
+        apk_update: true,
     }));
     ctx.binary_ident = format!("{}-alpine-{}", ctx.binary_ident, ver);
     try!(ctx.add_cache_dir(Path::new("/etc/apk/cache"),
@@ -312,6 +367,39 @@ impl BuildStep for Alpine {
         try!(configure(&mut guard.distro, &mut guard.ctx, &self.0));
         if build {
             try!(guard.distro.bootstrap(&mut guard.ctx));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for AlpineRepo {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        if let Some(ref url) = self.url {
+            hash.field("url", url);
+        }
+        if let Some(ref branch) = self.branch {
+            hash.field("branch", branch);
+        }
+        hash.field("repo", &self.repo);
+        if let Some(ref alias) = self.alias {
+            hash.field("alias", alias);
+        }
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            let ref mut ctx = guard.ctx;
+            try!(guard.distro.specific(|u: &mut Distro| {
+                try!(u.add_repo(ctx, &self));
+                Ok(())
+            }));
         }
         Ok(())
     }

@@ -24,6 +24,15 @@ setup() {
     [[ $output = *"Error checking alpine version"* ]]
 }
 
+@test "alpine: Alpine repo" {
+    run vagga _build alpine-repo
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/alpine-repo)
+    [[ $link = ".roots/alpine-repo.a3bfac74/root" ]]
+    run vagga _run alpine-repo tini -h
+    [[ $output = *"tini (version 0.9.0)"* ]]
+}
+
 @test "alpine: Run echo command" {
     run vagga echo-cmd hello
     printf "%s\n" "${lines[@]}"

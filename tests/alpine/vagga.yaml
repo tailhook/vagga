@@ -1,5 +1,12 @@
 containers:
 
+  alpine-repo:
+    setup:
+    - !Alpine v3.4
+    - !AlpineRepo
+      repo: community
+    - !Install [tini]
+
   v34-calc:
     setup:
     - !Alpine v3.4
