@@ -18,7 +18,7 @@ pub fn build_container(context: &Context, name: &String, mode: BuildMode)
     let ver = match mode {
         Normal => try!(build_internal(context, name, &[])),
         NoImage => try!(build_internal(context, name,
-            &[String::from("--no-image-download")])),
+            &["--no-image-download".to_string()])),
         NoBuild => format!("{}.{}", &name, try!(get_version(context, &name))),
         NoVersion => {
             try!(version_from_symlink(format!(".vagga/{}", name)))
@@ -124,6 +124,9 @@ pub fn build_command(context: &Context, args: Vec<String>)
     let mut args = Vec::new();
     if force {
         args.push("--force".to_string());
+    }
+    if let BuildMode::NoImage = context.build_mode {
+        args.push("--no-image-download".to_string());
     }
 
     build_internal(context, &name, &args)
