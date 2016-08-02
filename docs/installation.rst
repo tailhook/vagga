@@ -93,7 +93,6 @@ The only other optional dependency is ``iptables`` in case you will be doing
 
 See instructions specific for your distribution below.
 
-
 .. _ubuntu:
 
 Ubuntu
@@ -174,6 +173,27 @@ Or alternatively you may edit files by hand.
 
 Now your vagga is ready to go.
 
+.. _debian:
+
+Debian 8
+======
+
+Install Vagga like in Ubuntu:
+
+.. code-block:: console
+
+    $ echo 'deb [arch=amd64 trusted=yes] http://ubuntu.zerogw.com vagga main' | sudo tee /etc/apt/sources.list.d/vagga.list
+    $ sudo apt-get update
+    $ sudo apt-get install vagga
+
+Then fix runtime dependencies:
+
+.. code-block:: console
+
+    $ echo 'kernel.unprivileged_userns_clone = 1' | sudo tee --append /etc/sysctl.conf
+    $ sudo sysctl -p
+
+Now your vagga is ready to go.
 
 .. _archlinux:
 
