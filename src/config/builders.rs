@@ -17,6 +17,7 @@ const COMMANDS: &'static [&'static str] = &[
     "UbuntuPPA",
     "UbuntuUniverse",
     "AptTrust",
+    "Repo",
     "Install",
     "BuildDeps",
     "Git",
@@ -87,6 +88,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("UbuntuPPA", cmd::ubuntu::UbuntuPPA::config())
     .option("UbuntuUniverse", cmd::ubuntu::UbuntuUniverse::config())
     .option("AptTrust", cmd::ubuntu::AptTrust::config())
+    .option("Repo", cmd::packaging::Repo::config())
     .option("Install", cmd::packaging::Install::config())
     .option("BuildDeps", cmd::packaging::BuildDeps::config())
     .option("Container", cmd::subcontainer::Container::config())
@@ -153,6 +155,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "UbuntuPPA" => step(cmd::ubuntu::UbuntuPPA::decode(d)),
         "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
         "AptTrust" => step(cmd::ubuntu::AptTrust::decode(d)),
+        "Repo" => step(cmd::packaging::Repo::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
         "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
         "Git" => step(cmd::vcs::Git::decode(d)),

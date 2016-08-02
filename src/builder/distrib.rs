@@ -29,6 +29,9 @@ pub trait Distribution: Any {
     /// Does distro-specific cleanup at the end of the build
     fn finish(&mut self, &mut Context) -> Result<(), String> { Ok(()) }
 
+    /// Adds repository
+    fn add_repo(&mut self, &mut Context, &str) -> Result<(), StepError>;
+
     /// Install normal packages
     fn install(&mut self, &mut Context, &[String]) -> Result<(), StepError>;
 
@@ -48,6 +51,11 @@ impl Distribution for Unknown {
     fn name(&self) -> &'static str { "unknown" }
     fn bootstrap(&mut self, _: &mut Context) -> Result<(), StepError> {
         unreachable!();
+    }
+    fn add_repo(&mut self, _: &mut Context, _repo: &str)
+        -> Result<(), StepError>
+    {
+        Err(StepError::NoDistro)
     }
     fn install(&mut self, _: &mut Context, _pkgs: &[String])
         -> Result<(), StepError>

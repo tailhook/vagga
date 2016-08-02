@@ -77,6 +77,30 @@ impl Distribution for Distro {
         }
         Ok(())
     }
+    fn add_repo(&mut self, ctx: &mut Context, repo: &str)
+        -> Result<(), StepError>
+    {
+        let repo_parts = repo.split('/').collect::<Vec<_>>();
+        let (branch, repository) = match repo_parts.len() {
+            1 => (None, repo_parts[0]),
+            2 => (Some(repo_parts[0]), repo_parts[1]),
+            _ => {
+                return Err(StepError::from(format!(
+                    "Cannot parse repository string. \
+                     Should be in the next formats: \
+                     'branch/repository' or 'repository'. \
+                     But was: '{}'", repo)));
+            },
+        };
+        let alpine_repo = AlpineRepo {
+            url: Some(self.mirror.clone()),
+            branch: branch.map(|x| x.to_string()),
+            repo: repository.to_string(),
+            alias: None,
+        };
+        try!(self.add_alpine_repo(ctx, &alpine_repo));
+        Ok(())
+    }
     fn install(&mut self, ctx: &mut Context, pkgs: &[String])
         -> Result<(), StepError>
     {
@@ -155,7 +179,7 @@ impl Distribution for Distro {
 }
 
 impl Distro {
-    pub fn add_repo(&mut self, _: &mut Context, repo: &AlpineRepo)
+    pub fn add_alpine_repo(&mut self, _: &mut Context, repo: &AlpineRepo)
         -> Result<(), String>
     {
         self.apk_update = true;
@@ -379,16 +403,10 @@ impl BuildStep for AlpineRepo {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        if let Some(ref url) = self.url {
-            hash.field("url", url);
-        }
-        if let Some(ref branch) = self.branch {
-            hash.field("branch", branch);
-        }
+        hash.opt_field("url", &self.url);
+        hash.opt_field("branch", &self.branch);
         hash.field("repo", &self.repo);
-        if let Some(ref alias) = self.alias {
-            hash.field("alias", alias);
-        }
+        hash.opt_field("alias", &self.alias);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -397,7 +415,7 @@ impl BuildStep for AlpineRepo {
         if build {
             let ref mut ctx = guard.ctx;
             try!(guard.distro.specific(|u: &mut Distro| {
-                try!(u.add_repo(ctx, &self));
+                try!(u.add_alpine_repo(ctx, &self));
                 Ok(())
             }));
         }
