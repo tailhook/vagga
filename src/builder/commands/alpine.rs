@@ -36,7 +36,7 @@ pub struct AlpineRepo {
     url: Option<String>,
     branch: Option<String>,
     repo: String,
-    alias: Option<String>,
+    tag: Option<String>,
 }
 
 impl Alpine {
@@ -51,7 +51,7 @@ impl AlpineRepo {
         .member("url", V::Scalar::new().optional())
         .member("branch", V::Scalar::new().optional())
         .member("repo", V::Scalar::new())
-        .member("alias", V::Scalar::new().optional())
+        .member("tag", V::Scalar::new().optional())
     }
 }
 
@@ -96,7 +96,7 @@ impl Distribution for Distro {
             url: Some(self.mirror.clone()),
             branch: branch.map(|x| x.to_string()),
             repo: repository.to_string(),
-            alias: None,
+            tag: None,
         };
         try!(self.add_alpine_repo(ctx, &alpine_repo));
         Ok(())
@@ -185,8 +185,8 @@ impl Distro {
         self.apk_update = true;
 
         let mut repo_line = String::new();
-        if let Some(ref alias) = repo.alias {
-            write!(&mut repo_line, "@{} ", alias).unwrap();
+        if let Some(ref tag) = repo.tag {
+            write!(&mut repo_line, "@{} ", tag).unwrap();
         }
         let url = repo.url.as_ref().unwrap_or(&self.mirror);
         let normalized_url = if !url.ends_with("/") {
@@ -406,7 +406,7 @@ impl BuildStep for AlpineRepo {
         hash.opt_field("url", &self.url);
         hash.opt_field("branch", &self.branch);
         hash.field("repo", &self.repo);
-        hash.opt_field("alias", &self.alias);
+        hash.opt_field("tag", &self.tag);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

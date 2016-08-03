@@ -113,7 +113,7 @@ setup() {
     run vagga _build alpine-repo-full
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/alpine-repo-full)
-    [[ $link = ".roots/alpine-repo-full.c7f46fee/root" ]]
+    [[ $link = ".roots/alpine-repo-full.ce345923/root" ]]
 
     [[ $(tail -n 1 ".vagga/alpine-repo-full/etc/apk/repositories") = \
         "@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing" ]]

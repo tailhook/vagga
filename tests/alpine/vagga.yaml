@@ -59,7 +59,7 @@ containers:
       url: http://dl-cdn.alpinelinux.org/alpine/
       branch: edge
       repo: testing
-      alias: testing
+      tag: testing
     - !Install [toilet@testing]
 
   repo-simple:

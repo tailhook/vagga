@@ -229,7 +229,7 @@ Alpine Commands
        url: http://nl.alpinelinux.org/alpine/
        branch: edge
        repo: testing
-       alias: testing
+       tag: testing
      - !Install [app@testing]
 
    Options:
@@ -246,10 +246,17 @@ Alpine Commands
      Repository to fetch packages from. For example ``main``, ``community``,
      ``testing``. **Required**.
 
-   alias
-     Alias or "pin" for this repository. Alpine package manager will now
-     by default only use the untagged repositories. Adding an alias to
-     specific package will prefer the repository with that alias.
+   tag
+     Tag for this repository. Alpine package manager will now
+     by default only use the untagged repositories. Adding a tag to
+     specific package will prefer the repository with that tag.
+     To add a tag just put ``@tag`` after the package name. For example::
+
+       - !AlpineRepo
+         branch: edge
+         repo: testing
+         tag: testing
+       - !Install [graphicsmagick@testing]
 
 
 Distribution Commands
