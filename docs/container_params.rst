@@ -110,3 +110,13 @@ Container Parameters
       this experimental. This may be useful for keeping image cache on network
       file system, presumably on non-public projects.
 
+.. opt:: data-dirs
+
+   List of directories and files that only should remain in the container.
+   All other directories and files will be removed after container is build.
+   Useful to create data containers that can be used as volumes inside normal
+   containers.
+
+   Example::
+
+     data-dirs: [/var/lib/postgres]
