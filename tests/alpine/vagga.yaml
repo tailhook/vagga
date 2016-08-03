@@ -45,6 +45,35 @@ containers:
       /etc/subuid: ""
       /etc/subgid: ""
 
+  alpine-repo:
+    setup:
+    - !Alpine v3.4
+    - !AlpineRepo
+      repo: community
+    - !Install [tini]
+
+  alpine-repo-full:
+    setup:
+    - !Alpine v3.4
+    - !AlpineRepo
+      url: http://dl-cdn.alpinelinux.org/alpine/
+      branch: edge
+      repo: testing
+      tag: testing
+    - !Install [toilet@testing]
+
+  repo-simple:
+    setup:
+    - !Alpine v3.4
+    - !Repo community
+    - !Install [tini]
+
+  repo-with-branch:
+    setup:
+    - !Alpine v3.4
+    - !Repo edge/testing
+    - !Install [toilet]
+
 commands:
   echo-cmd: !Command
     container: v31

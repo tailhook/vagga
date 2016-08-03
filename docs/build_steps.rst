@@ -166,16 +166,22 @@ Ubuntu Commands
    Options:
 
    url
-     Url to the repository. **Required**.
+     Url to the repository. Default is the mirror url from the current ubuntu
+     distribution.
 
    suite
      Suite of the repository. The common practice is that the suite is named just
-     like the codename of the ubuntu release. For example ``xenial``. **Required**.
+     like the codename of the ubuntu release. For example ``xenial``. Default is
+     the codename of the current distribution.
 
    components
      List of the components to fetch packages from. Common practice to have a
      ``main`` component. So usually this setting contains just single
      element ``components: [main]``. **Required**.
+
+   trusted
+     Marks repository as trusted. Usually useful for installing unsigned packages
+     from local repository. Default is ``false``.
 
 .. step:: UbuntuPPA
 
@@ -215,6 +221,43 @@ Alpine Commands
    setup:
    - !Alpine v3.4
 
+.. step:: AlpineRepo
+
+   Adds arbitrary alpine repository. For example to add testing repository::
+
+     - !AlpineRepo
+       url: http://nl.alpinelinux.org/alpine/
+       branch: edge
+       repo: testing
+       tag: testing
+     - !Install [app@testing]
+
+   Options:
+
+   url
+     Url to the repository. Default is the mirror url from the current alpine
+     distribution.
+
+   branch
+     Branch of the repository. For example ``v3.4``, ``edge``. Default is
+     the version of the current alpine distribution.
+
+   repo
+     Repository to fetch packages from. For example ``main``, ``community``,
+     ``testing``. **Required**.
+
+   tag
+     Tag for this repository. Alpine package manager will now
+     by default only use the untagged repositories. Adding a tag to
+     specific package will prefer the repository with that tag.
+     To add a tag just put ``@tag`` after the package name. For example::
+
+       - !AlpineRepo
+         branch: edge
+         repo: testing
+         tag: testing
+       - !Install [graphicsmagick@testing]
+
 
 Distribution Commands
 =====================
@@ -223,6 +266,28 @@ These commands work for any linux distributions as long as distribution is
 detected by vagga. Latter basically means you used :step:`Alpine`,
 :step:`Ubuntu`, :step:`UbuntuRelease` in container config (or in parent
 config if you use :step:`SubConfig` or :step:`Container`)
+
+.. step:: Repo
+
+   Adds official repository to the supported linux distribution. For example::
+
+     setup:
+     - !Ubuntu xenial
+     - !Repo xenial/universe
+     - !Repo xenial-security/universe
+     - !Repo xenial-updates/universe
+
+     setup:
+     - !Ubuntu xenial
+     - !Repo universe # The same as "xenial/universe"
+
+     setup:
+     - !Alpine v3.4
+     - !Repo edge/testing
+
+     setup:
+     - !Alpine v3.4
+     - !Repo community # The same as "v3.4/community"
 
 .. step:: Install
 

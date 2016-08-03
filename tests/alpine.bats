@@ -92,3 +92,68 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = 6ea38cf8 ]]
     [[ ${lines[${#lines[@]}-1]} = 6ea38cf8bd751ac737a41c6e1ddb4b87a804f8e562c30064ec42941005b7bc6f ]]
 }
+
+@test "alpine: AlpineRepo minimal" {
+    run vagga _build alpine-repo
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/alpine-repo)
+    [[ $link = ".roots/alpine-repo.a3bfac74/root" ]]
+
+    [[ $(tail -n 1 ".vagga/alpine-repo/etc/apk/repositories") = *"/v3.4/community" ]]
+    repositories=($(sed "s/\/community/\/main/g" ".vagga/alpine-repo/etc/apk/repositories"))
+    # test that additional repository has the same mirror
+    [[ ${repositories[0]} = ${repositories[1]} ]]
+
+    run vagga _run alpine-repo tini -h
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+}
+
+@test "alpine: AlpineRepo full" {
+    run vagga _build alpine-repo-full
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/alpine-repo-full)
+    [[ $link = ".roots/alpine-repo-full.ce345923/root" ]]
+
+    [[ $(tail -n 1 ".vagga/alpine-repo-full/etc/apk/repositories") = \
+        "@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing" ]]
+
+    run vagga _run alpine-repo-full toilet Welcome
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *'m     m        ""#'* ]]
+}
+
+@test "alpine: Repo simple" {
+    run vagga _build repo-simple
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/repo-simple)
+    [[ $link = ".roots/repo-simple.8c9ad301/root" ]]
+
+    [[ $(tail -n 1 ".vagga/repo-simple/etc/apk/repositories") = *"/v3.4/community" ]]
+    repositories=($(sed "s/\/community/\/main/g" ".vagga/repo-simple/etc/apk/repositories"))
+    # test that additional repository has the same mirror
+    [[ ${repositories[0]} = ${repositories[1]} ]]
+
+    run vagga _run repo-simple tini -h
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+}
+
+@test "alpine: Repo with branch" {
+    run vagga _build repo-with-branch
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/repo-with-branch)
+    [[ $link = ".roots/repo-with-branch.de239880/root" ]]
+
+    [[ $(tail -n 1 ".vagga/repo-with-branch/etc/apk/repositories") = *"/edge/testing" ]]
+    repositories=($(sed "s/\/edge\/testing/\/v3.4\/main/g" ".vagga/repo-with-branch/etc/apk/repositories"))
+    # test that additional repository has the same mirror
+    echo ${repositories[*]}
+    [[ ${repositories[0]} = ${repositories[1]} ]]
+
+    run vagga _run repo-with-branch toilet Welcome
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *'m     m        ""#'* ]]
+}

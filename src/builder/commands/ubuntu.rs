@@ -82,17 +82,19 @@ impl UbuntuPPA {
 
 #[derive(RustcDecodable, Debug)]
 pub struct UbuntuRepo {
-    pub url: String,
-    pub suite: String,
+    pub url: Option<String>,
+    pub suite: Option<String>,
     pub components: Vec<String>,
+    pub trusted: bool,
 }
 
 impl UbuntuRepo {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
-        .member("url", V::Scalar::new())
-        .member("suite", V::Scalar::new())
+        .member("url", V::Scalar::new().optional())
+        .member("suite", V::Scalar::new().optional())
         .member("components", V::Sequence::new(V::Scalar::new()))
+        .member("trusted", V::Scalar::new().default(false))    
     }
 }
 
@@ -142,6 +144,34 @@ impl Distribution for Distro {
         if !self.config.keep_chfn_command {
             try!(clobber_chfn());
         }
+        Ok(())
+    }
+    fn add_repo(&mut self, ctx: &mut Context, repo: &str)
+        -> Result<(), StepError>
+    {
+        let repo_parts = repo.split('/').collect::<Vec<_>>();
+        let (suite, component) = match repo_parts.len() {
+            1 => {
+                try!(self.ensure_codename(ctx));
+                (self.codename.as_ref().unwrap().to_string(), repo_parts[0].to_string())
+            },
+            2 => (repo_parts[0].to_string(), repo_parts[1].to_string()),
+            _ => {
+                return Err(StepError::from(format!(
+                    "Cannot parse repository string. \
+                     Should be in the next formats: \
+                     'suite/component' or 'component'. \
+                     But was: '{}'", repo)));
+            },
+        };
+        let mirror = get_ubuntu_mirror(ctx);
+        let ubuntu_repo = UbuntuRepo {
+            url: Some(mirror),
+            suite: Some(suite),
+            components: vec!(component),
+            trusted: false,
+        };
+        try!(self.add_debian_repo(ctx, &ubuntu_repo));
         Ok(())
     }
     fn install(&mut self, ctx: &mut Context, pkgs: &[String])
@@ -315,15 +345,25 @@ impl Distro {
         self.apt_update = true;
         Ok(())
     }
-    pub fn add_debian_repo(&mut self, _: &mut Context, repo: &UbuntuRepo)
+    pub fn add_debian_repo(&mut self, ctx: &mut Context, repo: &UbuntuRepo)
         -> Result<(), String>
     {
         self.apt_update = true;
 
+        let mirror = get_ubuntu_mirror(ctx);
+        let ref url = repo.url.as_ref().unwrap_or(&mirror);
+        let suite = match repo.suite {
+            Some(ref suite) => suite,
+            None => {
+                try!(self.ensure_codename(ctx));
+                self.codename.as_ref().unwrap()
+            },
+        };
+
         let mut hash = Sha256::new();
-        hash.input_str(&repo.url);
+        hash.input_str(url);
         hash.input(&[0]);
-        hash.input_str(&repo.suite);
+        hash.input_str(suite);
         hash.input(&[0]);
         for cmp in repo.components.iter() {
             hash.input_str(&cmp);
@@ -331,12 +371,13 @@ impl Distro {
         }
         let name = format!("{}-{}.list",
             hash.result_str()[..8].to_string(),
-            repo.suite);
+            suite);
 
         File::create(&Path::new("/vagga/root/etc/apt/sources.list.d")
                      .join(&name))
             .and_then(|mut f| {
-                try!(write!(&mut f, "deb {} {}", repo.url, repo.suite));
+                let flags = if repo.trusted { " [trusted=yes] " } else { " " };
+                try!(write!(&mut f, "deb{}{} {}", flags, url, suite));
                 for item in repo.components.iter() {
                     try!(write!(&mut f, " {}", item));
                 }
@@ -350,9 +391,10 @@ impl Distro {
         try!(self.ensure_codename(ctx));
         let suite = self.codename.as_ref().unwrap().to_string();
         try!(self.add_debian_repo(ctx, &UbuntuRepo {
-            url: format!("http://ppa.launchpad.net/{}/ubuntu", name),
-            suite: suite,
+            url: Some(format!("http://ppa.launchpad.net/{}/ubuntu", name)),
+            suite: Some(suite),
             components: vec!["main".to_string()],
+            trusted: false,
         }));
         Ok(())
     }
@@ -391,8 +433,7 @@ impl Distro {
         try!(self.ensure_codename(ctx));
         let codename = self.codename.as_ref().unwrap();
         let target = "/vagga/root/etc/apt/sources.list.d/universe.list";
-        let mirror = ctx.settings.ubuntu_mirror.as_ref().map(|x| &x[..])
-            .unwrap_or(DEFAULT_MIRROR);
+        let mirror = get_ubuntu_mirror(ctx);
         try!(File::create(&Path::new(target))
             .and_then(|mut f| {
                 try!(writeln!(&mut f, "deb {} {} universe",
@@ -530,6 +571,13 @@ impl Distro {
     }
 }
 
+fn get_ubuntu_mirror(ctx: &Context) -> String {
+    ctx.settings.ubuntu_mirror.as_ref()
+        .map(|x| &x[..])
+        .unwrap_or(DEFAULT_MIRROR)
+        .to_string()
+}
+
 pub fn read_ubuntu_codename() -> Result<String, String>
 {
     let lsb_release_path = "/vagga/root/etc/lsb-release";
@@ -633,10 +681,7 @@ pub fn init_ubuntu_core(ctx: &mut Context) -> Result<(), String> {
 }
 
 fn set_mirror(ctx: &mut Context) -> Result<(), String> {
-    let mirror = match ctx.settings.ubuntu_mirror {
-        Some(ref mirror) => mirror,
-        None => DEFAULT_MIRROR,
-    };
+    let mirror = get_ubuntu_mirror(ctx);
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
     let source = BufReader::new(try!(File::open(&sources_list)
         .map_err(|e| format!("Error reading sources.list file: {}", e))));
@@ -646,7 +691,7 @@ fn set_mirror(ctx: &mut Context) -> Result<(), String> {
             for line in source.lines() {
                 let line = try!(line);
                 try!(f.write_all(
-                    line.replace("http://archive.ubuntu.com/ubuntu/", mirror)
+                    line.replace("http://archive.ubuntu.com/ubuntu/", &mirror)
                     .as_bytes()));
                 try!(f.write_all(b"\n"));
             }
@@ -841,9 +886,13 @@ impl BuildStep for UbuntuRepo {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("url", &self.url);
-        hash.field("suite", &self.suite);
+        hash.opt_field("url", &self.url);
+        hash.opt_field("suite", &self.suite);
         hash.sequence("components", &self.components);
+        if self.trusted {
+            // For backward compatibility hash only non-default
+            hash.bool("trusted", self.trusted);
+        }
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

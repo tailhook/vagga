@@ -8,14 +8,16 @@ use builder::commands as cmd;
 
 use build_step::{Step, BuildStep};
 
-const COMMANDS: [&'static str; 43] = [
+const COMMANDS: &'static [&'static str] = &[
     "Alpine",
+    "AlpineRepo",
     "Ubuntu",
     "UbuntuRepo",
     "UbuntuRelease",
     "UbuntuPPA",
     "UbuntuUniverse",
     "AptTrust",
+    "Repo",
     "Install",
     "BuildDeps",
     "Git",
@@ -79,12 +81,14 @@ pub struct Copy {
 pub fn builder_validator<'x>() -> V::Enum<'x> {
     V::Enum::new()
     .option("Alpine", cmd::alpine::Alpine::config())
+    .option("AlpineRepo", cmd::alpine::AlpineRepo::config())
     .option("Ubuntu", cmd::ubuntu::Ubuntu::config())
     .option("UbuntuRelease", cmd::ubuntu::UbuntuRelease::config())
     .option("UbuntuRepo", cmd::ubuntu::UbuntuRepo::config())
     .option("UbuntuPPA", cmd::ubuntu::UbuntuPPA::config())
     .option("UbuntuUniverse", cmd::ubuntu::UbuntuUniverse::config())
     .option("AptTrust", cmd::ubuntu::AptTrust::config())
+    .option("Repo", cmd::packaging::Repo::config())
     .option("Install", cmd::packaging::Install::config())
     .option("BuildDeps", cmd::packaging::BuildDeps::config())
     .option("Container", cmd::subcontainer::Container::config())
@@ -144,12 +148,14 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
 {
     match options[index] {
         "Alpine" => step(cmd::alpine::Alpine::decode(d)),
+        "AlpineRepo" => step(cmd::alpine::AlpineRepo::decode(d)),
         "Ubuntu" => step(cmd::ubuntu::Ubuntu::decode(d)),
         "UbuntuRepo" => step(cmd::ubuntu::UbuntuRepo::decode(d)),
         "UbuntuRelease" => step(cmd::ubuntu::UbuntuRelease::decode(d)),
         "UbuntuPPA" => step(cmd::ubuntu::UbuntuPPA::decode(d)),
         "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
         "AptTrust" => step(cmd::ubuntu::AptTrust::decode(d)),
+        "Repo" => step(cmd::packaging::Repo::decode(d)),
         "Install" => step(cmd::packaging::Install::decode(d)),
         "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
         "Git" => step(cmd::vcs::Git::decode(d)),

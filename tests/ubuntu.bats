@@ -121,3 +121,61 @@ setup() {
     link=$(readlink .vagga/ppa)
     [[ $link = ".roots/ppa.73b33181/root" ]]
 }
+
+@test "ubuntu: UbuntuRepo minimal" {
+    run vagga _build ubuntu-repo-minimal
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/ubuntu-repo-minimal)
+    [[ $link = ".roots/ubuntu-repo-minimal.c01e9336/root" ]]
+
+    repo_line=$(cat ".vagga/ubuntu-repo-minimal/etc/apt/sources.list.d/84fc0152-xenial.list")
+    [[ $repo_line = *" xenial universe" ]]
+
+    run vagga _run ubuntu-repo-minimal /usr/games/cowsay "Have you mooed today?"
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *"Have you mooed today?"* ]]
+}
+
+@test "ubuntu: UbuntuRepo full" {
+    run vagga _build ubuntu-repo-full
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/ubuntu-repo-full)
+    [[ $link = ".roots/ubuntu-repo-full.dfc21695/root" ]]
+
+    repo_line=$(cat ".vagga/ubuntu-repo-full/etc/apt/sources.list.d/3276db2a-vagga.list")
+    [[ $repo_line = "deb [trusted=yes] http://ubuntu.zerogw.com vagga main" ]]
+
+    run vagga _run ubuntu-repo-full vagga --version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = "v0.6.1" ]]
+}
+
+@test "ubuntu: Repo simple" {
+    run vagga _build repo-simple
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/repo-simple)
+    [[ $link = ".roots/repo-simple.b510b875/root" ]]
+
+    repo_line=$(cat ".vagga/repo-simple/etc/apt/sources.list.d/84fc0152-xenial.list")
+    [[ $repo_line = *" xenial universe" ]]
+
+    run vagga _run repo-simple banner Wonderful
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "#     #"* ]]
+}
+
+@test "ubuntu: Repo with suite" {
+    run vagga _build repo-with-suite
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/repo-with-suite)
+    [[ $link = ".roots/repo-with-suite.883e5d19/root" ]]
+
+    repo_line=$(cat ".vagga/repo-with-suite/etc/apt/sources.list.d/84fc0152-xenial.list")
+    [[ $repo_line = *" xenial universe" ]]
+
+    run vagga _run repo-with-suite banner Wonderful
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "#     #"* ]]
+}

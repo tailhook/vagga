@@ -24,6 +24,16 @@ impl BuildDeps {
     }
 }
 
+#[derive(Debug)]
+pub struct Repo(String);
+tuple_struct_decode!(Repo);
+
+impl Repo {
+    pub fn config() -> V::Scalar {
+        V::Scalar::new()
+    }
+}
+
 impl BuildStep for Install {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
@@ -65,6 +75,26 @@ impl BuildStep for BuildDeps {
                 }
             }
             try!(guard.distro.install(&mut guard.ctx, &self.0));
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+impl BuildStep for Repo {
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("Repo", &self.0);
+        Ok(())
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            try!(guard.distro.add_repo(&mut guard.ctx, &self.0));
         }
         Ok(())
     }

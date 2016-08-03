@@ -35,6 +35,35 @@ containers:
     - !BuildDeps [file]  # a dependency of checkinstall
     - !Install [checkinstall]
 
+  ubuntu-repo-minimal:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuRepo
+      components: [universe]
+    - !Install [cowsay]
+
+  ubuntu-repo-full:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuRepo
+      url: http://ubuntu.zerogw.com
+      suite: vagga
+      components: [main]
+      trusted: true
+    - !Install [vagga=0.6.1-1]
+
+  repo-simple:
+    setup:
+    - !Ubuntu xenial
+    - !Repo universe
+    - !Install [sysvbanner]
+
+  repo-with-suite:
+    setup:
+    - !Ubuntu xenial
+    - !Repo xenial/universe
+    - !Install [sysvbanner]
+
 commands:
   echo-cmd: !Command
     container: trusty
