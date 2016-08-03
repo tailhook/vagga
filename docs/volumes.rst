@@ -148,6 +148,10 @@ Available volume types:
      size of the original contents. This is the limit of how much data you can
      write on the volume.
 
+   container
+     Copy contents of the folder of another container. Path to the source folder
+     is the same as the mountpoint.
+
    owner-uid, owner-gid
      (default is to preserve) The user id of the owner of the directory. If not
      specified the ownership will be copied  from the original
