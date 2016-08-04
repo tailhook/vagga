@@ -1,14 +1,12 @@
 use std::os::unix::ffi::OsStrExt;
 
-use sha2::{Sha256, Digest as Sha2Digest};
-
 use config::{Config, Container};
 use super::error::Error;
 use build_step::{BuildStep, Digest};
 
 
 fn all(container: &Container, cfg: &Config)
-    -> Result<Sha256, (String, Error)>
+    -> Result<String, (String, Error)>
 {
     debug!("Versioning items: {}", container.setup.len());
 
@@ -34,19 +32,19 @@ fn all(container: &Container, cfg: &Config)
         hash.sequence("data_dirs", str_data_dirs);
     }
 
-    Ok(hash.unwrap())
+    Ok(hash.result_str())
 }
 
 pub fn short_version(container: &Container, cfg: &Config)
     -> Result<String, (String, Error)>
 {
-    let mut hash = try!(all(container, cfg));
-    Ok(hash.result_str()[..8].to_string())
+    let hash_str = try!(all(container, cfg));
+    Ok(hash_str[..8].to_string())
 }
 
 pub fn long_version(container: &Container, cfg: &Config)
     -> Result<String, (String, Error)>
 {
-    let mut hash = try!(all(&container, cfg));
-    Ok(hash.result_str())
+    let hash_str = try!(all(&container, cfg));
+    Ok(hash_str)
 }
