@@ -209,7 +209,7 @@ pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String) -> Result<()
     let mut hash = Digest::new();
     try_msg!(hash.stream(&mut reader),
         "Error when calculating hashsum: {err}");
-    let hash_str = hash.unwrap().result_str();
+    let hash_str = hash.result_str();
     if !hash_str.starts_with(sha256) {
         return Err(format!("Hashsum mismatch: expected {} but was {}",
             sha256, hash_str));
