@@ -128,7 +128,7 @@ setup() {
     link=$(readlink .vagga/ubuntu-repo-minimal)
     [[ $link = ".roots/ubuntu-repo-minimal.c01e9336/root" ]]
 
-    repo_line=$(cat ".vagga/ubuntu-repo-minimal/etc/apt/sources.list.d/84fc0152-xenial.list")
+    repo_line=$(cat ".vagga/ubuntu-repo-minimal/etc/apt/sources.list.d/cfa8522d-xenial.list")
     [[ $repo_line = *" xenial universe" ]]
 
     run vagga _run ubuntu-repo-minimal /usr/games/cowsay "Have you mooed today?"
@@ -143,7 +143,7 @@ setup() {
     link=$(readlink .vagga/ubuntu-repo-full)
     [[ $link = ".roots/ubuntu-repo-full.dfc21695/root" ]]
 
-    repo_line=$(cat ".vagga/ubuntu-repo-full/etc/apt/sources.list.d/3276db2a-vagga.list")
+    repo_line=$(cat ".vagga/ubuntu-repo-full/etc/apt/sources.list.d/5fe01055-vagga.list")
     [[ $repo_line = "deb [trusted=yes] http://ubuntu.zerogw.com vagga main" ]]
 
     run vagga _run ubuntu-repo-full vagga --version
@@ -158,7 +158,7 @@ setup() {
     link=$(readlink .vagga/repo-simple)
     [[ $link = ".roots/repo-simple.b510b875/root" ]]
 
-    repo_line=$(cat ".vagga/repo-simple/etc/apt/sources.list.d/84fc0152-xenial.list")
+    repo_line=$(cat ".vagga/repo-simple/etc/apt/sources.list.d/cfa8522d-xenial.list")
     [[ $repo_line = *" xenial universe" ]]
 
     run vagga _run repo-simple banner Wonderful
@@ -172,7 +172,7 @@ setup() {
     link=$(readlink .vagga/repo-with-suite)
     [[ $link = ".roots/repo-with-suite.883e5d19/root" ]]
 
-    repo_line=$(cat ".vagga/repo-with-suite/etc/apt/sources.list.d/84fc0152-xenial.list")
+    repo_line=$(cat ".vagga/repo-with-suite/etc/apt/sources.list.d/cfa8522d-xenial.list")
     [[ $repo_line = *" xenial universe" ]]
 
     run vagga _run repo-with-suite banner Wonderful
