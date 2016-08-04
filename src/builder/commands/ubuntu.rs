@@ -8,7 +8,6 @@ use std::collections::btree_map::Entry::{Vacant, Occupied};
 use quire::validate as V;
 use unshare::Stdio;
 use scan_dir::ScanDir;
-use sha2::{Sha256, Digest as Sha2Digest};
 
 use super::super::context::{Context};
 use super::super::download::download_file;
@@ -164,9 +163,8 @@ impl Distribution for Distro {
                      But was: '{}'", repo)));
             },
         };
-        let mirror = get_ubuntu_mirror(ctx);
         let ubuntu_repo = UbuntuRepo {
-            url: Some(mirror),
+            url: None,
             suite: Some(suite),
             components: vec!(component),
             trusted: false,
@@ -360,15 +358,10 @@ impl Distro {
             },
         };
 
-        let mut hash = Sha256::new();
-        hash.input_str(url);
-        hash.input(&[0]);
-        hash.input_str(suite);
-        hash.input(&[0]);
-        for cmp in repo.components.iter() {
-            hash.input_str(&cmp);
-            hash.input(&[0]);
-        }
+        let mut hash = Digest::new();
+        hash.opt_field("url", &repo.url);
+        hash.field("suite", suite);
+        hash.sequence("components", &repo.components);
         let name = format!("{}-{}.list",
             hash.result_str()[..8].to_string(),
             suite);

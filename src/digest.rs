@@ -11,9 +11,8 @@ impl Digest {
     pub fn new() -> Digest {
         Digest(Sha256::new())
     }
-    // TODO(tailhook) get rid of the method
-    pub fn unwrap(self) -> Sha256 {
-        return self.0
+    pub fn result_str(&mut self) -> String {
+        return self.0.result_str();
     }
     pub fn input<V: AsRef<[u8]>>(&mut self, value: V) {
         self.0.input(value.as_ref());
