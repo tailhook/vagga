@@ -43,6 +43,7 @@ Miscellaneous
    examples/misc/travis
    examples/misc/selenium
    examples/misc/firefox
+   examples/misc/certificate
 
 
 Documentation
