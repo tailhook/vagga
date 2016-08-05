@@ -10,7 +10,6 @@ extern crate rustc_serialize;
 extern crate env_logger;
 extern crate argparse;
 extern crate quire;
-extern crate time;
 extern crate signal;
 extern crate regex;
 extern crate scan_dir;
