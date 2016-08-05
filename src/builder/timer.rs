@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::Path;
 use std::fs::File;
 use std::fmt::{Arguments};
-use std::time::{Instant, Duration};
+use std::time::{Instant, Duration, SystemTime, UNIX_EPOCH};
 
 const NANO_FACTOR: f64 = 0.000000001;
 
@@ -20,13 +20,16 @@ pub struct TimeLog {
 
 impl TimeLog {
     pub fn start(path: &Path) -> Result<TimeLog, Error> {
-        let now = Instant::now();
+        let now = SystemTime::now();
+        let now_instant = Instant::now();
         let mut res = TimeLog {
             file: try!(File::create(path)),
-            start: now,
-            prev: now,
+            start: now_instant,
+            prev: now_instant,
         };
-        try!(res.mark(format_args!("Start {:?}", now)));
+        let duration = now.duration_since(UNIX_EPOCH)
+                          .expect("FATAL: now was created after the epoch");
+        try!(res.mark(format_args!("Start {:?}", duration_as_f64(duration))));
         Ok(res)
     }
     pub fn mark(&mut self, args: Arguments) -> Result<(), Error> {
