@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
 use builder::error::{Error};
-use builder::commands::{composer, gem, npm, pip};
+use builder::commands::{composer, gem, npm, pip, dirs};
 use builder::packages;
 use build_step::BuildStep;
 use container::util::clean_dir;
@@ -89,9 +89,9 @@ impl<'a> Guard<'a> {
         }
         try!(unmount_system_dirs());
 
-        for dir in self.ctx.remove_dirs.iter() {
-            try!(clean_dir(&base.join(dir), true)
-                .map_err(|e| format!("Error removing dir: {}", e)));
+        for path in self.ctx.remove_paths.iter() {
+            try_msg!(dirs::remove(&Path::new("/").join(path)),
+                "Error removing path: {err}");
         }
 
         for dir in self.ctx.empty_dirs.iter() {
@@ -99,8 +99,7 @@ impl<'a> Guard<'a> {
         }
 
         for dir in self.ctx.ensure_dirs.iter() {
-            let fulldir = base.join(dir);
-            try_msg!(create_dir(&fulldir, true),
+            try_msg!(dirs::ensure(&Path::new("/").join(dir)),
                 "Error creating dir: {err}");
         }
 

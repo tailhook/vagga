@@ -1,3 +1,4 @@
+use std::io;
 use std::fs::{create_dir_all, set_permissions, Permissions, remove_file};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::ffi::OsStrExt;
@@ -52,42 +53,55 @@ impl CacheDirs {
     }
 }
 
-pub fn remove(path: &PathBuf, guard: &mut Guard)
+pub fn remove(path: &PathBuf)
     -> Result<(), StepError>
 {
-    let fpath = Path::new("/vagga/root")
+    let ref fpath = Path::new("/vagga/root")
         .join(try!(path.strip_prefix("/")
             .map_err(|_| format!("Must be absolute: {:?}", path))));
-    if fpath.is_dir() {
-        try!(clean_dir(&fpath, true));
-    } else if fpath.exists() {
-        try!(remove_file(&fpath)
-            .map_err(|e| format!("Error removing file {:?}: {}",
-                                 &fpath, e)));
+    match fpath.symlink_metadata() {
+        Ok(ref stats) if stats.is_dir() => {
+            try!(clean_dir(fpath, true));
+        },
+        Ok(_) => {
+            try!(remove_file(fpath)
+                 .map_err(|e| format!("Error removing file {:?}: {}",
+                     fpath, e)));
+        },
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {},
+        Err(_) => {
+            return Err(StepError::from(format!("Cannot stat {:?}",
+                path)));
+        },
     }
-    try!(guard.ctx.add_remove_dir(&path));
     Ok(())
 }
 
-pub fn ensure(path: &PathBuf, guard: &mut Guard)
+pub fn ensure(path: &PathBuf)
     -> Result<(), StepError>
 {
-    let fpath = Path::new("/vagga/root")
+    let ref fpath = Path::new("/vagga/root")
         .join(try!(path.strip_prefix("/")
             .map_err(|_| format!("Must be absolute: {:?}", path))));
-    try!(create_dir_all(&fpath)
-        .map_err(|e| format!("Error creating dir: {}", e)));
-    try!(set_permissions(&fpath, Permissions::from_mode(0o755))
-        .map_err(|e| format!("Error setting permissions: {}", e)));
-    for mount_point in guard.ctx.container_config.volumes.keys() {
-        if path != mount_point && path.starts_with(mount_point) {
-            warn!("{0:?} directory is in the volume: {1:?}.\n\t\
-                   {0:?} will be unaccessible inside the container.",
-                path,
-                mount_point);
-        }
+    match fpath.metadata() {
+        Ok(ref stats) if stats.is_dir() => {
+            return Ok(());
+        },
+        Ok(_) => {
+            return Err(StepError::from(format!(
+                "Path {:?} exists but not a directory", path)));
+        },
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+            try!(create_dir_all(fpath)
+                .map_err(|e| format!("Error creating dir: {}", e)));
+            try!(set_permissions(fpath, Permissions::from_mode(0o755))
+                .map_err(|e| format!("Error setting permissions: {}", e)));
+        },
+        Err(_) => {
+            return Err(StepError::from(format!("Cannot stat {:?}",
+                path)));
+        },
     }
-    try!(guard.ctx.add_ensure_dir(path));
     Ok(())
 }
 
@@ -101,7 +115,18 @@ impl BuildStep for EnsureDir {
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
-        ensure(&self.0, guard)
+        let ref path = self.0;
+        try!(ensure(path));
+        for mount_point in guard.ctx.container_config.volumes.keys() {
+            if path != mount_point && path.starts_with(mount_point) {
+                warn!("{0:?} directory is in the volume: {1:?}.\n\t\
+                       {0:?} will be unaccessible inside the container.",
+                    path,
+                    mount_point);
+            }
+        }
+        try!(guard.ctx.add_ensure_dir(path));
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
@@ -159,7 +184,9 @@ impl BuildStep for Remove {
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
-        remove(&self.0, guard)
+        try!(remove(&self.0));
+        try!(guard.ctx.add_remove_path(&self.0));
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None

@@ -77,6 +77,15 @@ setup() {
     [[ ! $output =~ "\"/var/lib/mount_point\" directory is in the volume: '/var/lib/mount_point'" ]]
 }
 
+@test "generic: Remove step" {
+    run vagga _build remove
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/remove)
+    [[ $link = ".roots/remove.19355f95/root" ]]
+
+    [[ $(ls -1 .vagga/remove/opt/ | wc -l) = "0" ]]
+}
+
 @test "generic: The data-dirs option works" {
     run vagga _build data-container
     printf "%s\n" "${lines[@]}"

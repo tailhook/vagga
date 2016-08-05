@@ -26,7 +26,7 @@ pub struct Context<'a> {
     pub container_config: &'a Container,
     pub ensure_dirs: BTreeSet<PathBuf>,
     pub empty_dirs: BTreeSet<PathBuf>,
-    pub remove_dirs: BTreeSet<PathBuf>,
+    pub remove_paths: BTreeSet<PathBuf>,
     pub mounted: Vec<PathBuf>,
     pub cache_dirs: BTreeMap<PathBuf, String>,
     pub environ: BTreeMap<String, String>,
@@ -85,7 +85,7 @@ impl<'a> Context<'a> {
                 PathBuf::from("tmp"),
                 PathBuf::from("var/tmp"),
                 ).into_iter().collect(),
-            remove_dirs: BTreeSet::new(),
+            remove_paths: BTreeSet::new(),
             mounted: Vec::new(),
             cache_dirs: BTreeMap::new(),
             environ: env,
@@ -128,12 +128,12 @@ impl<'a> Context<'a> {
         return Ok(());
     }
 
-    pub fn add_remove_dir(&mut self, path: &Path)
+    pub fn add_remove_path(&mut self, path: &Path)
         -> Result<(), String>
     {
         let rel_path = try!(path.strip_prefix("/")
-            .map_err(|_| format!("remove_dir must be absolute: {:?}", path)));
-        self.remove_dirs.insert(rel_path.to_path_buf());
+            .map_err(|_| format!("remove path must be absolute: {:?}", path)));
+        self.remove_paths.insert(rel_path.to_path_buf());
         Ok(())
     }
 
