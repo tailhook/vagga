@@ -1,6 +1,5 @@
 use std::io;
-use std::fs::{create_dir_all, set_permissions, Permissions, remove_file};
-use std::os::unix::fs::PermissionsExt;
+use std::fs::remove_file;
 use std::os::unix::ffi::OsStrExt;
 use std::collections::BTreeMap;
 
@@ -9,6 +8,7 @@ use quire::validate as V;
 use std::path::{Path, PathBuf};
 use container::util::{clean_dir};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use file_util::create_dir;
 
 
 #[derive(Debug)]
@@ -92,10 +92,18 @@ pub fn ensure(path: &PathBuf)
                 "Path {:?} exists but not a directory", path)));
         },
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            try!(create_dir_all(fpath)
-                .map_err(|e| format!("Error creating dir: {}", e)));
-            try!(set_permissions(fpath, Permissions::from_mode(0o755))
-                .map_err(|e| format!("Error setting permissions: {}", e)));
+            match create_dir(fpath, true) {
+                Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => {
+                    return Err(StepError::from(format!(
+                        "Some intermediate path for {:?} exists \
+                         but not a directory", path)));
+                },
+                Err(_) => {
+                    return Err(StepError::from(format!(
+                        "Error creating dir: {}", e)));
+                },
+                Ok(_) => {},
+            }
         },
         Err(_) => {
             return Err(StepError::from(format!("Cannot stat {:?}",
