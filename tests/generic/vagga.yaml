@@ -65,6 +65,19 @@ containers:
     volumes:
       /var/lib/mount_point: !BindRW /vagga/root/tmp
 
+  remove:
+    setup:
+    - !Alpine v3.4
+    - !Sh |
+        mkdir /opt
+        touch /opt/test_file
+        mkdir /opt/test_dir
+        touch /opt/test_dir/file
+        ln -s /opt/test_dir /opt/test_symlink
+    - !Remove /opt/test_file
+    - !Remove /opt/test_dir
+    - !Remove /opt/test_symlink
+
   data-container:
     setup:
     - !Alpine v3.4
