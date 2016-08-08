@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::collections::btree_map::Entry::{Vacant, Occupied};
+use std::ffi::OsStr;
 
 use quire::validate as V;
 use unshare::Stdio;
@@ -111,11 +112,19 @@ impl AptTrust {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum AptHttps {
+    No,
+    Need,
+    Installed,
+}
+
 #[derive(Debug)]
 pub struct Distro {
     config: UbuntuRelease,
     codename: Option<String>,
     apt_update: bool,
+    apt_https: AptHttps,
     has_indices: bool,
     has_universe: bool,
     do_eatmydata: bool,
@@ -177,6 +186,18 @@ impl Distribution for Distro {
     {
         let mut eatmy = None;
         if self.apt_update {
+            if self.apt_https == AptHttps::Need {
+                let apt_https_deps = ["ca-certificates", "apt-transport-https"];
+                for dep in apt_https_deps.iter() {
+                    ctx.build_deps.insert(dep.to_string());
+                }
+                try!(apt_get_update(ctx, &[
+                    "--no-list-cleanup",
+                    "-o", "Dir::Etc::sourcelist=sources.list",
+                    "-o", "Dir::Etc::sourceparts=-"]));
+                try!(apt_get_install(ctx, &apt_https_deps));
+                self.apt_https = AptHttps::Installed;
+            }
             if !self.has_indices {
                 try!(self.ensure_codename(ctx));
                 self.copy_apt_lists_from_cache()
@@ -199,31 +220,10 @@ impl Distribution for Distro {
                 }
             }
             self.apt_update = false;
-            let mut cmd = try!(command(ctx, "apt-get"));
-            cmd.arg("update");
-            try!(run(cmd)
-                .map_err(|error| {
-                    if ctx.settings.ubuntu_mirror.is_none() {
-                        warn!("The `apt-get update` failed. You have no mirror\
-                           setup, and default one is not always perfect.\n\
-                           Add the following to your ~/.vagga.yaml:\
-                           \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
-                           Where CC is a two-letter country code where you currently are.\
-                           ");
-                    } else {
-                        warn!("The `apt-get update` failed. \
-                            If this happens too often, consider changing \
-                            the `ubuntu-mirror` in settings");
-                    }
-                    error
-                }));
+            try!(apt_get_update::<&str>(ctx, &[]));
         }
         if let Some(ref params) = eatmy {
-            let mut cmd = try!(command(ctx, "apt-get"));
-            cmd.arg("install");
-            cmd.arg("-y");
-            cmd.arg(params.package);
-            try!(run(cmd));
+            try!(apt_get_install(ctx, &[params.package]));
             match ctx.environ.entry("LD_PRELOAD".to_string()) {
                 Vacant(v) => {
                     v.insert(params.preload.to_string());
@@ -239,11 +239,7 @@ impl Distribution for Distro {
                 }
             }
         }
-        let mut cmd = try!(command(ctx, "apt-get"));
-        cmd.arg("install");
-        cmd.arg("-y");
-        cmd.args(&pkgs[..]);
-        try!(run(cmd));
+        try!(apt_get_install(ctx, &pkgs[..]));
         Ok(())
     }
     fn ensure_packages(&mut self, ctx: &mut Context,
@@ -755,6 +751,7 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
         config: config,
         codename: None, // unknown yet
         apt_update: true,
+        apt_https: AptHttps::No,
         has_indices: false,
         has_universe: false,
     }));
@@ -774,6 +771,40 @@ fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
                         /usr/games:/usr/local/games\
                         ".to_string());
     Ok(())
+}
+
+fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
+    -> Result<(), StepError>
+{
+    let mut cmd = try!(command(ctx, "apt-get"));
+    cmd.arg("update");
+    cmd.args(options);
+    run(cmd)
+         .map_err(|error| {
+             if ctx.settings.ubuntu_mirror.is_none() {
+                 warn!("The `apt-get update` failed. You have no mirror\
+                     setup, and default one is not always perfect.\n\
+                     Add the following to your ~/.vagga.yaml:\
+                     \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
+                     Where CC is a two-letter country code where you currently are.\
+                     ");
+             } else {
+                 warn!("The `apt-get update` failed. \
+                     If this happens too often, consider changing \
+                     the `ubuntu-mirror` in settings");
+             }
+             error
+         })
+}
+
+fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context, packages: &[T])
+    -> Result<(), StepError>
+{
+    let mut cmd = try!(command(ctx, "apt-get"));
+    cmd.arg("install");
+    cmd.arg("-y");
+    cmd.args(packages);
+    run(cmd)
 }
 
 impl BuildStep for Ubuntu {
@@ -891,6 +922,14 @@ impl BuildStep for UbuntuRepo {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
+        if self.url.as_ref().map_or(false, |url| url.starts_with("https:")) {
+            try!(guard.distro.specific(|u: &mut Distro| {
+                if u.apt_https == AptHttps::No {
+                    u.apt_https = AptHttps::Need;
+                }
+                Ok(())
+            }));
+        }
         if build {
             let ref mut ctx = guard.ctx;
             try!(guard.distro.specific(|u: &mut Distro| {

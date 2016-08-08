@@ -152,6 +152,21 @@ setup() {
     [[ $output = "v0.6.1" ]]
 }
 
+@test "ubuntu: UbuntuRepo https" {
+    run vagga _build ubuntu-repo-https-sub
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/ubuntu-repo-https-sub)
+    [[ $link = ".roots/ubuntu-repo-https-sub.d6b7ec6b/root" ]]
+
+    repo_line=$(cat ".vagga/ubuntu-repo-https-sub/etc/apt/sources.list.d/9bdc2403-xenial.list")
+    [[ $repo_line = "deb https://deb.nodesource.com/node_5.x xenial main" ]]
+
+    run vagga _run ubuntu-repo-https-sub node --version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = "v5."* ]]
+}
+
 @test "ubuntu: Repo simple" {
     run vagga _build repo-simple
     printf "%s\n" "${lines[@]}"

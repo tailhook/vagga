@@ -52,6 +52,23 @@ containers:
       trusted: true
     - !Install [vagga=0.6.1-1]
 
+  ubuntu-repo-https:
+    setup:
+    - !Ubuntu xenial
+    - !Repo universe
+    - !AptTrust
+      keys: [1655A0AB68576280]
+    - !UbuntuRepo
+      url: https://deb.nodesource.com/node_5.x
+      suite: xenial
+      components: [main]
+    - !Install [nodejs]
+
+  ubuntu-repo-https-sub:
+    setup:
+    - !Container ubuntu-repo-https
+    - !Install [bc]
+
   repo-simple:
     setup:
     - !Ubuntu xenial
