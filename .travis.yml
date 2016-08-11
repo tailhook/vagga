@@ -1,9 +1,25 @@
+_defaults:
+  linux: &linux
+    os: linux
+    dist: trusty
+    sudo: required    
+
 language: rust
 matrix:
   include:
-    - os: linux
-      dist: trusty
-      sudo: required
+    - <<: *linux
+      env: TESTS="cargo alpine badcmd copy cyclic completion generic image network prerequisites readonly uidmap vcs version"
+    - <<: *linux
+      env: TESTS="inheritance subconfig ubuntu ubuntu_release"
+    # programing languages
+    - <<: *linux
+      env: TESTS=pip
+    - <<: *linux
+      env: TESTS=composer
+    - <<: *linux
+      env: TESTS="gem_bundler gem_bundler_lock"
+    - <<: *linux
+      env: TESTS=npm
     - os: osx
 install:
 - "echo ubuntu-mirror: http://mirrors.us.kernel.org/ubuntu/ > ~/.vagga.yaml"
@@ -11,7 +27,7 @@ install:
 - |
   if [[ $TRAVIS_OS_NAME != osx ]]; then
     echo "$(id -un):100000:65536" | sudo tee /etc/subuid | sudo tee /etc/subgid
-    sudo apt-get install uidmap
+    sudo apt-get install uidmap -y
     curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
     vagga make
     vagga _build test
@@ -22,11 +38,17 @@ install:
 script:
 - |
   if [[ $TRAVIS_OS_NAME != osx ]]; then
-    vagga -E VAGGA_VERSION=v0.0.0-test _run rust-musl cargo test
-    vagga \
-        -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
-        -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
-        test tests --tap
+    tests=($(echo $TESTS))
+    for test in ${tests[@]}; do
+      if [[ $test = cargo ]]; then
+        vagga -E VAGGA_VERSION=v0.0.0-test _run rust-musl cargo test
+      else
+        vagga \
+          -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
+          -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
+          test tests/$test.bats --tap
+      fi
+    done
   else
     ./target/debug/vagga _list
   fi
