@@ -140,3 +140,37 @@ to set up a Linux virtual machine and share your definitions into the machine. S
 and subsequent errors, including vagga not being allowed to clean up after itself.
 
 Don't use shared folders as your cache dir or storage dir, see :ref:`settings` for ways to change them.
+
+
+.. _err-shared-memory
+
+Out of Shared Memory
+--------------------
+
+We use 100MiB for shared memory by default, to increase it add the
+following to the volumes of your container (or command):
+
+.. code-block:: yaml
+
+    containers:
+     some-container:
+       volumes:
+        /run: !Tmpfs
+          size: 1Gi  # your new size of shared memory
+          subdirs:
+            shm:     # create shm directory
+
+
+Known scenarios
+```````````````
+
+Facebook's flow_ requires a lot of shared memory. The error that can be
+seen in the log is as follows::
+
+    [2016-08-11 06:59:40] We've run out of filesystems to use for shared memory
+    SharedMem.Out_of_shared_memory
+
+The amount of memory needed probably depends on an application that is
+being compiled by flow.
+
+.. _flow: https://github.com/facebook/flow
