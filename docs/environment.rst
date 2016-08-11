@@ -26,3 +26,14 @@ used to assign an environment variable that will be passed to the container::
 
     $ vagga --environ FOO=BAR _run container printenv FOO
     BAR
+
+The order of precedence for environment variables from the highest priority to
+the lowest::
+
+1. Options ``-E/--environ`` in the command-line
+#. Options ``-e/--use-env`` in the command-line
+#. ``VAGGAENV_*`` variables
+#. Variables set in command: ``environ`` option
+#. Variables set in container: ``environ`` option
+#. Variables set in container: ``environ-file`` option
+#. Variables that are auto-propagated: ``*_proxy``, ``TERM``

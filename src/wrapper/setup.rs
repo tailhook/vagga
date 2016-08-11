@@ -11,6 +11,7 @@ use libc::pid_t;
 use libmount::{BindMount, Tmpfs};
 
 use config::{Container, Settings};
+use config::command::CommandInfo;
 use config::volumes::Volume;
 use config::volumes::Volume as V;
 use container::root::{change_root};
@@ -268,7 +269,8 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     Ok(())
 }
 
-pub fn get_environment(container: &Container, settings: &Settings)
+pub fn get_environment(settings: &Settings, container: &Container,
+    command: Option<&CommandInfo>)
     -> Result<BTreeMap<String, String>, String>
 {
     let mut result = BTreeMap::new();
@@ -279,11 +281,6 @@ pub fn get_environment(container: &Container, settings: &Settings)
             if let Ok(v) = env::var(k) {
                 result.insert(k.to_string(), v);
             }
-        }
-    }
-    for (k, v) in env::vars() {
-        if k.starts_with("VAGGAENV_") {
-            result.insert(k[9..].to_string(), v);
         }
     }
     if let Some(ref filename) = container.environ_file {
@@ -308,6 +305,16 @@ pub fn get_environment(container: &Container, settings: &Settings)
     }
     for (ref k, ref v) in container.environ.iter() {
         result.insert(k.to_string(), v.to_string());
+    }
+    if let Some(command) = command {
+        for (ref k, ref v) in command.environ.iter() {
+            result.insert(k.to_string(), v.to_string());
+        }
+    }
+    for (k, v) in env::vars() {
+        if k.starts_with("VAGGAENV_") {
+            result.insert(k[9..].to_string(), v);
+        }
     }
     return Ok(result);
 }

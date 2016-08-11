@@ -72,10 +72,8 @@ pub fn commandline_cmd(command: &CommandInfo,
     warn_if_data_container(&cconfig);
     try!(setup::setup_filesystem(&setup_info, &cont_ver));
 
-    let mut env = try!(setup::get_environment(cconfig, &wrapper.settings));
-    for (k, v) in command.environ.iter() {
-        env.insert(k.clone(), v.clone());
-    }
+    let env = try!(setup::get_environment(&wrapper.settings, cconfig,
+        Some(&command)));
     let cpath = try!(find_cmd(&cmdline.remove(0), &env));
 
     let mut cmd = Command::new(&cpath);
