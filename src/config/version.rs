@@ -5,8 +5,7 @@ use std::default::Default;
 
 use quire::validate as V;
 use quire::ast::{Ast, NullKind, Tag};
-use quire::sky::Error as QuireError;
-use quire::ErrorCollector;
+use quire::{Error as QuireError, ErrorCollector};
 
 pub struct Version<'a>(pub &'a str);
 pub struct Components<'a>(&'a str, Peekable<CharIndices<'a>>);

@@ -1,11 +1,15 @@
-use std::default::Default;
-use std::path::{PathBuf, Path};
+use std::io::{Read};
+use std::rc::Rc;
+use std::fs::File;
+use std::path::{PathBuf, Path, Component};
 
 use std::collections::BTreeMap;
 use rustc_serialize::{Decoder};
 
-use quire::parse_config;
+use quire::{Options, Include, Error, ErrorCollector, Pos, parse_config};
 use quire::validate as V;
+use quire::parser::{parse as parse_yaml};
+use quire::ast::{Ast, process as process_ast};
 
 use super::containers;
 use super::containers::Container;
@@ -82,16 +86,48 @@ pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
     return Ok((cfg, cfg_dir));
 }
 
-pub fn read_config(filename: &Path) -> Result<Config, String> {
-    let mut config: Config = match parse_config(
-        filename, &config_validator(), Default::default())
-    {
-        Ok(cfg) => cfg,
-        Err(e) => {
-            return Err(format!("Config {:?} cannot be read: {}",
-                filename, e));
+fn include_file(pos: &Pos, include: &Include,
+    err: &ErrorCollector, options: &Options)
+    -> Ast
+{
+    match *include {
+        Include::File { filename } => {
+            let mut path = PathBuf::from(&*pos.filename);
+            path.pop(); // pop original filename
+            for component in Path::new(filename).components() {
+                match component {
+                    Component::Normal(x) => path.push(x),
+                    _ => {
+                        err.add_error(Error::preprocess_error(pos,
+                            format!("Only relative paths without parent \
+                                     directories can be included")));
+                        return Ast::void(pos);
+                    }
+                }
+            }
+
+            debug!("{} Including {:?}", pos, path);
+
+            let mut body = String::new();
+            File::open(&path)
+            .and_then(|mut f| f.read_to_string(&mut body))
+            .map_err(|e| err.add_error(Error::OpenError(path.clone(), e))).ok()
+            .and_then(|_| {
+                parse_yaml(Rc::new(path.display().to_string()), &body,
+                    |doc| { process_ast(&options, doc, err) },
+                ).map_err(|e| err.add_error(e)).ok()
+            })
+            .unwrap_or_else(|| Ast::void(pos))
         }
-    };
+    }
+}
+
+pub fn read_config(filename: &Path) -> Result<Config, String> {
+    let mut opt = Options::default();
+    opt.allow_include(include_file);
+    let mut config: Config = try!(
+        parse_config(filename, &config_validator(), &opt)
+        .map_err(|e| format!("{}", e)));
     for (_, ref mut container) in config.containers.iter_mut() {
         if container.uids.len() == 0 {
             container.uids.push(Range::new(0, 65535));

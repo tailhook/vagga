@@ -1,0 +1,13 @@
+docker-raw:
+  setup:
+  - !SubConfig
+    source: !Container docker-parser
+    path: vagga.yaml
+    container: docker-raw
+
+docker-smart:
+  setup:
+  - !SubConfig
+    source: !Container docker-parser
+    path: vagga.yaml
+    container: docker-smart

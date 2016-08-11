@@ -1,26 +1,7 @@
 containers:
 
-  docker-parser:
-    setup:
-    - !Alpine v3.4
-    - !Install [python]
-    - !Depends Dockerfile
-    - !Depends docker2vagga.py
-    - !Sh 'python ./docker2vagga.py > /vagga.yaml'
-
-  docker-raw:
-    setup:
-    - !SubConfig
-      source: !Container docker-parser
-      path: vagga.yaml
-      container: docker-raw
-
-  docker-smart:
-    setup:
-    - !SubConfig
-      source: !Container docker-parser
-      path: vagga.yaml
-      container: docker-smart
+  docker-parser: !*Include docker-parser.yaml
+  <<: [!*Include subdir/docker-subconfigs.yaml]
 
   subdir:
     setup:

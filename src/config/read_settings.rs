@@ -1,9 +1,8 @@
 use std::env;
-use std::default::Default;
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
-use quire::{parse_config, parse_string};
+use quire::{parse_config, parse_string, Options};
 use quire::validate as V;
 
 use config::Settings;
@@ -179,7 +178,7 @@ pub fn read_settings(project_root: &Path)
             continue;
         }
         let cfg: SecureSettings = try!(parse_config(filename,
-            &secure_settings_validator(true), Default::default())
+            &secure_settings_validator(true), &Options::default())
             .map_err(|e| format!("{}", e)));
         try!(merge_settings(cfg, &project_root,
             &mut ext_settings, &mut int_settings))
@@ -187,7 +186,7 @@ pub fn read_settings(project_root: &Path)
     if let Ok(settings) = env::var("VAGGA_SETTINGS") {
         let cfg: SecureSettings = try!(parse_string("<env:VAGGA_SETTINGS>",
                 &settings,
-                &secure_settings_validator(true), Default::default())
+                &secure_settings_validator(true), &Options::default())
             .map_err(|e| format!("{}", e)));
         try!(merge_settings(cfg, &project_root,
             &mut ext_settings, &mut int_settings))
@@ -200,7 +199,7 @@ pub fn read_settings(project_root: &Path)
             continue;
         }
         let cfg: InsecureSettings = try!(parse_config(filename,
-            &*insecure_settings_validator(), Default::default())
+            &*insecure_settings_validator(), &Options::default())
             .map_err(|e| format!("{}", e)));
         if let Some(val) = cfg.version_check {
             int_settings.version_check = val;
