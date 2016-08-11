@@ -32,7 +32,7 @@ quick-error = "1.1.0"
 
 [dependencies.quire]
 git = "git://github.com/tailhook/rust-quire"
-rev = "72ec8fc"
+rev = "083eeae"
 
 [features]
 default = ["containers"]

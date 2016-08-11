@@ -16,7 +16,7 @@ dependencies = [
  "net2 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=72ec8fc)",
+ "quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=083eeae)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.73 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -267,7 +267,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quire"
 version = "0.1.8"
-source = "git+git://github.com/tailhook/rust-quire?rev=72ec8fc#72ec8fc8558c15edf9e0ac009ba2dd682ad9c2e6"
+source = "git+git://github.com/tailhook/rust-quire?rev=083eeae#083eeaeab1778d1f32c3697473f48d0dab4a6d5b"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -6,6 +6,7 @@ use std::default::Default;
 use quire::validate as V;
 use quire::ast::{Ast, NullKind, Tag};
 use quire::sky::Error as QuireError;
+use quire::ErrorCollector;
 
 pub struct Version<'a>(pub &'a str);
 pub struct Components<'a>(&'a str, Peekable<CharIndices<'a>>);
@@ -127,28 +128,28 @@ impl V::Validator for MinimumVagga {
             None
         }
     }
-    fn validate(&self, ast: Ast) -> (Ast, Vec<QuireError>) {
-        let mut warnings = vec!();
+    fn validate(&self, ast: Ast, err: &ErrorCollector) -> Ast {
         let (pos, kind, val) = match ast {
             Ast::Scalar(pos, _, kind, min_version) => {
                 if let Some(ref current_version) = self.current_version {
                     if Version(&min_version) > Version(current_version) {
-                        warnings.push(QuireError::validation_error(&pos,
-                            format!("Please upgrade vagga to at least {:?}", min_version)));
+                        err.add_error(QuireError::validation_error(&pos,
+                            format!("Please upgrade vagga to at least {:?}",
+                                    min_version)));
                     }
                 }
                 (pos, kind, min_version)
             }
             Ast::Null(_, _, _) if self.optional => {
-                return (ast, warnings);
+                return ast;
             }
             ast => {
-                warnings.push(QuireError::validation_error(&ast.pos(),
+                err.add_error(QuireError::validation_error(&ast.pos(),
                     format!("Value must be scalar")));
-                return (ast, warnings);
+                return ast;
             }
         };
-        (Ast::Scalar(pos, Tag::NonSpecific, kind, val), warnings)
+        Ast::Scalar(pos, Tag::NonSpecific, kind, val)
     }
 }
 
