@@ -142,7 +142,7 @@ and subsequent errors, including vagga not being allowed to clean up after itsel
 Don't use shared folders as your cache dir or storage dir, see :ref:`settings` for ways to change them.
 
 
-.. _err-shared-memory
+.. _err-shared-memory:
 
 Out of Shared Memory
 --------------------
