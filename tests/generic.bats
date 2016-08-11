@@ -369,3 +369,21 @@ setup() {
     [[ $link = ".roots/path-precedence.c3ea6f51/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello world!" ]]
 }
+
+@test "generic: Environ precedence" {
+    run vagga _build environ
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/environ)
+    [[ $link = ".roots/environ.4ed6a479/root" ]]
+    
+    [[ $(vagga _run environ env | grep 'EDITOR=') = "EDITOR=vi" ]]
+    [[ $(vagga _run environ env | grep 'SHELL=') = "SHELL=/bin/bash" ]]
+
+    [[ $(vagga which-editor) = "vim" ]]
+
+    [[ $(VAGGAENV_EDITOR=pico vagga which-editor) = "pico" ]]
+
+    [[ $(VAGGAENV_EDITOR=pico EDITOR=nano vagga --use-env EDITOR which-editor) = "nano" ]]
+
+    [[ $(VAGGAENV_EDITOR=pico EDITOR=nano vagga --use-env EDITOR -E EDITOR=emacs which-editor) = "emacs" ]]
+}

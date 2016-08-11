@@ -208,6 +208,14 @@ containers:
         chmod +x /usr/bin/hello
         chmod +x /usr/local/bin/hello
 
+  environ:
+    environ-file: /work/environ.txt
+    environ:
+      EDITOR: vi
+      SHELL: /bin/bash
+    setup:
+    - !Alpine v3.4
+
 commands:
   two-lines: !Supervise
     children:
@@ -300,3 +308,9 @@ commands:
     external-user-id: 0
     container: busybox
     run: [id]
+
+  which-editor: !Command
+    container: environ
+    environ:
+      EDITOR: vim
+    run: echo $EDITOR

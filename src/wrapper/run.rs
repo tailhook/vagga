@@ -70,7 +70,7 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     warn_if_data_container(&cconfig);
     try!(setup::setup_filesystem(&setup_info, container_ver));
 
-    let env = try!(setup::get_environment(cconfig, &wrapper.settings));
+    let env = try!(setup::get_environment(&wrapper.settings, cconfig, None));
     let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
     if !command.contains("/") {
