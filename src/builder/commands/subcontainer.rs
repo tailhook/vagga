@@ -9,7 +9,7 @@ use config::containers::Container as Cont;
 use version::short_version;
 use container::mount::{remount_ro};
 use container::util::{copy_dir};
-use file_util::{create_dir, shallow_copy};
+use file_util::{create_dir, shallow_copy, copy};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 use builder::error::StepError as E;
@@ -129,6 +129,10 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
             try!(remount_ro(&dest));
             guard.ctx.mounted.push(dest);
         }
+        // Revert resolv.conf back
+        try!(copy(&Path::new("/etc/resolv.conf"),
+                  &Path::new("/vagga/root/etc/resolv.conf"))
+            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
     }
     Ok(())
 }
