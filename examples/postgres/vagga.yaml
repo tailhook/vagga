@@ -33,4 +33,4 @@ commands:
       su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
       su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
       su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-      psql postgres://$PG_USER:$PG_PASSWORD@127.0.0.1/$PG_DB
+      psql postgres://$PG_USER:$PG_PASSWORD@127.0.0.1:$PG_PORT/$PG_DB
