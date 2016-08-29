@@ -27,7 +27,7 @@ mod simple;
 
 mod wrap;
 pub mod system;
-mod network;
+pub mod network;
 mod socket;
 mod volumes;
 mod options;

@@ -325,6 +325,39 @@ fn setup_guest_namespace(args: Vec<String>) {
     }
 }
 
+fn setup_isolated_namespace(args: Vec<String>) {
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Set up isolated network namespace
+            ");
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => {}
+            Err(x) => {
+                exit(x);
+            }
+        }
+    }
+    let mut cmd = ip_cmd();
+    cmd.args(&["link", "set", "dev", "lo", "up"]);
+
+    debug!("Running {:?}", cmd);
+    match cmd.status() {
+        Ok(status) if status.success() => {}
+        Ok(status) => {
+            error!("Error running command {:?}: {}", cmd, status);
+            exit(1);
+        }
+        Err(err) => {
+            error!("Error running command {:?}: {}", cmd, err);
+            exit(1);
+        }
+    }
+
+    // sleep(Duration::from_millis(500));
+}
+
 pub fn main() {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
@@ -347,6 +380,7 @@ pub fn main() {
         "gateway" => setup_gateway_namespace(args),
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),
+        "isolated" => setup_isolated_namespace(args),
         _ => {
             error!("Unknown command {}", kind);
             exit(1);

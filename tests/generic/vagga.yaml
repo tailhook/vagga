@@ -194,6 +194,16 @@ containers:
     - !Sh |
         cp -a /tmp/ids-* /
 
+  isolated-run-as:
+    setup:
+    - !Alpine v3.4
+    - !RunAs
+      isolate-network: true
+      script: |
+        ip addr add 127.254.254.254/8 dev lo
+        ip addr > /var/ip-addr-isolated.out
+    - !Sh ip addr > /var/ip-addr.out
+
   path-precedence:
     setup:
     - !Alpine v3.4

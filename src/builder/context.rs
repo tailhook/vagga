@@ -1,4 +1,5 @@
 use std::env;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::default::Default;
 use std::collections::{BTreeMap, BTreeSet};
@@ -47,6 +48,7 @@ pub struct Context<'a> {
     pub packages: BTreeSet<String>,
     pub build_deps: BTreeSet<String>,
     pub featured_packages: BTreeSet<packages::Package>,
+    pub network_namespace: Option<File>,
     pub timelog: timer::TimeLog,
 }
 
@@ -99,6 +101,7 @@ impl<'a> Context<'a> {
             packages: BTreeSet::new(),
             build_deps: BTreeSet::new(),
             featured_packages: BTreeSet::new(),
+            network_namespace: None,
             timelog: timer::TimeLog::start(
                     &Path::new("/vagga/container/timings.log"))
                 .map_err(|e| format!("Can't write timelog: {}", e))

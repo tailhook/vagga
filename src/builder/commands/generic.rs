@@ -2,12 +2,13 @@ use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use std::os::unix::ffi::OsStrExt;
 
-use unshare::{Command};
+use unshare::{Command, Namespace};
 use quire::validate as V;
 
 use super::super::context::Context;
 use process_util::{capture_stdout, set_fake_uidmap};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use launcher::network::create_network_namespace;
 
 // Build Steps
 #[derive(Debug)]
@@ -37,6 +38,7 @@ pub struct RunAs {
     pub supplementary_gids: Vec<u32>,
     pub external_user_id: Option<u32>,
     pub work_dir: PathBuf,
+    pub isolate_network: bool,
     pub script: String,
 }
 
@@ -48,6 +50,7 @@ impl RunAs {
         .member("external_user_id", V::Numeric::new().min(0).optional())
         .member("supplementary_gids", V::Sequence::new(V::Numeric::new()))
         .member("work_dir", V::Directory::new().default("/work"))
+        .member("isolate_network", V::Scalar::new().default(false))
         .member("script", V::Scalar::new())
     }
 }
@@ -277,6 +280,9 @@ impl BuildStep for RunAs {
             hash.text("supplementary_gids", &i);
         }
         hash.field("work_dir", self.work_dir.as_os_str().as_bytes());
+        if self.isolate_network {
+            hash.bool("isolate_network", self.isolate_network);
+        }
         hash.field("script", &self.script);
         Ok(())
     }
@@ -284,11 +290,31 @@ impl BuildStep for RunAs {
         -> Result<(), StepError>
     {
         if build {
+            let netns_file = if self.isolate_network {
+                match guard.ctx.network_namespace {
+                    Some(ref netns_file) => {
+                        Some(netns_file)
+                    },
+                    None => {
+                        guard.ctx.network_namespace = Some(try_msg!(
+                            create_network_namespace(),
+                            "Cannot create network namespace: {err}"));
+                        guard.ctx.network_namespace.as_ref()
+                    },
+                }
+            } else {
+                None
+            };
+
             let mut cmd = Command::new("/bin/sh");
             setup_command(&guard.ctx, &mut cmd);
             cmd.arg("-exc");
             cmd.arg(&self.script);
             cmd.current_dir(&Path::new("/work").join(&self.work_dir));
+            if let Some(netns_file) = netns_file {
+                try_msg!(cmd.set_namespace(netns_file, Namespace::Net),
+                    "Cannot set namespace for command: {err}");
+            }
 
             let uid = self.user_id;
             let gid = self.group_id;

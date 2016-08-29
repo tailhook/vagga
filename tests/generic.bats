@@ -349,6 +349,20 @@ setup() {
     [[ ! -G .vagga/run_as/ids-110 ]]
 }
 
+@test "generic: isolated RunAs" {
+    run vagga _build isolated-run-as
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/isolated-run-as"
+    link=$(readlink "${root}")
+    [[ $link = ".roots/isolated-run-as.1412590a/root" ]]
+    isolated_out=$(cat "${root}/var/ip-addr-isolated.out")
+    [[ $isolated_out = *"inet 127.0.0.1/8"* ]]
+    [[ $isolated_out = *"inet 127.254.254.254/8"* ]]
+    host_out=$(cat "${root}/var/ip-addr.out")
+    [[ $host_out = *"inet 127.0.0.1/8"* ]]
+    [[ $host_out != *"inet 127.254.254.254/8"* ]]
+}
+
 @test "generic: Tmpfs Subdirs" {
     vagga _build tmpfs-subdirs
     run vagga _run tmpfs-subdirs stat -c "%A" /tmp

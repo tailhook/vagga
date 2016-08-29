@@ -691,6 +691,29 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     }
 }
 
+pub fn create_network_namespace() -> Result<File, String> {
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
+    cmd.arg("isolated");
+    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.env_clear();
+    let mut child = try!(cmd.spawn()
+        .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let child_pid = child.pid();
+
+    let netns_file = try_msg!(
+        File::open(PathBuf::from(format!("/proc/{}/ns/net", child_pid))),
+        "Cannot open file: {err}");
+
+    match child.wait() {
+        Ok(status) if status.success() => {}
+        Ok(status) => return Err(format!("Error running {:?}: {}", cmd, status)),
+        Err(e) => return Err(format!("Error waiting {:?}: {}", cmd, e)),
+    }
+
+    Ok(netns_file)
+}
+
 impl PortForwardGuard {
     pub fn new(ns: &Path, ip: String, ports: Vec<u16>) -> PortForwardGuard {
         return PortForwardGuard {
