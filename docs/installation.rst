@@ -292,8 +292,10 @@ Then just build using cargo and the appropriate target::
 OS X / Windows
 ==============
 
-We have proof of concept vagga-docker_ which leverages docker for mac to
-run vagga on OS X.
+We have two proof of concept wrappers around vagga:
+
+* vagga-docker_ which leverages docker for mac to run vagga on OS X
+* vagga-box_ a wrapper around VirtualBox (tested on OS X only so far)
 
 If you'd like something more stable, try:
 
@@ -302,4 +304,5 @@ If you'd like something more stable, try:
 * Or just your own vagrant config (but see `this FAQ entry`_)
 
 .. _vagga-docker: https://github.com/tailhook/vagga-docker
+.. _vagga-box: https://github.com/tailhook/vagga-box
 .. _this faq entry: http://vagga.readthedocs.io/en/latest/errors.html#don-t-run-vagga-on-shared-folders
