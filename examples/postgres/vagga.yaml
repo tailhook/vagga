@@ -6,31 +6,76 @@ containers:
   ubuntu:
     setup:
     - !Ubuntu xenial
-    - !Install
-      - postgresql-9.5
+    # Use fixed user id and group id for postgres, because in some cases
+    # we may need to upgrade (rebuild) a postgres container, but keep the data
+    # on a `!Persistent` volume still usable. User ids in ubuntu packages are
+    # not guaranteed to be same on every installation.
+    #
+    # The command-lines are from the postgres-common package except
+    # added --uid 200 --gid 200
+    - !Sh |
+        addgroup --system --gid 200 postgres
+        adduser --uid 200 --system --home /data --no-create-home \
+            --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+            postgres
+    - !Install [postgresql-9.5]
     - !EnsureDir /data
     environ:
       PG_PORT: 5433   # Port of host to use
       PG_DB: vagga-test
-      PG_USER: vagga
-      PG_PASSWORD: vagga
       PGDATA: /data
       PG_BIN: /usr/lib/postgresql/9.5/bin
     volumes:
-      /data: !Tmpfs
-        size: 100M
-        mode: 0o700
+      /data: !Persistent
+        name: postgres
+        owner-uid: 200
+        owner-gid: 200
+        init-command: _pg-init
+      /run: !Tmpfs
+        subdirs:
+          postgresql: { mode: 0o777 }  # until we have user, group options
 
 commands:
-  psql: !Command
+
+  _pg-init: !Command
+    description: Init postgres database
+    container: ubuntu
+    user-id: 200
+    group-id: 200
+    run: |
+      set -ex
+      ls -la /data
+      $PG_BIN/pg_ctl initdb
+      $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+      $PG_BIN/psql -h 127.0.0.1 -p $PG_PORT \
+        -c "CREATE USER vagga WITH PASSWORD 'vagga';"
+      $PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O vagga
+
+      # init schema usually schema shouldn't be inline here, but contained
+      # in a separate file
+      psql postgres://vagga:vagga@127.0.0.1:$PG_PORT/$PG_DB <<ENDSQL
+      CREATE TABLE random_stuff (x TEXT);
+      ENDSQL
+
+      pkill postgres
+      sleep 1 # give postgres sometime to shutdown
+
+  postgres: &postgres !Command
+    description: Run postgres database
+    container: ubuntu
+    user-id: 200
+    group-id: 200
+    run: |
+      exec $PG_BIN/postgres -F --port=$PG_PORT
+
+  psql: &psql !Command
     description: Run postgres shell
     container: ubuntu
-    # This long script initialized new empty postgres database each time
-    # container is run
     run: |
-      chown postgres:postgres $PGDATA;
-      su postgres -c "$PG_BIN/pg_ctl initdb";
-      su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-      su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
-      su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-      psql postgres://$PG_USER:$PG_PASSWORD@127.0.0.1:$PG_PORT/$PG_DB
+      psql -U vagga postgres://$PG_USER:$PG_PASSWORD@127.0.0.1:$PG_PORT/$PG_DB
+
+  run: !Supervise
+    description: Run both postgres and shell
+    children:
+      postgres: *postgres
+      psql: *psql
