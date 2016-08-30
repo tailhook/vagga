@@ -8,6 +8,7 @@ use libc::pid_t;
 use argparse::{ArgumentParser};
 use unshare::{Command};
 
+use config::volumes::{Volume, PersistentInfo};
 use config::command::CommandInfo;
 use config::command::WriteMode;
 
@@ -16,9 +17,10 @@ use super::Wrapper;
 use super::util::{find_cmd, warn_if_data_container};
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap};
+use wrapper::init_persistent::{Guard, PersistentVolumeGuard};
 
 
-pub fn commandline_cmd(command: &CommandInfo,
+pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
     wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<i32, String>
 {
@@ -69,7 +71,29 @@ pub fn commandline_cmd(command: &CommandInfo,
     setup_info
         .volumes(&command.volumes)
         .write_mode(write_mode);
+    let mut guards = Vec::<Box<Guard>>::new();
+    for (_, &volume) in &setup_info.volumes {
+        match volume {
+            &Volume::Persistent(PersistentInfo {
+                init_command: Some(ref init_command), ref name })
+            if init_command == cmd_name => {
+                match PersistentVolumeGuard::new(name.to_string()) {
+                    Ok(Some(guard)) => {
+                        guards.push(Box::new(guard));
+                        setup_info.tmp_volumes.insert(name);
+                    }
+                    Ok(None) => {}
+                    Err(e) => {
+                        return Err(format!("Persistent volume {:?} error: {}",
+                                           name, e));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     warn_if_data_container(&cconfig);
+
     try!(setup::setup_filesystem(&setup_info, &cont_ver));
 
     let env = try!(setup::get_environment(&wrapper.settings, cconfig,
@@ -96,6 +120,13 @@ pub fn commandline_cmd(command: &CommandInfo,
         cmd.env(k, v);
     }
 
-    run_and_wait(&mut cmd)
-    .map(convert_status)
+    let result = run_and_wait(&mut cmd)
+                .map(convert_status);
+    if result == Ok(0) {
+        for guard in guards {
+            try!(guard.commit()
+                .map_err(|e| format!("Error commiting guard: {}", e)));
+        }
+    }
+    return result;
 }

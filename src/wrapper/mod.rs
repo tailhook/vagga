@@ -20,6 +20,7 @@ mod util;
 mod clean;
 mod pack;
 mod snapshot;
+mod init_persistent;
 
 
 pub struct Wrapper<'a> {
@@ -101,7 +102,8 @@ pub fn run() -> i32 {
         _ => {
             match config.commands.get(&cmd) {
                 Some(&Command(ref cmd_info)) => {
-                    commandline::commandline_cmd(cmd_info, &wrapper, args)
+                    commandline::commandline_cmd(&cmd,
+                        cmd_info, &wrapper, args)
                 }
                 Some(&Supervise(ref svc_info)) => {
                     supervise::supervise_cmd(&cmd, svc_info, &wrapper, args)

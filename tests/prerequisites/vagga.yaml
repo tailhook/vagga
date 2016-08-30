@@ -3,6 +3,14 @@ containers:
     setup:
     - !Alpine v3.4
 
+  persistent:
+    setup:
+    - !Alpine v3.4
+    volumes:
+      /mnt: !Persistent
+        init-command: _init-hello
+        name: hello
+
 commands:
   one: !Command
     container: only
@@ -22,3 +30,12 @@ commands:
     container: only
     prerequisites: [two, three]
     run: [echo, four]
+
+  _init-hello: !Command
+    container: persistent
+    run: |
+      echo world >> /mnt/hello.txt
+
+  persistent: !Command
+    container: persistent
+    run: [cat, /mnt/hello.txt]

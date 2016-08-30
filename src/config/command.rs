@@ -101,12 +101,6 @@ impl MainCommand {
             MainCommand::Supervise(ref cmd) => cmd.description.as_ref(),
         }
     }
-    pub fn prerequisites<'x>(&'x self) -> &Vec<String> {
-        match *self {
-            MainCommand::Command(ref cmd) => cmd.prerequisites.as_ref(),
-            MainCommand::Supervise(ref cmd) => cmd.prerequisites.as_ref(),
-        }
-    }
     pub fn system<'x>(&'x self) -> SystemInfo {
         match *self {
             MainCommand::Command(ref cmd) => SystemInfo {
@@ -142,6 +136,12 @@ impl ChildCommand {
         match *self {
             ChildCommand::Command(ref info) => &info.volumes,
             ChildCommand::BridgeCommand(ref info) => &info.volumes,
+        }
+    }
+    pub fn prerequisites<'x>(&'x self) -> &Vec<String> {
+        match *self {
+            ChildCommand::Command(ref cmd) => cmd.prerequisites.as_ref(),
+            ChildCommand::BridgeCommand(ref cmd) => cmd.prerequisites.as_ref(),
         }
     }
     pub fn pass_socket(&self) -> Option<&String> {
@@ -203,7 +203,7 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
     return cmd;
 }
 
-fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
+fn command_fields<'a>(mut cmd: V::Structure, _toplevel: bool) -> V::Structure
 {
     cmd = cmd
         .member("description", V::Scalar::new().optional())
@@ -212,10 +212,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("epilog", V::Scalar::new().optional())
         .member("tags", V::Sequence::new(V::Scalar::new()))
         .member("pass_tcp_socket", V::Scalar::new().optional())
-        .member("expect_inotify_limit", V::Scalar::new().optional());
-    if toplevel {
-        cmd = cmd.member("prerequisites", V::Sequence::new(V::Scalar::new()))
-    }
+        .member("expect_inotify_limit", V::Scalar::new().optional())
+        .member("prerequisites", V::Sequence::new(V::Scalar::new()));
     return cmd;
 }
 

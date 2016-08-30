@@ -1,13 +1,59 @@
 use std::collections::HashSet;
 
-use config::Config;
+use config::volumes::Volume;
+use config::volumes::PersistentInfo;
+use config::command::MainCommand;
+use launcher::Context;
 
-pub fn scan(config: &Config, src: Vec<String>) -> Vec<String> {
-    let empty = Vec::new();
+
+fn _check_volumes<'x, I>(ctx: &Context, iter: I, result: &mut Vec<&'x String>)
+     where I: IntoIterator<Item=&'x Volume>
+{
+    for vol in iter.into_iter() {
+        match vol {
+            &Volume::Persistent(PersistentInfo {
+                init_command: Some(ref cmd), ref name })
+            => {
+                let path = if ctx.ext_settings.storage_dir.is_some() {
+                    ctx.config_dir.join(".vagga/.lnk/.volumes").join(name)
+                } else {
+                    ctx.config_dir.join(".vagga/.volumes").join(name)
+                };
+                if !path.exists() {
+                    result.push(&cmd);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+pub fn scan(ctx: &Context, src: Vec<String>) -> Vec<String> {
     return _scan(|name| {
-        config.commands.get(name)
-        .map(|x| x.prerequisites().iter())
-        .unwrap_or(empty.iter())
+        let mut all = Vec::new();
+        if let Some(cmd) = ctx.config.commands.get(name) {
+            match cmd {
+                &MainCommand::Command(ref cmd) => {
+                    all.extend(cmd.prerequisites.iter());
+                    _check_volumes(ctx, cmd.volumes.values(), &mut all);
+                    ctx.config.containers.get(&cmd.container)
+                    .map(|cont|
+                        _check_volumes(ctx, cont.volumes.values(), &mut all));
+                }
+                &MainCommand::Supervise(ref sup) => {
+                    all.extend(sup.prerequisites.iter());
+                    for cmd in sup.children.values() {
+                        all.extend(cmd.prerequisites().iter());
+                        _check_volumes(ctx,
+                            cmd.get_volumes().values(), &mut all);
+                        ctx.config.containers.get(cmd.get_container())
+                        .map(|cont| _check_volumes(ctx,
+                            cont.volumes.values(), &mut all));
+                    }
+                }
+            }
+        }
+        return all.into_iter();
     }, src);
 }
 
@@ -139,5 +185,14 @@ mod test {
         ],
         &["d", "d", "d"],
         &["a", "b", "c", "d", "d", "d"]);
+    }
+
+    #[test]
+    fn test_override() {
+        do_scan(&[
+            ("d", &["b", "a", "a", "b"]),
+        ],
+        &["d"],
+        &["b", "a", "d"]);
     }
 }

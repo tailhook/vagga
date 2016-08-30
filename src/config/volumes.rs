@@ -17,6 +17,7 @@ pub struct SnapshotInfo {
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct PersistentInfo {
     pub name: String,
+    pub init_command: Option<String>,
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
@@ -76,6 +77,7 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
     .option("Container", V::Scalar::new())
     .option("Persistent", V::Structure::new()
         .member("name", V::Scalar::new())
+        .member("init_command", V::Scalar::new().optional())
         .parser(persistent_volume_string))
 }
 

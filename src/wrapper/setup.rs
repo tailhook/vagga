@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind, Write};
@@ -321,6 +321,7 @@ pub fn get_environment(settings: &Settings, container: &Container,
 
 pub struct SetupInfo<'a> {
     pub volumes: BTreeMap<&'a PathBuf, &'a Volume>,
+    pub tmp_volumes: BTreeSet<&'a String>,
     pub write_mode: WriteMode,
     pub resolv_conf_path: Option<&'a PathBuf>,
     pub hosts_file_path: Option<&'a PathBuf>,
@@ -330,6 +331,7 @@ impl<'a> SetupInfo<'a> {
     pub fn from_container(container: &Container) -> SetupInfo {
         let mut setup_info = SetupInfo {
             volumes: BTreeMap::new(),
+            tmp_volumes: BTreeSet::new(),
             write_mode: WriteMode::ReadOnly,
             resolv_conf_path: container.resolv_conf_path.as_ref(),
             hosts_file_path: container.hosts_file_path.as_ref(),
@@ -472,11 +474,28 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 try!(remount_ro(&dest));
             }
             &V::Persistent(ref info) => {
-                let path = Path::new("/vagga/base/.volumes/").join(&info.name);
-                try_msg!(create_dir(&path, true),
-                    "error creating dir for volume {p:?}: {err}", p=path);
-                try_msg!(BindMount::new(&path, &dest).mount(),
-                    "mount !BindRW: {err}");
+                if setup_info.tmp_volumes.contains(&info.name) {
+                    let path = Path::new("/vagga/base/.volumes")
+                        .join(&format!(".tmp.{}", info.name));
+                    try_msg!(create_dir(&path, true),
+                        "error creating dir for volume {p:?}: {err}", p=path);
+                    try_msg!(BindMount::new(&path, &dest).mount(),
+                        "mount !BindRW: {err}");
+                } else {
+                    let path = Path::new("/vagga/base/.volumes")
+                        .join(&info.name);
+                    if info.init_command.is_none() {
+                        try_msg!(create_dir(&path, true),
+                            "error creating dir for volume {p:?}: {err}",
+                            p=path);
+                    } else if !path.exists() {
+                        return Err(format!("Internal error: \
+                            Got uninitialized volume {:?}",
+                            info.name));
+                    }
+                    try_msg!(BindMount::new(&path, &dest).mount(),
+                        "mount !BindRW: {err}");
+                };
             }
         }
     }

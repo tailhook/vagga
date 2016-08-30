@@ -225,6 +225,33 @@ Available volume types:
      single container may reference same volume too. We currently don't
      support mounting subvolumes but we may do in future.
 
+   init-command
+     The name of the command that is used for initializing volume. Technically
+     command is inserted into the prerequisites of every other command that
+     uses this volume. The command must have this volume either in container
+     or in command definition. When command is first run, it has an empty
+     directory at the mount point of the volume. If command fails we
+     immediately stop running dependent commands, which effectively means no
+     other command can run with the volume mounted.
+
+     It's usually good idea to name the command starting with underscore, so
+     it doesn't show in the list of commands to use for daily work.
+
+     If volume is already initialized and command is run in a normal way
+     (using `vagga xx` or as a prerequisite), it's run as any other command.
+     But if the volume is not initialized it will be run with the temporary
+     directory at a volume mount point which will be committed to a volume on
+     success. Basically this allows to debug the command easily.
+
+     If the same `init-command` is repeated in multiple volumes it is run only
+     once (so you must initialize all the volumes that depend on it).
+     Multiple volumes that have different `init-command` values can only be
+     used in the command definition (not in container), because otherwise
+     it's impossible to establish an initialization order.
+
+     Currently `!Supervise` commands can't be used to initialize a volume, but
+     we may lift this limitation in the future.
+
    To remove volumes that were created but had been removed since than run::
 
      vagga _clean --unused-volumes

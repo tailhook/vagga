@@ -37,7 +37,7 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
     -> Result<i32, String>
 {
     if context.prerequisites {
-        commands = prerequisites::scan(&context.config, commands);
+        commands = prerequisites::scan(context, commands);
     }
     use self::ArgError::*;
     let mut all_args = Vec::new();

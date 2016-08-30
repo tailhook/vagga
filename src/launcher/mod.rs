@@ -38,6 +38,7 @@ pub struct Context {
     settings: Settings,
     ext_settings: MergedSettings,
     workdir: PathBuf,
+    config_dir: PathBuf,
     build_mode: BuildMode,
     prerequisites: bool,
 }
@@ -183,6 +184,7 @@ pub fn run() -> i32 {
         settings: int_settings,
         ext_settings: ext_settings,
         workdir: int_workdir.to_path_buf(),
+        config_dir: cfg_dir.to_path_buf(),
         build_mode: bmode,
         prerequisites: prerequisites,
     };

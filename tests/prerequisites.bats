@@ -30,3 +30,10 @@ setup() {
     [[ ${lines[2]} = "two" ]]
     [[ ${lines[3]} = "four" ]]
 }
+
+@test "prerequisites: Check persistent volume init" {
+    run vagga persistent
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[0]} = "hello" ]]
+}
