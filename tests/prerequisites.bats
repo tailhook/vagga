@@ -35,5 +35,5 @@ setup() {
     run vagga persistent
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[0]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
 }
