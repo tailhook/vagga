@@ -25,10 +25,22 @@ use launcher::volumes::prepare_volumes;
 use launcher::user::ArgError;
 use launcher::socket;
 use launcher::Context;
+use launcher::options::parse_docopts;
+
+
+const DEFAULT_DOCOPT: &'static str = "\
+Supervise options:
+  -h, --help           This help
+  --only <tag> ...     Only run specified processes.
+                       This matches both names and tags
+  --exclude <tag> ...  Don't run specified processes.
+                       This excludes both names and tags\
+";
 
 
 pub struct Args {
     cmdname: String,
+    environ: HashMap<String, String>,
     only: Vec<String>,
     exclude: Vec<String>,
     build_mode: BuildMode,
@@ -47,39 +59,54 @@ pub fn parse_args(sup: &SuperviseInfo, context: &Context,
     cmd: String, mut args: Vec<String>)
     -> Result<Args, ArgError>
 {
-    let mut only: Vec<String> = Vec::new();
-    let mut exclude: Vec<String> = Vec::new();
-    let mut bmode = context.build_mode;
-    if sup.mode != stop_on_failure {
-        return Err(ArgError::Error(
-            format!("Only stop-on-failure mode implemented")));
-    }
-    {
-        args.insert(0, "vagga ".to_string() + &cmd);
-        let mut ap = ArgumentParser::new();
-        ap.set_description(sup.description.as_ref().map(|x| &x[..])
-            .unwrap_or("Run multiple processes simultaneously"));
-        ap.refer(&mut only).metavar("PROCESS_NAME_OR_TAG")
-            .add_option(&["--only"], List, "
-                Only run specified processes.
-                This matches both names and tags");
-        ap.refer(&mut exclude).metavar("PROCESS_NAME_OR_TAG")
-            .add_option(&["--exclude"], List, "
-                Don't run specified processes.
-                This excludes both names and tags");
-        build_mode(&mut ap, &mut bmode);
-        match ap.parse(args, &mut stdout(), &mut stderr()) {
-            Ok(()) => {}
-            Err(0) => return Err(ArgError::Exit(0)),
-            Err(_) => return Err(ArgError::Exit(122)),
+    if let Some(ref opttext) = sup.options {
+        let (env, args) = try!(parse_docopts(&sup.description, opttext,
+            DEFAULT_DOCOPT, &cmd, args));
+        Ok(Args {
+            cmdname: cmd,
+            environ: env,
+            only: args.get_vec("--only")
+                .iter().map(|x| x.to_string()).collect(),
+            exclude: args.get_vec("--exclude")
+                .iter().map(|x| x.to_string()).collect(),
+            build_mode: context.build_mode,
+        })
+    } else {  // this may eventually be used be ported to docopt
+        let mut only: Vec<String> = Vec::new();
+        let mut exclude: Vec<String> = Vec::new();
+        let mut bmode = context.build_mode;
+        if sup.mode != stop_on_failure {
+            return Err(ArgError::Error(
+                format!("Only stop-on-failure mode implemented")));
         }
+        {
+            args.insert(0, "vagga ".to_string() + &cmd);
+            let mut ap = ArgumentParser::new();
+            ap.set_description(sup.description.as_ref().map(|x| &x[..])
+                .unwrap_or("Run multiple processes simultaneously"));
+            ap.refer(&mut only).metavar("PROCESS_NAME_OR_TAG")
+                .add_option(&["--only"], List, "
+                    Only run specified processes.
+                    This matches both names and tags");
+            ap.refer(&mut exclude).metavar("PROCESS_NAME_OR_TAG")
+                .add_option(&["--exclude"], List, "
+                    Don't run specified processes.
+                    This excludes both names and tags");
+            build_mode(&mut ap, &mut bmode);
+            match ap.parse(args, &mut stdout(), &mut stderr()) {
+                Ok(()) => {}
+                Err(0) => return Err(ArgError::Exit(0)),
+                Err(_) => return Err(ArgError::Exit(122)),
+            }
+        }
+        Ok(Args {
+            cmdname: cmd,
+            environ: HashMap::new(),
+            only: only,
+            exclude: exclude,
+            build_mode: bmode,
+        })
     }
-    Ok(Args {
-        cmdname: cmd,
-        only: only,
-        exclude: exclude,
-        build_mode: bmode,
-    })
 }
 
 pub fn prepare_containers(sup: &SuperviseInfo, args: &Args, context: &Context)
@@ -190,6 +217,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         let mut cmd: Command = Wrapper::new(
             Some(&versions[cname]),
             &context.settings);
+        for (k, v) in &args.environ {
+            cmd.env(k, v);
+        }
         cmd.workdir(&context.workdir);
         try!(cmd.map_users_for(
             &context.config.get_container(cname).unwrap(),
@@ -244,6 +274,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
             let mut cmd: Command = Wrapper::new(
                 Some(&versions[sup.children[name].get_container()]),
                 &context.settings);
+            for (k, v) in &args.environ {
+                cmd.env(k, v);
+            }
             cmd.workdir(&context.workdir);
             cmd.arg(&args.cmdname);
             cmd.arg(&name);

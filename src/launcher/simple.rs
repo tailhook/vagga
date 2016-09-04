@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use unshare::{Command, Fd};
 
 use config::command::{CommandInfo, Networking, WriteMode};
@@ -8,9 +10,22 @@ use launcher::volumes::prepare_volumes;
 use launcher::user::ArgError;
 use launcher::Context;
 use launcher::socket;
+use launcher::options::parse_docopts;
 
-pub type Args = (String, Vec<String>);
+
+const DEFAULT_DOCOPT: &'static str = "\
+Common options:
+  -h, --help           This help
+";
+
+
 pub type Version = String;
+
+pub struct Args {
+    cmdname: String,
+    args: Vec<String>,
+    environ: HashMap<String, String>,
+}
 
 
 pub fn parse_args(cinfo: &CommandInfo, _context: &Context,
@@ -21,7 +36,22 @@ pub fn parse_args(cinfo: &CommandInfo, _context: &Context,
         return Err(ArgError::Error(format!(
             "Network is not supported for !Command use !Supervise")));
     }
-    Ok((cmd, args))
+    if let Some(ref opttext) = cinfo.options {
+        let (env, _) = try!(parse_docopts(&cinfo.description, opttext,
+                                          DEFAULT_DOCOPT,
+                                          &cmd, args));
+        Ok(Args {
+            cmdname: cmd,
+            environ: env,
+            args: Vec::new(),
+        })
+    } else {
+        Ok(Args {
+            cmdname: cmd,
+            environ: HashMap::new(),
+            args: args,
+        })
+    }
 }
 
 pub fn prepare_containers(cinfo: &CommandInfo, _: &Args, context: &Context)
@@ -36,14 +66,17 @@ pub fn prepare_containers(cinfo: &CommandInfo, _: &Args, context: &Context)
     return Ok(ver);
 }
 
-pub fn run(cinfo: &CommandInfo, (cmdname, args): Args, version: Version,
+pub fn run(cinfo: &CommandInfo, args: Args, version: Version,
     context: &Context)
     -> Result<i32, String>
 {
     let mut cmd: Command = Wrapper::new(Some(&version), &context.settings);
     cmd.workdir(&context.workdir);
-    cmd.arg(cmdname);
-    cmd.args(&args);
+    for (k, v) in &args.environ {
+        cmd.env(k, v);
+    }
+    cmd.arg(&args.cmdname);
+    cmd.args(&args.args);
     if let Some(ref sock_str) = cinfo.pass_tcp_socket {
         let sock = try!(socket::parse_and_bind(sock_str)
             .map_err(|e| format!("Error listening {:?}: {}", sock_str, e)));

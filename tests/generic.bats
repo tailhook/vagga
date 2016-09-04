@@ -375,7 +375,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/environ)
     [[ $link = ".roots/environ.4ed6a479/root" ]]
-    
+
     [[ $(vagga _run environ env | grep 'EDITOR=') = "EDITOR=vi" ]]
     [[ $(vagga _run environ env | grep 'SHELL=') = "SHELL=/bin/bash" ]]
 
@@ -386,4 +386,57 @@ setup() {
     [[ $(VAGGAENV_EDITOR=pico EDITOR=nano vagga --use-env EDITOR which-editor) = "nano" ]]
 
     [[ $(VAGGAENV_EDITOR=pico EDITOR=nano vagga --use-env EDITOR -E EDITOR=emacs which-editor) = "emacs" ]]
+}
+
+@test "generic: Argument parsing for supervise" {
+    run sh -c 'vagga args -Fhello --second "world"  | sort'
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
+
+    run sh -c 'vagga args --first=x --second="y" | sort'
+    printf "%s\n" "${lines[@]}"
+    [[ ${lines[${#lines[@]}-2]} = "x" ]]
+    [[ ${lines[${#lines[@]}-1]} = "y" ]]
+}
+
+@test "generic: Argument parsing for normal command" {
+    run vagga cmdargs -vvvv --verbose
+    printf "%s\n" "${lines[@]}"
+    # ensure arguments is not passed directly
+    [[ ${lines[${#lines[@]}-2]} = "Args:" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Verbosity: 5" ]]
+}
+
+@test "generic: Help with 'options'" {
+    run vagga cmdargs --help
+    printf "%s\n" "${lines[@]}"
+    [[ "$status" -eq 0 ]]
+
+    run vagga args --help
+    printf "%s\n" "${lines[@]}"
+    [[ "$status" -eq 0 ]]
+}
+
+@test "generic: Bad arguments for command with 'options'" {
+    run vagga args --bad-arg
+    printf "%s\n" "${lines[@]}"
+    [[ "$status" -eq 121 ]]
+    [[ ${lines[${#lines[@]}-2]} = "Unknown flag: '--bad-arg'" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Usage: vagga args [options]" ]]
+
+    run vagga cmdargs --bad-arg
+    printf "%s\n" "${lines[@]}"
+    [[ "$status" -eq 121 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Usage: vagga cmdargs [options]" ]]
+
+    run vagga args extra-arg
+    printf "%s\n" "${lines[@]}"
+    [[ "$status" -eq 121 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Usage: vagga args [options]" ]]
+
+    run vagga cmdargs extra-arg
+    printf "%s\n" "${lines[@]}"
+    [[ "$status" -eq 121 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Usage: vagga cmdargs [options]" ]]
 }

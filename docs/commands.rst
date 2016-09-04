@@ -107,6 +107,55 @@ These parameters work for both kinds of commands:
    or set it automatically if :opt:`auto-apply-sysctl` is enabled.
    :ref:`More info about max_user_watches <sysctl-max-user-watches>`
 
+.. opt:: options
+
+   This is a docopt_ definition for the options that this command accepts.
+   Example:
+
+   .. code-block:: yaml
+
+      commands:
+        test: !Supervise
+          options: |
+            Usage: vagga test [--redis-port=<n>] [<tests>...]
+
+            Options:
+              -R, --redis-port <n>  Port to run redis on [default: 6379]
+              <tests> ...           Name of the tests to run. By default all
+                                    tests are run
+          children:
+            redis: !Command
+              container: redis
+              run: |
+                redis-server --daemonize no --port "$VAGGAOPT_REDIS_PORT"
+            first-line: !Command
+              container: busybox
+              run: |
+                py.test --redis-port "$VAGGAOPT_REDIS_PORT" $VAGGAOPT_TESTS
+
+   As you might have noticed, options are passed in environment variables
+   prefixed with ``VAGGAOPT_``. Your scripts are free to use them however
+   makes sense for your application.
+
+   .. note:: This setting overrides :opt:`accepts-arguments`
+
+   Some shell patterns:
+
+   1. Propagate a flag::
+
+        somecmd ${VAGGAOPT_FLAG:+--flag}
+
+   2. Optionally pass a value to a command::
+
+        somecmd ${VAGGAOPT_VALUE:+--value} $VAGGAOPT_VALUE
+
+   3. Pass list of commands each prefixed with an ``--test=`` (bash only)::
+
+        tests=($VAGGAOPT_TESTS)
+        somecmd ${tests[@]/#/--test=}
+
+.. _docopt: http://docopt.org/
+
 
 Parameters of `!Command`
 ========================
@@ -168,6 +217,8 @@ Parameters of `!Command`
    NB: If command is a shell command line - even if it's composed of
    only one call to an executable -, arguments are given to its
    executing context, not appended to it.
+
+   .. note:: This setting is ignored when :opt:`options` is set.
 
 .. opt:: environ
 
