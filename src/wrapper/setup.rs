@@ -314,7 +314,7 @@ pub fn get_environment(settings: &Settings, container: &Container,
     for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             result.insert(k[9..].to_string(), v);
-        } else if k.starts_with("VAGGAOPT_") {
+        } else if k.starts_with("VAGGAOPT_") || k.starts_with("VAGGACLI_") {
             result.insert(k, v);
         }
     }
