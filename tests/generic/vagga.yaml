@@ -231,6 +231,37 @@ commands:
           echo hello
           sleep 0.1
 
+
+  args: !Supervise
+    description: Test of arg parsing
+    options: |
+      Usage: vagga args [options]
+
+      Options:
+        -F, --first <txt>  First process' text
+        --second <txt>     Second process' text
+    children:
+      second-line: !Command
+        container: busybox
+        run: |
+          echo $VAGGAOPT_FIRST
+      first-line: !Command
+        container: busybox
+        run: |
+          echo $VAGGAOPT_SECOND
+
+  cmdargs: !Command
+    description: Test of arg parsing
+    container: busybox
+    options: |
+      Usage: vagga cmdargs [options]
+
+      Options:
+        -v, --verbose ...  Increase pseudo-verbosity
+    run: |
+      echo Args: "$@"
+      echo Verbosity: "$VAGGAOPT_VERBOSE"
+
   tagged: !Supervise
     children:
       first: !Command

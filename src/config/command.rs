@@ -52,7 +52,8 @@ pub struct CommandInfo {
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
     pub pass_tcp_socket: Option<String>,
-    pub prerequisites: Vec<String>,  // Only for toplevel
+    pub prerequisites: Vec<String>,
+    pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
 
     // Command
@@ -80,6 +81,7 @@ pub struct SuperviseInfo {
     pub banner_delay: Option<u32>,
     pub epilog: Option<String>,
     pub prerequisites: Vec<String>,
+    pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
 
     // Supervise
@@ -203,7 +205,7 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
     return cmd;
 }
 
-fn command_fields<'a>(mut cmd: V::Structure, _toplevel: bool) -> V::Structure
+fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
 {
     cmd = cmd
         .member("description", V::Scalar::new().optional())
@@ -214,6 +216,9 @@ fn command_fields<'a>(mut cmd: V::Structure, _toplevel: bool) -> V::Structure
         .member("pass_tcp_socket", V::Scalar::new().optional())
         .member("expect_inotify_limit", V::Scalar::new().optional())
         .member("prerequisites", V::Sequence::new(V::Scalar::new()));
+    if toplevel {
+        cmd = cmd.member("options", V::Scalar::new().optional());
+    }
     return cmd;
 }
 

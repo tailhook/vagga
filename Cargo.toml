@@ -29,6 +29,7 @@ bzip2 = "0.3.0"
 net2 = "0.2.23"
 humantime = "1.0.0"
 quick-error = "1.1.0"
+docopt = "0.6.83"
 
 [dependencies.quire]
 git = "git://github.com/tailhook/rust-quire"
