@@ -134,25 +134,68 @@ These parameters work for both kinds of commands:
                 py.test --redis-port "$VAGGAOPT_REDIS_PORT" $VAGGAOPT_TESTS
 
    As you might have noticed, options are passed in environment variables
-   prefixed with ``VAGGAOPT_``. Your scripts are free to use them however
-   makes sense for your application.
+   prefixed with ``VAGGAOPT_`` and ``VAGGACLI_`` (see below).
+   Your scripts are free to use them however makes sense for your application.
 
    .. note:: This setting overrides :opt:`accepts-arguments`
 
-   Some shell patterns:
+   Every argument is translated into two variables:
 
-   1. Propagate a flag::
+   * ``VAGGAOPT_ARG`` -- has the raw value of the argument, for boolean flags
+     it contains either ``true`` or nothing, for repeatable flags it contains
+     a number of occurences
+   * ``VAGGACLI_ARG`` -- has a canonical representation of an argument, this
+     includes option name and all needed escaping to represent multiple
+     command line arguments
+
+   The ``ARG`` is usually a long name of the option if exists, or short
+   name otherwise. For positional arguments it's argument name. It's always
+   uppercased and has ``-`` replaced with ``_``
+
+   There are few shortcommings of both kinds:
+
+   1. ``VAGGAOPT_`` can't represent list of arguments that can contain
+      spaces. So it can't be used for list of file names in the general
+      case.
+   2. ``VAGGACLI_`` contains escaped versions of arguments so requires
+      using ``eval`` to make proper argument list from it
+
+   Some shell patterns using ``VAGGAOPT_``:
+
+   1. To propagate a flag, use either one::
 
         somecmd ${VAGGAOPT_FLAG:+--flag}
+        somecmd $VAGGACLI_FLAG
 
-   2. Optionally pass a value to a command::
+   2. To optionally pass a value to a command, use either one (note the
+      implications of eval in the second command)::
 
         somecmd ${VAGGAOPT_VALUE:+--value} $VAGGAOPT_VALUE
+        eval somecmd $VAGGACLI_VALUE
 
-   3. Pass list of commands each prefixed with an ``--test=`` (bash only)::
+      To overcome limitations of eval, for example if you need to expand
+      ``$(hostname)`` in the command, you can use the following snippet::
 
-        tests=($VAGGAOPT_TESTS)
-        somecmd ${tests[@]/#/--test=}
+        eval printf "'%s\0'" $VAGGACLI_VALUE | xargs -0 somecmd -H$(hostname)
+
+   3. To pass a list of commands each prefixed with a ``--test=``, use either
+      one::
+
+        # any shell (but ugly)
+        eval printf "'%s\0'" $VAGGACLI_TESTS | sed -z 's/^/--test=/' | xargs -0 somecmd
+      ::
+
+        # bash only
+        eval "tests=($VAGGACLI_TESTS)"
+        somecmd "${tests[@]/#/--test=}"
+
+      (Note for some ``sed`` implementations you need to omit ``-z`` flag)
+
+      This works if you have argument like ``vagga test <tests>...``. However,
+      if your vagga command-line is ``vagga test --test=<name>...`` use the
+      following instead::
+
+        eval somecmd $VAGGACLI_TEST
 
 .. _docopt: http://docopt.org/
 
