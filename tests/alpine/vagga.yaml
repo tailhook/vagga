@@ -58,9 +58,9 @@ containers:
     - !AlpineRepo
       url: http://dl-cdn.alpinelinux.org/alpine/
       branch: edge
-      repo: testing
-      tag: testing
-    - !Install [toilet@testing]
+      repo: community
+      tag: community
+    - !Install [tini@community]
 
   repo-simple:
     setup:
@@ -71,8 +71,8 @@ containers:
   repo-with-branch:
     setup:
     - !Alpine v3.4
-    - !Repo edge/testing
-    - !Install [toilet]
+    - !Repo edge/community
+    - !Install [tini]
 
 commands:
   echo-cmd: !Command
