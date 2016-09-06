@@ -21,6 +21,7 @@ use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{create_dir, create_dir_mode, copy, safe_ensure_dir};
+use file_util::{set_owner_group};
 use wrapper::snapshot::make_snapshot;
 use container::util::version_from_symlink;
 
@@ -489,6 +490,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     if info.init_command.is_none() {
                         try_msg!(create_dir(&path, true),
                             "error creating dir for volume {p:?}: {err}",
+                            p=path);
+                        try_msg!(set_owner_group(&path,
+                            info.owner_uid, info.owner_gid),
+                            "error chowning dir for volume {p:?}: {err}",
                             p=path);
                     } else if !path.exists() {
                         return Err(format!("Internal error: \

@@ -5,7 +5,8 @@ use std::os::unix::io::RawFd;
 use nix::fcntl::O_PATH;
 use libc::{open, renameat};
 
-use file_util::{Lock, create_dir};
+use config::volumes::PersistentInfo;
+use file_util::{Lock, create_dir, set_owner_group};
 use container::util::clean_dir;
 use path_util::ToCString;
 
@@ -22,24 +23,27 @@ pub struct PersistentVolumeGuard {
 }
 
 impl PersistentVolumeGuard {
-    pub fn new(name: String) -> io::Result<Option<PersistentVolumeGuard>> {
+    pub fn new(vol: &PersistentInfo)
+        -> io::Result<Option<PersistentVolumeGuard>>
+    {
         let volbase = Path::new("/vagga/base/.volumes");
-        let path = volbase.join(&name);
+        let path = volbase.join(&vol.name);
         if path.exists() {
             return Ok(None);
         }
         try!(create_dir(&volbase, false));
-        let lockfile = volbase.join(format!(".tmp.{}.lock", name));
+        let lockfile = volbase.join(format!(".tmp.{}.lock", vol.name));
         let lock = try!(Lock::exclusive(lockfile));
         if path.exists() {
             return Ok(None);
         }
-        let tmpdir = volbase.join(format!(".tmp.{}", name));
+        let tmpdir = volbase.join(format!(".tmp.{}", vol.name));
         if tmpdir.exists() {
             try!(clean_dir(&tmpdir, false)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e)));
         }
         try!(create_dir(&tmpdir, false));
+        try!(set_owner_group(&tmpdir, vol.owner_uid, vol.owner_gid));
         let volumes_base = unsafe {
             open(volbase.to_cstring().as_ptr(), O_PATH.bits())
         };
@@ -49,7 +53,7 @@ impl PersistentVolumeGuard {
         Ok(Some(PersistentVolumeGuard {
             lock: lock,
             volumes_base: volumes_base,
-            volume_name: name,
+            volume_name: vol.name.clone(),
         }))
     }
 }

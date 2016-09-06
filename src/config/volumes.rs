@@ -17,6 +17,8 @@ pub struct SnapshotInfo {
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct PersistentInfo {
     pub name: String,
+    pub owner_uid: uid_t,
+    pub owner_gid: gid_t,
     pub init_command: Option<String>,
 }
 
@@ -78,6 +80,8 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
     .option("Persistent", V::Structure::new()
         .member("name", V::Scalar::new())
         .member("init_command", V::Scalar::new().optional())
+        .member("owner_uid", V::Numeric::new().min(0).default(0))
+        .member("owner_gid", V::Numeric::new().min(0).default(0))
         .parser(persistent_volume_string))
 }
 

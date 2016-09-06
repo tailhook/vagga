@@ -225,6 +225,10 @@ Available volume types:
      single container may reference same volume too. We currently don't
      support mounting subvolumes but we may do in future.
 
+   owner-uid, owner-gid
+     User id and group id to set for the new volume. The are only set when
+     volume is first created.
+
    init-command
      The name of the command that is used for initializing volume. Technically
      command is inserted into the prerequisites of every other command that

@@ -12,7 +12,7 @@ fn _check_volumes<'x, I>(ctx: &Context, iter: I, result: &mut Vec<&'x String>)
     for vol in iter.into_iter() {
         match vol {
             &Volume::Persistent(PersistentInfo {
-                init_command: Some(ref cmd), ref name })
+                init_command: Some(ref cmd), ref name, .. })
             => {
                 let path = if ctx.ext_settings.storage_dir.is_some() {
                     ctx.config_dir.join(".vagga/.lnk/.volumes").join(name)

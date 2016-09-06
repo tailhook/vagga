@@ -74,18 +74,18 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
     let mut guards = Vec::<Box<Guard>>::new();
     for (_, &volume) in &setup_info.volumes {
         match volume {
-            &Volume::Persistent(PersistentInfo {
-                init_command: Some(ref init_command), ref name })
-            if init_command == cmd_name => {
-                match PersistentVolumeGuard::new(name.to_string()) {
+            &Volume::Persistent(ref info @ PersistentInfo {
+                init_command: Some(_), .. })
+            if info.init_command.as_ref().unwrap() == cmd_name => {
+                match PersistentVolumeGuard::new(&info) {
                     Ok(Some(guard)) => {
                         guards.push(Box::new(guard));
-                        setup_info.tmp_volumes.insert(name);
+                        setup_info.tmp_volumes.insert(&info.name);
                     }
                     Ok(None) => {}
                     Err(e) => {
                         return Err(format!("Persistent volume {:?} error: {}",
-                                           name, e));
+                                           info.name, e));
                     }
                 }
             }
