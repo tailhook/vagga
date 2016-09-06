@@ -47,8 +47,7 @@ commands:
       ls -la /data
       $PG_BIN/pg_ctl initdb
       $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
-      $PG_BIN/psql -h 127.0.0.1 -p $PG_PORT \
-        -c "CREATE USER vagga WITH PASSWORD 'vagga';"
+      $PG_BIN/createuser -h 127.0.0.1 -p $PG_PORT vagga
       $PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O vagga
 
       # init schema usually schema shouldn't be inline here, but contained
@@ -57,8 +56,7 @@ commands:
       CREATE TABLE random_stuff (x TEXT);
       ENDSQL
 
-      pkill postgres
-      sleep 1 # give postgres sometime to shutdown
+      $PG_BIN/pg_ctl stop
 
   postgres: &postgres !Command
     description: Run postgres database
