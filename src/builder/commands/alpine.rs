@@ -329,10 +329,12 @@ fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
     try!(check_version(version));
     try_msg!(create_dir("/vagga/root/etc/apk", true),
         "Error creating apk dir: {err}");
-    try!(File::create("/vagga/root/etc/apk/repositories")
-        .and_then(|mut f| write!(&mut f, "{}{}/main\n",
-            mirror, version))
-        .map_err(|e| format!("Can't write repositories file: {}", e)));
+    if !Path::new("/vagga/root/etc/apk/repositories").exists() {
+        try!(File::create("/vagga/root/etc/apk/repositories")
+            .and_then(|mut f| write!(&mut f, "{}{}/main\n",
+                mirror, version))
+            .map_err(|e| format!("Can't write repositories file: {}", e)));
+    }
     try!(capsule::apk_run(&[
         "--update-cache",
         "--keys-dir=/etc/apk/keys",  // Use keys from capsule
@@ -391,6 +393,8 @@ impl BuildStep for Alpine {
         try!(configure(&mut guard.distro, &mut guard.ctx, &self.0));
         if build {
             try!(guard.distro.bootstrap(&mut guard.ctx));
+        } else {
+
         }
         Ok(())
     }

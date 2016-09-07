@@ -155,3 +155,14 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
 }
+
+@test "alpine: Repo subcontainer" {
+    run vagga _build repo-subcontainer
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/repo-subcontainer)
+    [[ $link = ".roots/repo-subcontainer.0c8a531b/root" ]]
+
+    run vagga _run repo-subcontainer tini -h
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+}

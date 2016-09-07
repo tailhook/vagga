@@ -74,6 +74,11 @@ containers:
     - !Repo edge/community
     - !Install [tini]
 
+  repo-subcontainer:
+    setup:
+    - !Container repo-simple
+    - !Install [tini]
+
 commands:
   echo-cmd: !Command
     container: v31
