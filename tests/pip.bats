@@ -99,7 +99,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-ubuntu)
-    [[ $link = ".roots/py3req-https-ubuntu.b4474ef3/root" ]]
+    [[ $link = ".roots/py3req-https-ubuntu.d463369b/root" ]]
 }
 
 @test "py3: alpine req-https.txt" {
@@ -107,7 +107,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-alpine)
-    [[ $link = ".roots/py3req-https-alpine.f05e1107/root" ]]
+    [[ $link = ".roots/py3req-https-alpine.0ddc98e5/root" ]]
 }
 
 @test "py3: container inheritance" {
@@ -115,7 +115,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-inherit)
-    [[ $link = ".roots/py3req-inherit.f05e1107/root" ]]
+    [[ $link = ".roots/py3req-inherit.0ddc98e5/root" ]]
 }
 
 @test "pip: C dependencies caching" {
