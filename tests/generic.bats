@@ -330,23 +330,27 @@ setup() {
 }
 
 @test "generic: RunAs" {
-    run vagga _build run_as
+    run vagga _build run-as
     printf "%s\n" "${lines[@]}"
-    [[ $(cat .vagga/run_as/ids-11) = "uid=1 gid=1" ]]
-    [[ $(cat .vagga/run_as/ids-10) = "uid=1 gid=0" ]]
-    [[ $(cat .vagga/run_as/ids-01) = "uid=0 gid=1" ]]
-    [[ $(cat .vagga/run_as/ids-00) = "uid=0 gid=0" ]]
-    [[ $(cat .vagga/run_as/ids-110) = "uid=1 gid=1" ]]
-    [[ ! -O .vagga/run_as/ids-11 ]]
-    [[ ! -G .vagga/run_as/ids-11 ]]
-    [[ ! -O .vagga/run_as/ids-10 ]]
-    [[ -G .vagga/run_as/ids-10 ]]
-    [[ -O .vagga/run_as/ids-01 ]]
-    [[ ! -G .vagga/run_as/ids-01 ]]
-    [[ -O .vagga/run_as/ids-00 ]]
-    [[ -G .vagga/run_as/ids-00 ]]
-    [[ -O .vagga/run_as/ids-110 ]]
-    [[ ! -G .vagga/run_as/ids-110 ]]
+    link=$(readlink ".vagga/run-as")
+    [[ $link = ".roots/run-as.d4040425/root" ]]
+
+    [[ $(cat .vagga/run-as/ids-11) = "uid=1 gid=1" ]]
+    [[ $(cat .vagga/run-as/ids-10) = "uid=1 gid=0" ]]
+    [[ $(cat .vagga/run-as/ids-01) = "uid=0 gid=1" ]]
+    [[ $(cat .vagga/run-as/ids-00) = "uid=0 gid=0" ]]
+    [[ $(cat .vagga/run-as/ids-110) = "uid=1 gid=1" ]]
+    [[ $(cat .vagga/run-as/var/groups) = "groups=root 501 502" ]]
+    [[ ! -O .vagga/run-as/ids-11 ]]
+    [[ ! -G .vagga/run-as/ids-11 ]]
+    [[ ! -O .vagga/run-as/ids-10 ]]
+    [[ -G .vagga/run-as/ids-10 ]]
+    [[ -O .vagga/run-as/ids-01 ]]
+    [[ ! -G .vagga/run-as/ids-01 ]]
+    [[ -O .vagga/run-as/ids-00 ]]
+    [[ -G .vagga/run-as/ids-00 ]]
+    [[ -O .vagga/run-as/ids-110 ]]
+    [[ ! -G .vagga/run-as/ids-110 ]]
 }
 
 @test "generic: isolated RunAs" {
