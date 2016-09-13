@@ -6,7 +6,7 @@ use unshare::{Command, Namespace};
 use quire::validate as V;
 
 use super::super::context::Context;
-use process_util::{capture_stdout, set_fake_uidmap};
+use process_util::capture_stdout;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use launcher::network::create_network_namespace;
 
@@ -98,10 +98,14 @@ fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
 fn setup_command(ctx: &Context, cmd: &mut Command)
 {
     cmd.chroot_dir("/vagga/root");
+    set_environ(ctx, cmd);
+}
+
+fn set_environ(ctx: &Context, cmd: &mut Command) {
     cmd.env_clear();
     for (k, v) in ctx.environ.iter() {
         cmd.env(k, v);
-    };
+    }
 }
 
 pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
@@ -306,11 +310,11 @@ impl BuildStep for RunAs {
                 None
             };
 
-            let mut cmd = Command::new("/bin/sh");
-            setup_command(&guard.ctx, &mut cmd);
-            cmd.arg("-exc");
-            cmd.arg(&self.script);
-            cmd.current_dir(&Path::new("/work").join(&self.work_dir));
+            let mut cmd = Command::new("/proc/self/exe");
+            cmd.arg0("vagga_runner");
+            cmd.arg("run_as");
+            set_environ(&guard.ctx, &mut cmd);
+            cmd.arg("--work-dir").arg(&Path::new("/work").join(&self.work_dir));
             if let Some(netns_file) = netns_file {
                 try_msg!(cmd.set_namespace(netns_file, Namespace::Net),
                     "Cannot set namespace for command: {err}");
@@ -319,11 +323,18 @@ impl BuildStep for RunAs {
             let uid = self.user_id;
             let gid = self.group_id;
             if let Some(euid) = self.external_user_id {
-                try!(set_fake_uidmap(&mut cmd, uid, euid));
+                cmd.arg("--external-user-id").arg(euid.to_string());
             }
-            cmd.uid(uid);
-            cmd.gid(gid);
-            cmd.groups(self.supplementary_gids.clone());
+            cmd.arg("--user-id").arg(uid.to_string());
+            cmd.arg("--group-id").arg(gid.to_string());
+            if !self.supplementary_gids.is_empty() {
+                let supplementary_gids = self.supplementary_gids.iter()
+                    .map(|g| g.to_string())
+                    .collect::<Vec<_>>();
+                cmd.arg("--supplementary-gids").args(&supplementary_gids[..]);
+            }
+            cmd.arg("--");
+            cmd.arg(&self.script);
 
             run(cmd)
         } else {

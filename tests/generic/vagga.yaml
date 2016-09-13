@@ -201,8 +201,20 @@ containers:
       isolate-network: true
       script: |
         ip addr add 127.254.254.254/8 dev lo
+        ip link > /var/ip-link-isolated.out
         ip addr > /var/ip-addr-isolated.out
-    - !Sh ip addr > /var/ip-addr.out
+    - !Sh |
+        ip addr > /var/ip-addr.out
+
+  isolated-run-as-with-external-uid:
+    setup:
+    - !Alpine v3.4
+    - !RunAs
+      user-id: 1
+      external-user-id: 0
+      isolate-network: true
+      script: |
+        ip link > /var/ip-link-isolated.out
 
   path-precedence:
     setup:

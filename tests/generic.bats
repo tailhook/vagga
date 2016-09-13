@@ -354,13 +354,25 @@ setup() {
     printf "%s\n" "${lines[@]}"
     root=".vagga/isolated-run-as"
     link=$(readlink "${root}")
-    [[ $link = ".roots/isolated-run-as.1412590a/root" ]]
+    [[ $link = ".roots/isolated-run-as.c7a1130a/root" ]]
+
     isolated_out=$(cat "${root}/var/ip-addr-isolated.out")
     [[ $isolated_out = *"inet 127.0.0.1/8"* ]]
     [[ $isolated_out = *"inet 127.254.254.254/8"* ]]
+    [[ $(cat "${root}/var/ip-link-isolated.out" | wc -l) = 2 ]]
     host_out=$(cat "${root}/var/ip-addr.out")
     [[ $host_out = *"inet 127.0.0.1/8"* ]]
     [[ $host_out != *"inet 127.254.254.254/8"* ]]
+}
+
+@test "generic: isolated RunAs with external user" {
+    run vagga _build isolated-run-as-with-external-uid
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/isolated-run-as-with-external-uid"
+    link=$(readlink "${root}")
+    [[ $link = ".roots/isolated-run-as-with-external-uid.3a2a25fb/root" ]]
+
+    [[ $(cat "${root}/var/ip-link-isolated.out" | wc -l) = 2 ]]
 }
 
 @test "generic: Tmpfs Subdirs" {
