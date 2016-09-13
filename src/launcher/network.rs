@@ -1,14 +1,14 @@
 use std::env;
 use std::fs::{remove_file};
 use std::fs::{File};
-use std::io::{stdout, stderr, BufRead, BufReader, Read};
+use std::io::{stdout, stderr, BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::collections::HashSet;
 use std::os::unix::io::AsRawFd;
 
 use log::LogLevel::Debug;
-use unshare::{Command, Stdio, Namespace};
+use unshare::{Command, Stdio, Fd, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
 use libc::{geteuid};
@@ -706,6 +706,7 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     let uid_map = try!(get_max_uidmap());
     set_uidmap(&mut cmd, &uid_map, true);
     cmd.env_clear();
+    cmd.file_descriptor(3, Fd::piped_read());
     let mut child = try!(cmd.spawn()
         .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
     let child_pid = child.pid();
@@ -716,6 +717,9 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     let userns_file = try_msg!(
         File::open(PathBuf::from(format!("/proc/{}/ns/user", child_pid))),
         "Cannot open userns file: {err}");
+
+    try!(child.take_pipe_writer(3).unwrap().write_all(b"ok")
+        .map_err(|e| format!("Error writing to pipe: {}", e)));
 
     match child.wait() {
         Ok(status) if status.success() => {}

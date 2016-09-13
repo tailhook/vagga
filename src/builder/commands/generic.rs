@@ -1,3 +1,4 @@
+use std::env;
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use std::os::unix::ffi::OsStrExt;
@@ -311,7 +312,7 @@ impl BuildStep for RunAs {
                 None
             };
 
-            let mut cmd = Command::new("/proc/self/exe");
+            let mut cmd = Command::new(env::current_exe().unwrap());
             cmd.arg0("vagga_runner");
             cmd.arg("run_as");
             set_environ(&guard.ctx, &mut cmd);

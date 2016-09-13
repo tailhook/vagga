@@ -1,11 +1,12 @@
 use std::env;
 use std::fs::File;
 use std::io::{stdout, stderr};
-use std::io::{BufRead, BufReader};
+use std::io::{Read, BufRead, BufReader};
 use std::path::Path;
 use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
+use std::os::unix::io::FromRawFd;
 
 use rustc_serialize::json;
 use unshare::{Command, Stdio};
@@ -354,6 +355,17 @@ fn setup_isolated_namespace(args: Vec<String>) {
             error!("Error running command {:?}: {}", cmd, err);
             exit(1);
         }
+    }
+
+    // Wait while parent process opens namespace files
+    let mut buf = vec!();
+    let mut fd3 = unsafe { File::from_raw_fd(3) };
+    match fd3.read_to_end(&mut buf) {
+        Ok(_) => {},
+        Err(e) => {
+            error!("Error reading from fd 3: {}", e);
+            exit(1);
+        },
     }
 }
 
