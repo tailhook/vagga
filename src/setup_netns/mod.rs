@@ -1,11 +1,12 @@
 use std::env;
 use std::fs::File;
 use std::io::{stdout, stderr};
-use std::io::{BufRead, BufReader};
+use std::io::{Read, BufRead, BufReader};
 use std::path::Path;
 use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
+use std::os::unix::io::FromRawFd;
 
 use rustc_serialize::json;
 use unshare::{Command, Stdio};
@@ -325,6 +326,49 @@ fn setup_guest_namespace(args: Vec<String>) {
     }
 }
 
+fn setup_isolated_namespace(args: Vec<String>) {
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Set up isolated network namespace
+            ");
+        match ap.parse(args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => {}
+            Err(x) => {
+                exit(x);
+            }
+        }
+    }
+
+    let mut cmd = ip_cmd();
+    cmd.args(&["link", "set", "dev", "lo", "up"]);
+
+    debug!("Running {:?}", cmd);
+    match cmd.status() {
+        Ok(status) if status.success() => {}
+        Ok(status) => {
+            error!("Error running command {:?}: {}", cmd, status);
+            exit(1);
+        }
+        Err(err) => {
+            error!("Error running command {:?}: {}", cmd, err);
+            exit(1);
+        }
+    }
+
+    // Wait while parent process opens namespace files
+    let mut buf = vec!();
+    let mut fd3 = unsafe { File::from_raw_fd(3) };
+    match fd3.read_to_end(&mut buf) {
+        Ok(_) => {},
+        Err(e) => {
+            error!("Error reading from fd 3: {}", e);
+            exit(1);
+        },
+    }
+}
+
 pub fn main() {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
@@ -347,6 +391,7 @@ pub fn main() {
         "gateway" => setup_gateway_namespace(args),
         "bridge" => setup_bridge_namespace(args),
         "guest" => setup_guest_namespace(args),
+        "isolated" => setup_isolated_namespace(args),
         _ => {
             error!("Unknown command {}", kind);
             exit(1);

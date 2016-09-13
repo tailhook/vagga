@@ -1,16 +1,18 @@
 use std::env;
 use std::fs::{remove_file};
 use std::fs::{File};
-use std::io::{stdout, stderr, BufRead, BufReader, Read};
+use std::io::{stdout, stderr, BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::collections::HashSet;
+use std::os::unix::io::AsRawFd;
 
 use log::LogLevel::Debug;
-use unshare::{Command, Stdio, Namespace};
+use unshare::{Command, Stdio, Fd, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
 use libc::{geteuid};
+use nix::sched::{setns, CloneFlags};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
@@ -689,6 +691,56 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
             Err(e)
         }
     }
+}
+
+pub struct IsolatedNetwork {
+    pub userns: File,
+    pub netns: File,
+}
+
+pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
+    let mut cmd = Command::new(env::current_exe().unwrap());
+    cmd.arg0("vagga_setup_netns");
+    cmd.arg("isolated");
+    cmd.unshare([Namespace::User, Namespace::Net].iter().cloned());
+    let uid_map = try!(get_max_uidmap());
+    set_uidmap(&mut cmd, &uid_map, true);
+    cmd.env_clear();
+    cmd.file_descriptor(3, Fd::piped_read());
+    let mut child = try!(cmd.spawn()
+        .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let child_pid = child.pid();
+
+    let netns_file = try_msg!(
+        File::open(PathBuf::from(format!("/proc/{}/ns/net", child_pid))),
+        "Cannot open netns file: {err}");
+    let userns_file = try_msg!(
+        File::open(PathBuf::from(format!("/proc/{}/ns/user", child_pid))),
+        "Cannot open userns file: {err}");
+
+    try!(child.take_pipe_writer(3).unwrap().write_all(b"ok")
+        .map_err(|e| format!("Error writing to pipe: {}", e)));
+
+    match child.wait() {
+        Ok(status) if status.success() => {}
+        Ok(status) => return Err(format!("Error running {:?}: {}", cmd, status)),
+        Err(e) => return Err(format!("Error waiting {:?}: {}", cmd, e)),
+    }
+
+    Ok(IsolatedNetwork{userns: userns_file, netns: netns_file})
+}
+
+pub fn isolate_network() -> Result<(), String> {
+    let isolated_net = try_msg!(
+        create_isolated_network(),
+        "Cannot create network namespace: {err}");
+    try_msg!(setns(isolated_net.userns.as_raw_fd(),
+            CloneFlags::from_bits_truncate(Namespace::User.to_clone_flag() as i32)),
+        "Cannot set user namespace: {err}");
+    try_msg!(setns(isolated_net.netns.as_raw_fd(),
+            CloneFlags::from_bits_truncate(Namespace::Net.to_clone_flag() as i32)),
+        "Cannot set network namespace: {err}");
+    Ok(())
 }
 
 impl PortForwardGuard {

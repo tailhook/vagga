@@ -86,6 +86,7 @@ pub struct SuperviseInfo {
 
     // Supervise
     pub mode: SuperviseMode,
+    pub isolate_network: bool,
     pub kill_unresponsive_after: u32,
     pub children: BTreeMap<String, ChildCommand>,
 }
@@ -236,6 +237,7 @@ pub fn command_validator<'a>() -> V::Enum<'a> {
 
     let sup = sup
         .member("mode", V::Scalar::new().default("stop-on-failure"))
+        .member("isolate_network", V::Scalar::new().default(false))
         .member("children", V::Mapping::new(
             V::Scalar::new(),
             subcommand_validator()))

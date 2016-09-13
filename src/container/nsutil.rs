@@ -5,12 +5,8 @@ use std::path::Path;
 
 use libc::{c_int};
 use libc::{open, close};
-use libc::O_RDONLY;
+use libc::{O_RDONLY, O_CLOEXEC};
 use unshare::Namespace;
-
-
-static O_CLOEXEC: c_int = 0o2000000;
-
 
 
 #[cfg(feature="containers")]

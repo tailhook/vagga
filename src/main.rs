@@ -54,6 +54,7 @@ mod setup_netns;
 mod version;
 mod wrapper;
 mod builder;
+mod runner;
 
 fn init_logging() {
     if let Err(_) = env::var("RUST_LOG") {
@@ -73,6 +74,7 @@ fn main() {
         Some("vagga_version") => version::main(),
         Some("vagga_wrapper") => wrapper::main(),
         Some("vagga_build") => builder::main(),
+        Some("vagga_runner") => runner::main(),
         _ => launcher::main(),
     }
 }

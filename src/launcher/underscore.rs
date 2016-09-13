@@ -60,6 +60,12 @@ pub fn run_command(context: &Context, mut args: Vec<String>)
     let cinfo = try!(context.config.get_container(&container));
     let ver = try!(build_container(context, &container, bmode));
     try!(prepare_volumes(cinfo.volumes.values(), context));
+
+    if context.isolate_network {
+        try_msg!(network::isolate_network(),
+            "Cannot setup isolated network: {err}");
+    }
+
     let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
     cmd.workdir(&context.workdir);
     cmd.arg("_run");

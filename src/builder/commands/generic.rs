@@ -1,13 +1,15 @@
+use std::env;
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 use std::os::unix::ffi::OsStrExt;
 
-use unshare::{Command};
+use unshare::{Command, Namespace};
 use quire::validate as V;
 
 use super::super::context::Context;
-use process_util::{capture_stdout, set_fake_uidmap};
+use process_util::capture_stdout;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use launcher::network::create_isolated_network;
 
 // Build Steps
 #[derive(Debug)]
@@ -37,6 +39,7 @@ pub struct RunAs {
     pub supplementary_gids: Vec<u32>,
     pub external_user_id: Option<u32>,
     pub work_dir: PathBuf,
+    pub isolate_network: bool,
     pub script: String,
 }
 
@@ -48,6 +51,7 @@ impl RunAs {
         .member("external_user_id", V::Numeric::new().min(0).optional())
         .member("supplementary_gids", V::Sequence::new(V::Numeric::new()))
         .member("work_dir", V::Directory::new().default("/work"))
+        .member("isolate_network", V::Scalar::new().default(false))
         .member("script", V::Scalar::new())
     }
 }
@@ -95,10 +99,14 @@ fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
 fn setup_command(ctx: &Context, cmd: &mut Command)
 {
     cmd.chroot_dir("/vagga/root");
+    set_environ(ctx, cmd);
+}
+
+fn set_environ(ctx: &Context, cmd: &mut Command) {
     cmd.env_clear();
     for (k, v) in ctx.environ.iter() {
         cmd.env(k, v);
-    };
+    }
 }
 
 pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
@@ -277,6 +285,9 @@ impl BuildStep for RunAs {
             hash.text("supplementary_gids", &i);
         }
         hash.field("work_dir", self.work_dir.as_os_str().as_bytes());
+        if self.isolate_network {
+            hash.bool("isolate_network", self.isolate_network);
+        }
         hash.field("script", &self.script);
         Ok(())
     }
@@ -284,20 +295,48 @@ impl BuildStep for RunAs {
         -> Result<(), StepError>
     {
         if build {
-            let mut cmd = Command::new("/bin/sh");
-            setup_command(&guard.ctx, &mut cmd);
-            cmd.arg("-exc");
-            cmd.arg(&self.script);
-            cmd.current_dir(&Path::new("/work").join(&self.work_dir));
+            let netns_file = if self.isolate_network {
+                match guard.ctx.network_namespace {
+                    Some(ref netns_file) => {
+                        Some(netns_file)
+                    },
+                    None => {
+                        let isolated_network = try_msg!(
+                            create_isolated_network(),
+                            "Cannot create network namespace: {err}");
+                        guard.ctx.network_namespace = Some(isolated_network.netns);
+                        guard.ctx.network_namespace.as_ref()
+                    },
+                }
+            } else {
+                None
+            };
+
+            let mut cmd = Command::new(env::current_exe().unwrap());
+            cmd.arg0("vagga_runner");
+            cmd.arg("run_as");
+            set_environ(&guard.ctx, &mut cmd);
+            cmd.arg("--work-dir").arg(&Path::new("/work").join(&self.work_dir));
+            if let Some(netns_file) = netns_file {
+                try_msg!(cmd.set_namespace(netns_file, Namespace::Net),
+                    "Cannot set namespace for command: {err}");
+            }
 
             let uid = self.user_id;
             let gid = self.group_id;
             if let Some(euid) = self.external_user_id {
-                try!(set_fake_uidmap(&mut cmd, uid, euid));
+                cmd.arg("--external-user-id").arg(euid.to_string());
             }
-            cmd.uid(uid);
-            cmd.gid(gid);
-            cmd.groups(self.supplementary_gids.clone());
+            cmd.arg("--user-id").arg(uid.to_string());
+            cmd.arg("--group-id").arg(gid.to_string());
+            if !self.supplementary_gids.is_empty() {
+                let supplementary_gids = self.supplementary_gids.iter()
+                    .map(|g| g.to_string())
+                    .collect::<Vec<_>>();
+                cmd.arg("--supplementary-gids").args(&supplementary_gids[..]);
+            }
+            cmd.arg("--");
+            cmd.arg(&self.script);
 
             run(cmd)
         } else {

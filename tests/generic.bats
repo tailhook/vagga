@@ -210,6 +210,38 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
+@test "generic: isolated Command" {
+    vagga _build busybox
+    run vagga --isolate-network isolated-command
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
+@test "generic: isolated _run" {
+    vagga _build busybox
+    run vagga --no-network _run busybox ip link
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
+@test "generic: isolated Supervise" {
+    vagga _build busybox
+    run vagga isolated-supervise
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
+@test "generic: Supervise with --isolate-network option" {
+    vagga _build busybox
+    run vagga --no-net not-isolated-supervise
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
 @test "generic: proxy forwards into build" {
     ftp_proxy=ftp://test.server run vagga _build --force printenv
     printf "%s\n" "${lines[@]}"
@@ -330,23 +362,53 @@ setup() {
 }
 
 @test "generic: RunAs" {
-    run vagga _build run_as
+    run vagga _build run-as
     printf "%s\n" "${lines[@]}"
-    [[ $(cat .vagga/run_as/ids-11) = "uid=1 gid=1" ]]
-    [[ $(cat .vagga/run_as/ids-10) = "uid=1 gid=0" ]]
-    [[ $(cat .vagga/run_as/ids-01) = "uid=0 gid=1" ]]
-    [[ $(cat .vagga/run_as/ids-00) = "uid=0 gid=0" ]]
-    [[ $(cat .vagga/run_as/ids-110) = "uid=1 gid=1" ]]
-    [[ ! -O .vagga/run_as/ids-11 ]]
-    [[ ! -G .vagga/run_as/ids-11 ]]
-    [[ ! -O .vagga/run_as/ids-10 ]]
-    [[ -G .vagga/run_as/ids-10 ]]
-    [[ -O .vagga/run_as/ids-01 ]]
-    [[ ! -G .vagga/run_as/ids-01 ]]
-    [[ -O .vagga/run_as/ids-00 ]]
-    [[ -G .vagga/run_as/ids-00 ]]
-    [[ -O .vagga/run_as/ids-110 ]]
-    [[ ! -G .vagga/run_as/ids-110 ]]
+    link=$(readlink ".vagga/run-as")
+    [[ $link = ".roots/run-as.d4040425/root" ]]
+
+    [[ $(cat .vagga/run-as/ids-11) = "uid=1 gid=1" ]]
+    [[ $(cat .vagga/run-as/ids-10) = "uid=1 gid=0" ]]
+    [[ $(cat .vagga/run-as/ids-01) = "uid=0 gid=1" ]]
+    [[ $(cat .vagga/run-as/ids-00) = "uid=0 gid=0" ]]
+    [[ $(cat .vagga/run-as/ids-110) = "uid=1 gid=1" ]]
+    [[ $(cat .vagga/run-as/var/groups) = "groups=root 501 502" ]]
+    [[ ! -O .vagga/run-as/ids-11 ]]
+    [[ ! -G .vagga/run-as/ids-11 ]]
+    [[ ! -O .vagga/run-as/ids-10 ]]
+    [[ -G .vagga/run-as/ids-10 ]]
+    [[ -O .vagga/run-as/ids-01 ]]
+    [[ ! -G .vagga/run-as/ids-01 ]]
+    [[ -O .vagga/run-as/ids-00 ]]
+    [[ -G .vagga/run-as/ids-00 ]]
+    [[ -O .vagga/run-as/ids-110 ]]
+    [[ ! -G .vagga/run-as/ids-110 ]]
+}
+
+@test "generic: isolated RunAs" {
+    run vagga _build isolated-run-as
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/isolated-run-as"
+    link=$(readlink "${root}")
+    [[ $link = ".roots/isolated-run-as.c7a1130a/root" ]]
+
+    isolated_out=$(cat "${root}/var/ip-addr-isolated.out")
+    [[ $isolated_out = *"inet 127.0.0.1/8"* ]]
+    [[ $isolated_out = *"inet 127.254.254.254/8"* ]]
+    [[ $(cat "${root}/var/ip-link-isolated.out" | wc -l) = 2 ]]
+    host_out=$(cat "${root}/var/ip-addr.out")
+    [[ $host_out = *"inet 127.0.0.1/8"* ]]
+    [[ $host_out != *"inet 127.254.254.254/8"* ]]
+}
+
+@test "generic: isolated RunAs with external user" {
+    run vagga _build isolated-run-as-with-external-uid
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/isolated-run-as-with-external-uid"
+    link=$(readlink "${root}")
+    [[ $link = ".roots/isolated-run-as-with-external-uid.3a2a25fb/root" ]]
+
+    [[ $(cat "${root}/var/ip-link-isolated.out" | wc -l) = 2 ]]
 }
 
 @test "generic: Tmpfs Subdirs" {

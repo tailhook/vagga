@@ -164,35 +164,61 @@ containers:
     - !Tar
       url: ./tmp.tar.gz
 
-  run_as:
+  run-as:
     setup:
     - !Alpine v3.4
     - !RunAs
-      user_id: 1
-      group_id: 1
+      user-id: 1
+      group-id: 1
       script: |
         echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-11
     - !RunAs
-      user_id: 1
+      user-id: 1
       work-dir: /tmp
       script: |
         echo "uid=$(id -u) gid=$(id -g)" > ids-10
     - !RunAs
-      group_id: 1
+      group-id: 1
       work-dir: /tmp
       script: |
         echo "uid=$(id -u) gid=$(id -g)" > ids-01
     - !RunAs
-      user_id: 1
-      group_id: 1
+      user-id: 1
+      group-id: 1
       external-user-id: 0
       script: |
         echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-110
+    - !RunAs
+      supplementary-gids: [501, 502]
+      script: |
+        echo "groups=$(groups)" > /var/groups
     - !RunAs
       script: |
         echo "uid=$(id -u) gid=$(id -g)" > /tmp/ids-00
     - !Sh |
         cp -a /tmp/ids-* /
+
+  isolated-run-as:
+    setup:
+    - !Alpine v3.4
+    - !RunAs
+      isolate-network: true
+      script: |
+        ip addr add 127.254.254.254/8 dev lo
+        ip link > /var/ip-link-isolated.out
+        ip addr > /var/ip-addr-isolated.out
+    - !Sh |
+        ip addr > /var/ip-addr.out
+
+  isolated-run-as-with-external-uid:
+    setup:
+    - !Alpine v3.4
+    - !RunAs
+      user-id: 1
+      external-user-id: 0
+      isolate-network: true
+      script: |
+        ip link > /var/ip-link-isolated.out
 
   path-precedence:
     setup:
@@ -299,6 +325,26 @@ commands:
           echo hello
           sleep 1
           echo world
+
+  isolated-command: !Command
+    container: busybox
+    run: |
+      ip link
+
+  isolated-supervise: !Supervise
+    isolate-network: true
+    children:
+      ip-link: !Command
+        container: busybox
+        run: |
+          ip link
+
+  not-isolated-supervise: !Supervise
+    children:
+      ip-link: !Command
+        container: busybox
+        run: |
+          ip link
 
   vagga: !Command
     container: vagga

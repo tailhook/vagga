@@ -13,7 +13,7 @@ rustc-serialize = "0.3.19"
 log = "0.3.6"
 env_logger = "0.3.3"
 url = "1.0.0"
-unshare = { version="0.1.11", optional=true }
+unshare = { git="git://github.com/tailhook/unshare", rev="9bf89d1", optional=true }
 signal = "0.2.0"
 mopa = "0.2.2"
 anymap = "0.11.1"

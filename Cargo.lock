@@ -25,7 +25,7 @@ dependencies = [
  "sha2 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.5 (git+git://github.com/alexcrichton/tar-rs?rev=c402adf)",
- "unshare 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unshare 0.1.11 (git+git://github.com/tailhook/unshare?rev=9bf89d1)",
  "url 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "zip 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -416,7 +416,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "unshare"
 version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+git://github.com/tailhook/unshare?rev=9bf89d1#9bf89d1e0ad6cedeb562846ebb383a975a6bbf3d"
 dependencies = [
  "libc 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
