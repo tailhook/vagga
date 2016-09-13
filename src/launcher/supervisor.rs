@@ -203,6 +203,16 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         }
     }
 
+    let isolate_network = sup.isolate_network || context.isolate_network;
+    if isolate_network && !containers_in_netns.is_empty() {
+        return Err(format!("Isolated network is forbidden in \
+            conjunction with network options inside supervised commands"));
+    }
+    if isolate_network {
+        try_msg!(network::isolate_network(),
+            "Cannot setup isolated network: {err}");
+    }
+
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
     let mut trap = Trap::trap(&[SIGINT, SIGQUIT,

@@ -339,6 +339,7 @@ fn setup_isolated_namespace(args: Vec<String>) {
             }
         }
     }
+
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
 
@@ -354,8 +355,6 @@ fn setup_isolated_namespace(args: Vec<String>) {
             exit(1);
         }
     }
-
-    // sleep(Duration::from_millis(500));
 }
 
 pub fn main() {

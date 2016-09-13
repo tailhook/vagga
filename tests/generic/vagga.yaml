@@ -326,6 +326,26 @@ commands:
           sleep 1
           echo world
 
+  isolated-command: !Command
+    container: busybox
+    run: |
+      ip link
+
+  isolated-supervise: !Supervise
+    isolate-network: true
+    children:
+      ip-link: !Command
+        container: busybox
+        run: |
+          ip link
+
+  not-isolated-supervise: !Supervise
+    children:
+      ip-link: !Command
+        container: busybox
+        run: |
+          ip link
+
   vagga: !Command
     container: vagga
     run: ["/usr/lib/vagga/vagga"]

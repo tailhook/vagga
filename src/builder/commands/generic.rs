@@ -8,7 +8,7 @@ use quire::validate as V;
 use super::super::context::Context;
 use process_util::capture_stdout;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use launcher::network::create_network_namespace;
+use launcher::network::create_isolated_network;
 
 // Build Steps
 #[derive(Debug)]
@@ -300,9 +300,10 @@ impl BuildStep for RunAs {
                         Some(netns_file)
                     },
                     None => {
-                        guard.ctx.network_namespace = Some(try_msg!(
-                            create_network_namespace(),
-                            "Cannot create network namespace: {err}"));
+                        let isolated_network = try_msg!(
+                            create_isolated_network(),
+                            "Cannot create network namespace: {err}");
+                        guard.ctx.network_namespace = Some(isolated_network.netns);
                         guard.ctx.network_namespace.as_ref()
                     },
                 }

@@ -6,6 +6,7 @@ use config::command::{CommandInfo, Networking, WriteMode};
 use process_util::{run_and_wait, convert_status};
 use super::build::{build_container};
 use super::wrap::Wrapper;
+use super::network;
 use launcher::volumes::prepare_volumes;
 use launcher::user::ArgError;
 use launcher::Context;
@@ -70,6 +71,11 @@ pub fn run(cinfo: &CommandInfo, args: Args, version: Version,
     context: &Context)
     -> Result<i32, String>
 {
+    if context.isolate_network {
+        try_msg!(network::isolate_network(),
+            "Cannot setup isolated network: {err}");
+    }
+
     let mut cmd: Command = Wrapper::new(Some(&version), &context.settings);
     cmd.workdir(&context.workdir);
     for (k, v) in &args.environ {

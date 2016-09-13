@@ -210,6 +210,38 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
+@test "generic: isolated Command" {
+    vagga _build busybox
+    run vagga --isolate-network isolated-command
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
+@test "generic: isolated _run" {
+    vagga _build busybox
+    run vagga --no-network _run busybox ip link
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
+@test "generic: isolated Supervise" {
+    vagga _build busybox
+    run vagga isolated-supervise
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
+@test "generic: Supervise with --isolate-network option" {
+    vagga _build busybox
+    run vagga --no-net not-isolated-supervise
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
+}
+
 @test "generic: proxy forwards into build" {
     ftp_proxy=ftp://test.server run vagga _build --force printenv
     printf "%s\n" "${lines[@]}"

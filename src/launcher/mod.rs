@@ -10,7 +10,7 @@ use libc::getuid;
 use options::build_mode::{build_mode, BuildMode};
 use config::{Config, Settings, find_config};
 use config::read_settings::{read_settings, MergedSettings};
-use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse};
+use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
 use self::wrap::Wrapper;
 
 mod list;
@@ -42,6 +42,7 @@ pub struct Context {
     config_dir: PathBuf,
     build_mode: BuildMode,
     prerequisites: bool,
+    isolate_network: bool
 }
 
 pub fn run() -> i32 {
@@ -54,6 +55,7 @@ pub fn run() -> i32 {
     let mut bmode = Default::default();
     let mut owner_check = true;
     let mut prerequisites = true;
+    let mut isolate_network = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -79,6 +81,9 @@ pub fn run() -> i32 {
         ap.refer(&mut prerequisites)
             .add_option(&["--no-prerequisites"], StoreFalse,
             "Run only specified command(s), don't run prerequisites");
+        ap.refer(&mut isolate_network)
+            .add_option(&["--isolate-network", "--no-network", "--no-net"], StoreTrue,
+            "Run command(s) inside isolated network");
         build_mode(&mut ap, &mut bmode);
         ap.refer(&mut commands)
           .add_option(&["-m", "--run-multi"], List, "
@@ -188,6 +193,7 @@ pub fn run() -> i32 {
         config_dir: cfg_dir.to_path_buf(),
         build_mode: bmode,
         prerequisites: prerequisites,
+        isolate_network: isolate_network,
     };
 
     if commands.len() > 0 {
