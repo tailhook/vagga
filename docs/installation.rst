@@ -176,7 +176,7 @@ Now your vagga is ready to go.
 .. _debian:
 
 Debian 8
-======
+========
 
 Install Vagga like in Ubuntu:
 

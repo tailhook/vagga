@@ -188,6 +188,7 @@ These parameters work for both kinds of commands:
 
         # any shell (but ugly)
         eval printf "'%s\0'" $VAGGACLI_TESTS | sed -z 's/^/--test=/' | xargs -0 somecmd
+
       ::
 
         # bash only

@@ -28,9 +28,9 @@ used to assign an environment variable that will be passed to the container::
     BAR
 
 The order of precedence for environment variables from the highest priority to
-the lowest::
+the lowest:
 
-1. Options ``-E/--environ`` in the command-line
+#. Options ``-E/--environ`` in the command-line
 #. Options ``-e/--use-env`` in the command-line
 #. ``VAGGAENV_*`` variables
 #. Variables set in command: ``environ`` option
