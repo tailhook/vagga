@@ -117,7 +117,7 @@ These parameters work for both kinds of commands:
       commands:
         test: !Supervise
           options: |
-            Usage: vagga test [--redis-port=<n>] [<tests>...]
+            Usage: vagga test [--redis-port=<n>] [options] [<tests>...]
 
             Options:
               -R, --redis-port <n>  Port to run redis on [default: 6379]
@@ -137,7 +137,12 @@ These parameters work for both kinds of commands:
    prefixed with ``VAGGAOPT_`` and ``VAGGACLI_`` (see below).
    Your scripts are free to use them however makes sense for your application.
 
-   .. note:: This setting overrides :opt:`accepts-arguments`
+   .. note::
+
+      * You should include ``[options]`` at least in one of the usage examples,
+        to have ``-h, --help`` working as well as other built-in options
+        (``--only, --except`` in supervise commands)
+      * This setting overrides :opt:`accepts-arguments`
 
    Every argument is translated into two variables:
 
