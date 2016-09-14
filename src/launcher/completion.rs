@@ -71,6 +71,11 @@ const GLOBAL_OPTIONS: &'static [&'static CommandOption<'static>] = &[
     NO_IMAGE_DOWNLOAD,
     NO_BUILD,
     NO_VERSION_CHECK,
+    &CommandOption {
+        names: &["--no-net", "--no-network", "--isolate-network"],
+        has_args: false,
+        single: true,
+    },
 ];
 
 const SUPERVISE_OPTIONS:

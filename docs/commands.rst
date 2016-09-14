@@ -399,3 +399,13 @@ Parameters of `!Supervise`
    signal (so they finish without being able to intercept signal
    unconditionally). If you don't like this behavior set the parameter to
    some large value.
+
+.. _isolate-network:
+
+.. opt:: isolate-network
+
+   Run all processes within isolated network namespace. Isolated network will
+   have only a loopback device, so processes won't have access to the internet.
+   For example, it is possible to run several test suites each start service
+   that binds the same port. Also you can run arbitrary command inside isolated
+   network using ``--isolate-network`` commandline option.

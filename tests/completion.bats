@@ -18,14 +18,14 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[@]} = "-V --version -E --env --environ -e --use-env \
 --ignore-owner-check --no-image-download --no-build \
---no-version-check" ]]
+--no-version-check --no-net --no-network --isolate-network" ]]
 
     run vagga _compgen -- --
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "--version --env --environ --use-env \
 --ignore-owner-check --no-image-download --no-build \
---no-version-check" ]]
+--no-version-check --no-net --no-network --isolate-network" ]]
 
     run vagga _compgen -- y
     printf "%s\n" "${lines[@]}"
@@ -56,14 +56,15 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "-V --version -E --env --environ -e --use-env \
---ignore-owner-check --no-image-download --no-version-check" ]]
+--ignore-owner-check --no-image-download --no-version-check \
+--no-net --no-network --isolate-network" ]]
 
     run vagga _compgen -E test=123 -- -
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "-V --version -E --env --environ -e --use-env \
 --ignore-owner-check --no-image-download --no-build \
---no-version-check" ]]
+--no-version-check --no-net --no-network --isolate-network" ]]
 
     run vagga _compgen -E test=123 -- d
     printf "%s\n" "${lines[@]}"

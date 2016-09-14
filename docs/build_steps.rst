@@ -404,6 +404,11 @@ Generic Commands
    work-dir
       (default ``/work``) Directory to run script in.
 
+   isolate-network
+      (default ``false``) See
+      :ref:`explanation of isolate-network <isolate-network>`
+      for ``!Supervise`` command type.
+
 .. step:: Download
 
    Downloads file and puts it somewhere in the file system.
