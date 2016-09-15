@@ -29,6 +29,10 @@ containers:
                --components=rust-std-x86_64-unknown-linux-musl"
     - !Sh 'ln -s /musl/lib/rustlib/x86_64-unknown-linux-musl /usr/lib/rustlib/x86_64-unknown-linux-musl'
     - !Install [musl-tools]
+    - &bulk !Tar
+      url: "http://files.zerogw.com/bulk/bulk-0.4.7.tar.gz"
+      sha256: faec9ee88ee079de3c7cfb95c5900489941b28b24b47411afaec1fae7a277546
+      path: /
 
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
@@ -120,6 +124,20 @@ commands:
       make all
       make ubuntu-package CHECKINSTALL_FLAGS=--strip=no
       make tarball
+
+  _package: !Command
+    description: Create a new kind of package with bulk
+    container: rust-musl
+    run: |
+      set -ex
+      version="$(git describe --dirty)"
+      rm -rf dist/pkg
+      rm target/x86_64-unknown-linux-musl/release/vagga || true # force rebuild
+      bulk with-version $version \
+        make release
+      DESTDIR=dist/pkg ./install.sh
+      bulk with-version $version \
+        bulk pack --dir dist/pkg
 
   test: !Command
     description: Run self tests

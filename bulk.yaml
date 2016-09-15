@@ -1,0 +1,53 @@
+minimum-bulk: v0.4.1
+
+metadata:
+  name: vagga
+  short-description: A containerisation tool without daemons
+  long-description: |
+    A containerization tool specialized in setting up container depdedencies,
+    running development environments and being first-class CI citizen.
+
+
+versions:
+- file: Cargo.toml
+  block-start: ^\[package\]
+  block-end: ^\[.*\]
+  regex: ^version\s*=\s*"(\S+)"
+
+- file: Cargo.lock
+  block-start: ^\[root\]
+  block-end: ^\[.*\]
+  regex: ^version\s*=\s*"(\S+)"
+
+- file: docs/conf.py
+  regex: ^version\s*=\s*'(\S+)'
+  partial-version: ^\d+\.\d+
+
+- file: docs/conf.py
+  regex: ^release\s*=\s*'(\S+)'
+
+- file: docs/installation.rst
+  regex: vagga-([\d\.]+)\.tar\.xz
+
+
+repositories:
+
+- kind: debian
+  suite: static
+  component: vagga
+  keep-releases: 1
+  match-version: ^\d+\.\d+\.\d+$
+  add-empty-i386-repo: true
+
+- kind: debian
+  suite: static
+  component: vagga-stable
+  keep-releases: 1000
+  match-version: ^\d+\.\d+\.\d+$
+  add-empty-i386-repo: true
+
+- kind: debian
+  suite: static
+  component: vagga-testing
+  keep-releases: 100
+  add-empty-i386-repo: true
