@@ -43,6 +43,8 @@ Links
 
 * `Container-only Linux Distribution <https://medium.com/p/container-only-linux-distribution-ff0497933c33>`_
 * `Containerized PHP Development Environments with Vagga <http://www.sitepoint.com/containerized-php-development-environments-with-vagga/>`_
+* `The story behind vagga (in russian) <https://dou.ua/lenta/articles/dou-labs-evo-vagga/>`_
+
 
 Documentation Contents
 ======================
