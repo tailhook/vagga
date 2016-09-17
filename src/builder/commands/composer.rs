@@ -15,6 +15,7 @@ use super::generic::{run_command, capture_command};
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
 use builder::download;
+use file_util::Dir;
 use process_util::capture_stdout;
 use file_util;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -221,7 +222,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
 }
 
 pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
-    try_msg!(file_util::create_dir(COMPOSER_HOME, true),
+    try_msg!(Dir::new(COMPOSER_HOME).recursive(true).create(),
         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
 
     let runtime_exe = ctx.composer_settings
@@ -299,7 +300,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
 
     // create conf.d
     if !conf_d.exists() {
-        try!(file_util::create_dir(&conf_d, true)
+        try!(Dir::new(&conf_d).recursive(true).create()
         .map_err(|e| format!("Error creating directory {:?}: {}", conf_d, e)));
     }
 

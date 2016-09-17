@@ -13,7 +13,7 @@ use super::super::config::command::ChildCommand as CC;
 use super::Wrapper;
 use super::util::{find_cmd, warn_if_data_container};
 use super::setup;
-use super::super::file_util::create_dir;
+use file_util::Dir;
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap};
 
@@ -57,7 +57,7 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
 
 fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
     let basedir = Path::new("/tmp/vagga");
-    try_msg!(create_dir(&basedir, false),
+    try_msg!(Dir::new(&basedir).create(),
              "Can't create dir: {err}");
     let mut file = try_msg!(File::create(&basedir.join("hosts")),
         "Can't create hosts file: {err}");

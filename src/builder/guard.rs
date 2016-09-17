@@ -11,7 +11,7 @@ use build_step::BuildStep;
 use container::util::clean_dir;
 use container::mount::{unmount, mount_system_dirs, mount_proc};
 use container::mount::unmount_system_dirs;
-use file_util::{create_dir, copy};
+use file_util::{Dir, copy};
 use path_util::IterSelfAndParents;
 
 
@@ -51,7 +51,7 @@ impl<'a> Guard<'a> {
             .map_err(|e| format!("Error copying uid_map: {}", e)));
         try!(copy("/proc/self/gid_map", "/vagga/container/gid_map")
             .map_err(|e| format!("Error copying gid_map: {}", e)));
-        try_msg!(create_dir("/vagga/root/etc", false),
+        try_msg!(Dir::new("/vagga/root/etc").create(),
              "Error creating /etc dir: {err}");
         try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));

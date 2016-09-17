@@ -8,10 +8,10 @@ use unshare::{Command, Stdio};
 use rand::{thread_rng, Rng};
 use regex::Regex;
 
-use super::super::super::file_util::create_dir;
 use super::super::context::{Context};
 use super::super::capsule;
 use super::super::packages;
+use file_util::Dir;
 use process_util::capture_stdout;
 use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -327,7 +327,7 @@ fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
 {
     try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
     try!(check_version(version));
-    try_msg!(create_dir("/vagga/root/etc/apk", true),
+    try_msg!(Dir::new("/vagga/root/etc/apk").recursive(true).create(),
         "Error creating apk dir: {err}");
     if !Path::new("/vagga/root/etc/apk/repositories").exists() {
         try!(File::create("/vagga/root/etc/apk/repositories")

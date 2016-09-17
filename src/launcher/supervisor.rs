@@ -18,7 +18,7 @@ use config::command::ChildCommand::{BridgeCommand};
 use tty_util::{TtyGuard};
 use super::network;
 use super::build::{build_container};
-use file_util::create_dir;
+use file_util::Dir;
 use process_util::{convert_status, killpg};
 use super::wrap::Wrapper;
 use launcher::volumes::prepare_volumes;
@@ -261,7 +261,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         let gwdir = network::namespace_dir();
         let nsdir = gwdir.join("children");
         if !nsdir.exists() {
-            try_msg!(create_dir(&nsdir, false),
+            try_msg!(Dir::new(&nsdir).create(),
                      "Failed to create dir: {err}");
         }
         try!(network::join_gateway_namespaces());

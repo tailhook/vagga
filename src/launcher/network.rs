@@ -22,7 +22,7 @@ use container::uidmap::get_max_uidmap;
 use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
 use sha2::{Sha256, Digest};
-use file_util::{create_dir_mode};
+use file_util::Dir;
 use process_util::{set_uidmap, env_command};
 
 static MAX_INTERFACES: u32 = 2048;
@@ -137,7 +137,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     let runtime_dir = namespace_dir();
     if !runtime_dir.exists() {
-        try_msg!(create_dir_mode(&runtime_dir, 0o755),
+        try_msg!(Dir::new(&runtime_dir).mode(0o755).create(),
             "Can't create runtime_dir: {err}");
     }
 

@@ -33,29 +33,82 @@ pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     Ok(res)
 }
 
-pub fn create_dir<P:AsRef<Path>>(path: P, recursive: bool) -> Result<(), Error>
+pub struct Dir<P: AsRef<Path>> {
+    path: P,
+    recursive: bool,
+    mode: Option<u32>,
+    uid: Option<uid_t>,
+    gid: Option<gid_t>,
+}
+
+impl<P> Dir<P> where P: AsRef<Path> {
+    pub fn new(path: P) -> Dir<P> {
+        Dir {
+            path: path,
+            recursive: false,
+            mode: None,
+            uid: None,
+            gid: None,
+        }
+    }
+
+    pub fn recursive(&mut self, recursive: bool) -> &mut Dir<P> {
+        self.recursive = recursive;
+        self
+    }
+
+    pub fn mode(&mut self, mode: u32) -> &mut Dir<P> {
+        self.mode = Some(mode);
+        self
+    }
+
+    pub fn uid(&mut self, uid: uid_t) -> &mut Dir<P> {
+        self.uid = Some(uid);
+        self
+    }
+
+    pub fn gid(&mut self, gid: gid_t) -> &mut Dir<P> {
+        self.gid = Some(gid);
+        self
+    }
+
+    pub fn create(&self) -> Result<(), Error> {
+        create_dir(self.path.as_ref(), self.recursive,
+            self.mode, self.uid, self.gid)
+    }
+}
+
+pub fn create_dir(path: &Path, recursive: bool,
+    mode: Option<u32>, uid: Option<uid_t>, gid: Option<gid_t>)
+    -> Result<(), Error>
 {
-    let path = path.as_ref();
     if path.is_dir() {
         return Ok(())
     }
     if recursive {
         match path.parent() {
-            Some(p) if p != path => try!(create_dir(p, true)),
+            Some(p) if p != path => {
+                try!(create_dir(p, true, mode, uid, gid));
+            }
             _ => {}
         }
     }
     try!(fs::create_dir(path));
-    try!(fs::set_permissions(path, fs::Permissions::from_mode(0o755)));
-    Ok(())
-}
-
-pub fn create_dir_mode(path: &Path, mode: u32) -> Result<(), Error> {
-    if path.is_dir() {
-        return Ok(())
+    try!(fs::set_permissions(path,
+        fs::Permissions::from_mode(mode.unwrap_or(0o755))));
+    if uid.is_some() || gid.is_some() {
+        let uid = if let Some(uid) = uid {
+            uid
+        } else {
+            try!(path.symlink_metadata()).uid()
+        };
+        let gid = if let Some(gid) = gid {
+            gid
+        } else {
+            try!(path.symlink_metadata()).gid()
+        };
+        try!(set_owner_group(path, uid, gid));
     }
-    try!(fs::create_dir(path));
-    try!(fs::set_permissions(path, fs::Permissions::from_mode(mode)));
     Ok(())
 }
 
@@ -73,7 +126,7 @@ pub fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
                                "Please run `unlink {0:?}`"), dir));
         }
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            try_msg!(create_dir(dir, false),
+            try_msg!(Dir::new(dir).create(),
                 "Can't create {dir:?}: {err}", dir=dir);
         }
         Err(ref e) => {
@@ -266,18 +319,11 @@ pub fn shallow_copy(src: &Path, src_stat: &Metadata, dest: &Path,
         // 3. Some directories (/proc, /sys, /dev) are mount points and we
         //    can't change the permissions
         if nstat.is_err() {
-            match mode {
-                Some(mode) => {
-                    try!(create_dir_mode(dest, mode));
-                },
-                None => {
-                    try!(fs::create_dir(dest));
-                    try!(fs::set_permissions(dest, src_stat.permissions()));
-                },
-            }
-            try!(set_owner_group(dest,
-                owner_uid.unwrap_or(src_stat.uid()),
-                owner_gid.unwrap_or(src_stat.gid())));
+            try!(Dir::new(dest)
+                .mode(mode.unwrap_or(src_stat.mode()))
+                .uid(owner_uid.unwrap_or(src_stat.uid()))
+                .gid(owner_gid.unwrap_or(src_stat.gid()))
+                .create());
         }
     } else if src_type.is_symlink() {
         let value = try!(fs::read_link(&src));

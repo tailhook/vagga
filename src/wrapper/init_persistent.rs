@@ -6,7 +6,7 @@ use nix::fcntl::O_PATH;
 use libc::{open, renameat};
 
 use config::volumes::PersistentInfo;
-use file_util::{Lock, create_dir, set_owner_group};
+use file_util::{Lock, Dir};
 use container::util::clean_dir;
 use path_util::ToCString;
 
@@ -31,7 +31,7 @@ impl PersistentVolumeGuard {
         if path.exists() {
             return Ok(None);
         }
-        try!(create_dir(&volbase, false));
+        try!(Dir::new(&volbase).create());
         let lockfile = volbase.join(format!(".tmp.{}.lock", vol.name));
         let lock = try!(Lock::exclusive(lockfile));
         if path.exists() {
@@ -42,8 +42,10 @@ impl PersistentVolumeGuard {
             try!(clean_dir(&tmpdir, false)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e)));
         }
-        try!(create_dir(&tmpdir, false));
-        try!(set_owner_group(&tmpdir, vol.owner_uid, vol.owner_gid));
+        try!(Dir::new(&tmpdir)
+            .uid(vol.owner_uid)
+            .gid(vol.owner_gid)
+            .create());
         let volumes_base = unsafe {
             open(volbase.to_cstring().as_ptr(), O_PATH.bits())
         };

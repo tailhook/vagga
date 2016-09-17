@@ -8,7 +8,7 @@ use quire::validate as V;
 use std::path::{Path, PathBuf};
 use container::util::{clean_dir};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use file_util::create_dir;
+use file_util::Dir;
 
 
 #[derive(Debug)]
@@ -92,7 +92,7 @@ pub fn ensure(path: &PathBuf)
                 "Path {:?} exists but not a directory", path)));
         },
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-            match create_dir(fpath, true) {
+            match Dir::new(fpath).recursive(true).create() {
                 Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => {
                     return Err(StepError::from(format!(
                         "Some intermediate path for {:?} exists \

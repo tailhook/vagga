@@ -17,7 +17,7 @@ use config::settings::Settings;
 use process_util::squash_stdio;
 use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
-use super::super::file_util::create_dir;
+use super::super::file_util::Dir;
 
 pub use self::Feature::*;
 
@@ -71,11 +71,11 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
     if !capsule.capsule_base {
         let cache_dir = Path::new("/vagga/cache/alpine-cache");
         if !cache_dir.exists() {
-            try_msg!(create_dir(&cache_dir, false),
+            try_msg!(Dir::new(&cache_dir).create(),
                  "Error creating cache dir: {err}");
         }
         let path = Path::new("/etc/apk/cache");
-        try_msg!(create_dir(&path, true),
+        try_msg!(Dir::new(&path).recursive(true).create(),
              "Error creating cache dir: {err}");
         try!(BindMount::new(&cache_dir, &path).mount()
              .map_err(|e| e.to_string()));

@@ -18,7 +18,7 @@ use libmount::BindMount;
 
 use container::util::clean_dir;
 use container::mount::{unmount};
-use file_util::{create_dir, create_dir_mode, Lock};
+use file_util::{Dir, Lock};
 use process_util::{capture_fd3_status, copy_env_vars};
 use super::Wrapper;
 use super::setup;
@@ -31,35 +31,35 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
         try!(clean_dir(path, true)
              .map_err(|x| format!("Error removing directory: {}", x)));
     }
-    try_msg!(create_dir(path, true),
+    try_msg!(Dir::new(path).recursive(true).create(),
          "Error creating directory: {err}");
     let rootdir = path.join("root");
-    try_msg!(create_dir(&rootdir, false),
+    try_msg!(Dir::new(&rootdir).create(),
          "Error creating directory: {err}");
 
     let tgtbase = Path::new("/vagga/container");
-    try_msg!(create_dir(&tgtbase, false),
+    try_msg!(Dir::new(&tgtbase).create(),
          "Error creating directory: {err}");
     try_msg!(BindMount::new(path, &tgtbase).mount(),
         "mount container: {err}");
 
     let tgtroot = Path::new("/vagga/root");
-    try_msg!(create_dir(&tgtroot, false),
+    try_msg!(Dir::new(&tgtroot).create(),
          "Error creating directory: {err}");
     try_msg!(BindMount::new(&rootdir, &tgtroot).mount(),
         "mount container root: {err}");
 
-    try_msg!(create_dir(&tgtroot.join("dev"), false),
+    try_msg!(Dir::new(&tgtroot.join("dev")).create(),
          "Error creating directory: {err}");
-    try_msg!(create_dir(&tgtroot.join("sys"), false),
+    try_msg!(Dir::new(&tgtroot.join("sys")).create(),
          "Error creating directory: {err}");
-    try_msg!(create_dir(&tgtroot.join("proc"), false),
+    try_msg!(Dir::new(&tgtroot.join("proc")).create(),
          "Error creating directory: {err}");
-    try_msg!(create_dir(&tgtroot.join("run"), false),
+    try_msg!(Dir::new(&tgtroot.join("run")).create(),
          "Error creating directory: {err}");
-    try_msg!(create_dir_mode(&tgtroot.join("tmp"), 0o1777),
+    try_msg!(Dir::new(&tgtroot.join("tmp")).mode(0o1777).create(),
          "Error creating directory: {err}");
-    try_msg!(create_dir(&tgtroot.join("work"), false),
+    try_msg!(Dir::new(&tgtroot.join("work")).create(),
          "Error creating directory: {err}");
     return Ok(());
 }
