@@ -128,7 +128,7 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
         if entry.is_dir() {
             let mode = try!(src.header().mode().map_err(&read_err));
             let mut dir_builder = Dir::new(&path);
-            dir_builder.mode(mode);
+            dir_builder.recursive(true).mode(mode);
             if preserve_owner {
                 dir_builder.uid(uid).gid(gid);
             }
