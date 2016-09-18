@@ -33,18 +33,20 @@ pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     Ok(res)
 }
 
-pub struct Dir<P: AsRef<Path>> {
-    path: P,
+pub struct Dir<'a> {
+    path: &'a Path,
     recursive: bool,
     mode: Option<u32>,
     uid: Option<uid_t>,
     gid: Option<gid_t>,
 }
 
-impl<P> Dir<P> where P: AsRef<Path> {
-    pub fn new(path: P) -> Dir<P> {
+impl<'a> Dir<'a> {
+    pub fn new<P: ?Sized>(path: &'a P) -> Dir<'a>
+        where P: AsRef<Path>
+    {
         Dir {
-            path: path,
+            path: path.as_ref(),
             recursive: false,
             mode: None,
             uid: None,
@@ -52,68 +54,65 @@ impl<P> Dir<P> where P: AsRef<Path> {
         }
     }
 
-    pub fn recursive(&mut self, recursive: bool) -> &mut Dir<P> {
+    pub fn recursive(&mut self, recursive: bool) -> &mut Dir<'a> {
         self.recursive = recursive;
         self
     }
 
-    pub fn mode(&mut self, mode: u32) -> &mut Dir<P> {
+    pub fn mode(&mut self, mode: u32) -> &mut Dir<'a> {
         self.mode = Some(mode);
         self
     }
 
-    pub fn uid(&mut self, uid: uid_t) -> &mut Dir<P> {
+    pub fn uid(&mut self, uid: uid_t) -> &mut Dir<'a> {
         self.uid = Some(uid);
         self
     }
 
-    pub fn gid(&mut self, gid: gid_t) -> &mut Dir<P> {
+    pub fn gid(&mut self, gid: gid_t) -> &mut Dir<'a> {
         self.gid = Some(gid);
         self
     }
 
     pub fn create(&self) -> Result<(), Error> {
-        create_dir(self.path.as_ref(), self.recursive,
-            self.mode, self.uid, self.gid, true)
+        self._create(self.path, true)
     }
-}
 
-fn create_dir(path: &Path, recursive: bool,
-    mode: Option<u32>, uid: Option<uid_t>, gid: Option<gid_t>,
-    is_last: bool)
-    -> Result<(), Error>
-{
-    if path.is_dir() {
-        return Ok(())
-    }
-    if recursive {
-        match path.parent() {
-            Some(p) if p != path => {
-                try!(create_dir(p, true, mode, uid, gid, false));
+    fn _create(&self, path: &Path, is_last: bool)
+        -> Result<(), Error>
+    {
+        if path.is_dir() {
+            return Ok(())
+        }
+        if self.recursive {
+            match path.parent() {
+                Some(p) if p != path => {
+                    try!(self._create(p, false));
+                }
+                _ => {}
             }
-            _ => {}
         }
-    }
-    try!(fs::create_dir(path));
-    let mode = if is_last { mode } else { None };
-    try!(fs::set_permissions(path,
-        fs::Permissions::from_mode(mode.unwrap_or(0o755))));
-    if is_last {
-        if uid.is_some() || gid.is_some() {
-            let uid = if let Some(uid) = uid {
-                uid
-            } else {
-                try!(path.symlink_metadata()).uid()
-            };
-            let gid = if let Some(gid) = gid {
-                gid
-            } else {
-                try!(path.symlink_metadata()).gid()
-            };
-            try!(set_owner_group(path, uid, gid));
+        try!(fs::create_dir(path));
+        let mode = if is_last { self.mode } else { None };
+        try!(fs::set_permissions(path,
+            fs::Permissions::from_mode(mode.unwrap_or(0o755))));
+        if is_last {
+            if self.uid.is_some() || self.gid.is_some() {
+                let uid = if let Some(uid) = self.uid {
+                    uid
+                } else {
+                    try!(path.symlink_metadata()).uid()
+                };
+                let gid = if let Some(gid) = self.gid {
+                    gid
+                } else {
+                    try!(path.symlink_metadata()).gid()
+                };
+                try!(set_owner_group(path, uid, gid));
+            }
         }
+        Ok(())
     }
-    Ok(())
 }
 
 pub fn safe_ensure_dir(dir: &Path) -> Result<(), String> {
