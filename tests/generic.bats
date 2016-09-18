@@ -284,7 +284,7 @@ setup() {
 
     [[ -d "${root}/opt/tmp/test" ]]
     [[ $(stat -c "%a" "${root}/opt") = "755" ]]
-    [[ $(stat -c "%a" "${root}/opt/tmp") = "775" ]]
+    [[ $(stat -c "%a" "${root}/opt/tmp") = "755" ]]
     [[ $(stat -c "%a" "${root}/opt/tmp/test") = "775" ]]
 }
 

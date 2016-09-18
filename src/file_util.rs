@@ -74,12 +74,13 @@ impl<P> Dir<P> where P: AsRef<Path> {
 
     pub fn create(&self) -> Result<(), Error> {
         create_dir(self.path.as_ref(), self.recursive,
-            self.mode, self.uid, self.gid)
+            self.mode, self.uid, self.gid, true)
     }
 }
 
-pub fn create_dir(path: &Path, recursive: bool,
-    mode: Option<u32>, uid: Option<uid_t>, gid: Option<gid_t>)
+fn create_dir(path: &Path, recursive: bool,
+    mode: Option<u32>, uid: Option<uid_t>, gid: Option<gid_t>,
+    is_last: bool)
     -> Result<(), Error>
 {
     if path.is_dir() {
@@ -88,26 +89,29 @@ pub fn create_dir(path: &Path, recursive: bool,
     if recursive {
         match path.parent() {
             Some(p) if p != path => {
-                try!(create_dir(p, true, mode, uid, gid));
+                try!(create_dir(p, true, mode, uid, gid, false));
             }
             _ => {}
         }
     }
     try!(fs::create_dir(path));
+    let mode = if is_last { mode } else { None };
     try!(fs::set_permissions(path,
         fs::Permissions::from_mode(mode.unwrap_or(0o755))));
-    if uid.is_some() || gid.is_some() {
-        let uid = if let Some(uid) = uid {
-            uid
-        } else {
-            try!(path.symlink_metadata()).uid()
-        };
-        let gid = if let Some(gid) = gid {
-            gid
-        } else {
-            try!(path.symlink_metadata()).gid()
-        };
-        try!(set_owner_group(path, uid, gid));
+    if is_last {
+        if uid.is_some() || gid.is_some() {
+            let uid = if let Some(uid) = uid {
+                uid
+            } else {
+                try!(path.symlink_metadata()).uid()
+            };
+            let gid = if let Some(gid) = gid {
+                gid
+            } else {
+                try!(path.symlink_metadata()).gid()
+            };
+            try!(set_owner_group(path, uid, gid));
+        }
     }
     Ok(())
 }
