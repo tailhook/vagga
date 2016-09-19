@@ -217,7 +217,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     // SIGTTOU and SIGTTIN be masked out
     let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
                                 SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
-    let mut tty_guard = try!(TtyGuard::capture_tty()
+    let mut tty_guard = try!(TtyGuard::new()
         .map_err(|e| format!("Error handling tty: {}", e)));
 
     let mut children = HashMap::new();

@@ -87,7 +87,7 @@ pub fn run_and_wait(cmd: &mut Command)
     let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
                                 SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
 
-    let mut tty_guard = try!(TtyGuard::capture_tty()
+    let mut tty_guard = try!(TtyGuard::new()
         .map_err(|e| format!("Error handling tty: {}", e)));
     cmd.make_group_leader(true);
 

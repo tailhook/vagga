@@ -47,7 +47,7 @@ impl TtyGuard {
             Ok(())
         })
     }
-    pub fn capture_tty() -> Result<TtyGuard, io::Error> {
+    pub fn new() -> Result<TtyGuard, io::Error> {
         let my_pgrp = unsafe { getpgrp() };
         if my_pgrp != 0 {
             // my_pgrp can be zero if group owner is outside of the PID ns
@@ -56,11 +56,10 @@ impl TtyGuard {
                     // after we determined which FD is a TTY there is no way
                     // to ensure that the same fd will be at the same number
                     // So we duplicate it:
-                    let mut guard = TtyGuard {
+                    let guard = TtyGuard {
                         tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
                         my_pgrp: unsafe { getpgrp() },
                     };
-                    try!(guard.take());
                     return Ok(guard)
                 }
             }
