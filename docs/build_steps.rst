@@ -472,8 +472,12 @@ Generic Commands
      default it's a root of the filesystem.
 
    subdir
-     Subdirectory inside the archive to extract. May be ``.`` to extract the
-     root of the archive.
+     (default ``.``) Subdirectory inside the archive to extract. ``.`` extracts
+     the root of the archive.
+
+   sha256
+     (optional) Sha256 hashsum of the archive. If real hashsum is different this
+     step will fail.
 
    **This command may be used to populate the container from scratch**
 
@@ -496,11 +500,15 @@ Generic Commands
      directory. Otherwise it's a url of the file to download.
 
    subdir
-     Subdirectory which command is run in. May be ``.`` to run command inside
-     the root of the archive.
+     (optional) Subdirectory which command is run in. May be ``.`` to run
+     command inside the root of the archive.
 
      The common case is having a single directory in the archive,
      and that directory is used as a working directory for script by default.
+
+   sha256
+     (optional) Sha256 hashsum of the archive. If real hashsum is different this
+     step will fail.
 
    script
      The command to use for installation of the archive. Default is effectively
@@ -509,6 +517,19 @@ Generic Commands
      The script is run with ``/bin/sh -exc``, to have better error hadling
      and display. Also this means that dash/bash-compatible shell should be
      installed in the previous steps under path ``/bin/sh``.
+
+.. step:: Unzip
+
+   Unpacks zip archive into container's filesystem.
+
+   All options is the same as for :step:`Tar` step.
+
+   Example::
+
+       - !Unzip
+         url: https://services.gradle.org/distributions/gradle-3.1-bin.zip
+         path: /opt/gradle
+         subdir: gradle-3.1
 
 .. step:: Git
 
