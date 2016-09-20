@@ -39,7 +39,7 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
     } else {
         let mut out = stdout();
         for (k, cmd) in config.commands.iter() {
-            if k.starts_with("_") && !hidden {
+            if k.starts_with("_") && !(hidden || all) {
                 continue;
             }
             out.write_all(k.as_bytes()).ok();
