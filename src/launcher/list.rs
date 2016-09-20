@@ -39,7 +39,7 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
     } else {
         let mut out = stdout();
         for (k, cmd) in config.commands.iter() {
-            if k.starts_with("_") && !hidden {
+            if k.starts_with("_") && !(hidden || all) {
                 continue;
             }
             out.write_all(k.as_bytes()).ok();
@@ -53,7 +53,14 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
                         }
                         out.write_all(b" ").ok();
                     }
-                    out.write_all(val.as_bytes()).ok();
+                    if val.contains("\n") {
+                        for line in val.lines() {
+                            out.write_all(line.as_bytes()).ok();
+                            out.write_all(b"\n                    ").ok();
+                        };
+                    } else {
+                        out.write_all(val.as_bytes()).ok();
+                    }
                 }
                 None => {}
             }
@@ -87,14 +94,21 @@ pub fn print_help(config: &Config)
         match cmd.description() {
             Some(ref val) => {
                 if k.len() > 19 {
-                    write!(&mut err, "\n                        ").ok();
+                    err.write_all(b"\n                        ").ok();
                 } else {
                     for _ in k.len()..19 {
                         err.write_all(b" ").ok();
                     }
                     err.write_all(b" ").ok();
                 }
-                err.write_all(val[..].as_bytes()).ok();
+                if val.contains("\n") {
+                    for line in val.lines() {
+                        err.write_all(line.as_bytes()).ok();
+                        err.write_all(b"\n                        ").ok();
+                    };
+                } else {
+                    err.write_all(val.as_bytes()).ok();
+                }
             }
             None => {}
         }
