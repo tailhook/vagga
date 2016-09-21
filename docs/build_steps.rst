@@ -522,7 +522,7 @@ Generic Commands
 
    Unpacks zip archive into container's filesystem.
 
-   All options is the same as for :step:`Tar` step.
+   All options are the same as for :step:`Tar` step.
 
    Example::
 
