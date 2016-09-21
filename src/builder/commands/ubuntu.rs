@@ -16,7 +16,7 @@ use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};
 use builder::distrib::{Distribution, Named, DistroBox};
-use file_util::{copy, create_dir, copy_utime};
+use file_util::{Dir, copy, copy_utime};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use container::util::clean_dir;
 
@@ -525,7 +525,7 @@ impl Distro {
             return Ok(());
         }
         let dir = Path::new("/vagga/root/var/lib/apt/lists");
-        try!(create_dir(dir, true));
+        try!(Dir::new(dir).recursive(true).create());
         ScanDir::files().read(&cache_dir, |iter| {
             for (entry, name) in iter {
                 let tmpname = dir.join(format!(".tmp.{}", name));
@@ -545,7 +545,7 @@ impl Distro {
         let dir = format!("/vagga/cache/apt-lists-{}",
             self.codename.as_ref().unwrap());
         let cache_dir = Path::new(&dir);
-        try!(create_dir(&cache_dir, false));
+        try!(Dir::new(&cache_dir).create());
         ScanDir::files().read("/vagga/root/var/lib/apt/lists", |iter| {
             for (entry, name) in iter {
                 if name == "lock" { continue };

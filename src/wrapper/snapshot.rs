@@ -5,7 +5,7 @@ use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use libmount::{BindMount, Tmpfs};
 
 use config::volumes::SnapshotInfo;
-use file_util::create_dir;
+use file_util::Dir;
 use container::mount::{unmount};
 use container::util::{copy_dir};
 
@@ -14,7 +14,7 @@ pub fn make_snapshot(src: &Path, dest: &Path, info: &SnapshotInfo)
     -> Result<(), String>
 {
     let tmp = Path::new("/tmp/mnt");
-    try_msg!(create_dir(&tmp, true),
+    try_msg!(Dir::new(&tmp).recursive(true).create(),
         "Error creating temporary mountpoint: {err}");
     let stat = try_msg!(symlink_metadata(&dest),
         "Error getting mountpoint metadata: {err}");

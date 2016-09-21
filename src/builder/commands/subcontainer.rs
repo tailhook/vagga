@@ -9,7 +9,7 @@ use config::containers::Container as Cont;
 use version::short_version;
 use container::mount::{remount_ro};
 use container::util::{copy_dir};
-use file_util::{create_dir, shallow_copy};
+use file_util::{Dir, shallow_copy};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 use builder::error::StepError as E;
@@ -123,7 +123,7 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
         } else if let Some(ref dest_rel) = binfo.temporary_mount {
             let dest = Path::new("/vagga/root")
                 .join(dest_rel.strip_prefix("/").unwrap());
-            try_msg!(create_dir(&dest, false),
+            try_msg!(Dir::new(&dest).create(),
                 "Error creating destination dir: {err}");
             try!(BindMount::new(&path, &dest).mount());
             try!(remount_ro(&dest));

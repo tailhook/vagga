@@ -270,6 +270,24 @@ setup() {
     [[ $link = ".roots/vagga.70efbe78/root" ]]
 }
 
+@test "generic: tar without intermediate dirs" {
+    rm -rf tmp tmp.tar.gz
+    mkdir -p tmp/test
+    chmod -R 0775 tmp
+    tar czf tmp.tar.gz tmp/test
+
+    run vagga _build tar-no-intermediate-dir
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/tar-no-intermediate-dir"
+    link=$(readlink "${root}")
+    [[ $link = ".roots/tar-no-intermediate-dir.65adeec0/root" ]]
+
+    [[ -d "${root}/opt/tmp/test" ]]
+    [[ $(stat -c "%a" "${root}/opt") = "755" ]]
+    [[ $(stat -c "%a" "${root}/opt/tmp") = "755" ]]
+    [[ $(stat -c "%a" "${root}/opt/tmp/test") = "775" ]]
+}
+
 @test "generic: test system dirs" {
     rm -rf tmp tmp.tar.gz
     mkdir tmp

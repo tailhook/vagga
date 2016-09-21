@@ -16,8 +16,7 @@ use container::mount::{unmount};
 use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
-use file_util::{read_visible_entries, create_dir, create_dir_mode,
-    copy_stream, set_owner_group};
+use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -128,10 +127,12 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
 
         if entry.is_dir() {
             let mode = try!(src.header().mode().map_err(&read_err));
-            try!(create_dir_mode(&path, mode).map_err(&write_err));
+            let mut dir_builder = Dir::new(&path);
+            dir_builder.recursive(true).mode(mode);
             if preserve_owner {
-                try!(set_owner_group(&path, uid, gid).map_err(&write_err));
+                dir_builder.uid(uid).gid(gid);
             }
+            try!(dir_builder.create().map_err(&write_err));
         } else if entry.is_symlink() {
             let src = try!(try!(src.header().link_name().map_err(&read_err))
                 .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
@@ -140,7 +141,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                 Err(e) => {
                     if e.kind() == io::ErrorKind::NotFound {
                         if let Some(parent) = path.parent() {
-                            try!(create_dir(parent, true).map_err(&write_err));
+                            try!(Dir::new(parent).recursive(true).create()
+                                .map_err(&write_err));
                             try!(symlink(&src, &path).map_err(&write_err))
                         } else {
                             return Err(write_err(e));
@@ -171,7 +173,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                 Err(e) => {
                     if e.kind() == io::ErrorKind::NotFound {
                         if let Some(parent) = path.parent() {
-                            try!(create_dir(parent, true).map_err(&write_err));
+                            try!(Dir::new(parent).recursive(true).create()
+                                .map_err(&write_err));
                             try!(File::create(&path).map_err(&write_err))
                         } else {
                             return Err(write_err(e));
@@ -201,7 +204,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
             Err(e) => {
                 if e.kind() == io::ErrorKind::NotFound {
                     if let Some(parent) = dst.parent() {
-                        try!(create_dir(parent, true).map_err(&write_err));
+                        try!(Dir::new(parent).recursive(true).create()
+                            .map_err(&write_err));
                         try!(hard_link(&src, &dst).map_err(&write_err))
                     } else {
                         return Err(write_err(e));
@@ -228,9 +232,11 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
         let tmppath = PathBuf::from("/vagga/root/tmp")
             .join(filename.file_name().unwrap());
         let tmpsub = tmppath.join(&tar.subdir);
-        try_msg!(create_dir(&tmpsub, true), "Error making dir: {err}");
+        try_msg!(Dir::new(&tmpsub).recursive(true).create(),
+            "Error making dir: {err}");
         if !fpath.exists() {
-            try_msg!(create_dir(&fpath, true), "Error making dir: {err}");
+            try_msg!(Dir::new(&fpath).recursive(true).create(),
+                "Error making dir: {err}");
         }
         try_msg!(BindMount::new(&fpath, &tmpsub).mount(),
             "temporary tar mount: {err}");

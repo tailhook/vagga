@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use libc::{uid_t, gid_t};
 
 use super::root::temporary_change_root;
-use file_util::{create_dir_mode, shallow_copy, set_owner_group};
+use file_util::{Dir, shallow_copy};
 
 quick_error!{
     #[derive(Debug)]
@@ -145,9 +145,11 @@ pub fn hardlink_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
                 let stat = try!(symlink_metadata(&oldp)
                     .map_err(|e| Stat(oldp.clone(), e)));
                 if !newp.is_dir() {
-                    try!(create_dir_mode(&newp, stat.mode())
-                        .map_err(|e| CreateDir(newp.clone(), e)));
-                    try!(set_owner_group(&newp, stat.uid(), stat.gid())
+                    try!(Dir::new(&newp)
+                            .mode(stat.mode())
+                            .uid(stat.uid())
+                            .gid(stat.gid())
+                            .create()
                         .map_err(|e| CreateDir(newp.clone(), e)));
                 }
                 stack.push(dir);  // Return dir to stack

@@ -20,8 +20,7 @@ use container::mount::{mount_proc, mount_dev};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
-use file_util::{create_dir, create_dir_mode, copy, safe_ensure_dir};
-use file_util::{set_owner_group};
+use file_util::{Dir, copy, safe_ensure_dir};
 use wrapper::snapshot::make_snapshot;
 use container::util::version_from_symlink;
 
@@ -173,17 +172,17 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
          .map_err(|e| format!("{}", e)));
 
     let proc_dir = mnt_dir.join("proc");
-    try_msg!(create_dir(&proc_dir, false),
+    try_msg!(Dir::new(&proc_dir).create(),
              "Error creating /proc: {err}");
     try!(mount_proc(&proc_dir));
 
     let dev_dir = mnt_dir.join("dev");
-    try_msg!(create_dir(&dev_dir, false),
+    try_msg!(Dir::new(&dev_dir).create(),
              "Error creating /dev: {err}");
     try!(mount_dev(&dev_dir));
 
     let sys_dir = mnt_dir.join("sys");
-    try_msg!(create_dir(&sys_dir, false),
+    try_msg!(Dir::new(&sys_dir).create(),
              "Error creating /sys: {err}");
     try_msg!(BindMount::new("/sys", &sys_dir).mount(), "mount /sys: {err}");
     let selinux = sys_dir.join("fs/selinux");
@@ -193,11 +192,11 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     }
 
     let vagga_dir = mnt_dir.join("vagga");
-    try_msg!(create_dir(&vagga_dir, false),
+    try_msg!(Dir::new(&vagga_dir).create(),
              "Error creating /vagga: {err}");
 
     let bin_dir = vagga_dir.join("bin");
-    try_msg!(create_dir(&bin_dir, false),
+    try_msg!(Dir::new(&bin_dir).create(),
              "Error creating /vagga/bin: {err}");
     try_msg!(BindMount::new(&current_exe().unwrap().parent().unwrap(),
                             &bin_dir)
@@ -205,7 +204,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(remount_ro(&bin_dir));
 
     let etc_dir = mnt_dir.join("etc");
-    try_msg!(create_dir(&etc_dir, false),
+    try_msg!(Dir::new(&etc_dir).create(),
              "Error creating /etc: {err}");
     try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
         .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
@@ -222,7 +221,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try!(safe_ensure_dir(&local_base.join(".transient")));
 
     let cache_dir = vagga_dir.join("cache");
-    try_msg!(create_dir(&cache_dir, false),
+    try_msg!(Dir::new(&cache_dir).create(),
         "Error creating /vagga/cache: {err}");
     let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
     try_msg!(BindMount::new(&locl_cache, &cache_dir).mount(),
@@ -230,19 +229,19 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
 
     if let Ok(nsdir) = env::var("VAGGA_NAMESPACE_DIR") {
         let newns_dir = vagga_dir.join("namespaces");
-        try_msg!(create_dir(&newns_dir, true),
+        try_msg!(Dir::new(&newns_dir).recursive(true).create(),
             "Error creating directory for namespaces: {err}");
         try_msg!(BindMount::new(&nsdir, &newns_dir).mount(),
              "namespace dir: {err}");
     }
 
     let volume_dir = mnt_dir.join("volumes");
-    try_msg!(create_dir(&volume_dir, false),
+    try_msg!(Dir::new(&volume_dir).create(),
         "Error creating /volumes: {err}");
     for (name, source_path) in &settings.external_volumes {
         let dest = volume_dir.join(name);
         if source_path.is_dir() {
-            try_msg!(create_dir(&dest, false),
+            try_msg!(Dir::new(&dest).create(),
                 "Error creating {p:?}: {err}", p=dest);
         } else {
             try_msg!(File::create(&dest),
@@ -253,14 +252,14 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     }
 
     let work_dir = mnt_dir.join("work");
-    try_msg!(create_dir(&work_dir, false),
+    try_msg!(Dir::new(&work_dir).create(),
         "Error creating /work: {err}");
     try_msg!(BindMount::new(project_root, &work_dir).mount(),
         "mount /work: {err}");
 
 
     let old_root = vagga_dir.join("old_root");
-    try_msg!(create_dir(&old_root, false),
+    try_msg!(Dir::new(&old_root).create(),
              "Error creating /vagga/old_root: {err}");
     try!(change_root(&mnt_dir, &old_root));
     try!(unmount(&Path::new("/work/.vagga/.mnt"))
@@ -363,7 +362,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
 {
     let tgtroot = Path::new("/vagga/root");
     if !tgtroot.exists() {
-        try_msg!(create_dir(&tgtroot, false),
+        try_msg!(Dir::new(&tgtroot).create(),
                  "Can't create rootfs mountpoint: {err}");
     }
     let image_base = Path::new("/vagga/base/.roots").join(container_ver);
@@ -381,7 +380,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 try_msg!(clean_dir(&newpath, true),
                         "Error removing dir: {err}");
             }
-            try_msg!(create_dir(&newpath, false),
+            try_msg!(Dir::new(&newpath).create(),
                      "Error creating directory: {err}");
             try_msg!(hardlink_dir(&oldpath, &newpath),
                 "Can't hardlink {p:?}: {err}", p=newpath);
@@ -407,7 +406,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
             .size_bytes(100 << 20)
             .mode(0o766)
             .mount().map_err(|e| format!("{}", e)));
-        try_msg!(create_dir_mode(&dest.join("shm"), 0o1777),
+        try_msg!(Dir::new(&dest.join("shm")).mode(0o1777).create(),
             "Error creating /run/shm: {err}");
     }
 
@@ -421,7 +420,9 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     .mode(params.mode)
                     .mount().map_err(|e| format!("{}", e)));
                 for (subpath, info) in &params.subdirs {
-                    try_msg!(create_dir_mode(&dest.join(&subpath), info.mode),
+                    try_msg!(Dir::new(&dest.join(&subpath))
+                            .mode(info.mode)
+                            .create(),
                         "Error creating subdir {sub:?} of {vol:?}: {err}",
                         sub=subpath, vol=path);
                 }
@@ -480,7 +481,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 if setup_info.tmp_volumes.contains(&info.name) {
                     let path = Path::new("/vagga/base/.volumes")
                         .join(&format!(".tmp.{}", info.name));
-                    try_msg!(create_dir(&path, true),
+                    try_msg!(Dir::new(&path).recursive(true).create(),
                         "error creating dir for volume {p:?}: {err}", p=path);
                     try_msg!(BindMount::new(&path, &dest).mount(),
                         "mount !BindRW: {err}");
@@ -488,12 +489,12 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     let path = Path::new("/vagga/base/.volumes")
                         .join(&info.name);
                     if info.init_command.is_none() {
-                        try_msg!(create_dir(&path, true),
+                        try_msg!(Dir::new(&path)
+                                .recursive(true)
+                                .uid(info.owner_uid)
+                                .gid(info.owner_gid)
+                                .create(),
                             "error creating dir for volume {p:?}: {err}",
-                            p=path);
-                        try_msg!(set_owner_group(&path,
-                            info.owner_uid, info.owner_gid),
-                            "error chowning dir for volume {p:?}: {err}",
                             p=path);
                     } else if !path.exists() {
                         return Err(format!("Internal error: \
@@ -508,7 +509,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     }
     if let Ok(_) = env::var("VAGGA_NAMESPACE_DIR") {
         let newns_dir = tgtroot.join("tmp/vagga/namespaces");
-        try_msg!(create_dir(&newns_dir, true),
+        try_msg!(Dir::new(&newns_dir).recursive(true).create(),
             "Error creating directory for namespaces: {err}");
         try_msg!(BindMount::new("/vagga/namespaces", &newns_dir).mount(),
             "mount namespaces: {err}");

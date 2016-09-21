@@ -9,7 +9,7 @@ use quire::validate as V;
 use builder::context::Context;
 use builder::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use file_util::{copy_stream, create_dir};
+use file_util::{Dir, copy_stream};
 
 
 #[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
@@ -59,7 +59,7 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
             continue;
         }
         if fin_name.ends_with("/") {
-            try_msg!(create_dir(&fout_path, true),
+            try_msg!(Dir::new(&fout_path).recursive(true).create(),
                 "Error creating dir: {err}");
         } else {
             let mut fout = try_msg!(File::create(&fout_path),

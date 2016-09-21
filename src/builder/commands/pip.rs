@@ -8,7 +8,7 @@ use super::super::context::{Context};
 use super::super::packages;
 use super::generic::{run_command_at_env, capture_command};
 use builder::distrib::Distribution;
-use file_util::create_dir;
+use file_util::Dir;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -199,7 +199,7 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
     let cache_root = Path::new("/vagga/root/tmp/pip-cache");
-    try_msg!(create_dir(&cache_root, true),
+    try_msg!(Dir::new(&cache_root).recursive(true).create(),
          "Error creating cache dir {d:?}: {err}", d=cache_root);
 
     try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache/http"),

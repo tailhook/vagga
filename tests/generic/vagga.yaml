@@ -159,6 +159,12 @@ containers:
       subdir: vagga
       path: /usr/lib/vagga
 
+  tar-no-intermediate-dir:
+    setup:
+    - !Tar
+      url: ./tmp.tar.gz
+      path: /opt
+
   sys-dirs:
     setup:
     - !Tar

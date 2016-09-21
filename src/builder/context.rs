@@ -17,7 +17,7 @@ use builder::commands::npm::NpmConfig;
 use super::capsule;
 use super::packages;
 use super::timer;
-use file_util::create_dir;
+use file_util::Dir;
 use process_util::PROXY_ENV_VARS;
 
 
@@ -117,11 +117,11 @@ impl<'a> Context<'a> {
         if self.cache_dirs.insert(path.to_path_buf(), name.clone()).is_none() {
             let cache_dir = Path::new("/vagga/cache").join(&name);
             if !cache_dir.exists() {
-                try_msg!(create_dir(&cache_dir, false),
+                try_msg!(Dir::new(&cache_dir).create(),
                      "Error creating cache dir: {err}");
             }
             let path = Path::new("/vagga/root").join(path);
-            try_msg!(create_dir(&path, true),
+            try_msg!(Dir::new(&path).recursive(true).create(),
                  "Error creating cache dir: {err}");
             try!(clean_dir(&path, false));
             try_msg!(BindMount::new(&cache_dir, &path).mount(),
