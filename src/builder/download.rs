@@ -16,10 +16,6 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     -> Result<PathBuf, String>
     where S: AsRef<str>
 {
-    let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
-    if https {
-        try!(capsule::ensure_features(ctx, &[capsule::Https]));
-    }
     let urlpath = Path::new(urls[0].as_ref());
     let hash = match sha256 {
         Some(ref sha256) => sha256[..8].to_string(),
@@ -44,6 +40,10 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     let filename = dir.join(&name);
     if filename.exists() {
         return Ok(filename);
+    }
+    let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
+    if https {
+        try!(capsule::ensure_features(ctx, &[capsule::Https]));
     }
     for url in urls {
         let url = url.as_ref();
