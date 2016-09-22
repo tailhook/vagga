@@ -1,0 +1,28 @@
+containers:
+  slapd:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install [slapd, ldap-utils]
+    volumes:
+      /var/lib/ldap: !Persistent ldap-db
+      /run: !Tmpfs
+        subdirs:
+          slapd:
+
+
+commands:
+  slapd: !Command
+    description: Run slapd
+    container: slapd
+    run:
+    - slapd
+    - -hldap://127.0.0.1:8389
+    - -dtrace
+  ldapsearch: !Command
+    description: Run ldapsearc
+    container: slapd
+    run:
+    - ldapsearch
+    - -Hldap://127.0.0.1:8389
+
