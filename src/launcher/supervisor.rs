@@ -6,8 +6,10 @@ use std::time::{Instant, Duration};
 use libmount::Tmpfs;
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU};
-use nix::sys::signal::{SIGQUIT, SIGKILL};
+use libc::kill;
+use nix::unistd::getpid;
+use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGTSTP};
+use nix::sys::signal::{SIGQUIT, SIGKILL, SIGSTOP, SIGCONT};
 use unshare::{Command, Namespace, reap_zombies, Fd};
 
 use options::build_mode::{build_mode, BuildMode};
@@ -215,8 +217,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
 
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
-    let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
-                                SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
+    let mut trap = Trap::trap(&[SIGINT, SIGQUIT, SIGTERM, SIGCHLD,
+                                SIGTTOU, SIGTTIN, SIGTSTP, SIGCONT]);
     let mut tty_guard = try!(TtyGuard::new()
         .map_err(|e| format!("Error handling tty: {}", e)));
 
@@ -370,6 +372,30 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     }
                     errcode = 128+SIGINT;
                     break;
+                }
+                SIGTSTP => {
+                    writeln!(&mut stderr(), "Received SIGTSTP signal. \
+                        Stopping children and self ..").ok();
+                    for &(cmd, ref child) in children.values() {
+                        if unsafe { killpg(child.pid(), SIGTSTP) } < 0 {
+                             error!("Error sending SIGTSTP to {:?}: {}", cmd,
+                                io::Error::last_os_error());
+                        }
+                    }
+                    if unsafe { kill(getpid(), SIGSTOP) } < 0 {
+                         error!("Error sending SIGSTOP to {}: {}", getpid(),
+                            io::Error::last_os_error());
+                    }
+                }
+                SIGCONT => {
+                    writeln!(&mut stderr(), "Received SIGCONT signal. Propagating ..")
+                        .ok();
+                    for &(cmd, ref child) in children.values() {
+                        if unsafe { killpg(child.pid(), SIGCONT) } < 0 {
+                             error!("Error sending SIGCONT to {:?}: {}", cmd,
+                                io::Error::last_os_error());
+                        }
+                    }
                 }
                 SIGTERM|SIGQUIT => {
                     // SIGTERM is usually sent to a specific process so we

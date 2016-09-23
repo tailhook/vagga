@@ -3,10 +3,11 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::FromRawFd;
 
-use libc::{getuid, c_int};
+use libc::{getuid, kill, c_int};
 use nix;
+use nix::unistd::getpid;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
-use nix::sys::signal::{SIGQUIT};
+use nix::sys::signal::{SIGQUIT, SIGTSTP, SIGSTOP};
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
@@ -18,7 +19,6 @@ use tty_util::{TtyGuard};
 extern {
     pub fn killpg(pgrp: c_int, sig: c_int) -> c_int;
 }
-
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
@@ -84,8 +84,8 @@ pub fn run_and_wait(cmd: &mut Command)
 {
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
-    let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
-                                SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
+    let mut trap = Trap::trap(&[SIGINT, SIGQUIT, SIGTERM, SIGCHLD,
+                                SIGTTOU, SIGTTIN, SIGTSTP, SIGCONT]);
 
     let mut tty_guard = try!(TtyGuard::new()
         .map_err(|e| format!("Error handling tty: {}", e)));
@@ -104,6 +104,24 @@ pub fn run_and_wait(cmd: &mut Command)
                 debug!("Received SIGINT signal. Waiting process to stop..");
                 if unsafe { killpg(child.pid(), SIGINT) } < 0 {
                      error!("Error sending SIGINT to {:?}: {}", cmd,
+                        io::Error::last_os_error());
+                }
+            }
+            SIGTSTP => {
+                debug!("Received SIGTSTP signal. Propagating ..");
+                if unsafe { killpg(child.pid(), SIGTSTP) } < 0 {
+                     error!("Error sending SIGTSTP to {:?}: {}", cmd,
+                        io::Error::last_os_error());
+                }
+                if unsafe { kill(getpid(), SIGSTOP) } < 0 {
+                     error!("Error sending SIGSTOP to {}: {}", getpid(),
+                        io::Error::last_os_error());
+                }
+            }
+            SIGCONT => {
+                debug!("Received SIGCONT signal. Propagating ..");
+                if unsafe { killpg(child.pid(), SIGCONT) } < 0 {
+                     error!("Error sending SIGCONT to {:?}: {}", cmd,
                         io::Error::last_os_error());
                 }
             }
