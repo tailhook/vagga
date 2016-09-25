@@ -375,7 +375,7 @@ The following ``pip`` package specification formats are supported:
 * Bare ``package_name`` (should be used only for one-off environments)
 * The ``git+`` and ``hg+`` links (the git and mercurial are installed as build
   dependency automatically), since vagga 0.4 ``git+https`` and ``hg+https``
-  are supported too (required installing ``ca-ceritificates`` manually before)
+  are supported too (required installing ``ca-certificates`` manually before)
 
 All other forms may work but not supported. Specifying command-line arguments
 instead of package names is not supported. To configure pip use ``!PipConfig``
