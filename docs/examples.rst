@@ -32,6 +32,7 @@ Databases
    examples/db/consul
    examples/db/elastic
    examples/db/influx
+   examples/db/rethinkdb
 
 
 Miscellaneous

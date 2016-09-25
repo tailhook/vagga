@@ -1,0 +1,42 @@
+#
+# Sample Vagga configuration for running RethinkDB server
+#
+
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuRepo
+      url: http://download.rethinkdb.com/apt
+      suite: xenial
+      components: [main]
+    - !Download
+      url: https://download.rethinkdb.com/apt/pubkey.gpg
+      path: /tmp/pubkey.gpg
+    - !Sh apt-key add /tmp/pubkey.gpg
+    - !Install [rethinkdb]
+    - !EnsureDir /data
+    volumes:
+      /data: !Persistent data
+
+  example-chat:
+    setup:
+    - !Alpine v3.4
+    - !Install [python]  # for node-gyp
+    - !NpmInstall [git://github.com/rethinkdb/rethinkdb-example-nodejs-chat.git]
+
+commands:
+
+  rethink: &rethink !Command
+    description: Run rethink database
+    container: ubuntu
+    run: [rethinkdb, --directory, /data]
+
+  example-chat: !Supervise
+    description: Run both rethink and example-chat
+    children:
+      rethink: *rethink
+      chat: !Command
+        container: example-chat
+        work-dir: /usr/lib/node_modules/awesome_chat2k/
+        run: [node, app]
