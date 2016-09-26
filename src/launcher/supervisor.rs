@@ -373,9 +373,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     errcode = 128+SIGINT;
                     break;
                 }
-                SIGTSTP => {
-                    writeln!(&mut stderr(), "Received SIGTSTP signal. \
-                        Stopping children and self ..").ok();
+                SIGTSTP|SIGTTIN|SIGTTOU => {
+                    writeln!(&mut stderr(), "Received some TTY signal: {}. \
+                        Stopping children and self ..", signal).ok();
                     for &(cmd, ref child) in children.values() {
                         if unsafe { killpg(child.pid(), SIGTSTP) } < 0 {
                              error!("Error sending SIGTSTP to {:?}: {}", cmd,

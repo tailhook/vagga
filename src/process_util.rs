@@ -107,8 +107,9 @@ pub fn run_and_wait(cmd: &mut Command, take_tty: bool)
                         io::Error::last_os_error());
                 }
             }
-            SIGTSTP => {
-                debug!("Received SIGTSTP signal. Propagating ..");
+            SIGTSTP|SIGTTOU|SIGTTIN => {
+                debug!("Received some TTY signal: {}. \
+                    Stopping child and self ..", signal);
                 if unsafe { killpg(child.pid(), SIGTSTP) } < 0 {
                      error!("Error sending SIGTSTP to {:?}: {}", cmd,
                         io::Error::last_os_error());
