@@ -365,8 +365,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     writeln!(&mut stderr(), "Received SIGINT signal. \
                         Waiting the processes to stop...").ok();
                     for &(cmd, ref child) in children.values() {
-                        if unsafe { killpg(child.pid(), SIGTERM) } < 0 {
-                             error!("Error sending SIGTERM to {:?}: {}", cmd,
+                        if unsafe { killpg(child.pid(), SIGINT) } < 0 {
+                             error!("Error sending SIGINT to {:?}: {}", cmd,
                                 io::Error::last_os_error());
                         }
                     }
