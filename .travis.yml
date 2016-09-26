@@ -11,15 +11,10 @@ matrix:
       env: TESTS="cargo alpine badcmd copy cyclic completion generic image network prerequisites readonly uidmap vcs version"
     - <<: *linux
       env: TESTS="inheritance subconfig ubuntu ubuntu_release"
-    # programing languages
     - <<: *linux
-      env: TESTS=pip
+      env: TESTS="npm pip"
     - <<: *linux
-      env: TESTS=composer
-    - <<: *linux
-      env: TESTS="gem_bundler gem_bundler_lock"
-    - <<: *linux
-      env: TESTS=npm
+      env: TESTS="composer gem_bundler gem_bundler_lock"
     - os: osx
 install:
 - "echo ubuntu-mirror: http://mirrors.us.kernel.org/ubuntu/ > ~/.vagga.yaml"
