@@ -79,7 +79,7 @@ pub fn capture_fd3_status(mut cmd: Command)
     Ok((status, buf))
 }
 
-pub fn run_and_wait(cmd: &mut Command)
+pub fn run_and_wait(cmd: &mut Command, take_tty: bool)
     -> Result<ExitStatus, String>
 {
     // Trap must be installed before tty_guard because TTY guard relies on
@@ -153,8 +153,11 @@ pub fn run_and_wait(cmd: &mut Command)
                         Stop(..) | Continue(..) | Death(..) => { }
                     }
                 }
-                try!(tty_guard.check().map_err(|e|
-                    format!("Error handling tty: {}", e)));
+                if take_tty {
+                    try!(tty_guard.check().map_err(|e|
+                        format!("Error handling tty: {}", e)));
+
+                }
             }
             _ => unreachable!(),
         }

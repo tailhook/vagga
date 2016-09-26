@@ -73,7 +73,7 @@ pub fn run_command(context: &Context, mut args: Vec<String>)
     try!(cmd.map_users_for(cinfo, &context.settings));
     cmd.gid(0);
     cmd.groups(Vec::new());
-    let res = run_and_wait(&mut cmd).map(convert_status);
+    let res = run_and_wait(&mut cmd, true).map(convert_status);
 
     if copy {
         let mut cmd: Command = Wrapper::new(None, &context.settings);
@@ -139,7 +139,7 @@ pub fn run_in_netns(context: &Context, cname: String, mut args: Vec<String>)
     cmd.arg(cname);
     cmd.arg(container.clone());
     cmd.args(&cmdargs);
-    run_and_wait(&mut cmd).map(convert_status)
+    run_and_wait(&mut cmd, true).map(convert_status)
 }
 
 pub fn version_hash(ctx: &Context, cname: &str, mut args: Vec<String>)

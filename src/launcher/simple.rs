@@ -95,7 +95,7 @@ pub fn run(cinfo: &CommandInfo, args: Args, version: Version,
         cmd.gid(0);
         cmd.groups(Vec::new());
     }
-    let res = run_and_wait(&mut cmd).map(convert_status);
+    let res = run_and_wait(&mut cmd, true).map(convert_status);
 
     if cinfo.write_mode != WriteMode::read_only {
         let mut cmd: Command = Wrapper::new(None, &context.settings);
