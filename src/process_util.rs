@@ -79,6 +79,10 @@ pub fn capture_fd3_status(mut cmd: Command)
     Ok((status, buf))
 }
 
+/// Runs command `cmd` and waits its termination. If `take_tty` is true
+/// then captures controlling terminal (if it's not owned)
+/// after command execution. In case of nested processes only top level
+/// process should take back tty.
 pub fn run_and_wait(cmd: &mut Command, take_tty: bool)
     -> Result<ExitStatus, String>
 {
