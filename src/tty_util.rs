@@ -2,8 +2,8 @@ use std::io;
 use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::fs::File;
 
-use libc::{c_int, pid_t};
-use libc::{getpgrp};
+use libc::{c_int, pid_t, ESRCH};
+use libc::{getpgrp, kill};
 use nix::sys::ioctl::ioctl;
 use nix::unistd::{isatty, dup};
 
@@ -41,8 +41,12 @@ impl TtyGuard {
     pub fn check(&mut self) -> Result<(), io::Error> {
         let &mut TtyGuard { ref tty, my_pgrp, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
-            if try!(unsafe { get_group(f.as_raw_fd()) }) == 0 {
-                try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+            let tty_owner_grp = try!(unsafe { get_group(f.as_raw_fd()) });
+            if tty_owner_grp != 0 {
+                let kill_res = unsafe { kill(tty_owner_grp, 0) };
+                if kill_res < 0 && io::Error::last_os_error().raw_os_error().unwrap() == ESRCH {
+                    try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+                }
             }
             Ok(())
         })

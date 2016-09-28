@@ -120,7 +120,7 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
         cmd.env(k, v);
     }
 
-    let result = run_and_wait(&mut cmd, false)
+    let result = run_and_wait(&mut cmd)
                 .map(convert_status);
     if result == Ok(0) {
         for guard in guards {

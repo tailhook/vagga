@@ -4,11 +4,6 @@ containers:
     - !Alpine v3.4
     - !Install [python3]
 
-  redis:
-    setup:
-    - !Alpine v3.4
-    - !Install [redis]
-
 commands:
   python: &python !Command
     container: python
@@ -16,14 +11,14 @@ commands:
 
   counter: !Command
     container: python
-    run: "python3 -c 'for i in range(1000000): print(i)'"
+    run: "python3 -c 'for i in range(1, 1000000): print(i)'"
 
   slow-counter: &slow-counter !Command
     container: python
     run: |
       python3 -c '
       import time
-      for i in range(1000000):
+      for i in range(1, 1000000):
           print(i)
           time.sleep(1)'
 
@@ -35,6 +30,10 @@ commands:
       for i in $(seq 1 1000000); do
         echo $i
         sleep 1
+        sleep_st=$?
+        if [ $sleep_st -ne 0 ] && [ $sleep_st -ne 130 ] && [ $sleep_st -ne 143 ]; then
+          exit $sleep_st
+        fi
       done
 
   run: !Supervise
@@ -47,8 +46,14 @@ commands:
       python: *python
       counter: *slow-counter
 
+  run-stuck: !Supervise
+    kill-unresponsive-after: 10
+    children:
+      counter1: *slow-counter
+      counter2: *stuck-counter
+
   run-interactive-stuck: !Supervise
-    kill-unresponsive-after: 5
+    kill-unresponsive-after: 10
     children:
       python: *python
       counter: *stuck-counter

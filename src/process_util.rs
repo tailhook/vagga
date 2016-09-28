@@ -79,11 +79,7 @@ pub fn capture_fd3_status(mut cmd: Command)
     Ok((status, buf))
 }
 
-/// Runs command `cmd` and waits its termination. If `take_tty` is true
-/// then captures controlling terminal (if it's not owned)
-/// after command execution. In case of nested processes only top level
-/// process should take back tty.
-pub fn run_and_wait(cmd: &mut Command, take_tty: bool)
+pub fn run_and_wait(cmd: &mut Command)
     -> Result<ExitStatus, String>
 {
     // Trap must be installed before tty_guard because TTY guard relies on
@@ -130,17 +126,26 @@ pub fn run_and_wait(cmd: &mut Command, take_tty: bool)
                         io::Error::last_os_error());
                 }
             }
-            SIGTERM|SIGQUIT => {
-                debug!("Received {} signal, propagating", signal);
-                child.signal(signal)
-                 .map_err(|e| error!("Error sending {} to {:?}: {}",
-                                     signal, cmd, e)).ok();
+            SIGTERM => {
+                debug!("Received SIGTERM signal. Propagating ..");
+                child.signal(SIGTERM)
+                    .map_err(|e| error!("Error sending SIGTERM to {:?}: {}",
+                        cmd, e)).ok();
+            }
+            SIGQUIT => {
+                debug!("Received SIGQUIT signal. Propagating ..");
+                if unsafe { killpg(child.pid(), SIGQUIT) } < 0 {
+                     error!("Error sending SIGQUIT to {:?}: {}", cmd,
+                        io::Error::last_os_error());
+                }
             }
             SIGCHLD => {
                 for event in child_events() {
                     use unshare::ChildEvent::*;
                     match event {
                         Death(pid, status) if pid == child.pid() => {
+                            try!(tty_guard.check().map_err(|e|
+                                format!("Error handling tty: {}", e)));
                             return Ok(status);
                         }
                         Stop(pid, SIGTTIN) | Stop(pid, SIGTTOU) => {
@@ -157,11 +162,6 @@ pub fn run_and_wait(cmd: &mut Command, take_tty: bool)
                         }
                         Stop(..) | Continue(..) | Death(..) => { }
                     }
-                }
-                if take_tty {
-                    try!(tty_guard.check().map_err(|e|
-                        format!("Error handling tty: {}", e)));
-
                 }
             }
             _ => unreachable!(),

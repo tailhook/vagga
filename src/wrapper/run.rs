@@ -99,5 +99,5 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         cmd.env(k.to_string(), v.to_string());
     }
 
-    run_and_wait(&mut cmd, false).map(convert_status)
+    run_and_wait(&mut cmd).map(convert_status)
 }

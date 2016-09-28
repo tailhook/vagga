@@ -6,11 +6,11 @@ use std::time::{Instant, Duration};
 use libmount::Tmpfs;
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
-use libc::kill;
+use libc::{kill, c_int, pid_t};
 use nix::unistd::getpid;
 use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGTSTP};
 use nix::sys::signal::{SIGQUIT, SIGKILL, SIGSTOP, SIGCONT};
-use unshare::{Command, Namespace, reap_zombies, Fd};
+use unshare::{Command, Child, Namespace, reap_zombies, Fd};
 
 use options::build_mode::{build_mode, BuildMode};
 use container::nsutil::{set_namespace, unshare_namespace};
@@ -362,50 +362,26 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     // SIGINT is usually a Ctrl+C, if we trap it here
                     // child process hasn't controlling terminal,
                     // so we send the signal to the child process
-                    writeln!(&mut stderr(), "Received SIGINT signal. \
-                        Waiting the processes to stop...").ok();
-                    for &(cmd, ref child) in children.values() {
-                        if unsafe { killpg(child.pid(), SIGINT) } < 0 {
-                             error!("Error sending SIGINT to {:?}: {}", cmd,
-                                io::Error::last_os_error());
-                        }
-                    }
+                    process_sigint(&children);
                     errcode = 128+SIGINT;
                     break;
                 }
                 SIGTSTP|SIGTTIN|SIGTTOU => {
-                    writeln!(&mut stderr(), "Received some TTY signal: {}. \
-                        Stopping children and self ..", signal).ok();
-                    for &(cmd, ref child) in children.values() {
-                        if unsafe { killpg(child.pid(), SIGTSTP) } < 0 {
-                             error!("Error sending SIGTSTP to {:?}: {}", cmd,
-                                io::Error::last_os_error());
-                        }
-                    }
-                    if unsafe { kill(getpid(), SIGSTOP) } < 0 {
-                         error!("Error sending SIGSTOP to {}: {}", getpid(),
-                            io::Error::last_os_error());
-                    }
+                    process_tty_signals(signal, &children);
                 }
                 SIGCONT => {
-                    writeln!(&mut stderr(), "Received SIGCONT signal. Propagating ..")
-                        .ok();
-                    for &(cmd, ref child) in children.values() {
-                        if unsafe { killpg(child.pid(), SIGCONT) } < 0 {
-                             error!("Error sending SIGCONT to {:?}: {}", cmd,
-                                io::Error::last_os_error());
-                        }
-                    }
+                    process_sigcont(&children);
                 }
-                SIGTERM|SIGQUIT => {
+                SIGTERM => {
                     // SIGTERM is usually sent to a specific process so we
                     // forward it to children
-                    writeln!(&mut stderr(), "Received {} signal, \
-                        propagating", signal).ok();
-                    for &(_, ref child) in children.values() {
-                        child.signal(SIGTERM).ok();
-                    }
-                    errcode = 128+signal;
+                    process_sigterm(&children);
+                    errcode = 128+SIGTERM;
+                    break;
+                }
+                SIGQUIT => {
+                    process_sigquit(&children);
+                    errcode = 128+SIGQUIT;
                     break;
                 }
                 SIGCHLD => {
@@ -423,11 +399,11 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                             for &(_, ref child) in children.values() {
                                 child.signal(SIGTERM).ok();
                             }
+                            try!(tty_guard.check().map_err(|e|
+                                format!("Error handling tty: {}", e)));
                             break 'signal_loop;
                         }
                     }
-                    try!(tty_guard.check().map_err(|e|
-                        format!("Error handling tty: {}", e)));
                     if children.len() == 0 {
                         break;
                     }
@@ -443,11 +419,20 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         let mut deadline = Instant::now() + Duration::from_secs(timeo as u64);
         loop {
             match trap.wait(deadline) {
-                Some(SIGINT) => {}
+                Some(SIGINT) => {
+                    process_sigint(&children);
+                }
+                Some(sig @ SIGTSTP)|Some(sig @ SIGTTIN)|Some(sig @ SIGTTOU) => {
+                    process_tty_signals(sig, &children);
+                }
+                Some(SIGCONT) => {
+                    process_sigcont(&children);
+                }
                 Some(SIGTERM) => {
-                    for &(_, ref child) in children.values() {
-                        child.signal(SIGTERM).ok();
-                    }
+                    process_sigterm(&children);
+                }
+                Some(SIGQUIT) => {
+                    process_sigquit(&children);
                 }
                 Some(SIGCHLD) => {
                     for (pid, _) in reap_zombies() {
@@ -486,4 +471,60 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     }
 
     Ok(errcode)
+}
+
+fn process_sigint(children: &HashMap<pid_t, (&String, Child)>) {
+    writeln!(&mut stderr(), "Received SIGINT signal. \
+        Waiting the processes to stop...").ok();
+    for &(cmd, ref child) in children.values() {
+        if unsafe { killpg(child.pid(), SIGINT) } < 0 {
+             error!("Error sending SIGINT to {:?}: {}", cmd,
+                io::Error::last_os_error());
+        }
+    }
+}
+
+fn process_tty_signals(signal: c_int, children: &HashMap<pid_t, (&String, Child)>)
+{
+    writeln!(&mut stderr(), "Received some TTY signal: {}. \
+        Stopping children and self ..", signal).ok();
+    for &(cmd, ref child) in children.values() {
+        if unsafe { killpg(child.pid(), SIGTSTP) } < 0 {
+             error!("Error sending SIGTSTP to {:?}: {}", cmd,
+                io::Error::last_os_error());
+        }
+    }
+    if unsafe { kill(getpid(), SIGSTOP) } < 0 {
+         error!("Error sending SIGSTOP to {}: {}", getpid(),
+            io::Error::last_os_error());
+    }
+}
+
+fn process_sigcont(children: &HashMap<pid_t, (&String, Child)>) {
+    writeln!(&mut stderr(), "Received SIGCONT signal. Propagating ..")
+        .ok();
+    for &(cmd, ref child) in children.values() {
+        if unsafe { killpg(child.pid(), SIGCONT) } < 0 {
+             error!("Error sending SIGCONT to {:?}: {}", cmd,
+                io::Error::last_os_error());
+        }
+    }
+}
+
+fn process_sigterm(children: &HashMap<pid_t, (&String, Child)>)
+{
+    for &(_, ref child) in children.values() {
+        child.signal(SIGTERM).ok();
+    }
+}
+
+fn process_sigquit(children: &HashMap<pid_t, (&String, Child)>)
+{
+    writeln!(&mut stderr(), "Received SIGQUIT signal. Propagating ..").ok();
+    for &(cmd, ref child) in children.values() {
+        if unsafe { killpg(child.pid(), SIGQUIT) } < 0 {
+             error!("Error sending SIGQUIT to {:?}: {}", cmd,
+                io::Error::last_os_error());
+        }
+    }
 }

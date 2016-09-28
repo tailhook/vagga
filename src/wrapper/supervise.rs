@@ -132,7 +132,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         cmd.env(k, v);
     }
 
-    run_and_wait(&mut cmd, false)
+    run_and_wait(&mut cmd)
     .map(convert_status)
     .map_err(|e| format!("Error running {:?}: {}", cmd, e))
 }
