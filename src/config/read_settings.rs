@@ -22,6 +22,7 @@ struct SecureSettings {
     push_image_script: Option<String>,
     build_lock_wait: Option<bool>,
     auto_apply_sysctl: Option<bool>,
+    environ: BTreeMap<String, String>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -39,7 +40,9 @@ pub fn secure_settings_validator<'a>(has_children: bool)
             V::Directory::new().is_absolute(true)))
         .member("push_image_script", V::Scalar::new().optional())
         .member("build_lock_wait", V::Scalar::new().optional())
-        .member("auto_apply_sysctl", V::Scalar::new().optional());
+        .member("auto_apply_sysctl", V::Scalar::new().optional())
+        .member("environ", V::Mapping::new(
+            V::Scalar::new(), V::Scalar::new()));
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -55,6 +58,7 @@ struct InsecureSettings {
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
     build_lock_wait: Option<bool>,
+    environ: BTreeMap<String, String>,
 }
 
 pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
@@ -62,7 +66,9 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
     .member("version_check", V::Scalar::new().optional())
     .member("shared_cache", V::Scalar::new().optional())
     .member("ubuntu_mirror", V::Scalar::new().optional())
-    .member("alpine_mirror", V::Scalar::new().optional()))
+    .member("alpine_mirror", V::Scalar::new().optional())
+    .member("environ", V::Mapping::new(
+        V::Scalar::new(), V::Scalar::new())))
 }
 
 #[derive(Debug)]
@@ -113,6 +119,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.auto_apply_sysctl {
         int_settings.auto_apply_sysctl = val;
     }
+    for (k, v) in &cfg.environ {
+        int_settings.environ.insert(k.clone(), v.clone());
+    }
     if let Some(cfg) = cfg.site_settings.get(project_root) {
         if let Some(ref dir) = cfg.storage_dir {
             ext_settings.storage_dir = Some(dir.clone());
@@ -142,6 +151,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.auto_apply_sysctl {
             int_settings.auto_apply_sysctl = val;
         }
+        for (k, v) in &cfg.environ {
+            int_settings.environ.insert(k.clone(), v.clone());
+        }
     }
     Ok(())
 }
@@ -165,6 +177,7 @@ pub fn read_settings(project_root: &Path)
         push_image_script: None,
         build_lock_wait: false,
         auto_apply_sysctl: false,
+        environ: BTreeMap::new(),
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {
@@ -215,6 +228,9 @@ pub fn read_settings(project_root: &Path)
         }
         if let Some(val) = cfg.build_lock_wait {
             int_settings.build_lock_wait = val;
+        }
+        for (k, v) in &cfg.environ {
+            int_settings.environ.insert(k.clone(), v.clone());
         }
     }
     return Ok((ext_settings, int_settings));

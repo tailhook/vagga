@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::collections::BTreeMap;
 
 use libc::{uid_t, gid_t};
 use rustc_serialize::json;
@@ -15,6 +16,7 @@ pub struct Settings {
     pub push_image_script: Option<String>,
     pub build_lock_wait: bool,
     pub auto_apply_sysctl: bool,
+    pub environ: BTreeMap<String, String>,
 }
 
 impl FromStr for Settings {
