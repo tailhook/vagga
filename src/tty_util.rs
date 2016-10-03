@@ -3,7 +3,8 @@ use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::fs::File;
 
 use libc::{c_int, pid_t};
-use libc::{getpgrp};
+use libc::{getpgrp, kill};
+use nix::errno::Errno;
 use nix::sys::ioctl::ioctl;
 use nix::unistd::{isatty, dup};
 
@@ -41,13 +42,17 @@ impl TtyGuard {
     pub fn check(&mut self) -> Result<(), io::Error> {
         let &mut TtyGuard { ref tty, my_pgrp, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
-            if try!(unsafe { get_group(f.as_raw_fd()) }) == 0 {
-                try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+            let tty_owner_grp = try!(unsafe { get_group(f.as_raw_fd()) });
+            if tty_owner_grp != 0 {
+                let kill_res = unsafe { kill(tty_owner_grp, 0) };
+                if kill_res < 0 && Errno::last() == Errno::ESRCH {
+                    try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+                }
             }
             Ok(())
         })
     }
-    pub fn capture_tty() -> Result<TtyGuard, io::Error> {
+    pub fn new() -> Result<TtyGuard, io::Error> {
         let my_pgrp = unsafe { getpgrp() };
         if my_pgrp != 0 {
             // my_pgrp can be zero if group owner is outside of the PID ns
@@ -56,11 +61,10 @@ impl TtyGuard {
                     // after we determined which FD is a TTY there is no way
                     // to ensure that the same fd will be at the same number
                     // So we duplicate it:
-                    let mut guard = TtyGuard {
+                    let guard = TtyGuard {
                         tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
                         my_pgrp: unsafe { getpgrp() },
                     };
-                    try!(guard.take());
                     return Ok(guard)
                 }
             }

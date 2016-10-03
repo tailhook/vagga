@@ -3,10 +3,12 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::FromRawFd;
 
-use libc::{getuid, c_int};
+use libc::{getuid, kill, c_int, pid_t};
+use libc::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
+use libc::{SIGQUIT, SIGTSTP, SIGSTOP};
 use nix;
-use nix::sys::signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
-use nix::sys::signal::{SIGQUIT};
+use nix::sys::signal::Signal;
+use nix::unistd::getpid;
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
@@ -18,7 +20,6 @@ use tty_util::{TtyGuard};
 extern {
     pub fn killpg(pgrp: c_int, sig: c_int) -> c_int;
 }
-
 
 pub static DEFAULT_PATH: &'static str =
     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
@@ -84,40 +85,46 @@ pub fn run_and_wait(cmd: &mut Command)
 {
     // Trap must be installed before tty_guard because TTY guard relies on
     // SIGTTOU and SIGTTIN be masked out
-    let mut trap = Trap::trap(&[SIGINT, SIGQUIT,
-                                SIGTERM, SIGCHLD, SIGTTOU, SIGTTIN]);
+    let mut trap = Trap::trap(&[SIGINT, SIGQUIT, SIGTERM, SIGCHLD,
+                                SIGTTOU, SIGTTIN, SIGTSTP, SIGCONT]);
 
-    let mut tty_guard = try!(TtyGuard::capture_tty()
+    let mut tty_guard = try!(TtyGuard::new()
         .map_err(|e| format!("Error handling tty: {}", e)));
     cmd.make_group_leader(true);
 
     info!("Running {:?}", cmd);
     let child = try!(cmd.spawn()
                      .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let cmd_name = &format!("{:?}", cmd);
+    let pid = getpid();
 
     for signal in trap.by_ref() {
         match signal {
-            SIGINT => {
+            SIGINT|SIGQUIT|SIGCONT => {
                 // SIGINT is usually a Ctrl+C, if we trap it here
                 // child process hasn't controlling terminal,
                 // so we send the signal to the child process
-                debug!("Received SIGINT signal. Waiting process to stop..");
-                if unsafe { killpg(child.pid(), SIGINT) } < 0 {
-                     error!("Error sending SIGINT to {:?}: {}", cmd,
-                        io::Error::last_os_error());
-                }
+                debug!("Received {:?} signal. Propagating ..",
+                    get_sig_name(signal));
+                send_pg_signal(signal, child.pid(), &cmd_name);
             }
-            SIGTERM|SIGQUIT => {
-                debug!("Received {} signal, propagating", signal);
-                child.signal(signal)
-                 .map_err(|e| error!("Error sending {} to {:?}: {}",
-                                     signal, cmd, e)).ok();
+            SIGTSTP|SIGTTOU|SIGTTIN => {
+                debug!("Received {:?} signal. Stopping child and self ..",
+                    get_sig_name(signal));
+                send_pg_signal(SIGTSTP, child.pid(), &cmd_name);
+                send_signal(SIGSTOP, pid, &pid.to_string());
+            }
+            SIGTERM => {
+                debug!("Received SIGTERM signal. Propagating ..");
+                send_signal(SIGTERM, child.pid(), &cmd_name);
             }
             SIGCHLD => {
                 for event in child_events() {
                     use unshare::ChildEvent::*;
                     match event {
                         Death(pid, status) if pid == child.pid() => {
+                            try!(tty_guard.check().map_err(|e|
+                                format!("Error handling tty: {}", e)));
                             return Ok(status);
                         }
                         Stop(pid, SIGTTIN) | Stop(pid, SIGTTOU) => {
@@ -135,13 +142,30 @@ pub fn run_and_wait(cmd: &mut Command)
                         Stop(..) | Continue(..) | Death(..) => { }
                     }
                 }
-                try!(tty_guard.check().map_err(|e|
-                    format!("Error handling tty: {}", e)));
             }
             _ => unreachable!(),
         }
     }
     unreachable!();
+}
+
+pub fn send_signal(sig: c_int, pid: pid_t, cmd_name: &String) {
+    if unsafe { kill(pid, sig) } < 0 {
+        error!("Error sending {:?} to {:?}: {}",
+            get_sig_name(sig), cmd_name, io::Error::last_os_error());
+    }
+}
+
+pub fn send_pg_signal(sig: c_int, pid: pid_t, cmd_name: &String) {
+    if unsafe { killpg(pid, sig) } < 0 {
+        error!("Error sending {:?} to {:?}: {}",
+            get_sig_name(sig), cmd_name, io::Error::last_os_error());
+    }
+}
+
+pub fn get_sig_name(sig: c_int) -> String {
+    Signal::from_c_int(sig).ok()
+        .map_or(sig.to_string(), |s| format!("{:?}", s))
 }
 
 pub fn convert_status(st: ExitStatus) -> i32 {
