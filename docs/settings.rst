@@ -184,3 +184,6 @@ not to do so.
     image. When this flag is set to ``true`` vagga will wait instead. This
     is mostly useful for CI systems.
 
+.. opt:: environ
+
+    The mapping, that overrides environment variables set in container or command.

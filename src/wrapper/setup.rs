@@ -311,6 +311,9 @@ pub fn get_environment(settings: &Settings, container: &Container,
             result.insert(k.to_string(), v.to_string());
         }
     }
+    for (ref k, ref v) in settings.environ.iter() {
+        result.insert(k.to_string(), v.to_string());
+    }
     for (k, v) in env::vars() {
         if k.starts_with("VAGGAENV_") {
             result.insert(k[9..].to_string(), v);

@@ -461,11 +461,31 @@ setup() {
 
     [[ $(vagga which-editor) = "vim" ]]
 
+    mkdir -p home
+    echo 'environ: {EDITOR: nvi}' > home/.vagga.yaml
+    export HOME=/work/tests/generic/home
+    [[ $(vagga _run environ env | grep 'EDITOR=') = "EDITOR=nvi" ]]
+    [[ $(vagga which-editor) = "nvi" ]]
+
+    echo 'environ: {EDITOR: nvi}
+site_settings:
+  /work/tests/generic:
+    environ: {EDITOR: elvis}' > home/.vagga.yaml
+    [[ $(vagga _run environ env | grep 'EDITOR=') = "EDITOR=elvis" ]]
+    [[ $(vagga which-editor) = "elvis" ]]
+
+    echo 'environ: {EDITOR: vile}' > .vagga/settings.yaml
+    [[ $(vagga _run environ env | grep 'EDITOR=') = "EDITOR=vile" ]]
+    [[ $(vagga which-editor) = "vile" ]]
+
     [[ $(VAGGAENV_EDITOR=pico vagga which-editor) = "pico" ]]
 
     [[ $(VAGGAENV_EDITOR=pico EDITOR=nano vagga --use-env EDITOR which-editor) = "nano" ]]
 
     [[ $(VAGGAENV_EDITOR=pico EDITOR=nano vagga --use-env EDITOR -E EDITOR=emacs which-editor) = "emacs" ]]
+
+    rm -rf home
+    rm -f .vagga/settings.yaml
 }
 
 @test "generic: Argument parsing for supervise" {

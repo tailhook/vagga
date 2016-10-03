@@ -33,6 +33,7 @@ the lowest:
 #. Options ``-E/--environ`` in the command-line
 #. Options ``-e/--use-env`` in the command-line
 #. ``VAGGAENV_*`` variables
+#. Variables set inside one of the settings files: ``environ`` option
 #. Variables set in command: ``environ`` option
 #. Variables set in container: ``environ`` option
 #. Variables set in container: ``environ-file`` option
