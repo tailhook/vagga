@@ -359,9 +359,6 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         'signal_loop: for signal in trap.by_ref() {
             match signal {
                 SIGINT|SIGQUIT => {
-                    // SIGINT is usually a Ctrl+C and SIGQUIT is a Ctrl+\,
-                    // if we trap it here child process hasn't controlling terminal,
-                    // so we send the signal to the child process
                     process_kbd_signal(signal, &children);
                     errcode = 128+signal;
                     break;
@@ -373,8 +370,6 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     process_sigcont(&children);
                 }
                 SIGTERM => {
-                    // SIGTERM is usually sent to a specific process so we
-                    // forward it to children
                     process_sigterm(&children);
                     errcode = 128+SIGTERM;
                     break;
@@ -465,6 +460,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     Ok(errcode)
 }
 
+/// SIGINT is usually a Ctrl+C and SIGQUIT is a Ctrl+\,
+/// if we trap it here child process hasn't controlling terminal,
+/// so we send the signal to the child process
 fn process_kbd_signal(sig: c_int, children: &HashMap<pid_t, (&String, Child)>) {
     writeln!(&mut stderr(), "Received {:?} signal. \
         Waiting the processes to stop...", get_sig_name(sig)).ok();
@@ -491,6 +489,8 @@ fn process_sigcont(children: &HashMap<pid_t, (&String, Child)>) {
     }
 }
 
+/// SIGTERM is usually sent to a specific process so we
+/// forward it to children
 fn process_sigterm(children: &HashMap<pid_t, (&String, Child)>) {
     writeln!(&mut stderr(), "Received {:?} signal. \
         Waiting the processes to stop...", get_sig_name(SIGTERM)).ok();
