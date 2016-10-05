@@ -153,7 +153,7 @@ pub fn version_hash(ctx: &Context, cname: &str, mut args: Vec<String>)
     let mut cmd: Command = Wrapper::new(None, &ctx.settings);
     cmd.workdir(&ctx.workdir);
     try!(cmd.map_users_for(
-        &ctx.config.get_container(&opt.container).unwrap(),
+        try!(ctx.config.get_container(&opt.container)),
         &ctx.settings));
     cmd.gid(0);
     cmd.groups(Vec::new());
