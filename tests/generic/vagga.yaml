@@ -397,3 +397,11 @@ commands:
     environ:
       EDITOR: vim
     run: echo $EDITOR
+
+  check-remount-options: !Command
+    container: snapshot-check-mode
+    volumes:
+      /home/hemingway: !BindRO /work/etc
+      /var/cache: !Empty
+    run: |
+      touch /home/hemingway/quote.txt

@@ -50,21 +50,6 @@ extern {
     fn umount2(target: *const u8, flags: c_int) -> c_int;
 }
 
-pub fn remount_ro(target: &Path) -> Result<(), String> {
-    let none = CString::new("none").unwrap();
-    debug!("Remount readonly: {:?}", target);
-    let c_target = target.to_cstring();
-    let rc = unsafe { mount(
-       none.as_bytes().as_ptr(),
-       c_target.as_bytes().as_ptr(),
-       null(), MS_BIND|MS_REMOUNT|MS_RDONLY, null()) };
-    if rc != 0 {
-        let err = IoError::last_os_error();
-        return Err(format!("Remount readonly {:?}: {}", target, err));
-    }
-    return Ok(());
-}
-
 pub fn mount_private(target: &Path) -> Result<(), String> {
     let none = CString::new("none").unwrap();
     let c_target = target.to_cstring();

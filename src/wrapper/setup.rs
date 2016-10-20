@@ -8,14 +8,14 @@ use std::os::unix::fs::{symlink};
 use std::path::{Path, PathBuf};
 
 use libc::pid_t;
-use libmount::{BindMount, Tmpfs};
+use libmount::{BindMount, Tmpfs, Remount};
 
 use config::{Container, Settings};
 use config::command::CommandInfo;
 use config::volumes::Volume;
 use config::volumes::Volume as V;
 use container::root::{change_root};
-use container::mount::{unmount, mount_system_dirs, remount_ro};
+use container::mount::{unmount, mount_system_dirs};
 use container::mount::{mount_proc, mount_dev};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
@@ -188,7 +188,9 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let selinux = sys_dir.join("fs/selinux");
     if selinux.is_dir() {
         // Need this go get some selinux-aware commands to work (see #65)
-        remount_ro(&sys_dir.join("fs/selinux"))?;
+        try_msg!(Remount::new(&sys_dir.join("fs/selinux"))
+                .bind(true).readonly(true).remount(),
+            "remount /sys/fs/selinux: {err}");
     }
 
     let vagga_dir = mnt_dir.join("vagga");
@@ -201,7 +203,8 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try_msg!(BindMount::new(&current_exe().unwrap().parent().unwrap(),
                             &bin_dir)
              .mount(), "mount /vagga/bin: {err}");
-    remount_ro(&bin_dir)?;
+    try_msg!(Remount::new(&bin_dir).bind(true).readonly(true).remount(),
+        "remount /vagga/bin: {err}");
 
     let etc_dir = mnt_dir.join("etc");
     try_msg!(Dir::new(&etc_dir).create(),
@@ -448,14 +451,16 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
             &V::BindRO(ref bindpath) => {
                 try_msg!(BindMount::new(&bindpath, &dest).mount(),
                     "mount !BindRO: {err}");
-                remount_ro(&dest)?;
+                try_msg!(Remount::new(&dest).bind(true).readonly(true).remount(),
+                    "remount !BindRO: {err}");
             }
             &V::Empty => {
                 Tmpfs::new(&dest)
                     .size_bytes(1)
                     .mode(0)
                     .mount().map_err(|e| format!("{}", e))?;
-                remount_ro(&dest)?;
+                try_msg!(Remount::new(&dest).bind(true).readonly(true).remount(),
+                    "remount !Empty: {err}");
             }
             &V::Snapshot(ref info) => {
                 let ref src = match info.container {
@@ -478,7 +483,8 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     .join(container_ver).join("root");
                 try_msg!(BindMount::new(&target, &dest).mount(),
                     "mount !Container: {err}");
-                remount_ro(&dest)?;
+                try_msg!(Remount::new(&dest).bind(true).readonly(true).remount(),
+                    "remount !Container: {err}");
             }
             &V::Persistent(ref info) => {
                 if setup_info.tmp_volumes.contains(&info.name) {
@@ -533,7 +539,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     //  hosts.  It's a bit ugly but bearable for development environments.
     //  Eventually we'll find a better way
     if setup_info.write_mode == WriteMode::ReadOnly {
-        if let Err(e) = remount_ro(&tgtroot) {
+        if let Err(e) = Remount::new(&tgtroot).bind(true).readonly(true).remount() {
             warn!("Failed to remount readonly root of the file system: {}. \
                 Some programs may overwrite files in initial system image. \
                 This is usually happen when root filesystem is on tmpfs. \

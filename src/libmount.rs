@@ -11,6 +11,7 @@ type gid_t = u32;
 pub struct BindMount;
 pub struct Tmpfs;
 pub struct Overlay;
+pub struct Remount;
 pub struct Error;
 pub struct OSError;
 
@@ -53,6 +54,14 @@ impl Overlay {
     }
     pub fn bare_mount(self) -> Result<(), OSError> { unimplemented!(); }
     pub fn mount(self) -> Result<(), Error> { unimplemented!(); }
+}
+
+impl Remount {
+    pub fn new<P: AsRef<Path>>(path: P) -> Remount { unimplemented!(); }
+    pub fn bind(mut self, flag: bool) -> Remount { unimplemented!(); }
+    pub fn readonly(mut self, flag: bool) -> Remount { unimplemented!(); }
+    pub fn bare_remount(self) -> Result<(), OSError> { unimplemented!(); }
+    pub fn remount(self) -> Result<(), Error> { unimplemented!(); }
 }
 
 impl fmt::Display for Error {
