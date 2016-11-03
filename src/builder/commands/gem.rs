@@ -155,6 +155,7 @@ fn scan_features(settings: &GemConfig, info: Option<&GemBundle>)
         res.push(packages::RubyDev);
     }
 
+    res.push(packages::Https);
     res.push(packages::Bundler);
 
     if let Some(info) = info {
