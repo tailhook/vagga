@@ -1,9 +1,7 @@
-use std::default::Default;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use quire::validate as V;
-use rustc_serialize::{Decoder};
 
 use super::builders::{builder_validator};
 use super::volumes::{Volume, volume_validator};

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use unshare::{Command, Fd};
 
-use config::command::{CommandInfo, Networking, WriteMode};
+use config::command::{CommandInfo, WriteMode};
 use process_util::{run_and_wait, convert_status};
 use super::build::{build_container};
 use super::wrap::Wrapper;

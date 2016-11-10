@@ -12,7 +12,6 @@ use file_util::copy;
 use self::context::{Context};
 use self::commands::tarcmd::unpack_file;
 use self::download::maybe_download_and_check_hashsum;
-use build_step::BuildStep;
 pub use self::guard::Guard;
 pub use self::error::StepError;
 

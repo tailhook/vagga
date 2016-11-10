@@ -4,7 +4,6 @@ use std::fs::File;
 use std::path::{PathBuf, Path, Component};
 
 use std::collections::BTreeMap;
-use rustc_serialize::{Decoder};
 
 use quire::{Options, Include, Error, ErrorCollector, Pos, parse_config};
 use quire::validate as V;

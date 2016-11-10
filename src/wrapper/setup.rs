@@ -4,7 +4,7 @@ use std::env::{current_exe};
 use std::io::{BufRead, BufReader, ErrorKind, Write};
 use std::fs::{read_link};
 use std::fs::File;
-use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
+use std::os::unix::fs::{symlink};
 use std::path::{Path, PathBuf};
 
 use libc::pid_t;

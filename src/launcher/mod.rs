@@ -11,7 +11,6 @@ use options::build_mode::{build_mode, BuildMode};
 use config::{Config, Settings, find_config};
 use config::read_settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
-use self::wrap::Wrapper;
 
 mod list;
 mod user;
