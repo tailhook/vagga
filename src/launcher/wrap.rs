@@ -76,8 +76,7 @@ impl Wrapper for Command {
     fn map_users_for(&mut self, container: &Container, settings: &Settings)
         -> Result<(), String>
     {
-        let uid_map = try!(map_users(settings,
-            &container.uids, &container.gids));
+        let uid_map = map_users(settings, &container.uids, &container.gids)?;
         set_uidmap(self, &uid_map, true);
         Ok(())
     }

@@ -116,7 +116,7 @@ pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     let cmdpath = if cmdline[0][..].starts_with("/") {
         PathBuf::from(&cmdline[0])
     } else {
-        try!(find_cmd(ctx, &cmdline[0]))
+        find_cmd(ctx, &cmdline[0])?
     };
 
     let mut cmd = Command::new(&cmdpath);
@@ -161,7 +161,7 @@ pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
     let cmdpath = if cmdline[0][..].starts_with("/") {
         PathBuf::from(&cmdline[0])
     } else {
-        try!(find_cmd(ctx, &cmdline[0]))
+        find_cmd(ctx, &cmdline[0])?
     };
 
     let mut cmd = Command::new(&cmdpath);
@@ -185,7 +185,7 @@ pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
     let mut cmd = if cmdpath.is_absolute() {
         Command::new(&cmdpath)
     } else {
-        Command::new(try!(find_cmd(ctx, cmdpath)))
+        Command::new(find_cmd(ctx, cmdpath)?)
     };
 
     cmd.current_dir("/work");
@@ -218,10 +218,10 @@ impl BuildStep for Sh {
         -> Result<(), StepError>
     {
         if build {
-            try!(run_command(&mut guard.ctx,
+            run_command(&mut guard.ctx,
                 &["/bin/sh".to_string(),
                   "-exc".to_string(),
-                  self.0.to_string()]));
+                  self.0.to_string()])?;
         }
         Ok(())
     }
@@ -241,7 +241,7 @@ impl BuildStep for Cmd {
         -> Result<(), StepError>
     {
         if build {
-            try!(run_command(&mut guard.ctx, &self.0));
+            run_command(&mut guard.ctx, &self.0)?;
         }
         Ok(())
     }

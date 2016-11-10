@@ -147,29 +147,29 @@ pub fn unmount(target: &Path) -> Result<(), String> {
 }
 
 pub fn mount_system_dirs() -> Result<(), String> {
-    try!(mount_dev(&Path::new("/vagga/root/dev")));
-    try!(BindMount::new("/sys", "/vagga/root/sys").mount()
-        .map_err(|e| e.to_string()));
-    try!(mount_proc(&Path::new("/vagga/root/proc")));
-    try!(BindMount::new("/work", "/vagga/root/work").mount()
-        .map_err(|e| e.to_string()));
+    mount_dev(&Path::new("/vagga/root/dev"))?;
+    BindMount::new("/sys", "/vagga/root/sys").mount()
+        .map_err(|e| e.to_string())?;
+    mount_proc(&Path::new("/vagga/root/proc"))?;
+    BindMount::new("/work", "/vagga/root/work").mount()
+        .map_err(|e| e.to_string())?;
     return Ok(())
 }
 
 pub fn unmount_system_dirs() -> Result<(), String> {
-    try!(unmount(Path::new("/vagga/root/work")));
-    try!(unmount(Path::new("/vagga/root/proc")));
-    try!(unmount(Path::new("/vagga/root/sys")));
-    try!(unmount(Path::new("/vagga/root/dev")));
+    unmount(Path::new("/vagga/root/work"))?;
+    unmount(Path::new("/vagga/root/proc"))?;
+    unmount(Path::new("/vagga/root/sys"))?;
+    unmount(Path::new("/vagga/root/dev"))?;
     Ok(())
 }
 
 pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
-    try!(BindMount::new("/dev", &dev_dir).mount()
-        .map_err(|e| e.to_string()));
+    BindMount::new("/dev", &dev_dir).mount()
+        .map_err(|e| e.to_string())?;
 
     let pts_dir = dev_dir.join("pts");
-    try!(mount_pseudo(&pts_dir, "devpts", "newinstance"));
+    mount_pseudo(&pts_dir, "devpts", "newinstance")?;
 
     let ptmx_path = dev_dir.join("ptmx");
     match read_link(&ptmx_path) {
@@ -184,8 +184,8 @@ pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
         }
         Err(ref e) if e.kind() == ErrorKind::InvalidInput => {
             // It's just a device. Let's try bind mount
-            try!(BindMount::new(pts_dir.join("ptmx"), &ptmx_path).mount()
-                .map_err(|e| e.to_string()));
+            BindMount::new(pts_dir.join("ptmx"), &ptmx_path).mount()
+                .map_err(|e| e.to_string())?;
         }
         Err(e) => {
             warn!("Can't stat /dev/ptmx: {}. \

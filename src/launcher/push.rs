@@ -18,9 +18,9 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
         Err(code) => return Ok(code),
     };
 
-    let cinfo = try!(ctx.config.get_container(&opt.name));
+    let cinfo = ctx.config.get_container(&opt.name)?;
 
-    let ver = try!(build_container(ctx, &opt.name, opt.build_mode));
+    let ver = build_container(ctx, &opt.name, opt.build_mode)?;
     let short_hash = match ver.rsplitn(2, ".").next() {
         Some(v) => v,
         None => return Err(format!("Incorrect container version")),
@@ -31,7 +31,7 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
     let image_path = Path::new("/vagga/base/.roots")
         .join(&ver)
         .join(image_name);
-    try!(pack_cmd.map_users_for(cinfo, &ctx.settings));
+    pack_cmd.map_users_for(cinfo, &ctx.settings)?;
     pack_cmd.gid(0);
     pack_cmd.groups(Vec::new());
     pack_cmd
@@ -83,7 +83,7 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
         },
     }
 
-    try!(remove_file(tmp_image_path).map_err(|e| format!("{}", e)));
+    remove_file(tmp_image_path).map_err(|e| format!("{}", e))?;
 
     Ok(0)
 }

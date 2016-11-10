@@ -61,9 +61,9 @@ impl BuildStep for Depends {
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.path);
-        let filter = try!(Filter::new(
-            &self.ignore_regex, &self.include_regex));
-        try!(hash_path(hash, &path, &filter, |h, p, st| {
+        let filter = Filter::new(
+            &self.ignore_regex, &self.include_regex)?;
+        hash_path(hash, &path, &filter, |h, p, st| {
             h.field("filename", p.as_os_str().as_bytes());
             // We hash only executable flag for files
             // as mode depends on the host system umask
@@ -72,10 +72,10 @@ impl BuildStep for Depends {
                 let is_executable = mode & EXE_CHECK_MASK > 0;
                 h.bool("is_executable", is_executable);
             }
-            try!(hash_file_content(h, p, st)
-                .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+            hash_file_content(h, p, st)
+                .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
             Ok(())
-        }));
+        })?;
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, _build: bool)
@@ -143,19 +143,19 @@ impl BuildStep for Copy {
     {
         let ref src = self.source;
         if src.starts_with("/work") {
-            let filter = try!(Filter::new(
-                &self.ignore_regex, &self.include_regex));
-            try!(hash_path(hash, src, &filter, |h, p, st| {
+            let filter = Filter::new(
+                &self.ignore_regex, &self.include_regex)?;
+            hash_path(hash, src, &filter, |h, p, st| {
                 h.field("filename", p.as_os_str().as_bytes());
                 if let Some(mode) = self.calc_mode(st) {
                     h.text("mode", mode);
                 }
                 h.text("uid", self.owner_uid.unwrap_or(st.uid()));
                 h.text("gid", self.owner_gid.unwrap_or(st.gid()));
-                try!(hash_file_content(h, p, st)
-                    .map_err(|e| VersionError::Io(e, PathBuf::from(p))));
+                hash_file_content(h, p, st)
+                    .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
                 Ok(())
-            }));
+            })?;
             hash.field("path", self.path.to_str().unwrap());
         } else {
             // We don't version the files outside of the /work because
@@ -187,16 +187,16 @@ impl BuildStep for Copy {
         temporary_change_root("/vagga/root", || {
             let ref src = self.source;
             let ref dest = self.path;
-            let ref typ = try!(src.symlink_metadata()
-                .map_err(|e| StepError::Read(src.into(), e)));
+            let ref typ = src.symlink_metadata()
+                .map_err(|e| StepError::Read(src.into(), e))?;
             if typ.is_dir() {
-                try!(shallow_copy(src, typ, dest,
+                shallow_copy(src, typ, dest,
                         self.owner_uid, self.owner_gid,
                         self.calc_mode(typ))
-                    .context((src, dest)));
-                let filter = try!(Filter::new(&self.ignore_regex, &self.include_regex));
+                    .context((src, dest))?;
+                let filter = Filter::new(&self.ignore_regex, &self.include_regex)?;
                 let mut processed_paths = HashSet::new();
-                try!(ScanDir::all().walk(src, |iter| {
+                ScanDir::all().walk(src, |iter| {
                     for (entry, _) in iter {
                         let fpath = entry.path();
                         // We know that directory is inside
@@ -212,23 +212,23 @@ impl BuildStep for Copy {
                             for parent in parents.iter().rev() {
                                 let ref fdest = dest.join(parent);
                                 let ref fsrc = src.join(parent);
-                                let ref fsrc_stat = try!(fsrc.symlink_metadata()
-                                    .map_err(|e| StepError::Read(src.into(), e)));
-                                try!(shallow_copy(fsrc, fsrc_stat, fdest,
+                                let ref fsrc_stat = fsrc.symlink_metadata()
+                                    .map_err(|e| StepError::Read(src.into(), e))?;
+                                shallow_copy(fsrc, fsrc_stat, fdest,
                                         self.owner_uid, self.owner_gid,
                                         self.calc_mode(fsrc_stat))
-                                     .context((fsrc, fdest)));
+                                     .context((fsrc, fdest))?;
                                 processed_paths.insert(PathBuf::from(parent));
                             }
                         }
                     }
                     Ok(())
-                }).map_err(StepError::ScanDir).and_then(|x| x));
+                }).map_err(StepError::ScanDir).and_then(|x| x)?;
             } else {
-                try!(shallow_copy(src, typ, dest,
+                shallow_copy(src, typ, dest,
                         self.owner_uid, self.owner_gid,
                         self.calc_mode(typ))
-                    .context((src, dest)));
+                    .context((src, dest))?;
             }
             Ok(())
         })
@@ -244,17 +244,17 @@ fn hash_path<F>(hash: &mut Digest, path: &Path, filter: &Filter, hash_file: F)
 {
     match path.symlink_metadata() {
         Ok(ref meta) if meta.file_type().is_dir() => {
-            try!(hash_file(hash, path, meta));
-            let all_rel_paths = try!(get_sorted_rel_paths(path, &filter));
+            hash_file(hash, path, meta)?;
+            let all_rel_paths = get_sorted_rel_paths(path, &filter)?;
             for rel_path in &all_rel_paths {
                 let ref abs_path = path.join(rel_path);
-                let stat = try!(abs_path.symlink_metadata()
-                    .map_err(|e| VersionError::Io(e, PathBuf::from(abs_path))));
-                try!(hash_file(hash, abs_path, &stat));
+                let stat = abs_path.symlink_metadata()
+                    .map_err(|e| VersionError::Io(e, PathBuf::from(abs_path)))?;
+                hash_file(hash, abs_path, &stat)?;
             }
         }
         Ok(ref meta) => {
-            try!(hash_file(hash, path, meta));
+            hash_file(hash, path, meta)?;
         }
         Err(ref e) if e.kind() == ErrorKind::NotFound => {
             return Err(VersionError::New);
@@ -294,10 +294,10 @@ fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     -> Result<(), io::Error>
 {
     if stat.file_type().is_file() {
-        let mut file = try!(File::open(&path));
-        try!(hash.stream(&mut file));
+        let mut file = File::open(&path)?;
+        hash.stream(&mut file)?;
     } else if stat.file_type().is_symlink() {
-        let data = try!(read_link(path));
+        let data = read_link(path)?;
         hash.input(data.as_os_str().as_bytes());
     }
     Ok(())
@@ -313,10 +313,10 @@ impl Filter {
         -> Result<Filter, RegexError>
     {
         Ok(Filter {
-            ignore_re: Some(try!(Regex::new(ignore_regex))),
+            ignore_re: Some(Regex::new(ignore_regex)?),
             include_re: match *include_regex {
                 Some(ref include_regex) => {
-                    Some(try!(Regex::new(include_regex)))
+                    Some(Regex::new(include_regex)?)
                 },
                 None => None,
             },

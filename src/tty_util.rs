@@ -27,14 +27,14 @@ impl TtyGuard {
     pub fn take(&mut self) -> Result<(), io::Error> {
         let &mut TtyGuard { ref tty, my_pgrp, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
-            try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+            unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) }?;
             Ok(())
         })
     }
     pub fn give(&mut self, pid: pid_t) -> Result<(), io::Error> {
         let &mut TtyGuard { ref tty, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
-            try!(unsafe { give_tty_to(f.as_raw_fd(), pid) });
+            unsafe { give_tty_to(f.as_raw_fd(), pid) }?;
             Ok(())
         })
     }
@@ -42,11 +42,11 @@ impl TtyGuard {
     pub fn check(&mut self) -> Result<(), io::Error> {
         let &mut TtyGuard { ref tty, my_pgrp, .. } = self;
         tty.as_ref().map_or(Ok(()), |f| {
-            let tty_owner_grp = try!(unsafe { get_group(f.as_raw_fd()) });
+            let tty_owner_grp = unsafe { get_group(f.as_raw_fd()) }?;
             if tty_owner_grp != 0 {
                 let kill_res = unsafe { kill(tty_owner_grp, 0) };
                 if kill_res < 0 && Errno::last() == Errno::ESRCH {
-                    try!(unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) });
+                    unsafe { give_tty_to(f.as_raw_fd(), my_pgrp) }?;
                 }
             }
             Ok(())
@@ -62,7 +62,7 @@ impl TtyGuard {
                     // to ensure that the same fd will be at the same number
                     // So we duplicate it:
                     let guard = TtyGuard {
-                        tty: Some(unsafe { File::from_raw_fd(try!(dup(i))) }),
+                        tty: Some(unsafe { File::from_raw_fd(dup(i)?) }),
                         my_pgrp: unsafe { getpgrp() },
                     };
                     return Ok(guard)

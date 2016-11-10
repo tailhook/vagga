@@ -22,8 +22,8 @@ pub struct Lock {
 
 pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let mut res = vec!();
-    for entry_ in try!(fs::read_dir(dir)) {
-        let entry = try!(entry_);
+    for entry_ in fs::read_dir(dir)? {
+        let entry = entry_?;
         if !entry.file_name()[..].to_str().map(|x| x.starts_with("."))
             .unwrap_or(false)
         {
@@ -87,28 +87,28 @@ impl<'a> Dir<'a> {
         if self.recursive {
             match path.parent() {
                 Some(p) if p != path => {
-                    try!(self._create(p, false));
+                    self._create(p, false)?;
                 }
                 _ => {}
             }
         }
-        try!(fs::create_dir(path));
+        fs::create_dir(path)?;
         let mode = if is_last { self.mode } else { None };
-        try!(fs::set_permissions(path,
-            fs::Permissions::from_mode(mode.unwrap_or(0o755))));
+        fs::set_permissions(path,
+            fs::Permissions::from_mode(mode.unwrap_or(0o755)))?;
         if is_last {
             if self.uid.is_some() || self.gid.is_some() {
                 let uid = if let Some(uid) = self.uid {
                     uid
                 } else {
-                    try!(path.symlink_metadata()).uid()
+                    path.symlink_metadata()?.uid()
                 };
                 let gid = if let Some(gid) = self.gid {
                     gid
                 } else {
-                    try!(path.symlink_metadata()).gid()
+                    path.symlink_metadata()?.gid()
                 };
-                try!(set_owner_group(path, uid, gid));
+                set_owner_group(path, uid, gid)?;
             }
         }
         Ok(())
@@ -174,20 +174,20 @@ fn _copy(from: &Path, to: &Path, mode: Option<u32>) -> io::Result<()> {
                               "the source path is not an existing regular file"))
     }
 
-    let mut reader = try!(fs::File::open(from));
-    let mut writer = try!(fs::File::create(to));
+    let mut reader = fs::File::open(from)?;
+    let mut writer = fs::File::create(to)?;
 
-    try!(copy_stream(&mut reader, &mut writer));
+    copy_stream(&mut reader, &mut writer)?;
 
     let perm = match mode {
         Some(mode) => {
             fs::Permissions::from_mode(mode)
         },
         None => {
-            try!(reader.metadata()).permissions()
+            reader.metadata()?.permissions()
         }
     };
-    try!(fs::set_permissions(to, perm));
+    fs::set_permissions(to, perm)?;
     Ok(())
 }
 
@@ -205,19 +205,19 @@ pub fn copy_stream(reader: &mut Read, writer: &mut Write)
             Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
             Err(e) => return Err(e),
         };
-        try!(writer.write_all(&buf[..len]));
+        writer.write_all(&buf[..len])?;
     }
     Ok(())
 }
 
 impl Lock {
     pub fn exclusive<P: AsRef<Path>>(p: P) -> Result<Lock, Error> {
-        let f = try!(fs::File::create(p));
-        try!(flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock)
+        let f = fs::File::create(p)?;
+        flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock)
             .map_err(|e| match e {
                 nix::Error::Sys(code) => Error::from_raw_os_error(code as i32),
                 nix::Error::InvalidPath => unreachable!(),
-            }));
+            })?;
         Ok(Lock {
             file: f,
         })
@@ -225,18 +225,18 @@ impl Lock {
     pub fn exclusive_wait<P: AsRef<Path>>(path: P, message: &str)
         -> Result<Lock, Error>
     {
-        let f = try!(fs::File::create(path));
+        let f = fs::File::create(path)?;
         match flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock) {
             Ok(()) => {}
             Err(nix::Error::Sys(nix::Errno::EAGAIN)) => {
                 warn!("{}", message);
-                try!(flock(f.as_raw_fd(), FlockArg::LockExclusive)
+                flock(f.as_raw_fd(), FlockArg::LockExclusive)
                     .map_err(|e| match e {
                         nix::Error::Sys(code) => {
                             Error::from_raw_os_error(code as i32)
                         },
                         nix::Error::InvalidPath => unreachable!(),
-                    }));
+                    })?;
             }
             Err(nix::Error::Sys(code)) => {
                 return Err(Error::from_raw_os_error(code as i32))
@@ -277,8 +277,8 @@ pub fn force_symlink(target: &Path, linkpath: &Path)
     -> Result<(), io::Error>
 {
     let tmpname = linkpath.with_extension(".vagga.tmp.link~");
-    try!(symlink(target, &tmpname));
-    try!(fs::rename(&tmpname, linkpath));
+    symlink(target, &tmpname)?;
+    fs::rename(&tmpname, linkpath)?;
     Ok(())
 }
 
@@ -322,26 +322,26 @@ pub fn shallow_copy(src: &Path, src_stat: &Metadata, dest: &Path,
         // 3. Some directories (/proc, /sys, /dev) are mount points and we
         //    can't change the permissions
         if nstat.is_err() {
-            try!(Dir::new(dest)
+            Dir::new(dest)
                 .mode(mode.unwrap_or(src_stat.mode()))
                 .uid(owner_uid.unwrap_or(src_stat.uid()))
                 .gid(owner_gid.unwrap_or(src_stat.gid()))
-                .create());
+                .create()?;
         }
     } else if src_type.is_symlink() {
-        let value = try!(fs::read_link(&src));
-        try!(force_symlink(&value, dest));
-        try!(set_owner_group(dest,
+        let value = fs::read_link(&src)?;
+        force_symlink(&value, dest)?;
+        set_owner_group(dest,
             owner_uid.unwrap_or(src_stat.uid()),
-            owner_gid.unwrap_or(src_stat.gid())));
+            owner_gid.unwrap_or(src_stat.gid()))?;
     } else {
         match mode {
-            Some(mode) => try!(copy_with_mode(src, dest, mode)),
-            None => try!(copy(src, dest)),
+            Some(mode) => copy_with_mode(src, dest, mode)?,
+            None => copy(src, dest)?,
         }
-        try!(set_owner_group(dest,
+        set_owner_group(dest,
             owner_uid.unwrap_or(src_stat.uid()),
-            owner_gid.unwrap_or(src_stat.gid())));
+            owner_gid.unwrap_or(src_stat.gid()))?;
     }
     Ok(!is_dir)
 }
@@ -349,7 +349,7 @@ pub fn shallow_copy(src: &Path, src_stat: &Metadata, dest: &Path,
 pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
     -> io::Result<()>
 {
-    let metadata = try!(fs::metadata(from.as_ref()));
+    let metadata = fs::metadata(from.as_ref())?;
     let filename = CString::new(to.as_ref().as_os_str().as_bytes())
                    .unwrap().as_ptr();
     let utimes = utimbuf {

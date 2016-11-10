@@ -72,19 +72,19 @@ pub fn run_command(cfg: &Config, kind: String, args: Vec<String>)
     -> Result<(), Result<i32, String>>
 {
     let graph = match &kind[..] {
-        "fullmesh" => try!(graphs::full_mesh_cmd(&cfg, args)),
-        "disjoint" => try!(graphs::disjoint_graph_cmd(&cfg, args)),
-        "split" => try!(graphs::split_graph_cmd(&cfg, args)),
-        "isolate" => try!(graphs::isolate_graph_cmd(&cfg, args)),
+        "fullmesh" => graphs::full_mesh_cmd(&cfg, args)?,
+        "disjoint" => graphs::disjoint_graph_cmd(&cfg, args)?,
+        "split" => graphs::split_graph_cmd(&cfg, args)?,
+        "isolate" => graphs::isolate_graph_cmd(&cfg, args)?,
         "run" => {
-            try!(run::run_command_cmd(&cfg, args));
+            run::run_command_cmd(&cfg, args)?;
             return Ok(());
         }
         _ => {
             return Err(Err(format!("Unknown command {}", kind)));
         }
     };
-    try!(apply_graph(graph).map_err(Err));
+    apply_graph(graph).map_err(Err)?;
     Ok(())
 }
 

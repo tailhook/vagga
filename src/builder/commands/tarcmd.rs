@@ -68,15 +68,15 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     info!("Unpacking {:?} -> {:?}", src, tgt);
     let read_err = |e| format!("Error reading {:?}: {}", src, e);
 
-    let mut file = try!(File::open(&src).map_err(&read_err));
+    let mut file = File::open(&src).map_err(&read_err)?;
 
     let mut buf = [0u8; 8];
-    let nbytes = try!(file.read(&mut buf).map_err(&read_err));
-    try!(file.seek(SeekFrom::Start(0)).map_err(&read_err));
+    let nbytes = file.read(&mut buf).map_err(&read_err)?;
+    file.seek(SeekFrom::Start(0)).map_err(&read_err)?;
     let magic = &buf[..nbytes];
     if magic.len() >= 2 && magic[..2] == [0x1f, 0x8b] {
         return unpack_stream(
-            try!(file.gz_decode().map_err(&read_err)),
+            file.gz_decode().map_err(&read_err)?,
             src, tgt, includes, excludes, preserve_owner);
     } else if magic.len() >= 6 && magic[..6] ==
         [ 0xFD, b'7', b'z', b'X', b'Z', 0x00]
@@ -100,9 +100,9 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
     let mut arc = Archive::new(file);
     let mut hardlinks = Vec::new();
 
-    for item in try!(arc.entries().map_err(&read_err)) {
-        let mut src = try!(item.map_err(&read_err));
-        let path_ref = try!(src.path().map_err(&read_err))
+    for item in arc.entries().map_err(&read_err)? {
+        let mut src = item.map_err(&read_err)?;
+        let path_ref = src.path().map_err(&read_err)?
             .to_path_buf();
         let mut orig_path: &Path = &path_ref;
         if orig_path.is_absolute() {
@@ -126,24 +126,24 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
         let gid = src.header().gid().unwrap_or(0);
 
         if entry.is_dir() {
-            let mode = try!(src.header().mode().map_err(&read_err));
+            let mode = src.header().mode().map_err(&read_err)?;
             let mut dir_builder = Dir::new(&path);
             dir_builder.recursive(true).mode(mode);
             if preserve_owner {
                 dir_builder.uid(uid).gid(gid);
             }
-            try!(dir_builder.create().map_err(&write_err));
+            dir_builder.create().map_err(&write_err)?;
         } else if entry.is_symlink() {
-            let src = try!(try!(src.header().link_name().map_err(&read_err))
-                .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
+            let src = src.header().link_name().map_err(&read_err)?
+                .ok_or(format!("Error unpacking {:?}, broken symlink", path))?;
             match symlink(&src, &path) {
                 Ok(_) => {},
                 Err(e) => {
                     if e.kind() == io::ErrorKind::NotFound {
                         if let Some(parent) = path.parent() {
-                            try!(Dir::new(parent).recursive(true).create()
-                                .map_err(&write_err));
-                            try!(symlink(&src, &path).map_err(&write_err))
+                            Dir::new(parent).recursive(true).create()
+                                .map_err(&write_err)?;
+                            symlink(&src, &path).map_err(&write_err)?
                         } else {
                             return Err(write_err(e));
                         }
@@ -153,8 +153,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                 }
             };
         } else if entry.is_hard_link() {
-            let link = try!(try!(src.link_name().map_err(&read_err))
-                .ok_or(format!("Error unpacking {:?}, broken symlink", path)));
+            let link = src.link_name().map_err(&read_err)?
+                .ok_or(format!("Error unpacking {:?}, broken symlink", path))?;
             let link = if link.is_absolute() {
                 link.strip_prefix("/").unwrap()
             } else {
@@ -173,9 +173,9 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                 Err(e) => {
                     if e.kind() == io::ErrorKind::NotFound {
                         if let Some(parent) = path.parent() {
-                            try!(Dir::new(parent).recursive(true).create()
-                                .map_err(&write_err));
-                            try!(File::create(&path).map_err(&write_err))
+                            Dir::new(parent).recursive(true).create()
+                                .map_err(&write_err)?;
+                            File::create(&path).map_err(&write_err)?
                         } else {
                             return Err(write_err(e));
                         }
@@ -184,14 +184,14 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
                     }
                 }
             };
-            try!(copy_stream(&mut src, &mut dest).map_err(|e|
+            copy_stream(&mut src, &mut dest).map_err(|e|
                 format!("Error unpacking {:?} -> {:?}: {}",
-                        srcpath, path, e)));
-            let mode = try!(src.header().mode().map_err(&read_err));
-            try!(set_permissions(&path, Permissions::from_mode(mode))
-                .map_err(&write_err));
+                        srcpath, path, e))?;
+            let mode = src.header().mode().map_err(&read_err)?;
+            set_permissions(&path, Permissions::from_mode(mode))
+                .map_err(&write_err)?;
             if preserve_owner {
-                try!(set_owner_group(&path, uid, gid).map_err(&write_err));
+                set_owner_group(&path, uid, gid).map_err(&write_err)?;
             }
         }
     }
@@ -204,9 +204,9 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
             Err(e) => {
                 if e.kind() == io::ErrorKind::NotFound {
                     if let Some(parent) = dst.parent() {
-                        try!(Dir::new(parent).recursive(true).create()
-                            .map_err(&write_err));
-                        try!(hard_link(&src, &dst).map_err(&write_err))
+                        Dir::new(parent).recursive(true).create()
+                            .map_err(&write_err)?;
+                        hard_link(&src, &dst).map_err(&write_err)?
                     } else {
                         return Err(write_err(e));
                     }
@@ -223,11 +223,11 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root")
         .join(tar.path.strip_prefix("/").unwrap());
-    let (filename, _) = try!(maybe_download_and_check_hashsum(
-        ctx, &tar.url, tar.sha256.clone()));
+    let (filename, _) = maybe_download_and_check_hashsum(
+        ctx, &tar.url, tar.sha256.clone())?;
 
     if &Path::new(&tar.subdir) == &Path::new(".") {
-        try!(unpack_file(ctx, &filename, &fpath, &[], &[], false));
+        unpack_file(ctx, &filename, &fpath, &[], &[], false)?;
     } else {
         let tmppath = PathBuf::from("/vagga/root/tmp")
             .join(filename.file_name().unwrap());
@@ -246,8 +246,8 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
             unpack_file(ctx, &filename, &tmppath,
                 &[&tar.subdir.clone()], &[], false)
         };
-        try!(unmount(&tmpsub));
-        try!(res);
+        unmount(&tmpsub)?;
+        res?;
     }
     Ok(())
 }
@@ -255,21 +255,21 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
-    let (filename, _) = try!(maybe_download_and_check_hashsum(
-        ctx, &tar.url, tar.sha256.clone()));
+    let (filename, _) = maybe_download_and_check_hashsum(
+        ctx, &tar.url, tar.sha256.clone())?;
 
     let tmppath = PathBuf::from("/vagga/root/tmp")
         .join(filename.file_name().unwrap());
-    try!(create_dir_all(&tmppath)
-         .map_err(|e| format!("Error making dir: {}", e)));
-    try!(set_permissions(&tmppath, Permissions::from_mode(0o755))
-         .map_err(|e| format!("Error setting permissions: {}", e)));
-    try!(unpack_file(ctx, &filename, &tmppath, &[], &[], false));
+    create_dir_all(&tmppath)
+         .map_err(|e| format!("Error making dir: {}", e))?;
+    set_permissions(&tmppath, Permissions::from_mode(0o755))
+         .map_err(|e| format!("Error setting permissions: {}", e))?;
+    unpack_file(ctx, &filename, &tmppath, &[], &[], false)?;
     let workdir = if let Some(ref subpath) = tar.subdir {
         tmppath.join(subpath)
     } else {
-        let items = try!(read_visible_entries(&tmppath)
-            .map_err(|e| format!("Error reading dir: {}", e)));
+        let items = read_visible_entries(&tmppath)
+            .map_err(|e| format!("Error reading dir: {}", e))?;
         if items.len() != 1 {
             if items.len() == 0 {
                 return Err("Tar archive was empty".to_string());
@@ -307,7 +307,7 @@ impl BuildStep for Tar {
         -> Result<(), StepError>
     {
         if build {
-            try!(tar_command(&mut guard.ctx, self));
+            tar_command(&mut guard.ctx, self)?;
         }
         Ok(())
     }
@@ -334,7 +334,7 @@ impl BuildStep for TarInstall {
         -> Result<(), StepError>
     {
         if build {
-            try!(tar_install(&mut guard.ctx, self));
+            tar_install(&mut guard.ctx, self)?;
         }
         Ok(())
     }

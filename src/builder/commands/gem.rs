@@ -76,7 +76,7 @@ fn no_doc_args(ctx: &mut Context) -> Result<Vec<&'static str>, String> {
     if ctx.gem_settings.update_gem {
         Ok(vec!("--no-document"))
     } else {
-        let version = try!(gem_version(ctx));
+        let version = gem_version(ctx)?;
         if version < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
             Ok(vec!("--no-rdoc", "--no-ri"))
         } else {
@@ -94,15 +94,15 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
         "--version".to_owned(),
     ];
 
-    let gem_ver = try!(capture_command(ctx, &args, &[])
+    let gem_ver = capture_command(ctx, &args, &[])
         .and_then(|x| String::from_utf8(x)
             .map_err(|e| format!("Error parsing gem version: {}", e)))
-        .map_err(|e| format!("Error getting gem version: {}", e)));
+        .map_err(|e| format!("Error getting gem version: {}", e))?;
 
     let re = Regex::new(r#"^(\d+?\.\d+?)\."#).expect("Invalid regex");
-    let version = try!(re.captures(&gem_ver)
+    let version = re.captures(&gem_ver)
         .and_then(|cap| cap.at(1))
-        .ok_or("Gem version was not found".to_owned()));
+        .ok_or("Gem version was not found".to_owned())?;
 
     version.parse::<f32>()
         .map_err(|e| format!("Erro parsing gem version: {}", e))
@@ -118,9 +118,9 @@ fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
         "gemdir".to_owned(),
     ];
 
-    let gem_dir = try!(capture_command(ctx, &args, &[])
+    let gem_dir = capture_command(ctx, &args, &[])
         .and_then(|x| String::from_utf8(x)
-            .map_err(|e| format!("Error getting gem dir: {}", e))));
+            .map_err(|e| format!("Error getting gem dir: {}", e)))?;
 
     Ok(Path::new(gem_dir.trim()).join("cache"))
 }
@@ -134,9 +134,9 @@ fn requires_git(gemfile: &Path) -> Result<bool, String> {
 
     let gemfile_data = {
         let mut buf = String::new();
-        try!(File::open(&gemfile)
+        File::open(&gemfile)
             .and_then(|mut f| f.read_to_string(&mut buf))
-            .map_err(|e| format!("Error reading Gemfile ({:?}): {}", &gemfile, e)));
+            .map_err(|e| format!("Error reading Gemfile ({:?}): {}", &gemfile, e))?;
 
         buf
     };
@@ -159,7 +159,7 @@ fn scan_features(settings: &GemConfig, info: Option<&GemBundle>)
     res.push(packages::Bundler);
 
     if let Some(info) = info {
-        let git_required = try!(requires_git(&info.gemfile));
+        let git_required = requires_git(&info.gemfile)?;
         if git_required {
             res.push(packages::Git);
         }
@@ -172,10 +172,10 @@ pub fn install(distro: &mut Box<Distribution>,
     ctx: &mut Context, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    let features = try!(scan_features(&ctx.gem_settings, None));
-    try!(packages::ensure_packages(distro, ctx, &features));
+    let features = scan_features(&ctx.gem_settings, None)?;
+    packages::ensure_packages(distro, ctx, &features)?;
 
-    try!(configure(ctx));
+    configure(ctx)?;
 
     if pkgs.len() == 0 {
         return Ok(());
@@ -184,15 +184,15 @@ pub fn install(distro: &mut Box<Distribution>,
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
 
-    let mut cmd = try!(command(ctx, &gem_exe));
+    let mut cmd = command(ctx, &gem_exe)?;
     cmd.arg("install");
     cmd.args(&["--bindir", BIN_DIR]);
 
-    let no_doc = try!(no_doc_args(ctx));
+    let no_doc = no_doc_args(ctx)?;
     cmd.args(&no_doc);
 
     cmd.args(pkgs);
-    try!(run(cmd));
+    run(cmd)?;
     Ok(())
 }
 
@@ -200,12 +200,12 @@ pub fn bundle(distro: &mut Box<Distribution>,
     ctx: &mut Context, info: &GemBundle)
     -> Result<(), StepError>
 {
-    let features = try!(scan_features(&ctx.gem_settings, Some(info)));
-    try!(packages::ensure_packages(distro, ctx, &features));
+    let features = scan_features(&ctx.gem_settings, Some(info))?;
+    packages::ensure_packages(distro, ctx, &features)?;
 
-    try!(configure(ctx));
+    configure(ctx)?;
 
-    let mut cmd = try!(command(ctx, "bundle"));
+    let mut cmd = command(ctx, "bundle")?;
     cmd.args(&["install", "--system", "--binstubs", BIN_DIR]);
 
     cmd.arg("--gemfile");
@@ -244,7 +244,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
             "--system".to_owned(),
         );
 
-        let version = try!(gem_version(ctx));
+        let version = gem_version(ctx)?;
         if version < GEM_VERSION_WITH_NO_DOCUMENT_OPT {
             args.extend(vec!("--no-rdoc".to_owned(), "--no-ri".to_owned()));
         } else {
@@ -253,29 +253,28 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
 
         // Debian based distros doesn't allow updating gem unless this flag is set
         let env = [("REALLY_GEM_UPDATE_SYSTEM", "1")];
-        try!(run_command_at_env(ctx, &args, Path::new("/work"), &env));
+        run_command_at_env(ctx, &args, Path::new("/work"), &env)?;
     }
 
-    let gem_cache = try!(gem_cache_dir(ctx));
-    try!(ctx.add_cache_dir(&gem_cache,
-                           "gems-cache".to_string()));
+    let gem_cache = gem_cache_dir(ctx)?;
+    ctx.add_cache_dir(&gem_cache, "gems-cache".to_string())?;
 
     Ok(())
 }
 
 pub fn setup_bundler(ctx: &mut Context) -> Result<(), String> {
-    try!(configure(ctx));
+    configure(ctx)?;
 
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
 
-    let mut cmd = try!(command(ctx, gem_exe));
+    let mut cmd = command(ctx, gem_exe)?;
     cmd.args(&["install", "bundler"]);
 
-    let no_doc = try!(no_doc_args(ctx));
+    let no_doc = no_doc_args(ctx)?;
     cmd.args(&no_doc);
 
-    try!(run(cmd));
+    run(cmd)?;
 
     Ok(())
 }
@@ -284,16 +283,16 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
 
-    let mut cmd = try!(command(ctx, gem_exe));
+    let mut cmd = command(ctx, gem_exe)?;
     cmd.arg("list");
     cmd.arg("--local");
 
-    try!(capture_stdout(cmd)
+    capture_stdout(cmd)
         .and_then(|out| {
             File::create("/vagga/container/gems-list.txt")
             .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping gems package list: {}", e))
-        }));
+        })?;
     Ok(())
 }
 
@@ -308,7 +307,7 @@ impl BuildStep for GemInstall {
         -> Result<(), StepError>
     {
         if build {
-            try!(install(&mut guard.distro, &mut guard.ctx, &self.0));
+            install(&mut guard.distro, &mut guard.ctx, &self.0)?;
         }
         Ok(())
     }
@@ -344,23 +343,23 @@ impl BuildStep for GemBundle {
         let path = Path::new("/work").join(&self.gemfile);
 
         hash.item(&self.gemfile.as_os_str().as_bytes());
-        let gemlock = try!(path.parent()
+        let gemlock = path.parent()
             .map(|dir| dir.join("Gemfile.lock"))
-            .ok_or("Gemfile should be under /work".to_owned()));
+            .ok_or("Gemfile should be under /work".to_owned())?;
         if gemlock.exists() {
-            let mut lockfile = try!(File::open(&path)
-                .map_err(|e| VersionError::Io(e, gemlock.clone())));
-            try!(hash.stream(&mut lockfile)
-                .map_err(|e| VersionError::Io(e, gemlock.clone())));
+            let mut lockfile = File::open(&path)
+                .map_err(|e| VersionError::Io(e, gemlock.clone()))?;
+            hash.stream(&mut lockfile)
+                .map_err(|e| VersionError::Io(e, gemlock.clone()))?;
         }
 
-        let f = try!(File::open(&path)
-            .map_err(|e| VersionError::Io(e, path.clone())));
+        let f = File::open(&path)
+            .map_err(|e| VersionError::Io(e, path.clone()))?;
         let reader = BufReader::new(f);
 
         for line in reader.lines() {
-            let line = try!(line
-                .map_err(|e| VersionError::Io(e, path.clone())));
+            let line = line
+                .map_err(|e| VersionError::Io(e, path.clone()))?;
             let line = line.trim();
             if line.is_empty() || line.starts_with("#") {
                 continue
@@ -374,7 +373,7 @@ impl BuildStep for GemBundle {
         -> Result<(), StepError>
     {
         if build {
-            try!(bundle(&mut guard.distro, &mut guard.ctx, self));
+            bundle(&mut guard.distro, &mut guard.ctx, self)?;
         }
         Ok(())
     }

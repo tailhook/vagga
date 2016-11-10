@@ -29,8 +29,8 @@ pub static PROXY_ENV_VARS: [&'static str; 5] =
 
 
 pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
-    let fd = try!(nix::unistd::dup(2)
-        .map_err(|e| format!("Can't duplicate fd 2: {}", e)));
+    let fd = nix::unistd::dup(2)
+        .map_err(|e| format!("Can't duplicate fd 2: {}", e))?;
     cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
     cmd.stdin(Stdio::null());
     Ok(())
@@ -39,12 +39,12 @@ pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
 pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     cmd.stdout(Stdio::piped());
     info!("Running {:?}", cmd);
-    let mut child = try!(cmd.spawn()
-        .map_err(|e| format!("{}", e)));
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("{}", e))?;
     let mut buf = Vec::with_capacity(1024);
-    try!(child.stdout.take().unwrap().read_to_end(&mut buf)
-        .map_err(|e| format!("Error reading from pipe: {}", e)));
-    try!(child.wait().map_err(|e| format!("Error waiting for child: {}", e)));
+    child.stdout.take().unwrap().read_to_end(&mut buf)
+        .map_err(|e| format!("Error reading from pipe: {}", e))?;
+    child.wait().map_err(|e| format!("Error waiting for child: {}", e))?;
     Ok(buf)
 }
 
@@ -52,13 +52,13 @@ pub fn capture_fd3(mut cmd: Command) -> Result<Vec<u8>, String>
 {
     cmd.file_descriptor(3, Fd::piped_write());
     info!("Running {:?}", cmd);
-    let mut child = try!(cmd.spawn()
-        .map_err(|e| format!("Command {:?}: {}", cmd, e)));
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("Command {:?}: {}", cmd, e))?;
     let mut buf = Vec::with_capacity(1024);
-    try!(child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
-        .map_err(|e| format!("Error reading from pipe: {}", e)));
-    let status = try!(child.wait()
-        .map_err(|e| format!("Error waiting for child: {}", e)));
+    child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
+        .map_err(|e| format!("Error reading from pipe: {}", e))?;
+    let status = child.wait()
+        .map_err(|e| format!("Error waiting for child: {}", e))?;
     if !status.success() {
         return Err(format!("Command {:?} {}", cmd, status));
     }
@@ -70,13 +70,13 @@ pub fn capture_fd3_status(mut cmd: Command)
 {
     cmd.file_descriptor(3, Fd::piped_write());
     info!("Running {:?}", cmd);
-    let mut child = try!(cmd.spawn()
-        .map_err(|e| format!("{}", e)));
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("{}", e))?;
     let mut buf = Vec::with_capacity(1024);
-    try!(child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
-        .map_err(|e| format!("Error reading from pipe: {}", e)));
-    let status = try!(child.wait()
-        .map_err(|e| format!("Error waiting for child: {}", e)));
+    child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
+        .map_err(|e| format!("Error reading from pipe: {}", e))?;
+    let status = child.wait()
+        .map_err(|e| format!("Error waiting for child: {}", e))?;
     Ok((status, buf))
 }
 
@@ -88,13 +88,13 @@ pub fn run_and_wait(cmd: &mut Command)
     let mut trap = Trap::trap(&[SIGINT, SIGQUIT, SIGTERM, SIGCHLD,
                                 SIGTTOU, SIGTTIN, SIGTSTP, SIGCONT]);
 
-    let mut tty_guard = try!(TtyGuard::new()
-        .map_err(|e| format!("Error handling tty: {}", e)));
+    let mut tty_guard = TtyGuard::new()
+        .map_err(|e| format!("Error handling tty: {}", e))?;
     cmd.make_group_leader(true);
 
     info!("Running {:?}", cmd);
-    let child = try!(cmd.spawn()
-                     .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let child = cmd.spawn()
+                     .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
     let cmd_name = &format!("{:?}", cmd);
     let pid = getpid();
 
@@ -123,8 +123,8 @@ pub fn run_and_wait(cmd: &mut Command)
                     use unshare::ChildEvent::*;
                     match event {
                         Death(pid, status) if pid == child.pid() => {
-                            try!(tty_guard.check().map_err(|e|
-                                format!("Error handling tty: {}", e)));
+                            tty_guard.check().map_err(|e|
+                                format!("Error handling tty: {}", e))?;
                             return Ok(status);
                         }
                         Stop(pid, SIGTTIN) | Stop(pid, SIGTTOU) => {
@@ -241,7 +241,7 @@ pub fn set_uidmap(cmd: &mut Command, uid_map: &Uidmap, use_bin: bool) {
 pub fn set_fake_uidmap(cmd: &mut Command, uid: u32, external_uid:u32)
     -> Result<(), String>
 {
-    let gid_ranges = try!(read_mapped_gids());
+    let gid_ranges = read_mapped_gids()?;
     cmd.set_id_maps(vec![
             UidMap {
                 inside_uid: uid,

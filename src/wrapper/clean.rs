@@ -143,11 +143,11 @@ fn clean_dir_wrapper(path: &Path,
             None
         };
         debug!("Removing {:?}", path);
-        try!(clean_dir(path, remove_dir_itself));
+        clean_dir(path, remove_dir_itself)?;
         if let Some(_lock) = lock_guard {
-            try!(remove_file(lock_name)
+            remove_file(lock_name)
                 .map_err(|e| format!("Error removing lock file {:?}: {}",
-                    lock_name, e)));
+                    lock_name, e))?;
         }
     }
     Ok(())
@@ -158,14 +158,14 @@ fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
 {
     if global {
         if let Some(ref cache_dir) = wrapper.ext_settings.cache_dir {
-            try!(clean_dir_wrapper(&cache_dir, false, dry_run));
+            clean_dir_wrapper(&cache_dir, false, dry_run)?;
         }
         if let Some(ref storage_dir) = wrapper.ext_settings.storage_dir {
-            try!(clean_dir_wrapper(&storage_dir, false, dry_run));
+            clean_dir_wrapper(&storage_dir, false, dry_run)?;
         }
     } else {
-        let base = match try!(setup::get_vagga_base(
-            wrapper.project_root, wrapper.ext_settings))
+        let base = match setup::get_vagga_base(
+            wrapper.project_root, wrapper.ext_settings)?
         {
             Some(base) => base,
             None => {
@@ -173,10 +173,10 @@ fn clean_everything(wrapper: &Wrapper, global: bool, dry_run: bool)
                 return Ok(());
             }
         };
-        try!(clean_dir_wrapper(&base, true, dry_run));
+        clean_dir_wrapper(&base, true, dry_run)?;
         let inner = wrapper.project_root.join(".vagga");
         if base != inner {
-            try!(clean_dir_wrapper(&inner, true, dry_run));
+            clean_dir_wrapper(&inner, true, dry_run)?;
         }
 
     }
@@ -189,8 +189,8 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
     if global {
         panic!("Global cleanup is not implemented yet");
     }
-    let base = match try!(setup::get_vagga_base(
-        wrapper.project_root, wrapper.ext_settings))
+    let base = match setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings)?
     {
         Some(base) => base,
         None => {
@@ -209,7 +209,7 @@ fn clean_temporary(wrapper: &Wrapper, global: bool, dry_run: bool)
            entry.file_name()[..].to_str().map(|n| n.starts_with(".tmp"))
                                          .unwrap_or(false)
         {
-            try!(clean_dir_wrapper(&entry.path(), true, dry_run));
+            clean_dir_wrapper(&entry.path(), true, dry_run)?;
         }
     }
 
@@ -222,8 +222,8 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
     if global {
         panic!("Global cleanup is not implemented yet");
     }
-    let base = match try!(setup::get_vagga_base(
-        wrapper.project_root, wrapper.ext_settings))
+    let base = match setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings)?
     {
         Some(base) => base,
         None => {
@@ -246,7 +246,7 @@ fn clean_old(wrapper: &Wrapper, global: bool, dry_run: bool)
         .collect();
 
     info!("Useful images {:?}", useful);
-    try!(clean_dirs_except(&base.join(".roots"), &useful, dry_run));
+    clean_dirs_except(&base.join(".roots"), &useful, dry_run)?;
 
     return Ok(());
 }
@@ -257,8 +257,8 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
     if global {
         panic!("Global cleanup is not implemented yet");
     }
-    let base = match try!(setup::get_vagga_base(
-        wrapper.project_root, wrapper.ext_settings))
+    let base = match setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings)?
     {
         Some(base) => base,
         None => {
@@ -280,7 +280,7 @@ fn clean_transient(wrapper: &Wrapper, global: bool, dry_run: bool)
                 }
             }
         }
-        try!(clean_dir_wrapper(&entry.path(), true, dry_run));
+        clean_dir_wrapper(&entry.path(), true, dry_run)?;
     }
 
     return Ok(());
@@ -319,7 +319,7 @@ fn clean_dirs_except<P: AsRef<Path>>(roots: P, useful: &HashSet<String>,
             .map(|n| !useful.contains(&n.to_string()))
             .unwrap_or(false)
         {
-            try!(clean_dir_wrapper(&entry.path(), true, dry_run));
+            clean_dir_wrapper(&entry.path(), true, dry_run)?;
         }
     }
     Ok(())
@@ -333,8 +333,8 @@ fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
         panic!("Global cleanup is not implemented yet");
     }
 
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
 
     let mut useful: HashSet<String> = HashSet::new();
     if let Some(duration) = duration {
@@ -359,13 +359,13 @@ fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
         }).ok();
     } else {
         for (name, _) in &wrapper.config.containers {
-            if let Some(version) = try!(get_version_hash(name, wrapper)) {
+            if let Some(version) = get_version_hash(name, wrapper)? {
                 useful.insert(format!("{}.{}", name, &version[..8]));
             }
         }
     }
     info!("Useful images {:?}", useful);
-    try!(clean_dirs_except("/vagga/base/.roots", &useful, dry_run));
+    clean_dirs_except("/vagga/base/.roots", &useful, dry_run)?;
 
     return Ok(());
 }
@@ -376,8 +376,8 @@ fn clean_volumes(wrapper: &Wrapper, global: bool, dry_run: bool, all: bool)
     if global {
         panic!("Global cleanup is not implemented yet");
     }
-    let base = match try!(setup::get_vagga_base(
-        wrapper.project_root, wrapper.ext_settings))
+    let base = match setup::get_vagga_base(
+        wrapper.project_root, wrapper.ext_settings)?
     {
         Some(base) => base,
         None => {
@@ -417,7 +417,7 @@ fn clean_volumes(wrapper: &Wrapper, global: bool, dry_run: bool, all: bool)
         }
     }
     info!("Useful volumes {:?}", useful);
-    try!(clean_dirs_except(volume_dir, &useful, dry_run));
+    clean_dirs_except(volume_dir, &useful, dry_run)?;
 
     return Ok(());
 }

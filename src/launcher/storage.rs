@@ -51,16 +51,16 @@ pub fn init_dir(settings: &MergedSettings, project_root: &Path,
         return Ok(1);
     }
     let target = settings.storage_dir.as_ref().unwrap().join(name);
-    try!(safe_ensure_dir(&target));
+    safe_ensure_dir(&target)?;
     let vagga = project_root.join(".vagga");
-    try!(safe_ensure_dir(&vagga));
+    safe_ensure_dir(&vagga)?;
     let lnk = vagga.join(".lnk");
-    try!(ensure_symlink(&target, &lnk)
-        .map_err(|e| format!("Error symlinking {:?}: {}", lnk, e)));
+    ensure_symlink(&target, &lnk)
+        .map_err(|e| format!("Error symlinking {:?}: {}", lnk, e))?;
     if !multiple {
         let target_lnk = target.join(".lnk");
-        try!(ensure_symlink(&project_root, &target_lnk)
-            .map_err(|e| format!("Error symlinking {:?}: {}", target_lnk, e)));
+        ensure_symlink(&project_root, &target_lnk)
+            .map_err(|e| format!("Error symlinking {:?}: {}", target_lnk, e))?;
     }
 
     return Ok(0);

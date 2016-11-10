@@ -23,13 +23,13 @@ impl TimeLog {
         let now = SystemTime::now();
         let now_instant = Instant::now();
         let mut res = TimeLog {
-            file: try!(File::create(path)),
+            file: File::create(path)?,
             start: now_instant,
             prev: now_instant,
         };
         let duration = now.duration_since(UNIX_EPOCH)
                           .expect("FATAL: now was created after the epoch");
-        try!(res.mark(format_args!("Start {:?}", duration_as_f64(duration))));
+        res.mark(format_args!("Start {:?}", duration_as_f64(duration)))?;
         Ok(res)
     }
     pub fn mark(&mut self, args: Arguments) -> Result<(), Error> {

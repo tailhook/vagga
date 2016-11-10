@@ -19,8 +19,8 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         Err(code) => return Ok(code),
     };
 
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
 
     let mut capsule_features = vec!();
     let container_ver = wrapper.root.as_ref().unwrap();
@@ -49,8 +49,8 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 
     if capsule_features.len() > 0 {
         let mut capsule_state = Default::default();
-        try!(capsule::ensure(
-            &mut capsule_state, &wrapper.settings, &capsule_features));
+        capsule::ensure(
+            &mut capsule_state, &wrapper.settings, &capsule_features)?;
     }
 
     if let Some(_) = options.compression_type {

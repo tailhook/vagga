@@ -62,8 +62,8 @@ pub fn parse_args(sup: &SuperviseInfo, context: &Context,
     -> Result<Args, ArgError>
 {
     if let Some(ref opttext) = sup.options {
-        let (env, args) = try!(parse_docopts(&sup.description, opttext,
-            DEFAULT_DOCOPT, &cmd, args));
+        let (env, args) = parse_docopts(&sup.description, opttext,
+            DEFAULT_DOCOPT, &cmd, args)?;
         Ok(Args {
             cmdname: cmd,
             environ: env,
@@ -137,11 +137,11 @@ pub fn prepare_containers(sup: &SuperviseInfo, args: &Args, context: &Context)
         let cont = child.get_container();
         if !containers.contains(cont) {
             containers.insert(cont.to_string());
-            let continfo = try!(context.config.containers.get(cont)
-                .ok_or_else(|| format!("Container {:?} not found", cont)));
-            let ver = try!(build_container(context, cont, args.build_mode));
-            try!(prepare_volumes(continfo.volumes.values(), context));
-            try!(prepare_volumes(child.get_volumes().values(), context));
+            let continfo = context.config.containers.get(cont)
+                .ok_or_else(|| format!("Container {:?} not found", cont))?;
+            let ver = build_container(context, cont, args.build_mode)?;
+            prepare_volumes(continfo.volumes.values(), context)?;
+            prepare_volumes(child.get_volumes().values(), context)?;
             versions.insert(cont.to_string(), ver);
         }
         if let &BridgeCommand(_) = child {
@@ -198,9 +198,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     let mut sockets = HashMap::new();
     for (cname, child) in sup.children.iter() {
         if let Some(sock_str) = child.pass_socket() {
-            let sock = try!(socket::parse_and_bind(sock_str)
+            let sock = socket::parse_and_bind(sock_str)
                 .map_err(|e| format!("Error listening {:?}: {}",
-                                     sock_str, e)));
+                                     sock_str, e))?;
             sockets.insert(cname, sock);
         }
     }
@@ -219,8 +219,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
     // SIGTTOU and SIGTTIN be masked out
     let mut trap = Trap::trap(&[SIGINT, SIGQUIT, SIGTERM, SIGCHLD,
                                 SIGTTOU, SIGTTIN, SIGTSTP, SIGCONT]);
-    let mut tty_guard = try!(TtyGuard::new()
-        .map_err(|e| format!("Error handling tty: {}", e)));
+    let mut tty_guard = TtyGuard::new()
+        .map_err(|e| format!("Error handling tty: {}", e))?;
 
     let mut children = HashMap::new();
     let mut error = false;
@@ -233,9 +233,9 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
             cmd.env(k, v);
         }
         cmd.workdir(&context.workdir);
-        try!(cmd.map_users_for(
+        cmd.map_users_for(
             &context.config.get_container(cname).unwrap(),
-            &context.settings));
+            &context.settings)?;
         cmd.gid(0);
         cmd.groups(Vec::new());
         cmd.arg(&args.cmdname);
@@ -266,20 +266,20 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
             try_msg!(Dir::new(&nsdir).create(),
                      "Failed to create dir: {err}");
         }
-        try!(network::join_gateway_namespaces());
-        try!(unshare_namespace(Namespace::Mount)
-            .map_err(|e| format!("Failed to create mount namespace: {}", e)));
-        try!(Tmpfs::new(&nsdir)
+        network::join_gateway_namespaces()?;
+        unshare_namespace(Namespace::Mount)
+            .map_err(|e| format!("Failed to create mount namespace: {}", e))?;
+        Tmpfs::new(&nsdir)
             .size_bytes(10 << 20)
             .mode(0o755)
-            .mount().map_err(|e| format!("{}", e)));
+            .mount().map_err(|e| format!("{}", e))?;
 
         let bridge_ns = nsdir.join("bridge");
-        let ip = try!(network::setup_bridge(&bridge_ns, &forwards));
+        let ip = network::setup_bridge(&bridge_ns, &forwards)?;
 
         port_forward_guard = network::PortForwardGuard::new(
             &gwdir.join("netns"), ip, ports);
-        try!(port_forward_guard.start_forwarding());
+        port_forward_guard.start_forwarding()?;
 
         for name in containers_in_netns.iter() {
             let child = sup.children.get(name).unwrap();
@@ -296,8 +296,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                 cmd.file_descriptor(3, Fd::from_file(sock));
             }
 
-            try!(set_namespace(&bridge_ns, Namespace::Net)
-                .map_err(|e| format!("Error setting netns: {}", e)));
+            set_namespace(&bridge_ns, Namespace::Net)
+                .map_err(|e| format!("Error setting netns: {}", e))?;
             if let &BridgeCommand(_) = child {
                 // Already setup by set_namespace
                 // But also need to mount namespace_dir into container
@@ -309,13 +309,13 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                 net_ns = nsdir.join("net.".to_string() + &netw.ip);
                 uts_ns = nsdir.join("uts.".to_string() + &netw.ip);
                 // TODO(tailhook) support multiple commands with same IP
-                try!(network::setup_container(&net_ns, &uts_ns,
+                network::setup_container(&net_ns, &uts_ns,
                     &name, &netw.ip,
-                    &netw.hostname.as_ref().unwrap_or(name)));
-                try!(set_namespace(&net_ns, Namespace::Net)
-                    .map_err(|e| format!("Error setting netns: {}", e)));
-                try!(set_namespace(&uts_ns, Namespace::Uts)
-                    .map_err(|e| format!("Error setting netns: {}", e)));
+                    &netw.hostname.as_ref().unwrap_or(name))?;
+                set_namespace(&net_ns, Namespace::Net)
+                    .map_err(|e| format!("Error setting netns: {}", e))?;
+                set_namespace(&uts_ns, Namespace::Uts)
+                    .map_err(|e| format!("Error setting netns: {}", e))?;
             }
 
             cmd.make_group_leader(true);
@@ -337,8 +337,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
         // Need to set network namespace back to bridge, to keep namespace
         // alive. Otherwise bridge is dropped, and no connectivity between
         // containers.
-        try!(set_namespace(&bridge_ns, Namespace::Net)
-            .map_err(|e| format!("Error setting netns: {}", e)));
+        set_namespace(&bridge_ns, Namespace::Net)
+            .map_err(|e| format!("Error setting netns: {}", e))?;
     }
 
     let mut errcode = 0;
@@ -389,8 +389,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                             for &(_, ref child) in children.values() {
                                 child.signal(SIGTERM).ok();
                             }
-                            try!(tty_guard.check().map_err(|e|
-                                format!("Error handling tty: {}", e)));
+                            tty_guard.check().map_err(|e|
+                                format!("Error handling tty: {}", e))?;
                             break 'signal_loop;
                         }
                     }
@@ -425,8 +425,8 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     for (pid, _) in reap_zombies() {
                         children.remove(&pid);
                     }
-                    try!(tty_guard.check().map_err(|e|
-                        format!("Error handling tty: {}", e)));
+                    tty_guard.check().map_err(|e|
+                        format!("Error handling tty: {}", e))?;
                     if children.len() == 0 {
                         break;
                     }

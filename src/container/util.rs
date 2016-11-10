@@ -43,7 +43,7 @@ fn _clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
     }
     // We temporarily change root, so that symlinks inside the dir
     // would do no harm. But note that dir itself can be a symlink
-    try!(temporary_change_root::<_, _, _, String>(dir, || {
+    temporary_change_root::<_, _, _, String>(dir, || {
         let mut path = PathBuf::from("/");
         let diriter = try_msg!(read_dir(&path),
              "Can't read directory {d:?}: {err}", d=dir);
@@ -56,9 +56,9 @@ fn _clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
                 path.push(entry.file_name());
                 if typ.is_dir() {
                     stack.push(diriter);  // push directory back to stack
-                    let niter = try!(read_dir(&path)
+                    let niter = read_dir(&path)
                          .map_err(|e| format!("Can't read directory {:?}: {}",
-                                              dir, e)));
+                                              dir, e))?;
                     stack.push(niter);  // push new directory to stack
                     continue 'next_dir;
                 } else {
@@ -76,7 +76,7 @@ fn _clean_dir(dir: &Path, remove_dir_itself: bool) -> Result<(), String> {
             }
         }
         Ok(())
-    }));
+    })?;
     if remove_dir_itself {
         try_msg!(remove_dir(dir),
             "Can't remove dir {dir:?}: {err}", dir=dir);
@@ -90,26 +90,26 @@ pub fn copy_dir(old: &Path, new: &Path,
 {
     use self::CopyDirError::*;
     // TODO(tailhook) use reflinks if supported
-    let dir = try!(read_dir(old).map_err(|e| ReadDir(old.to_path_buf(), e)));
+    let dir = read_dir(old).map_err(|e| ReadDir(old.to_path_buf(), e))?;
     let mut stack = vec![dir];
     let mut oldp = old.to_path_buf();
     let mut newp = new.to_path_buf();
     'next_dir: while let Some(mut dir) = stack.pop() {
         while let Some(item) = dir.next() {
-            let entry = try!(item.map_err(|e| ReadDir(old.to_path_buf(), e)));
+            let entry = item.map_err(|e| ReadDir(old.to_path_buf(), e))?;
             let filename = entry.file_name();
             oldp.push(&filename);
             newp.push(&filename);
 
-            let oldp_stat = try!(oldp.symlink_metadata()
-                .map_err(|e| Stat(oldp.clone(), e)));
-            let copy_rc = try!(shallow_copy(&oldp, &oldp_stat, &newp,
+            let oldp_stat = oldp.symlink_metadata()
+                .map_err(|e| Stat(oldp.clone(), e))?;
+            let copy_rc = shallow_copy(&oldp, &oldp_stat, &newp,
                     owner_uid, owner_gid, None)
-                .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
+                .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e))?;
             if !copy_rc {
                 stack.push(dir);  // Return dir to stack
-                let ndir = try!(read_dir(&oldp)
-                    .map_err(|e| ReadDir(oldp.to_path_buf(), e)));
+                let ndir = read_dir(&oldp)
+                    .map_err(|e| ReadDir(oldp.to_path_buf(), e))?;
                 stack.push(ndir); // Add new dir to the stack too
                 continue 'next_dir;
             }
@@ -125,43 +125,43 @@ pub fn copy_dir(old: &Path, new: &Path,
 pub fn hardlink_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
     use self::CopyDirError::*;
     // TODO(tailhook) use reflinks if supported
-    let dir = try!(read_dir(old).map_err(|e| ReadDir(old.to_path_buf(), e)));
+    let dir = read_dir(old).map_err(|e| ReadDir(old.to_path_buf(), e))?;
     let mut stack = vec![dir];
     let mut oldp = old.to_path_buf();
     let mut newp = new.to_path_buf();
     'next_dir: while let Some(mut dir) = stack.pop() {
         while let Some(item) = dir.next() {
-            let entry = try!(item.map_err(|e| ReadDir(old.to_path_buf(), e)));
+            let entry = item.map_err(|e| ReadDir(old.to_path_buf(), e))?;
             let filename = entry.file_name();
             oldp.push(&filename);
             newp.push(&filename);
 
-            let typ = try!(entry.file_type()
-                .map_err(|e| Stat(oldp.clone(), e)));
+            let typ = entry.file_type()
+                .map_err(|e| Stat(oldp.clone(), e))?;
             if typ.is_file() {
-                try!(hard_link(&oldp, &newp)
-                    .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e)));
+                hard_link(&oldp, &newp)
+                    .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e))?;
             } else if typ.is_dir() {
-                let stat = try!(symlink_metadata(&oldp)
-                    .map_err(|e| Stat(oldp.clone(), e)));
+                let stat = symlink_metadata(&oldp)
+                    .map_err(|e| Stat(oldp.clone(), e))?;
                 if !newp.is_dir() {
-                    try!(Dir::new(&newp)
+                    Dir::new(&newp)
                             .mode(stat.mode())
                             .uid(stat.uid())
                             .gid(stat.gid())
                             .create()
-                        .map_err(|e| CreateDir(newp.clone(), e)));
+                        .map_err(|e| CreateDir(newp.clone(), e))?;
                 }
                 stack.push(dir);  // Return dir to stack
-                let ndir = try!(read_dir(&oldp)
-                    .map_err(|e| ReadDir(oldp.to_path_buf(), e)));
+                let ndir = read_dir(&oldp)
+                    .map_err(|e| ReadDir(oldp.to_path_buf(), e))?;
                 stack.push(ndir); // Add new dir to the stack too
                 continue 'next_dir;
             } else if typ.is_symlink() {
-                let lnk = try!(read_link(&oldp)
-                               .map_err(|e| ReadLink(oldp.clone(), e)));
-                try!(symlink(&lnk, &newp)
-                    .map_err(|e| Symlink(newp.clone(), e)));
+                let lnk = read_link(&oldp)
+                               .map_err(|e| ReadLink(oldp.clone(), e))?;
+                symlink(&lnk, &newp)
+                    .map_err(|e| Symlink(newp.clone(), e))?;
             } else {
                 warn!("Unknown file type {:?}", &entry.path());
             }
@@ -177,8 +177,8 @@ pub fn hardlink_dir(old: &Path, new: &Path) -> Result<(), CopyDirError> {
 pub fn version_from_symlink<P: AsRef<Path>>(path: P) -> Result<String, String>
 {
     let lnk = path.as_ref();
-    let path = try!(read_link(&path)
-        .map_err(|e| format!("Can't read link {:?}: {}", lnk, e)));
+    let path = read_link(&path)
+        .map_err(|e| format!("Can't read link {:?}: {}", lnk, e))?;
     path.iter().rev().nth(1).and_then(|x| x.to_str())
     .ok_or_else(|| format!("Bad symlink {:?}: {:?}", lnk, path))
     .map(|x| x.to_string())

@@ -85,14 +85,14 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     -> Result<(), String>
 {
     if let Some(dir) = cfg.storage_dir {
-        ext_settings.storage_dir = Some(try!(dir.expand_home()
+        ext_settings.storage_dir = Some(dir.expand_home()
             .map_err(|()| format!("Can't expand tilde `~` in storage dir \
-                no HOME found"))));
+                no HOME found"))?);
     }
     if let Some(dir) = cfg.cache_dir {
-        ext_settings.cache_dir = Some(try!(dir.expand_home()
+        ext_settings.cache_dir = Some(dir.expand_home()
             .map_err(|()| format!("Can't expand tilde `~` in cache dir \
-                no HOME found"))));
+                no HOME found"))?);
         ext_settings.shared_cache = true;
     }
     if let Some(val) = cfg.version_check {
@@ -190,19 +190,19 @@ pub fn read_settings(project_root: &Path)
         if !filename.exists() {
             continue;
         }
-        let cfg: SecureSettings = try!(parse_config(filename,
+        let cfg: SecureSettings = parse_config(filename,
             &secure_settings_validator(true), &Options::default())
-            .map_err(|e| format!("{}", e)));
-        try!(merge_settings(cfg, &project_root,
-            &mut ext_settings, &mut int_settings))
+            .map_err(|e| format!("{}", e))?;
+        merge_settings(cfg, &project_root,
+            &mut ext_settings, &mut int_settings)?
     }
     if let Ok(settings) = env::var("VAGGA_SETTINGS") {
-        let cfg: SecureSettings = try!(parse_string("<env:VAGGA_SETTINGS>",
+        let cfg: SecureSettings = parse_string("<env:VAGGA_SETTINGS>",
                 &settings,
                 &secure_settings_validator(true), &Options::default())
-            .map_err(|e| format!("{}", e)));
-        try!(merge_settings(cfg, &project_root,
-            &mut ext_settings, &mut int_settings))
+            .map_err(|e| format!("{}", e))?;
+        merge_settings(cfg, &project_root,
+            &mut ext_settings, &mut int_settings)?
     }
     let mut insecure_files = vec!();
     insecure_files.push(project_root.join(".vagga.settings.yaml"));
@@ -211,9 +211,9 @@ pub fn read_settings(project_root: &Path)
         if !filename.exists() {
             continue;
         }
-        let cfg: InsecureSettings = try!(parse_config(filename,
+        let cfg: InsecureSettings = parse_config(filename,
             &*insecure_settings_validator(), &Options::default())
-            .map_err(|e| format!("{}", e)));
+            .map_err(|e| format!("{}", e))?;
         if let Some(val) = cfg.version_check {
             int_settings.version_check = val;
         }

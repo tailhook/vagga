@@ -44,14 +44,14 @@ impl BuildStep for Download {
             let filename = if self.url.starts_with(".") {
                 PathBuf::from("/work").join(&self.url)
             } else {
-                try!(download_file(&mut guard.ctx, &[&self.url], None))
+                download_file(&mut guard.ctx, &[&self.url], None)?
             };
-            try!(copy(&filename, &fpath)
+            copy(&filename, &fpath)
                 .map_err(|e| format!("Error copying {:?} to {:?}: {}",
-                    &filename, self.path, e)));
-            try!(set_permissions(&fpath, Permissions::from_mode(self.mode))
+                    &filename, self.path, e))?;
+            set_permissions(&fpath, Permissions::from_mode(self.mode))
                 .map_err(|e| format!("Error setting permissions for {:?}: {}",
-                    self.path, e)));
+                    self.path, e))?;
         }
         Ok(())
     }

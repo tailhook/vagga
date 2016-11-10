@@ -51,15 +51,15 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
     let mut cmdline = command.run.clone();
     cmdline.extend(args.into_iter());
 
-    let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
+    let pid: pid_t = read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
         .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
-            .ok_or(format!("Can't parse pid: {:?}", v))));
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
+            .ok_or(format!("Can't parse pid: {:?}", v)))?;
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
 
-    let cconfig = try!(wrapper.config.containers.get(&command.container)
-        .ok_or(format!("Container {} not found", command.container)));
+    let cconfig = wrapper.config.containers.get(&command.container)
+        .ok_or(format!("Container {} not found", command.container))?;
 
     let write_mode = match command.write_mode {
         WriteMode::read_only => setup::WriteMode::ReadOnly,
@@ -94,18 +94,18 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
     }
     warn_if_data_container(&cconfig);
 
-    try!(setup::setup_filesystem(&setup_info, &cont_ver));
+    setup::setup_filesystem(&setup_info, &cont_ver)?;
 
-    let env = try!(setup::get_environment(&wrapper.settings, cconfig,
-        Some(&command)));
-    let cpath = try!(find_cmd(&cmdline.remove(0), &env));
+    let env = setup::get_environment(&wrapper.settings, cconfig,
+        Some(&command))?;
+    let cpath = find_cmd(&cmdline.remove(0), &env)?;
 
     let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
     if let Some(euid) = command.external_user_id {
-        try!(set_fake_uidmap(&mut cmd, command.user_id, euid));
+        set_fake_uidmap(&mut cmd, command.user_id, euid)?;
     }
     cmd.uid(command.user_id);
     cmd.gid(command.group_id);
@@ -124,8 +124,8 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
                 .map(convert_status);
     if result == Ok(0) {
         for guard in guards {
-            try!(guard.commit()
-                .map_err(|e| format!("Error commiting guard: {}", e)));
+            guard.commit()
+                .map_err(|e| format!("Error commiting guard: {}", e))?;
         }
     }
     return result;

@@ -31,21 +31,21 @@ impl PersistentVolumeGuard {
         if path.exists() {
             return Ok(None);
         }
-        try!(Dir::new(&volbase).create());
+        Dir::new(&volbase).create()?;
         let lockfile = volbase.join(format!(".tmp.{}.lock", vol.name));
-        let lock = try!(Lock::exclusive(lockfile));
+        let lock = Lock::exclusive(lockfile)?;
         if path.exists() {
             return Ok(None);
         }
         let tmpdir = volbase.join(format!(".tmp.{}", vol.name));
         if tmpdir.exists() {
-            try!(clean_dir(&tmpdir, false)
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e)));
+            clean_dir(&tmpdir, false)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         }
-        try!(Dir::new(&tmpdir)
+        Dir::new(&tmpdir)
             .uid(vol.owner_uid)
             .gid(vol.owner_gid)
-            .create());
+            .create()?;
         let volumes_base = unsafe {
             open(volbase.to_cstring().as_ptr(), O_PATH.bits())
         };

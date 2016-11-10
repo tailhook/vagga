@@ -30,33 +30,33 @@ impl<'a> Guard<'a> {
     }
 
     fn run_process(&mut self) -> Result<(), Error> {
-        try!(self.start());
+        self.start()?;
 
         for b in self.ctx.container_config.setup.iter() {
             debug!("Building step: {:?}", b);
-            try!(self.ctx.timelog.mark(format_args!("Step: {:?}", b))
-                .map_err(|e| format!("Can't write timelog: {}", e)));
-            try!(b.build(self, true)
-                .map_err(|e| Error::Step(b.0.clone(), e)));
+            self.ctx.timelog.mark(format_args!("Step: {:?}", b))
+                .map_err(|e| format!("Can't write timelog: {}", e))?;
+            b.build(self, true)
+                .map_err(|e| Error::Step(b.0.clone(), e))?;
         }
 
-        try!(self.finish());
+        self.finish()?;
         Ok(())
     }
 
     pub fn start(&mut self) -> Result<(), String> {
-        try!(mount_system_dirs());
-        try!(mount_proc(&Path::new("/proc")));
-        try!(copy("/proc/self/uid_map", "/vagga/container/uid_map")
-            .map_err(|e| format!("Error copying uid_map: {}", e)));
-        try!(copy("/proc/self/gid_map", "/vagga/container/gid_map")
-            .map_err(|e| format!("Error copying gid_map: {}", e)));
+        mount_system_dirs()?;
+        mount_proc(&Path::new("/proc"))?;
+        copy("/proc/self/uid_map", "/vagga/container/uid_map")
+            .map_err(|e| format!("Error copying uid_map: {}", e))?;
+        copy("/proc/self/gid_map", "/vagga/container/gid_map")
+            .map_err(|e| format!("Error copying gid_map: {}", e))?;
         try_msg!(Dir::new("/vagga/root/etc").create(),
              "Error creating /etc dir: {err}");
-        try!(copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
-            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
-        try!(self.ctx.timelog.mark(format_args!("Prepare"))
-            .map_err(|e| format!("Can't write timelog: {}", e)));
+        copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
+            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
+        self.ctx.timelog.mark(format_args!("Prepare"))
+            .map_err(|e| format!("Can't write timelog: {}", e))?;
         Ok(())
     }
 
@@ -65,29 +65,29 @@ impl<'a> Guard<'a> {
         if self.ctx.featured_packages.contains(&packages::PipPy2) ||
            self.ctx.featured_packages.contains(&packages::PipPy3)
         {
-            try!(pip::freeze(&mut self.ctx));
+            pip::freeze(&mut self.ctx)?;
         }
         // Npm
         if self.ctx.featured_packages.contains(&packages::Npm) {
-            try!(npm::list(&mut self.ctx));
+            npm::list(&mut self.ctx)?;
         }
         // Composer
         if self.ctx.featured_packages.contains(&packages::Composer) {
-            try!(composer::finish(&mut self.ctx));
+            composer::finish(&mut self.ctx)?;
         }
         // Gem
         if self.ctx.featured_packages.contains(&packages::Bundler) {
-            try!(gem::list(&mut self.ctx));
+            gem::list(&mut self.ctx)?;
         }
 
-        try!(self.distro.finish(&mut self.ctx));
+        self.distro.finish(&mut self.ctx)?;
 
         let base = Path::new("/vagga/root");
 
         for path in self.ctx.mounted.iter().rev() {
-            try!(unmount(path));
+            unmount(path)?;
         }
-        try!(unmount_system_dirs());
+        unmount_system_dirs()?;
 
         for path in self.ctx.remove_paths.iter() {
             try_msg!(dirs::remove(&Path::new("/").join(path)),
@@ -95,7 +95,7 @@ impl<'a> Guard<'a> {
         }
 
         for dir in self.ctx.empty_dirs.iter() {
-            try!(clean_dir(&base.join(dir), false));
+            clean_dir(&base.join(dir), false)?;
         }
 
         for dir in self.ctx.ensure_dirs.iter() {
@@ -136,8 +136,8 @@ impl<'a> Guard<'a> {
         File::create("/vagga/container/last_use")
             .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
 
-        try!(self.ctx.timelog.mark(format_args!("Finish"))
-            .map_err(|e| format!("Can't write timelog: {}", e)));
+        self.ctx.timelog.mark(format_args!("Finish"))
+            .map_err(|e| format!("Can't write timelog: {}", e))?;
 
         return Ok(());
     }
@@ -159,7 +159,7 @@ fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
                 continue;
             },
             Some(_) => {
-                try!(remove_all_except(path, keep_rel_paths));
+                remove_all_except(path, keep_rel_paths)?;
             },
             None => {
                 if path.is_dir() {

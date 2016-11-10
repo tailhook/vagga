@@ -71,7 +71,7 @@ fn make_cache_dir(_project_root: &Path, vagga_base: &Path,
         }
         _ => {
             let dir = vagga_base.join(".cache");
-            try!(safe_ensure_dir(&dir));
+            safe_ensure_dir(&dir)?;
             return Ok(dir);
         }
    }
@@ -138,12 +138,12 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
 {
     match _vagga_base(project_root, settings) {
         Ok(Err((lnkdir, dir))) => {
-            let target = try!(create_storage_dir(&dir, project_root));
-            try!(safe_ensure_dir(&target));
-            try!(symlink(&target, &lnkdir)
-                .map_err(|e| format!("Error symlinking storage: {}", e)));
-            try!(symlink(project_root, &target.join(".lnk"))
-                .map_err(|e| format!("Error symlinking storage: {}", e)));
+            let target = create_storage_dir(&dir, project_root)?;
+            safe_ensure_dir(&target)?;
+            symlink(&target, &lnkdir)
+                .map_err(|e| format!("Error symlinking storage: {}", e))?;
+            symlink(project_root, &target.join(".lnk"))
+                .map_err(|e| format!("Error symlinking storage: {}", e))?;
             return Ok(target)
         }
         Ok(Ok(path)) => {
@@ -157,9 +157,9 @@ fn vagga_base(project_root: &Path, settings: &MergedSettings)
 
 fn make_mountpoint(project_root: &Path) -> Result<(), String> {
     let vagga_dir = project_root.join(".vagga");
-    try!(safe_ensure_dir(&vagga_dir));
+    safe_ensure_dir(&vagga_dir)?;
     let mnt_dir = vagga_dir.join(".mnt");
-    try!(safe_ensure_dir(&mnt_dir));
+    safe_ensure_dir(&mnt_dir)?;
     return Ok(());
 }
 
@@ -167,19 +167,19 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     -> Result<(), String>
 {
     let mnt_dir = project_root.join(".vagga/.mnt");
-    try!(make_mountpoint(project_root));
-    try!(Tmpfs::new(&mnt_dir).size_bytes(100 << 20).mount()
-         .map_err(|e| format!("{}", e)));
+    make_mountpoint(project_root)?;
+    Tmpfs::new(&mnt_dir).size_bytes(100 << 20).mount()
+         .map_err(|e| format!("{}", e))?;
 
     let proc_dir = mnt_dir.join("proc");
     try_msg!(Dir::new(&proc_dir).create(),
              "Error creating /proc: {err}");
-    try!(mount_proc(&proc_dir));
+    mount_proc(&proc_dir)?;
 
     let dev_dir = mnt_dir.join("dev");
     try_msg!(Dir::new(&dev_dir).create(),
              "Error creating /dev: {err}");
-    try!(mount_dev(&dev_dir));
+    mount_dev(&dev_dir)?;
 
     let sys_dir = mnt_dir.join("sys");
     try_msg!(Dir::new(&sys_dir).create(),
@@ -188,7 +188,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let selinux = sys_dir.join("fs/selinux");
     if selinux.is_dir() {
         // Need this go get some selinux-aware commands to work (see #65)
-        try!(remount_ro(&sys_dir.join("fs/selinux")));
+        remount_ro(&sys_dir.join("fs/selinux"))?;
     }
 
     let vagga_dir = mnt_dir.join("vagga");
@@ -201,29 +201,29 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     try_msg!(BindMount::new(&current_exe().unwrap().parent().unwrap(),
                             &bin_dir)
              .mount(), "mount /vagga/bin: {err}");
-    try!(remount_ro(&bin_dir));
+    remount_ro(&bin_dir)?;
 
     let etc_dir = mnt_dir.join("etc");
     try_msg!(Dir::new(&etc_dir).create(),
              "Error creating /etc: {err}");
-    try!(copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
-        .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
-    try!(copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
-        .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
+    copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
+        .map_err(|e| format!("Error copying /etc/hosts: {}", e))?;
+    copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
+        .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
 
     let local_base = vagga_dir.join("base");
-    try!(safe_ensure_dir(&local_base));
-    let vagga_base = try!(vagga_base(project_root, settings));
+    safe_ensure_dir(&local_base)?;
+    let vagga_base = vagga_base(project_root, settings)?;
 
     try_msg!(BindMount::new(&vagga_base, &local_base).mount(),
         "mount /vagga/base: {err}");
-    try!(safe_ensure_dir(&local_base.join(".roots")));
-    try!(safe_ensure_dir(&local_base.join(".transient")));
+    safe_ensure_dir(&local_base.join(".roots"))?;
+    safe_ensure_dir(&local_base.join(".transient"))?;
 
     let cache_dir = vagga_dir.join("cache");
     try_msg!(Dir::new(&cache_dir).create(),
         "Error creating /vagga/cache: {err}");
-    let locl_cache = try!(make_cache_dir(project_root, &vagga_base, settings));
+    let locl_cache = make_cache_dir(project_root, &vagga_base, settings)?;
     try_msg!(BindMount::new(&locl_cache, &cache_dir).mount(),
         "mount /vagga/cache: {err}");
 
@@ -261,10 +261,10 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let old_root = vagga_dir.join("old_root");
     try_msg!(Dir::new(&old_root).create(),
              "Error creating /vagga/old_root: {err}");
-    try!(change_root(&mnt_dir, &old_root));
-    try!(unmount(&Path::new("/work/.vagga/.mnt"))
-         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e)));
-    try!(unmount(&Path::new("/vagga/old_root")));
+    change_root(&mnt_dir, &old_root)?;
+    unmount(&Path::new("/work/.vagga/.mnt"))
+         .map_err(|e| format!("Error unmounting `.vagga/.mnt`: {}", e))?;
+    unmount(&Path::new("/vagga/old_root"))?;
 
     Ok(())
 }
@@ -284,19 +284,19 @@ pub fn get_environment(settings: &Settings, container: &Container,
         }
     }
     if let Some(ref filename) = container.environ_file {
-        let f = BufReader::new(try!(
+        let f = BufReader::new(
                 File::open(filename)
                 .map_err(|e| format!("Error reading environment file {:?}: {}",
-                    filename, e))));
+                    filename, e))?);
         for line_read in f.lines() {
-            let line = try!(line_read
+            let line = line_read
                 .map_err(|e| format!("Error reading environment file {:?}: {}",
-                    filename, e)));
+                    filename, e))?;
             let mut pair = line[..].splitn(2, '=');
             let key = pair.next().unwrap();
-            let mut value = try!(pair.next()
+            let mut value = pair.next()
                 .ok_or(format!("Error reading environment file {:?}: bad format",
-                    filename)));
+                    filename))?;
             if value.len() > 0 && value.starts_with("\"") {
                 value = value.trim_matches('"');
             }
@@ -394,21 +394,21 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     File::create(image_base.join("last_use"))
         .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
 
-    try!(mount_system_dirs()
-        .map_err(|e| format!("Error mounting system dirs: {}", e)));
+    mount_system_dirs()
+        .map_err(|e| format!("Error mounting system dirs: {}", e))?;
 
     if let None = setup_info.volumes.get(&PathBuf::from("/tmp")) {
-        try!(Tmpfs::new(&tgtroot.join("tmp"))
+        Tmpfs::new(&tgtroot.join("tmp"))
             .size_bytes(100 << 20)
             .mode(0o1777)
-            .mount().map_err(|e| format!("{}", e)));
+            .mount().map_err(|e| format!("{}", e))?;
     }
     if let None = setup_info.volumes.get(&PathBuf::from("/run")) {
         let dest = tgtroot.join("run");
-        try!(Tmpfs::new(&dest)
+        Tmpfs::new(&dest)
             .size_bytes(100 << 20)
             .mode(0o766)
-            .mount().map_err(|e| format!("{}", e)));
+            .mount().map_err(|e| format!("{}", e))?;
         try_msg!(Dir::new(&dest.join("shm")).mode(0o1777).create(),
             "Error creating /run/shm: {err}");
     }
@@ -418,10 +418,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         let dest = tgtroot.join(rel_path);
         match *vol {
             &V::Tmpfs(ref params) => {
-                try!(Tmpfs::new(&dest)
+                Tmpfs::new(&dest)
                     .size_bytes(params.size)
                     .mode(params.mode)
-                    .mount().map_err(|e| format!("{}", e)));
+                    .mount().map_err(|e| format!("{}", e))?;
                 for (subpath, info) in &params.subdirs {
                     try_msg!(Dir::new(&dest.join(&subpath))
                             .mode(info.mode)
@@ -448,20 +448,20 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
             &V::BindRO(ref bindpath) => {
                 try_msg!(BindMount::new(&bindpath, &dest).mount(),
                     "mount !BindRO: {err}");
-                try!(remount_ro(&dest));
+                remount_ro(&dest)?;
             }
             &V::Empty => {
-                try!(Tmpfs::new(&dest)
+                Tmpfs::new(&dest)
                     .size_bytes(1)
                     .mode(0)
-                    .mount().map_err(|e| format!("{}", e)));
-                try!(remount_ro(&dest));
+                    .mount().map_err(|e| format!("{}", e))?;
+                remount_ro(&dest)?;
             }
             &V::Snapshot(ref info) => {
                 let ref src = match info.container {
                     Some(ref src_container) => {
-                        let container_ver = try!(version_from_symlink(
-                            format!("/work/.vagga/{}", src_container)));
+                        let container_ver = version_from_symlink(
+                            format!("/work/.vagga/{}", src_container))?;
                         Path::new("/vagga/base/.roots")
                             .join(container_ver)
                             .join("root")
@@ -469,16 +469,16 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     },
                     None => dest.clone(),
                 };
-                try!(make_snapshot(src, &dest, info));
+                make_snapshot(src, &dest, info)?;
             }
             &V::Container(ref child_cont) => {
-                let container_ver = try!(version_from_symlink(
-                    format!("/work/.vagga/{}", child_cont)));
+                let container_ver = version_from_symlink(
+                    format!("/work/.vagga/{}", child_cont))?;
                 let target = Path::new("/vagga/base/.roots")
                     .join(container_ver).join("root");
                 try_msg!(BindMount::new(&target, &dest).mount(),
                     "mount !Container: {err}");
-                try!(remount_ro(&dest));
+                remount_ro(&dest)?;
             }
             &V::Persistent(ref info) => {
                 if setup_info.tmp_volumes.contains(&info.name) {
@@ -520,13 +520,13 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
 
     if let Some(path) = setup_info.resolv_conf_path {
         let path = tgtroot.join(path.strip_prefix("/").unwrap());
-        try!(copy(&Path::new("/etc/resolv.conf"), &path)
-            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e)));
+        copy(&Path::new("/etc/resolv.conf"), &path)
+            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
     }
     if let Some(path) = setup_info.hosts_file_path {
         let path = tgtroot.join(path.strip_prefix("/").unwrap());
-        try!(copy(&Path::new("/etc/hosts"), &path)
-            .map_err(|e| format!("Error copying /etc/hosts: {}", e)));
+        copy(&Path::new("/etc/hosts"), &path)
+            .map_err(|e| format!("Error copying /etc/hosts: {}", e))?;
     }
 
     //  Currently we need the root to be writeable for putting resolv.conf and
@@ -541,10 +541,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         }
     }
 
-    try!(change_root(&tgtroot, &tgtroot.join("tmp"))
-         .map_err(|e| format!("Error changing root: {}", e)));
-    try!(unmount(&Path::new("/tmp"))
-         .map_err(|e| format!("Error unmounting `/tmp`: {}", e)));
+    change_root(&tgtroot, &tgtroot.join("tmp"))
+         .map_err(|e| format!("Error changing root: {}", e))?;
+    unmount(&Path::new("/tmp"))
+         .map_err(|e| format!("Error unmounting `/tmp`: {}", e))?;
     Ok(())
 }
 

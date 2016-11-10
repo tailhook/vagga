@@ -49,7 +49,7 @@ impl BuildStep for Install {
             guard.ctx.build_deps.remove(i);
         }
         if build {
-            try!(guard.distro.install(&mut guard.ctx, &self.0));
+            guard.distro.install(&mut guard.ctx, &self.0)?;
         }
         Ok(())
     }
@@ -74,7 +74,7 @@ impl BuildStep for BuildDeps {
                     guard.ctx.build_deps.insert(i.clone());
                 }
             }
-            try!(guard.distro.install(&mut guard.ctx, &self.0));
+            guard.distro.install(&mut guard.ctx, &self.0)?;
         }
         Ok(())
     }
@@ -94,7 +94,7 @@ impl BuildStep for Repo {
         -> Result<(), StepError>
     {
         if build {
-            try!(guard.distro.add_repo(&mut guard.ctx, &self.0));
+            guard.distro.add_repo(&mut guard.ctx, &self.0)?;
         }
         Ok(())
     }

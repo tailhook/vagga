@@ -38,9 +38,9 @@ pub fn parse_args(cinfo: &CommandInfo, _context: &Context,
             "Network is not supported for !Command use !Supervise")));
     }
     if let Some(ref opttext) = cinfo.options {
-        let (env, _) = try!(parse_docopts(&cinfo.description, opttext,
+        let (env, _) = parse_docopts(&cinfo.description, opttext,
                                           DEFAULT_DOCOPT,
-                                          &cmd, args));
+                                          &cmd, args)?;
         Ok(Args {
             cmdname: cmd,
             environ: env,
@@ -58,12 +58,12 @@ pub fn parse_args(cinfo: &CommandInfo, _context: &Context,
 pub fn prepare_containers(cinfo: &CommandInfo, _: &Args, context: &Context)
     -> Result<Version, String>
 {
-    let ver = try!(build_container(context, &cinfo.container,
-        context.build_mode));
-    let cont = try!(context.config.containers.get(&cinfo.container)
-        .ok_or_else(|| format!("Container {:?} not found", cinfo.container)));
-    try!(prepare_volumes(cont.volumes.values(), context));
-    try!(prepare_volumes(cinfo.volumes.values(), context));
+    let ver = build_container(context, &cinfo.container,
+        context.build_mode)?;
+    let cont = context.config.containers.get(&cinfo.container)
+        .ok_or_else(|| format!("Container {:?} not found", cinfo.container))?;
+    prepare_volumes(cont.volumes.values(), context)?;
+    prepare_volumes(cinfo.volumes.values(), context)?;
     return Ok(ver);
 }
 
@@ -84,14 +84,14 @@ pub fn run(cinfo: &CommandInfo, args: Args, version: Version,
     cmd.arg(&args.cmdname);
     cmd.args(&args.args);
     if let Some(ref sock_str) = cinfo.pass_tcp_socket {
-        let sock = try!(socket::parse_and_bind(sock_str)
-            .map_err(|e| format!("Error listening {:?}: {}", sock_str, e)));
+        let sock = socket::parse_and_bind(sock_str)
+            .map_err(|e| format!("Error listening {:?}: {}", sock_str, e))?;
         cmd.file_descriptor(3, Fd::from_file(sock));
     }
     if cinfo.network.is_none() { // TODO(tailhook) is it still a thing?
-        try!(cmd.map_users_for(
+        cmd.map_users_for(
             &context.config.get_container(&cinfo.container).unwrap(),
-            &context.settings));
+            &context.settings)?;
         cmd.gid(0);
         cmd.groups(Vec::new());
     }

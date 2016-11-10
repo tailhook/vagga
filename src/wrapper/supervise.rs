@@ -38,15 +38,15 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
             }
         }
     }
-    let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
+    let pid: pid_t = read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
         .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
-            .ok_or(format!("Can't parse pid: {:?}", v))));
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
+            .ok_or(format!("Can't parse pid: {:?}", v)))?;
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
 
-    let childtype = try!(command.children.get(&child)
-        .ok_or(format!("Child {} not found", child)));
+    let childtype = command.children.get(&child)
+        .ok_or(format!("Child {} not found", child))?;
     match childtype {
         &CC::Command(ref info) => supervise_child_command(cname,
             &child, false, info, wrapper, command, pid),
@@ -61,19 +61,18 @@ fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
              "Can't create dir: {err}");
     let mut file = try_msg!(File::create(&basedir.join("hosts")),
         "Can't create hosts file: {err}");
-    try!((writeln!(&mut file, "127.0.0.1 localhost"))
-         .map_err(|e| format!("Error writing hosts: {}", e)));
+    (writeln!(&mut file, "127.0.0.1 localhost"))
+         .map_err(|e| format!("Error writing hosts: {}", e))?;
     for (subname, subcommand) in supervise.children.iter() {
         if let &CC::Command(ref cmd) = subcommand {
             if let Some(ref netw) = cmd.network {
                 // TODO(tailhook) support multiple commands with same IP
                 if let Some(ref val) = netw.hostname {
-                    try!((writeln!(&mut file, "{} {} {}", netw.ip,
-                                    val, subname))
-                         .map_err(|e| format!("Error writing hosts: {}", e)));
+                    writeln!(&mut file, "{} {} {}", netw.ip, val, subname)
+                         .map_err(|e| format!("Error writing hosts: {}", e))?;
                 } else {
-                    try!((writeln!(&mut file, "{} {}", netw.ip, subname))
-                         .map_err(|e| format!("Error writing hosts: {}", e)));
+                    writeln!(&mut file, "{} {}", netw.ip, subname)
+                         .map_err(|e| format!("Error writing hosts: {}", e))?;
                 }
             }
         }
@@ -86,8 +85,8 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     pid: pid_t)
     -> Result<i32, String>
 {
-    let cconfig = try!(wrapper.config.containers.get(&command.container)
-        .ok_or(format!("Container {} not found", command.container)));
+    let cconfig = wrapper.config.containers.get(&command.container)
+        .ok_or(format!("Container {} not found", command.container))?;
 
     let write_mode = match command.write_mode {
         WriteMode::read_only => setup::WriteMode::ReadOnly,
@@ -99,14 +98,14 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     setup_info.volumes(&command.volumes)
         .write_mode(write_mode);
     warn_if_data_container(&cconfig);
-    try!(setup::setup_filesystem(&setup_info, &cont_ver));
+    setup::setup_filesystem(&setup_info, &cont_ver)?;
 
-    try!(_write_hosts(supervise));
+    _write_hosts(supervise)?;
 
-    let env = try!(setup::get_environment(&wrapper.settings, cconfig,
-        Some(&command)));
+    let env = setup::get_environment(&wrapper.settings, cconfig,
+        Some(&command))?;
     let mut cmdline = command.run.clone();
-    let cpath = try!(find_cmd(&cmdline.remove(0), &env));
+    let cpath = find_cmd(&cmdline.remove(0), &env)?;
 
     let mut cmd = Command::new(&cpath);
     cmd.args(&cmdline);
@@ -116,7 +115,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
     cmd.env("VAGGA_SUBCOMMAND", name);
     if !bridge {
         if let Some(euid) = command.external_user_id {
-            try!(set_fake_uidmap(&mut cmd, command.user_id, euid));
+            set_fake_uidmap(&mut cmd, command.user_id, euid)?;
         }
         cmd.uid(command.user_id);
     }

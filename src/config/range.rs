@@ -23,10 +23,10 @@ impl Decodable for Range {
             .or_else(|_| {
                 let mut pair = val.splitn(2, '-');
                 Ok(Range::new(
-                    try!(pair.next().and_then(|x| FromStr::from_str(x).ok())
-                        .ok_or(d.error("Error parsing range"))),
-                    try!(pair.next().and_then(|x| FromStr::from_str(x).ok())
-                        .ok_or(d.error("Error parsing range"))),
+                    pair.next().and_then(|x| FromStr::from_str(x).ok())
+                        .ok_or(d.error("Error parsing range"))?,
+                    pair.next().and_then(|x| FromStr::from_str(x).ok())
+                        .ok_or(d.error("Error parsing range"))?,
                 ))
             })
         })

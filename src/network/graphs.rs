@@ -24,10 +24,10 @@ pub struct Graph {
 pub fn get_full_mesh(config: &Config)
     -> Result<(HashMap<String, String>, Graph), String>
 {
-    let cmd = try!(env::var("VAGGA_COMMAND").ok()
+    let cmd = env::var("VAGGA_COMMAND").ok()
         .and_then(|cmd| config.commands.get(&cmd))
         .ok_or(format!("This command is supposed to be run inside \
-                        container started by vagga !Supervise command")));
+                        container started by vagga !Supervise command"))?;
     let sup = match cmd {
         &MainCommand::Supervise(ref sup) => sup,
         _ => return Err(format!("This command is supposed to be run \
@@ -64,7 +64,7 @@ pub fn full_mesh_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let (_ips, graph) = try!(get_full_mesh(config).map_err(Err));
+    let (_ips, graph) = get_full_mesh(config).map_err(Err)?;
     return Ok(graph);
 }
 
@@ -92,7 +92,7 @@ pub fn disjoint_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    Ok(try!(_partition(config, nodes, true).map_err(Err)))
+    Ok(_partition(config, nodes, true).map_err(Err)?)
 }
 
 pub fn split_graph_cmd(config: &Config, args: Vec<String>)
@@ -120,13 +120,13 @@ pub fn split_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    Ok(try!(_partition(config, nodes, false).map_err(Err)))
+    Ok(_partition(config, nodes, false).map_err(Err)?)
 }
 
 fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
     -> Result<Graph, String>
 {
-    let (ips, mut graph) = try!(get_full_mesh(config));
+    let (ips, mut graph) = get_full_mesh(config)?;
     let mut visited = HashSet::new();
     let mut clusters = vec!();
     let mut cluster: Vec<String> = vec!();
@@ -138,8 +138,8 @@ fn _partition(config: &Config, nodes: Vec<String>, check_all: bool)
             }
             continue;
         }
-        let ip = try!(ips.get(v)
-            .ok_or(format!("Node {} does not exists or has no IP", v)));
+        let ip = ips.get(v)
+            .ok_or(format!("Node {} does not exists or has no IP", v))?;
         cluster.push(ip.to_string());
         if !visited.insert(ip.to_string()) && check_all {
             return Err(format!("Duplicate node {} (or it's IP)", v));
@@ -216,10 +216,10 @@ pub fn isolate_graph_cmd(config: &Config, args: Vec<String>)
             }
         }
     }
-    let (ips, mut graph) = try!(get_full_mesh(config).map_err(Err));
+    let (ips, mut graph) = get_full_mesh(config).map_err(Err)?;
     for v in nodes.iter() {
-        let ip = try!(ips.get(v)
-            .ok_or(Err(format!("Node {} does not exists", v))));
+        let ip = ips.get(v)
+            .ok_or(Err(format!("Node {} does not exists", v)))?;
         *graph.nodes.get_mut(ip).unwrap() = Isolate;
     }
     return Ok(graph);

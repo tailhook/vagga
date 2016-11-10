@@ -56,14 +56,14 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     "/tmp/get-pip.py".to_string(),
                     "--target=/tmp/pip-install".to_string(),
                     );
-                let pip_inst = try!(download::download_file(ctx,
-                    &["https://bootstrap.pypa.io/get-pip.py"], None));
-                try!(copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
-                    .map_err(|e| format!("Error copying pip: {}", e)));
-                try!(run_command_at_env(ctx, &args, &Path::new("/work"), &[]));
+                let pip_inst = download::download_file(ctx,
+                    &["https://bootstrap.pypa.io/get-pip.py"], None)?;
+                copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
+                    .map_err(|e| format!("Error copying pip: {}", e))?;
+                run_command_at_env(ctx, &args, &Path::new("/work"), &[])?;
             }
-            Composer => try!(composer::bootstrap(ctx)),
-            Bundler => try!(gem::setup_bundler(ctx)),
+            Composer => composer::bootstrap(ctx)?,
+            Bundler => gem::setup_bundler(ctx)?,
             _ => {
                 left.push(i);
                 continue;
@@ -83,13 +83,13 @@ pub fn ensure_packages(distro: &mut Box<Distribution>, ctx: &mut Context,
         .filter(|x| !ctx.featured_packages.contains(x))
         .collect::<Vec<Package>>();
     if features.len() > 0 {
-        let leftover = try!(distro.ensure_packages(ctx, &features));
+        let leftover = distro.ensure_packages(ctx, &features)?;
         ctx.featured_packages.extend(
             features.into_iter().filter(|x| !leftover.contains(x)));
         features = leftover;
     }
     if features.len() > 0 {
-        features = try!(generic_packages(ctx, features));
+        features = generic_packages(ctx, features)?;
     }
     if features.len() > 0 {
         return Err(StepError::UnsupportedFeatures(features));

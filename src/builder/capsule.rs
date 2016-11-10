@@ -42,7 +42,7 @@ pub struct State {
 // Also used in alpine
 pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     let mut cmd = Command::new("/vagga/bin/apk");
-    try!(squash_stdio(&mut cmd));
+    squash_stdio(&mut cmd)?;
     cmd.env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
@@ -77,22 +77,22 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
         let path = Path::new("/etc/apk/cache");
         try_msg!(Dir::new(&path).recursive(true).create(),
              "Error creating cache dir: {err}");
-        try!(BindMount::new(&cache_dir, &path).mount()
-             .map_err(|e| e.to_string()));
+        BindMount::new(&cache_dir, &path).mount()
+             .map_err(|e| e.to_string())?;
 
-        try!(apk_run(&[
+        apk_run(&[
             "--allow-untrusted",
             "--initdb",
             "add",
             "--force",
             "/vagga/bin/alpine-keys.apk",
-            ], &[]));
+            ], &[])?;
         let mirror = settings.alpine_mirror.clone()
             .unwrap_or(choose_mirror());
-        try!(File::create(&Path::new("/etc/apk/repositories"))
+        File::create(&Path::new("/etc/apk/repositories"))
             .and_then(|mut f| write!(&mut f, "{}{}/main\n",
                 mirror, LATEST_VERSION))
-            .map_err(|e| format!("Can't write repositories file: {}", e)));
+            .map_err(|e| format!("Can't write repositories file: {}", e))?;
         capsule.capsule_base = true;
     }
     let mut pkg_queue = vec!();
@@ -125,14 +125,14 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
     }
     if pkg_queue.len() > 0 {
         if capsule.installed_packages.len() == 0 { // already have indexes
-            try!(apk_run(&[
+            apk_run(&[
                 "--update-cache",
                 "add",
-                ], &pkg_queue[0..]));
+                ], &pkg_queue[0..])?;
         } else {
-            try!(apk_run(&[
+            apk_run(&[
                 "add",
-                ], &pkg_queue[0..]));
+                ], &pkg_queue[0..])?;
         }
         capsule.installed_packages.extend(pkg_queue.into_iter());
     }

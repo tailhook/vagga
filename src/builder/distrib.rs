@@ -97,7 +97,7 @@ impl DistroBox for Box<Distribution> {
     }
     fn npm_configure(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         if (**self).is::<Unknown>() {
-            try!(alpine::configure(self, ctx, alpine::LATEST_VERSION));
+            alpine::configure(self, ctx, alpine::LATEST_VERSION)?;
         }
         Ok(())
     }

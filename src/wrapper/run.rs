@@ -51,14 +51,14 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             }
         }
     }
-    let pid: pid_t = try!(read_link(&Path::new("/proc/self"))
+    let pid: pid_t = read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
         .and_then(|v| v.to_str().and_then(|x| FromStr::from_str(x).ok())
-            .ok_or(format!("Can't parse pid: {:?}", v))));
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
-    let cconfig = try!(wrapper.config.containers.get(&container)
-        .ok_or(format!("Container {} not found", container)));
+            .ok_or(format!("Can't parse pid: {:?}", v)))?;
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
+    let cconfig = wrapper.config.containers.get(&container)
+        .ok_or(format!("Container {} not found", container))?;
 
     let write_mode = match copy {
         false => setup::WriteMode::ReadOnly,
@@ -68,9 +68,9 @@ pub fn run_command_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     let mut setup_info = setup::SetupInfo::from_container(&cconfig);
     setup_info.write_mode(write_mode);
     warn_if_data_container(&cconfig);
-    try!(setup::setup_filesystem(&setup_info, container_ver));
+    setup::setup_filesystem(&setup_info, container_ver)?;
 
-    let env = try!(setup::get_environment(&wrapper.settings, cconfig, None));
+    let env = setup::get_environment(&wrapper.settings, cconfig, None)?;
     let mut cpath = PathBuf::from(&command);
     let args = args.clone().to_vec();
     if !command.contains("/") {

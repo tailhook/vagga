@@ -199,10 +199,10 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
 
 impl Decodable for Step {
     fn decode<D: Decoder>(d: &mut D) -> Result<Step, D::Error> {
-        Ok(try!(d.read_enum("BuildStep", |d| {
+        Ok(d.read_enum("BuildStep", |d| {
             d.read_enum_variant(&COMMANDS, |d, index| {
                 decode_step(&COMMANDS, index, d)
             })
-        })))
+        })?)
     }
 }

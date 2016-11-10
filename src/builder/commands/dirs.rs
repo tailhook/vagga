@@ -57,16 +57,16 @@ pub fn remove(path: &PathBuf)
     -> Result<(), StepError>
 {
     let ref fpath = Path::new("/vagga/root")
-        .join(try!(path.strip_prefix("/")
-            .map_err(|_| format!("Must be absolute: {:?}", path))));
+        .join(path.strip_prefix("/")
+            .map_err(|_| format!("Must be absolute: {:?}", path))?);
     match fpath.symlink_metadata() {
         Ok(ref stats) if stats.is_dir() => {
-            try!(clean_dir(fpath, true));
+            clean_dir(fpath, true)?;
         },
         Ok(_) => {
-            try!(remove_file(fpath)
+            remove_file(fpath)
                  .map_err(|e| format!("Error removing file {:?}: {}",
-                     fpath, e)));
+                     fpath, e))?;
         },
         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {},
         Err(_) => {
@@ -81,8 +81,8 @@ pub fn ensure(path: &PathBuf)
     -> Result<(), StepError>
 {
     let ref fpath = Path::new("/vagga/root")
-        .join(try!(path.strip_prefix("/")
-            .map_err(|_| format!("Must be absolute: {:?}", path))));
+        .join(path.strip_prefix("/")
+            .map_err(|_| format!("Must be absolute: {:?}", path))?);
     match fpath.metadata() {
         Ok(ref stats) if stats.is_dir() => {
             return Ok(());
@@ -124,7 +124,7 @@ impl BuildStep for EnsureDir {
         -> Result<(), StepError>
     {
         let ref path = self.0;
-        try!(ensure(path));
+        ensure(path)?;
         for mount_point in guard.ctx.container_config.volumes.keys() {
             if path != mount_point && path.starts_with(mount_point) {
                 warn!("{0:?} directory is in the volume: {1:?}.\n\t\
@@ -133,7 +133,7 @@ impl BuildStep for EnsureDir {
                     mount_point);
             }
         }
-        try!(guard.ctx.add_ensure_dir(path));
+        guard.ctx.add_ensure_dir(path)?;
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
@@ -151,8 +151,8 @@ impl BuildStep for EmptyDir {
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
-        try!(clean_dir(&self.0, false));
-        try!(guard.ctx.add_empty_dir(&self.0));
+        clean_dir(&self.0, false)?;
+        guard.ctx.add_empty_dir(&self.0)?;
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
@@ -173,7 +173,7 @@ impl BuildStep for CacheDirs {
         -> Result<(), StepError>
     {
         for (k, v) in self.0.iter() {
-            try!(guard.ctx.add_cache_dir(k, v.clone()));
+            guard.ctx.add_cache_dir(k, v.clone())?;
         }
         Ok(())
     }
@@ -192,8 +192,8 @@ impl BuildStep for Remove {
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
-        try!(remove(&self.0));
-        try!(guard.ctx.add_remove_path(&self.0));
+        remove(&self.0)?;
+        guard.ctx.add_remove_path(&self.0)?;
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {

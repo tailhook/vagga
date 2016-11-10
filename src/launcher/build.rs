@@ -16,12 +16,12 @@ pub fn build_container(context: &Context, name: &String, mode: BuildMode)
 {
     use options::build_mode::BuildMode::*;
     let ver = match mode {
-        Normal => try!(build_internal(context, name, &[])),
-        NoImage => try!(build_internal(context, name,
-            &["--no-image-download".to_string()])),
-        NoBuild => format!("{}.{}", &name, try!(get_version(context, &name))),
+        Normal => build_internal(context, name, &[])?,
+        NoImage => build_internal(context, name,
+            &["--no-image-download".to_string()])?,
+        NoBuild => format!("{}.{}", &name, get_version(context, &name)?),
         NoVersion => {
-            try!(version_from_symlink(format!(".vagga/{}", name)))
+            version_from_symlink(format!(".vagga/{}", name))?
         }
     };
     Ok(ver)
@@ -51,9 +51,7 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    try!(cmd.map_users_for(
-        try!(context.config.get_container(name)),
-        &context.settings));
+    cmd.map_users_for(context.config.get_container(name)?, &context.settings)?;
 
     capture_fd3(cmd)
     .and_then(|x| String::from_utf8(x)
@@ -64,7 +62,7 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     -> Result<String, String>
 {
     let mut cmd = Wrapper::new(None, &context.settings);
-    try!(squash_stdio(&mut cmd));
+    squash_stdio(&mut cmd)?;
     cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
@@ -86,9 +84,7 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    try!(cmd.map_users_for(
-        try!(context.config.get_container(name)),
-        &context.settings));
+    cmd.map_users_for(context.config.get_container(name)?, &context.settings)?;
 
     capture_fd3(cmd)
     .and_then(|x| String::from_utf8(x)

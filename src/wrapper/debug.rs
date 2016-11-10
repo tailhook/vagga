@@ -31,18 +31,18 @@ pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
 }
 
 fn create_dirs() -> io::Result<()> {
-    try!(create_dir("/tmp"));
-    try!(create_dir("/tmp/dir1"));
-    try!(File::create("/tmp/dir1/f1.txt")
-        .and_then(|mut f| f.write_all(b"one")));
-    try!(create_dir("/tmp/dir2"));
-    try!(File::create("/tmp/dir2/f2.txt")
-        .and_then(|mut f| f.write_all(b"two")));
-    try!(create_dir("/tmp/dir3"));
-    try!(File::create("/tmp/dir3/f3.txt")
-        .and_then(|mut f| f.write_all(b"three")));
-    try!(create_dir("/tmp/wrk"));
-    try!(create_dir("/tmp/merged"));
+    create_dir("/tmp")?;
+    create_dir("/tmp/dir1")?;
+    File::create("/tmp/dir1/f1.txt")
+        .and_then(|mut f| f.write_all(b"one"))?;
+    create_dir("/tmp/dir2")?;
+    File::create("/tmp/dir2/f2.txt")
+        .and_then(|mut f| f.write_all(b"two"))?;
+    create_dir("/tmp/dir3")?;
+    File::create("/tmp/dir3/f3.txt")
+        .and_then(|mut f| f.write_all(b"three"))?;
+    create_dir("/tmp/wrk")?;
+    create_dir("/tmp/merged")?;
     Ok(())
 }
 
@@ -52,34 +52,34 @@ fn err(e: &'static str) -> io::Result<()> {
 
 fn check_read_write() -> io::Result<()> {
     let mut buf = String::with_capacity(100);
-    try!(File::open("/tmp/merged/f1.txt")
-        .and_then(|mut f| f.read_to_string(&mut buf)));
+    File::open("/tmp/merged/f1.txt")
+        .and_then(|mut f| f.read_to_string(&mut buf))?;
     if buf != "one" {
         return err("f1.txt has wrong data");
     }
     buf.clear();
-    try!(File::open("/tmp/merged/f2.txt")
-        .and_then(|mut f| f.read_to_string(&mut buf)));
+    File::open("/tmp/merged/f2.txt")
+        .and_then(|mut f| f.read_to_string(&mut buf))?;
     if buf != "two" {
         return err("f2.txt has wrong data");
     }
     buf.clear();
-    try!(File::open("/tmp/merged/f3.txt")
-        .and_then(|mut f| f.read_to_string(&mut buf)));
+    File::open("/tmp/merged/f3.txt")
+        .and_then(|mut f| f.read_to_string(&mut buf))?;
     if buf != "three" {
         return err("f3.txt has wrong data");
     }
-    try!(File::create("/tmp/merged/new.txt")
-        .and_then(|mut f| f.write_all(b"Hello world!")));
+    File::create("/tmp/merged/new.txt")
+        .and_then(|mut f| f.write_all(b"Hello world!"))?;
     buf.clear();
-    try!(File::open("/tmp/merged/new.txt")
-        .and_then(|mut f| f.read_to_string(&mut buf)));
+    File::open("/tmp/merged/new.txt")
+        .and_then(|mut f| f.read_to_string(&mut buf))?;
     if buf != "Hello world!" {
         return err("Can't read data just written in merge dir");
     }
     buf.clear();
-    try!(File::open("/tmp/dir3/new.txt")
-        .and_then(|mut f| f.read_to_string(&mut buf)));
+    File::open("/tmp/dir3/new.txt")
+        .and_then(|mut f| f.read_to_string(&mut buf))?;
     if buf != "Hello world!" {
         return err("Can't read data just written in upper dir");
     }

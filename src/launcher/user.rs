@@ -57,7 +57,7 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
             None => return Err(format!("Command {} not found. \
                         Run vagga without arguments to see the list.", cmd)),
         };
-        try!(system::check(&cinfo.system(), context));
+        system::check(&cinfo.system(), context)?;
         let arg = match *cinfo {
             MainCommand::Command(ref info) => {
                 let a = match simple::parse_args(info, context, cmd, args) {
@@ -83,13 +83,13 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
     for arg in all_args.into_iter() {
         let data = match arg {
             Args::Simple(info, arg) => {
-                let v = try!(simple::prepare_containers(
-                    info, &arg, context));
+                let v = simple::prepare_containers(
+                    info, &arg, context)?;
                 Data::Simple(info, arg, v)
             }
             Args::Supervise(info, arg) => {
-                let v = try!(supervisor::prepare_containers(
-                    info, &arg, context));
+                let v = supervisor::prepare_containers(
+                    info, &arg, context)?;
                 Data::Supervise(info, arg, v)
             }
         };

@@ -20,12 +20,12 @@ impl<T: AsRef<str>> fmt::Display for Escaped<T> {
         {
             write!(fmt, "{}", data)
         } else {
-            try!(fmt.write_str("'"));
+            fmt.write_str("'")?;
             for c in data.chars() {
                 if c == '\'' {
-                    try!(fmt.write_str(r#"'"'"'"#));
+                    fmt.write_str(r#"'"'"'"#)?;
                 } else {
-                    try!(write!(fmt, "{}", c));
+                    write!(fmt, "{}", c)?;
                 }
             }
             fmt.write_str("'")
@@ -49,10 +49,10 @@ pub fn parse_docopts(description: &Option<String>,
         description.as_ref().unwrap_or(&format!("vagga {}", cmd)),
         original_text,
         extra_text);
-    let opt = try!(Docopt::new(docopt)
+    let opt = Docopt::new(docopt)
         .map_err(|e| format!("Error parsing `options` in command {:?}: {}",
                              cmd, e))
-        .map_err(ArgError::Error))
+        .map_err(ArgError::Error)?
         .argv(args);
     let parsed = match opt.parse() {
         Ok(parsed) => parsed,

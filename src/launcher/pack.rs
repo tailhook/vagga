@@ -17,12 +17,12 @@ pub fn pack_command(context: &Context, args: Vec<String>)
         Err(code) => return Ok(code),
     };
 
-    let ver = try!(build_container(context, &opt.name, opt.build_mode));
+    let ver = build_container(context, &opt.name, opt.build_mode)?;
 
     let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
-    try!(cmd.map_users_for(
+    cmd.map_users_for(
         &context.config.get_container(&opt.name).unwrap(),
-        &context.settings));
+        &context.settings)?;
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.arg("_pack_image").args(&args);

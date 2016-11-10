@@ -23,7 +23,7 @@ fn all(container: &Container, cfg: &Config)
 
     for b in container.setup.iter() {
         debug!("Versioning setup: {:?}", b);
-        try!(b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e)));
+        b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e))?;
     }
 
     if !container.data_dirs.is_empty() {
@@ -38,13 +38,13 @@ fn all(container: &Container, cfg: &Config)
 pub fn short_version(container: &Container, cfg: &Config)
     -> Result<String, (String, Error)>
 {
-    let hash_str = try!(all(container, cfg));
+    let hash_str = all(container, cfg)?;
     Ok(hash_str[..8].to_string())
 }
 
 pub fn long_version(container: &Container, cfg: &Config)
     -> Result<String, (String, Error)>
 {
-    let hash_str = try!(all(&container, cfg));
+    let hash_str = all(&container, cfg)?;
     Ok(hash_str)
 }

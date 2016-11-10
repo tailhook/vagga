@@ -81,8 +81,8 @@ pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
             "Config not found in path {:?}", work_dir)),
     };
     assert!(cfg_dir.is_absolute());
-    let cfg = try!(read_config(&filename));
-    try!(validate_config(&cfg));
+    let cfg = read_config(&filename)?;
+    validate_config(&cfg)?;
     return Ok((cfg, cfg_dir));
 }
 
@@ -125,9 +125,9 @@ fn include_file(pos: &Pos, include: &Include,
 pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut opt = Options::default();
     opt.allow_include(include_file);
-    let mut config: Config = try!(
+    let mut config: Config = 
         parse_config(filename, &config_validator(), &opt)
-        .map_err(|e| format!("{}", e)));
+        .map_err(|e| format!("{}", e))?;
     for (_, ref mut container) in config.containers.iter_mut() {
         if container.uids.len() == 0 {
             container.uids.push(Range::new(0, 65535));

@@ -19,10 +19,10 @@ fn has_interface(name: &str) -> Result<bool, String> {
         .map(BufReader::new)
         .and_then(|f| {
             let mut lineiter = f.lines();
-            try!(lineiter.next().unwrap());  // Two header lines
-            try!(lineiter.next().unwrap());
+            lineiter.next().unwrap()?;  // Two header lines
+            lineiter.next().unwrap()?;
             for line in lineiter {
-                let line = try!(line);
+                let line = line?;
                 let mut splits = line[..].splitn(2, ':');
                 let interface = splits.next().unwrap();
                 if interface.trim() == name {

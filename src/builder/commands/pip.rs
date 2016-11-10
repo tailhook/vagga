@@ -161,7 +161,7 @@ pub fn pip_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     -> Result<(), String>
 {
     let features = scan_features(&ctx.pip_settings, ver, pkgs);
-    try!(packages::ensure_packages(distro, ctx, &features));
+    packages::ensure_packages(distro, ctx, &features)?;
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.extend(pkgs.clone().into_iter());
     run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
@@ -172,13 +172,13 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: u8, reqtxt: &Path)
     -> Result<(), String>
 {
-    let f = try!(File::open(&Path::new("/work").join(reqtxt))
-        .map_err(|e| format!("Can't open requirements file: {}", e)));
+    let f = File::open(&Path::new("/work").join(reqtxt))
+        .map_err(|e| format!("Can't open requirements file: {}", e))?;
     let f = BufReader::new(f);
     let mut names = vec!();
     for line in f.lines() {
-        let line = try!(line
-                .map_err(|e| format!("Error reading requirements: {}", e)));
+        let line = line
+                .map_err(|e| format!("Error reading requirements: {}", e))?;
         let chunk = line[..].trim();
         // Ignore empty lines and comments
         if chunk.len() == 0 || chunk.starts_with("#") {
@@ -188,11 +188,11 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
     }
 
     let features = scan_features(&ctx.pip_settings, ver, &names);
-    try!(packages::ensure_packages(distro, ctx, &features));
+    packages::ensure_packages(distro, ctx, &features)?;
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.push("--requirement".to_string());
-    pip_cli.push(try!(reqtxt.to_str()
-        .ok_or("Incorrect path for requirements file")).to_string());
+    pip_cli.push(reqtxt.to_str()
+        .ok_or("Incorrect path for requirements file")?.to_string());
     run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }
@@ -202,12 +202,12 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     try_msg!(Dir::new(&cache_root).recursive(true).create(),
          "Error creating cache dir {d:?}: {err}", d=cache_root);
 
-    try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache/http"),
-                           "pip-cache-http".to_string()));
+    ctx.add_cache_dir(Path::new("/tmp/pip-cache/http"),
+                           "pip-cache-http".to_string())?;
 
     if ctx.pip_settings.cache_wheels {
         let cache_dir = format!("pip-cache-wheels-{}", ctx.binary_ident);
-        try!(ctx.add_cache_dir(Path::new("/tmp/pip-cache/wheels"), cache_dir));
+        ctx.add_cache_dir(Path::new("/tmp/pip-cache/wheels"), cache_dir)?;
     } // else just write files in tmp
 
     ctx.environ.insert("PIP_CACHE_DIR".to_string(),
@@ -221,7 +221,7 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
     if ctx.featured_packages.contains(&packages::PipPy2) {
         let python_exe = ctx.pip_settings.python_exe.clone()
                          .unwrap_or("python2".to_string());
-        try!(capture_command(ctx, &[python_exe,
+        capture_command(ctx, &[python_exe,
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
@@ -230,12 +230,12 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 File::create("/vagga/container/pip2-freeze.txt")
                 .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
-            }));
+            })?;
     }
     if ctx.featured_packages.contains(&packages::PipPy3) {
         let python_exe = ctx.pip_settings.python_exe.clone()
                          .unwrap_or("python3".to_string());
-        try!(capture_command(ctx, &[python_exe,
+        capture_command(ctx, &[python_exe,
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
@@ -244,7 +244,7 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 File::create("/vagga/container/pip3-freeze.txt")
                 .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
-            }));
+            })?;
     }
     Ok(())
 }
@@ -283,9 +283,9 @@ impl BuildStep for Py2Install {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.ctx));
+        configure(&mut guard.ctx)?;
         if build {
-            try!(pip_install(&mut guard.distro, &mut guard.ctx, 2, &self.0));
+            pip_install(&mut guard.distro, &mut guard.ctx, 2, &self.0)?;
         }
         Ok(())
     }
@@ -304,9 +304,9 @@ impl BuildStep for Py3Install {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.ctx));
+        configure(&mut guard.ctx)?;
         if build {
-            try!(pip_install(&mut guard.distro, &mut guard.ctx, 3, &self.0));
+            pip_install(&mut guard.distro, &mut guard.ctx, 3, &self.0)?;
         }
         Ok(())
     }
@@ -329,10 +329,8 @@ fn parse_req_filename(line: &str) -> Option<&str> {
 fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
                Result<(), VersionError> {
 
-    let path = try!(Path::new("/work")
-                       .join(fname)
-                       .canonicalize()
-                       .map_err(|e| VersionError::Io(e, fname.to_path_buf())));
+    let path = Path::new("/work").join(fname).canonicalize()
+                   .map_err(|e| VersionError::Io(e, fname.to_path_buf()))?;
 
     let name = format!("{:?}", path);
     if used.contains(&name[..]) {
@@ -342,21 +340,18 @@ fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
 
     used.insert(name);
 
-    let f = try!(File::open(&path)
-                      .map_err(|e| VersionError::Io(e, path.clone())));
+    let f = File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))?;
 
     let f = BufReader::new(f);
     for line in f.lines() {
-        let line = try!(line.map_err(|e| VersionError::Io(e, path.clone())));
+        let line = line.map_err(|e| VersionError::Io(e, path.clone()))?;
         let chunk = line[..].trim();
         // Ignore empty lines and comments
         if chunk.len() == 0 || chunk.starts_with("#") {
             continue;
         }
         if let Some(req) = parse_req_filename(chunk) {
-            try!(version_req(hash,
-                             &fname.parent().unwrap().join(req),
-                             used));
+            version_req(hash, &fname.parent().unwrap().join(req), used)?;
             continue;
         }
         // Should we also ignore the order?
@@ -374,10 +369,9 @@ impl BuildStep for Py2Requirements {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.ctx));
+        configure(&mut guard.ctx)?;
         if build {
-            try!(pip_requirements(&mut guard.distro,
-                &mut guard.ctx, 2, &self.0));
+            pip_requirements(&mut guard.distro, &mut guard.ctx, 2, &self.0)?;
         }
         Ok(())
     }
@@ -395,10 +389,9 @@ impl BuildStep for Py3Requirements {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.ctx));
+        configure(&mut guard.ctx)?;
         if build {
-            try!(pip_requirements(&mut guard.distro,
-                &mut guard.ctx, 3, &self.0));
+            pip_requirements(&mut guard.distro, &mut guard.ctx, 3, &self.0)?;
         }
         Ok(())
     }

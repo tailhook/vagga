@@ -102,10 +102,10 @@ impl BuildStep for Unzip {
 
             let fpath = PathBuf::from("/vagga/root")
                 .join(self.path.strip_prefix("/").unwrap());
-            let (filename, _) = try!(maybe_download_and_check_hashsum(
-                &mut guard.ctx, &self.url, self.sha256.clone()));
+            let (filename, _) = maybe_download_and_check_hashsum(
+                &mut guard.ctx, &self.url, self.sha256.clone())?;
 
-            try!(unzip_file(&mut guard.ctx, &filename, &fpath, &self.subdir));
+            unzip_file(&mut guard.ctx, &filename, &fpath, &self.subdir)?;
         }
         Ok(())
     }

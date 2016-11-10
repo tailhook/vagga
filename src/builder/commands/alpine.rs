@@ -73,7 +73,7 @@ impl Distribution for Distro {
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         if !self.base_setup {
             self.base_setup = true;
-            try!(setup_base(ctx, &self.version, &self.mirror));
+            setup_base(ctx, &self.version, &self.mirror)?;
         }
         Ok(())
     }
@@ -98,13 +98,13 @@ impl Distribution for Distro {
             repo: repository.to_string(),
             tag: None,
         };
-        try!(self.add_alpine_repo(ctx, &alpine_repo));
+        self.add_alpine_repo(ctx, &alpine_repo)?;
         Ok(())
     }
     fn install(&mut self, ctx: &mut Context, pkgs: &[String])
         -> Result<(), StepError>
     {
-        try!(self.bootstrap(ctx));
+        self.bootstrap(ctx)?;
         let mut apk_args = vec!();
         if self.apk_update {
             self.apk_update = false;
@@ -112,14 +112,14 @@ impl Distribution for Distro {
         }
         apk_args.extend(&["--root", "/vagga/root"]);
         apk_args.push("add");
-        try!(capsule::apk_run(&apk_args, &pkgs[..]));
+        capsule::apk_run(&apk_args, &pkgs[..])?;
         Ok(())
     }
     fn ensure_packages(&mut self, ctx: &mut Context,
         features: &[packages::Package])
         -> Result<Vec<packages::Package>, StepError>
     {
-        try!(self.bootstrap(ctx));
+        self.bootstrap(ctx)?;
         let mut to_install = vec!();
         let mut unsupp = vec!();
         for i in features.iter() {
@@ -149,17 +149,17 @@ impl Distribution for Distro {
             }
         }
         if to_install.len() > 0 {
-            try!(capsule::apk_run(&[
+            capsule::apk_run(&[
                 "--root", "/vagga/root",
                 "add",
-                ], &to_install[..]));
+                ], &to_install[..])?;
         }
         return Ok(unsupp);
     }
     fn finish(&mut self, ctx: &mut Context) -> Result<(), String>
     {
         let pkgs = ctx.build_deps.clone().into_iter().collect();
-        try!(remove(ctx, &pkgs));
+        remove(ctx, &pkgs)?;
         let mut cmd = Command::new("/vagga/bin/apk");
         cmd
             .stdin(Stdio::null())
@@ -167,13 +167,13 @@ impl Distribution for Distro {
             .arg("--root").arg("/vagga/root")
             .arg("-vv")
             .arg("info");
-        try!(capture_stdout(cmd)
+        capture_stdout(cmd)
             .map_err(|e| format!("Error dumping package list: {}", e))
             .and_then(|out| {
                 File::create("/vagga/container/alpine-packages.txt")
                 .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
-            }));
+            })?;
         Ok(())
     }
 }
@@ -199,10 +199,10 @@ impl Distro {
             &repo.branch.as_ref().unwrap_or(&self.version),
             &repo.repo).unwrap();
 
-        try!(OpenOptions::new().append(true)
+        OpenOptions::new().append(true)
             .open("/vagga/root/etc/apk/repositories")
             .and_then(|mut f| write!(&mut f, "{}\n", &repo_line))
-            .map_err(|e| format!("Can't write repositories file: {}", e)));
+            .map_err(|e| format!("Can't write repositories file: {}", e))?;
 
         Ok(())
     }
@@ -314,8 +314,8 @@ pub fn choose_mirror() -> String {
 }
 
 fn check_version(version: &String) -> Result<(), String> {
-    let version_regex = try!(Regex::new(ALPINE_VERSION_REGEX)
-                             .map_err(|e| format!("{}", e)));
+    let version_regex = Regex::new(ALPINE_VERSION_REGEX)
+                             .map_err(|e| format!("{}", e))?;
     match version_regex.is_match(&version) {
         true => Ok(()),
         false => Err(format!("Error checking alpine version: '{}'", version).to_string()),
@@ -325,24 +325,24 @@ fn check_version(version: &String) -> Result<(), String> {
 fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
     -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::AlpineInstaller]));
-    try!(check_version(version));
+    capsule::ensure_features(ctx, &[capsule::AlpineInstaller])?;
+    check_version(version)?;
     try_msg!(Dir::new("/vagga/root/etc/apk").recursive(true).create(),
         "Error creating apk dir: {err}");
     if !Path::new("/vagga/root/etc/apk/repositories").exists() {
-        try!(File::create("/vagga/root/etc/apk/repositories")
+        File::create("/vagga/root/etc/apk/repositories")
             .and_then(|mut f| write!(&mut f, "{}{}/main\n",
                 mirror, version))
-            .map_err(|e| format!("Can't write repositories file: {}", e)));
+            .map_err(|e| format!("Can't write repositories file: {}", e))?;
     }
-    try!(capsule::apk_run(&[
+    capsule::apk_run(&[
         "--update-cache",
         "--keys-dir=/etc/apk/keys",  // Use keys from capsule
         "--root=/vagga/root",
         "--initdb",
         "add",
         "alpine-base",
-        ], &[]));
+        ], &[])?;
     Ok(())
 }
 
@@ -362,15 +362,15 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
 {
     let mirror = ctx.settings.alpine_mirror.clone()
         .unwrap_or(choose_mirror());
-    try!(distro.set(Distro {
+    distro.set(Distro {
         version: ver.to_string(),
         mirror: mirror,
         base_setup: false,
         apk_update: true,
-    }));
+    })?;
     ctx.binary_ident = format!("{}-alpine-{}", ctx.binary_ident, ver);
-    try!(ctx.add_cache_dir(Path::new("/etc/apk/cache"),
-                           "alpine-cache".to_string()));
+    ctx.add_cache_dir(Path::new("/etc/apk/cache"),
+                           "alpine-cache".to_string())?;
     ctx.environ.insert("LANG".to_string(),
                        "en_US.UTF-8".to_string());
     ctx.environ.insert("PATH".to_string(),
@@ -390,9 +390,9 @@ impl BuildStep for Alpine {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.distro, &mut guard.ctx, &self.0));
+        configure(&mut guard.distro, &mut guard.ctx, &self.0)?;
         if build {
-            try!(guard.distro.bootstrap(&mut guard.ctx));
+            guard.distro.bootstrap(&mut guard.ctx)?;
         } else {
 
         }
@@ -418,10 +418,10 @@ impl BuildStep for AlpineRepo {
     {
         if build {
             let ref mut ctx = guard.ctx;
-            try!(guard.distro.specific(|u: &mut Distro| {
-                try!(u.add_alpine_repo(ctx, &self));
+            guard.distro.specific(|u: &mut Distro| {
+                u.add_alpine_repo(ctx, &self)?;
                 Ok(())
-            }));
+            })?;
         }
         Ok(())
     }

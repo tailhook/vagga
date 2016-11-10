@@ -112,8 +112,8 @@ impl<'a> Context<'a> {
     pub fn add_cache_dir(&mut self, path: &Path, name: String)
         -> Result<(), String>
     {
-        let path = try!(path.strip_prefix("/")
-            .map_err(|_| format!("cache_dir must be absolute: {:?}", path)));
+        let path = path.strip_prefix("/")
+            .map_err(|_| format!("cache_dir must be absolute: {:?}", path))?;
         if self.cache_dirs.insert(path.to_path_buf(), name.clone()).is_none() {
             let cache_dir = Path::new("/vagga/cache").join(&name);
             if !cache_dir.exists() {
@@ -123,7 +123,7 @@ impl<'a> Context<'a> {
             let path = Path::new("/vagga/root").join(path);
             try_msg!(Dir::new(&path).recursive(true).create(),
                  "Error creating cache dir: {err}");
-            try!(clean_dir(&path, false));
+            clean_dir(&path, false)?;
             try_msg!(BindMount::new(&cache_dir, &path).mount(),
                 "mount cache dir: {err}");
             self.mounted.push(path);
@@ -134,8 +134,8 @@ impl<'a> Context<'a> {
     pub fn add_remove_path(&mut self, path: &Path)
         -> Result<(), String>
     {
-        let rel_path = try!(path.strip_prefix("/")
-            .map_err(|_| format!("remove path must be absolute: {:?}", path)));
+        let rel_path = path.strip_prefix("/")
+            .map_err(|_| format!("remove path must be absolute: {:?}", path))?;
         self.remove_paths.insert(rel_path.to_path_buf());
         Ok(())
     }
@@ -143,8 +143,8 @@ impl<'a> Context<'a> {
     pub fn add_empty_dir(&mut self, path: &Path)
         -> Result<(), String>
     {
-        let rel_path = try!(path.strip_prefix("/")
-            .map_err(|_| format!("empty_dir must be absolute: {:?}", path)));
+        let rel_path = path.strip_prefix("/")
+            .map_err(|_| format!("empty_dir must be absolute: {:?}", path))?;
         self.empty_dirs.insert(rel_path.to_path_buf());
         Ok(())
     }
@@ -152,8 +152,8 @@ impl<'a> Context<'a> {
     pub fn add_ensure_dir(&mut self, path: &Path)
         -> Result<(), String>
     {
-        let rel_path = try!(path.strip_prefix("/")
-            .map_err(|_| format!("ensure_dir must be absolute: {:?}", path)));
+        let rel_path = path.strip_prefix("/")
+            .map_err(|_| format!("ensure_dir must be absolute: {:?}", path))?;
         self.ensure_dirs.insert(rel_path.to_path_buf());
         Ok(())
     }

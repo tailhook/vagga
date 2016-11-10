@@ -92,8 +92,8 @@ fn git_cache(url: &String) -> Result<PathBuf, String> {
                 return Err(format!("Error running {:?}: {}", cmd, err));
             }
         }
-        try!(rename(&tmppath, &cache_path)
-            .map_err(|e| format!("Error renaming cache dir: {}", e)));
+        rename(&tmppath, &cache_path)
+            .map_err(|e| format!("Error renaming cache dir: {}", e))?;
     }
     Ok(cache_path)
 }
@@ -129,26 +129,26 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 
 pub fn git_command(ctx: &mut Context, git: &Git) -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::Git]));
+    capsule::ensure_features(ctx, &[capsule::Git])?;
     let dest = PathBuf::from("/vagga/root")
         .join(&git.path.strip_prefix("/").unwrap());
-    let cache_path = try!(git_cache(&git.url));
-    try!(create_dir_all(&dest)
-         .map_err(|e| format!("Error creating dir: {}", e)));
-    try!(git_checkout(&cache_path, &dest, &git.revision, &git.branch));
+    let cache_path = git_cache(&git.url)?;
+    create_dir_all(&dest)
+         .map_err(|e| format!("Error creating dir: {}", e))?;
+    git_checkout(&cache_path, &dest, &git.revision, &git.branch)?;
     Ok(())
 }
 
 pub fn git_install(ctx: &mut Context, git: &GitInstall)
     -> Result<(), String>
 {
-    try!(capsule::ensure_features(ctx, &[capsule::Git]));
-    let cache_path = try!(git_cache(&git.url));
+    capsule::ensure_features(ctx, &[capsule::Git])?;
+    let cache_path = git_cache(&git.url)?;
     let tmppath = Path::new("/vagga/root/tmp")
         .join(cache_path.file_name().unwrap());
-    try!(create_dir_all(&tmppath)
-         .map_err(|e| format!("Error creating dir: {}", e)));
-    try!(git_checkout(&cache_path, &tmppath, &git.revision, &git.branch));
+    create_dir_all(&tmppath)
+         .map_err(|e| format!("Error creating dir: {}", e))?;
+    git_checkout(&cache_path, &tmppath, &git.revision, &git.branch)?;
     let workdir = PathBuf::from("/")
         .join(tmppath.strip_prefix("/vagga/root").unwrap())
         .join(&git.subdir);
@@ -164,13 +164,13 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
     git: &GitSource)
     -> Result<(), String>
 {
-    try!(capsule::ensure(capsule, settings, &[capsule::Git]));
-    let cache_path = try!(git_cache(&git.url));
+    capsule::ensure(capsule, settings, &[capsule::Git])?;
+    let cache_path = git_cache(&git.url)?;
     let dest = Path::new("/vagga/sources")
         .join(cache_path.file_name().unwrap());
-    try!(create_dir_all(&dest)
-         .map_err(|e| format!("Error creating dir: {}", e)));
-    try!(git_checkout(&cache_path, &dest, &git.revision, &git.branch));
+    create_dir_all(&dest)
+         .map_err(|e| format!("Error creating dir: {}", e))?;
+    git_checkout(&cache_path, &dest, &git.revision, &git.branch)?;
     Ok(())
 }
 
@@ -188,7 +188,7 @@ impl BuildStep for Git {
         -> Result<(), StepError>
     {
         if build {
-            try!(git_command(&mut guard.ctx, &self));
+            git_command(&mut guard.ctx, &self)?;
         }
         Ok(())
     }
@@ -212,7 +212,7 @@ impl BuildStep for GitInstall {
         -> Result<(), StepError>
     {
         if build {
-            try!(git_install(&mut guard.ctx, &self));
+            git_install(&mut guard.ctx, &self)?;
         }
         Ok(())
     }

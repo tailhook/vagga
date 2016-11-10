@@ -57,9 +57,9 @@ pub fn run_command(context: &Context, mut args: Vec<String>)
             }
         }
     }
-    let cinfo = try!(context.config.get_container(&container));
-    let ver = try!(build_container(context, &container, bmode));
-    try!(prepare_volumes(cinfo.volumes.values(), context));
+    let cinfo = context.config.get_container(&container)?;
+    let ver = build_container(context, &container, bmode)?;
+    prepare_volumes(cinfo.volumes.values(), context)?;
 
     if context.isolate_network {
         try_msg!(network::isolate_network(),
@@ -70,7 +70,7 @@ pub fn run_command(context: &Context, mut args: Vec<String>)
     cmd.workdir(&context.workdir);
     cmd.arg("_run");
     cmd.args(&args[1..]);
-    try!(cmd.map_users_for(cinfo, &context.settings));
+    cmd.map_users_for(cinfo, &context.settings)?;
     cmd.gid(0);
     cmd.groups(Vec::new());
     let res = run_and_wait(&mut cmd).map(convert_status);
@@ -128,11 +128,11 @@ pub fn run_in_netns(context: &Context, cname: String, mut args: Vec<String>)
             }
         }
     }
-    let ver = try!(build_container(context, &container, bmode));
-    try!(network::join_gateway_namespaces());
+    let ver = build_container(context, &container, bmode)?;
+    network::join_gateway_namespaces()?;
     if let Some::<i32>(pid) = pid {
-        try!(set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
-            .map_err(|e| format!("Error setting networkns: {}", e)));
+        set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
+            .map_err(|e| format!("Error setting networkns: {}", e))?;
     }
     let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
     cmd.workdir(&context.workdir);
@@ -152,9 +152,9 @@ pub fn version_hash(ctx: &Context, cname: &str, mut args: Vec<String>)
     };
     let mut cmd: Command = Wrapper::new(None, &ctx.settings);
     cmd.workdir(&ctx.workdir);
-    try!(cmd.map_users_for(
-        try!(ctx.config.get_container(&opt.container)),
-        &ctx.settings));
+    cmd.map_users_for(
+        ctx.config.get_container(&opt.container)?,
+        &ctx.settings)?;
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.arg(&cname).args(&args[1..]);

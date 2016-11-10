@@ -140,7 +140,7 @@ fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
         .runtime_exe
         .clone()
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
-    let mut cmd = try!(command(ctx, runtime));
+    let mut cmd = command(ctx, runtime)?;
     cmd.arg("/usr/local/bin/composer");
     cmd.arg("--no-interaction");
     Ok(cmd)
@@ -151,16 +151,16 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     -> Result<(), String>
 {
     let features = scan_features(&ctx.composer_settings);
-    try!(packages::ensure_packages(distro, ctx, &features));
+    packages::ensure_packages(distro, ctx, &features)?;
 
     if pkgs.len() == 0 {
         return Ok(());
     }
 
-    let mut cmd = try!(composer_cmd(ctx));
+    let mut cmd = composer_cmd(ctx)?;
     cmd.args(&["global", "require", "--prefer-dist", "--update-no-dev"]);
     cmd.args(pkgs);
-    try!(run(cmd));
+    run(cmd)?;
     Ok(())
 }
 
@@ -169,9 +169,9 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
     -> Result<(), StepError>
 {
     let features = scan_features(&ctx.composer_settings);
-    try!(packages::ensure_packages(distro, ctx, &features));
+    packages::ensure_packages(distro, ctx, &features)?;
 
-    let mut cmd = try!(composer_cmd(ctx));
+    let mut cmd = composer_cmd(ctx)?;
     cmd.arg("install");
     if let Some(ref dir) = info.working_dir {
         cmd.arg(format!("--working-dir={}", dir));
@@ -197,11 +197,11 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
 }
 
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    try!(ctx.add_cache_dir(Path::new(COMPOSER_CACHE),
-                           "composer-cache".to_string()));
+    ctx.add_cache_dir(Path::new(COMPOSER_CACHE),
+                           "composer-cache".to_string())?;
 
-    try!(ctx.add_cache_dir(Path::new(COMPOSER_SELF_CACHE),
-                           "composer-self-cache".to_owned()));
+    ctx.add_cache_dir(Path::new(COMPOSER_SELF_CACHE),
+                           "composer-self-cache".to_owned())?;
 
     let vendor_dir = ctx.composer_settings.vendor_dir.as_ref()
         .map(|p| p.to_string_lossy().into_owned())
@@ -232,16 +232,16 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
 
     let cached_composer = format!("/vagga/root{}/composer.phar", COMPOSER_SELF_CACHE);
     if Path::new(&cached_composer).exists() {
-        try!(update_composer(ctx, &runtime_exe));
+        update_composer(ctx, &runtime_exe)?;
     } else {
-        try!(install_composer(ctx, &runtime_exe));
+        install_composer(ctx, &runtime_exe)?;
     }
 
-    try!(file_util::copy(cached_composer, "/vagga/root/usr/local/bin/composer")
-        .map_err(|e| format!("Error copying composer binary: {}", e)));
+    file_util::copy(cached_composer, "/vagga/root/usr/local/bin/composer")
+        .map_err(|e| format!("Error copying composer binary: {}", e))?;
 
     if ctx.composer_settings.install_runtime {
-        try!(setup_include_path(ctx));
+        setup_include_path(ctx)?;
     }
 
     Ok(())
@@ -259,11 +259,11 @@ fn update_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
 }
 
 fn install_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
-    let composer_inst = try!(download::download_file(ctx,
-        &[COMPOSER_BOOTSTRAP], None));
-    try!(file_util::copy(&composer_inst,
+    let composer_inst = download::download_file(ctx,
+        &[COMPOSER_BOOTSTRAP], None)?;
+    file_util::copy(&composer_inst,
                          &Path::new("/vagga/root/tmp/composer-setup.php"))
-        .map_err(|e| format!("Error copying composer installer: {}", e)));
+        .map_err(|e| format!("Error copying composer installer: {}", e))?;
 
     let args = [
         runtime.to_owned(),
@@ -287,7 +287,7 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
 
     for conf_d in conf_dirs.iter() {
         // create vagga.ini file
-        try!(create_vagga_ini(&conf_d.join("vagga.ini"), &vagga_ini_content));
+        create_vagga_ini(&conf_d.join("vagga.ini"), &vagga_ini_content)?;
     }
 
     if !conf_dirs.is_empty() {
@@ -296,16 +296,16 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
     }
 
     // If we didn't find any conf.d, ask 'php --ini'
-    let conf_d = try!(ask_php_for_conf_d(ctx));
+    let conf_d = ask_php_for_conf_d(ctx)?;
 
     // create conf.d
     if !conf_d.exists() {
-        try!(Dir::new(&conf_d).recursive(true).create()
-        .map_err(|e| format!("Error creating directory {:?}: {}", conf_d, e)));
+        Dir::new(&conf_d).recursive(true).create()
+        .map_err(|e| format!("Error creating directory {:?}: {}", conf_d, e))?;
     }
 
     // create vagga.ini file
-    try!(create_vagga_ini(&conf_d.join("vagga.ini"), &vagga_ini_content));
+    create_vagga_ini(&conf_d.join("vagga.ini"), &vagga_ini_content)?;
 
     Ok(())
 }
@@ -318,22 +318,22 @@ fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
 
 fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     // find php main config directory (/etc/php or /etc/php5 or both)
-    let etc_php: Vec<PathBuf> = try!(
+    let etc_php: Vec<PathBuf> = 
         ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
             iter.filter(|&(_, ref name)| name.starts_with("php"))
             .map(|(ref entry, _)| entry.path())
             .collect()
         })
-    );
+    ?;
 
     // get subdirectories of main php config directory
     let mut etc_php_dirs = Vec::new();
     for path in etc_php.iter() {
-        try!(ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
+        ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
             for (ref entry, _) in iter {
                 etc_php_dirs.push(entry.path())
             }
-        }));
+        })?;
     }
 
     // In ubuntu xenial, /etc/php directory structure was changed, now it's like:
@@ -352,7 +352,7 @@ fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     // found in ubuntu xenial
     let mut etc_php_subdirs = Vec::new();
     for path in etc_php_dirs.iter() {
-        try!(ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
+        ScanDir::dirs().skip_symlinks(true).read(path, |iter| {
             for (ref entry, _) in iter {
                 let path = entry.path();
                 if path.ends_with(CONF_D) {
@@ -361,7 +361,7 @@ fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
                     etc_php_subdirs.push(path.join(CONF_D));
                 }
             }
-        }));
+        })?;
     }
 
     Ok(
@@ -379,41 +379,41 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
     let args = [runtime_exe, "--ini".to_owned()];
-    let output = try!(capture_command(ctx, &args, &[])
+    let output = capture_command(ctx, &args, &[])
         .and_then(|x| String::from_utf8(x)
             .map_err(|e| format!("Error parsing command output: {}", e)))
-        .map_err(|e| format!("Error reading command output: {}", e)));
+        .map_err(|e| format!("Error reading command output: {}", e))?;
 
     // match any line that ends with /etc/php*/**/conf.d, get first result
     let re = Regex::new(r#"(?m).*?(/etc/php\d/.*?conf.d)$"#).expect("Invalid regex");
 
-    let conf_d = try!(re.captures(&output)
+    let conf_d = re.captures(&output)
         .and_then(|cap| cap.at(1))
-        .ok_or("PHP configuration directory was not found".to_owned()));
+        .ok_or("PHP configuration directory was not found".to_owned())?;
 
     Ok(PathBuf::from(conf_d))
 }
 
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
-    try!(list_packages(ctx));
+    list_packages(ctx)?;
     if !ctx.composer_settings.keep_composer {
-        try!(fs::remove_file(Path::new("/vagga/root/usr/local/bin/composer"))
-            .map_err(|e| format!("Error removing '/usr/local/bin/composer': {}", e)));
+        fs::remove_file(Path::new("/vagga/root/usr/local/bin/composer"))
+            .map_err(|e| format!("Error removing '/usr/local/bin/composer': {}", e))?;
     }
 
     Ok(())
 }
 
 fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
-    let mut cmd = try!(composer_cmd(ctx));
+    let mut cmd = composer_cmd(ctx)?;
     cmd.arg("show");
 
-    try!(capture_stdout(cmd)
+    capture_stdout(cmd)
         .and_then(|out| {
             File::create("/vagga/container/composer-list.txt")
             .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping composer package list: {}", e))
-        }));
+        })?;
 
     Ok(())
 }
@@ -452,9 +452,9 @@ impl BuildStep for ComposerInstall {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.ctx));
+        configure(&mut guard.ctx)?;
         if build {
-            try!(composer_install(&mut guard.distro, &mut guard.ctx, &self.0));
+            composer_install(&mut guard.distro, &mut guard.ctx, &self.0)?;
         }
         Ok(())
     }
@@ -474,10 +474,10 @@ fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
     .and_then(|mut f| Json::from_reader(&mut f)
         .map_err(|e| VersionError::Json(e, path.to_path_buf())))
     .and_then(|data| {
-        let packages = try!(data.find("packages")
-            .ok_or("Missing 'packages' property from composer.lock".to_owned()));
-        let packages = try!(packages.as_array()
-            .ok_or("'packages' property is not an array".to_owned()));
+        let packages = data.find("packages")
+            .ok_or("Missing 'packages' property from composer.lock".to_owned())?;
+        let packages = packages.as_array()
+            .ok_or("'packages' property is not an array".to_owned())?;
         for package in packages.iter() {
             for key in LOCKFILE_RELEVANT_KEYS.iter() {
                 write!(hash, "{}: {}\n", key, get(&package, key)).unwrap();
@@ -505,7 +505,7 @@ impl BuildStep for ComposerDependencies {
 
         let path = base_path.join("composer.lock");
         if path.exists() {
-            try!(hash_lock_file(&path, hash));
+            hash_lock_file(&path, hash)?;
         }
 
         let path = base_path.join("composer.json");
@@ -535,10 +535,9 @@ impl BuildStep for ComposerDependencies {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(configure(&mut guard.ctx));
+        configure(&mut guard.ctx)?;
         if build {
-            try!(composer_dependencies(&mut guard.distro,
-                &mut guard.ctx, &self));
+            composer_dependencies(&mut guard.distro, &mut guard.ctx, &self)?;
         }
         Ok(())
     }

@@ -100,8 +100,8 @@ fn make_uidmap<F>(fun: F) -> Result<Uidmap, String>
     if uid == 0 && !Path::new("/etc/subuid").exists() {
         // For root user we may use all available user ids
         // This is useful mostly for running vagga in vagga
-        let uid_rng = try!(read_id_ranges("/proc/self/uid_map", true));
-        let gid_rng = try!(read_id_ranges("/proc/self/gid_map", true));
+        let uid_rng = read_id_ranges("/proc/self/uid_map", true)?;
+        let gid_rng = read_id_ranges("/proc/self/gid_map", true)?;
         return fun(uid, gid, &uid_rng, &gid_rng);
     }
 
@@ -112,10 +112,10 @@ fn make_uidmap<F>(fun: F) -> Result<Uidmap, String>
         cmd.env("PATH", path);
     }
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
-    let username = try!(capture_stdout(cmd)
+    let username = capture_stdout(cmd)
         .map_err(|e| format!("Error running `id -u -n`: {}", e))
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
-                   .map_err(|e| format!("Can't decode username: {}", e))));
+                   .map_err(|e| format!("Can't decode username: {}", e)))?;
     let uid_map = read_id_map("/etc/subuid", &username)
         .map_err(|e| error!("Error reading uidmap: {}", e));
     let gid_map = read_id_map("/etc/subgid", &username)
@@ -126,10 +126,8 @@ fn make_uidmap<F>(fun: F) -> Result<Uidmap, String>
             if uid == 0 {
                 // For root user we may use all available user ids
                 // This is useful mostly for running vagga in vagga
-                    let uid_rng = try!(read_id_ranges(
-                        "/proc/self/uid_map", true));
-                    let gid_rng = try!(read_id_ranges(
-                        "/proc/self/gid_map", true));
+                    let uid_rng = read_id_ranges("/proc/self/uid_map", true)?;
+                    let gid_rng = read_id_ranges("/proc/self/gid_map", true)?;
                     return fun(uid, gid, &uid_rng, &gid_rng);
             } else {
                 warn!("Could not find the user {:?} in \
@@ -180,22 +178,22 @@ pub fn get_max_uidmap() -> Result<Uidmap, String>
 fn read_id_ranges(path: &str, read_inside: bool)
     -> Result<Vec<Range>, String>
 {
-    let file = BufReader::new(try!(File::open(&Path::new(path))
-        .map_err(|e| format!("Error reading uid/gid map: {}", e))));
+    let file = BufReader::new(File::open(&Path::new(path))
+        .map_err(|e| format!("Error reading uid/gid map: {}", e))?);
     let mut result = vec!();
     for line in file.lines() {
-        let line = try!(line
-            .map_err(|_| format!("Error reading uid/gid map")));
+        let line = line
+            .map_err(|_| format!("Error reading uid/gid map"))?;
         let mut words = line[..].split_whitespace();
-        let inside: u32 = try!(words.next()
+        let inside: u32 = words.next()
             .and_then(|x| FromStr::from_str(x).ok())
-            .ok_or(format!("uid/gid map format error")));
-        let outside: u32 = try!(words.next()
+            .ok_or(format!("uid/gid map format error"))?;
+        let outside: u32 = words.next()
             .and_then(|x| FromStr::from_str(x).ok())
-            .ok_or(format!("uid/gid map format error")));
-        let count: u32 = try!(words.next()
+            .ok_or(format!("uid/gid map format error"))?;
+        let count: u32 = words.next()
             .and_then(|x| FromStr::from_str(x).ok())
-            .ok_or(format!("uid/gid map format error")));
+            .ok_or(format!("uid/gid map format error"))?;
         if read_inside {
             result.push(Range::new(inside, inside+count-1));
         } else {
@@ -220,22 +218,22 @@ pub fn map_users(settings: &Settings, uids: &Vec<Range>, gids: &Vec<Range>)
     match settings.uid_map {
         None => {
             make_uidmap(|uid, gid, uid_ranges, gid_ranges| {
-                let uid_map = try!(match_ranges(uids, &uid_ranges, uid)
+                let uid_map = match_ranges(uids, &uid_ranges, uid)
                     .map_err(|()| {
                         return format!("Number of allowed subuids is too small. \
                             Required {:?}, allowed {:?}. You either need to increase \
                             allowed numbers in /etc/subuid (preferred) or decrease \
                             needed ranges in vagga.yaml by adding `uids` key \
                             to container config", uids, uid_ranges);
-                    }));
-                let gid_map = try!(match_ranges(gids, &gid_ranges, gid)
+                    })?;
+                let gid_map = match_ranges(gids, &gid_ranges, gid)
                     .map_err(|()| {
                         return format!("Number of allowed subgids is too small. \
                             Required {:?}, allowed {:?}. You either need to increase \
                             allowed numbers in /etc/subgid (preferred) or decrease \
                             needed ranges in vagga.yaml by adding `gids` key \
                             to container config", gids, gid_ranges);
-                    }));
+                    })?;
                 Ok(Ranges(uid_map, gid_map))
             })
         }

@@ -173,9 +173,8 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg("--network");
     cmd.arg(&network);
     let child = if dry_run { None } else {
-        Some(try!(cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e))
-        ))
+        Some(cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))?)
     };
     let child_pid = child.as_ref().map(|x| x.pid()).unwrap_or(123456);
 
@@ -204,9 +203,9 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     commands.push(cmd);
 
     let mut nforward = String::with_capacity(100);
-    try!(File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
+    File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
         .and_then(|mut f| f.read_to_string(&mut nforward))
-        .map_err(|e| format!("Can't read sysctl: {}", e)));
+        .map_err(|e| format!("Can't read sysctl: {}", e))?;
 
     if nforward[..].trim() == "0" {
         let mut cmd = sudo_sysctl();
@@ -220,16 +219,16 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg("net.ipv4.conf.vagga.route_localnet=1");
     commands.push(cmd);
 
-    let nameservers = try!(get_nameservers());
+    let nameservers = get_nameservers()?;
     info!("Detected nameservers: {:?}", nameservers);
 
     let local_dns = &nameservers[..] == ["127.0.0.1".to_string()];
 
     if !dry_run {
-        try!(File::create(&netns_file)
-            .map_err(|e| format!("Error creating netns file: {}", e)));
-        try!(File::create(&userns_file)
-            .map_err(|e| format!("Error creating userns file: {}", e)));
+        File::create(&netns_file)
+            .map_err(|e| format!("Error creating netns file: {}", e))?;
+        File::create(&userns_file)
+            .map_err(|e| format!("Error creating userns file: {}", e))?;
     }
 
     let mut cmd = sudo_mount();
@@ -462,10 +461,10 @@ pub fn is_netns_set_up() -> bool {
 
 pub fn join_gateway_namespaces() -> Result<(), String> {
     let nsdir = namespace_dir();
-    try!(set_namespace(nsdir.join("userns"), Namespace::User)
-        .map_err(|e| format!("Error setting userns: {}", e)));
-    try!(set_namespace(nsdir.join("netns"), Namespace::Net)
-        .map_err(|e| format!("Error setting networkns: {}", e)));
+    set_namespace(nsdir.join("userns"), Namespace::User)
+        .map_err(|e| format!("Error setting userns: {}", e))?;
+    set_namespace(nsdir.join("netns"), Namespace::Net)
+        .map_err(|e| format!("Error setting networkns: {}", e))?;
     Ok(())
 }
 
@@ -475,7 +474,7 @@ pub fn get_nameservers() -> Result<Vec<String>, String> {
         .and_then(|f| {
             let mut ns = vec!();
             for line in f.lines() {
-                let line = try!(line);
+                let line = line?;
                 if line[..].starts_with("nameserver ") {
                     ns.push(line[11..].trim().to_string());
                 }
@@ -491,10 +490,10 @@ fn get_interfaces() -> Result<HashSet<u32>, String> {
         .and_then(|f| {
             let mut lineiter = f.lines();
             let mut result = HashSet::with_capacity(MAX_INTERFACES as usize);
-            try!(lineiter.next().unwrap());  // Two header lines
-            try!(lineiter.next().unwrap());
+            lineiter.next().unwrap()?;  // Two header lines
+            lineiter.next().unwrap()?;
             for line in lineiter {
-                let line = try!(line);
+                let line = line?;
                 let line = line.trim();
                 let end = line.find(':');
                 if line.starts_with("ch") && end.is_some() {
@@ -515,7 +514,7 @@ fn get_unused_inteface_no() -> Result<u32, String> {
     // slots in total, and average user only runs a couple of commands
     // simultaneously. It fails miserably only if there are > 100 or they
     // are spawning too often.
-    let busy = try!(get_interfaces());
+    let busy = get_interfaces()?;
     let start = Range::new(0u32, MAX_INTERFACES - 100)
                 .ind_sample(&mut thread_rng());
     for index in start..MAX_INTERFACES {
@@ -539,31 +538,31 @@ fn _run_command(mut cmd: Command) -> Result<(), String> {
 pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     -> Result<String, String>
 {
-    let index = try!(get_unused_inteface_no());
+    let index = get_unused_inteface_no()?;
 
     let eif = format!("ch{}", index);
     let iif = format!("ch{}c", index);
     let eip = format!("172.23.{}.{}", 192 + (index*4)/256, (index*4 + 1) % 256);
     let iip = format!("172.23.{}.{}", 192 + (index*4)/256, (index*4 + 2) % 256);
 
-    try!(File::create(link_to)
+    File::create(link_to)
         .map_err(|e| format!("Can't create namespace file {:?}: {}",
-                             link_to, e)));
+                             link_to, e))?;
 
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",
                "peer", "name", &iif[..]]);
-    try!(_run_command(cmd));
+    _run_command(cmd)?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["addr", "add"]);
     cmd.arg(eip.clone() + "/30").arg("dev").arg(&eif);
-    try!(_run_command(cmd));
+    _run_command(cmd)?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
-    try!(_run_command(cmd));
+    _run_command(cmd)?;
 
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg0("vagga_setup_netns");
@@ -587,8 +586,8 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let mut child = try!(cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let mut child = cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
@@ -606,7 +605,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         Err(e) => {
             let mut cmd = ip_cmd();
             cmd.args(&["link", "del", &eif[..]]);
-            try!(_run_command(cmd));
+            _run_command(cmd)?;
             Err(e)
         }
     }
@@ -625,25 +624,25 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     };
     let iif = eif.clone() + "g";
 
-    try!(File::create(link_net)
+    File::create(link_net)
         .map_err(|e| format!("Can't create namespace file {:?}: {}",
-            link_net, e)));
-    try!(File::create(link_uts)
+            link_net, e))?;
+    File::create(link_uts)
         .map_err(|e| format!("Can't create namespace file {:?}: {}",
-            link_uts, e)));
+            link_uts, e))?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",
                "peer", "name", &iif[..]]);
-    try!(_run_command(cmd));
+    _run_command(cmd)?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
-    try!(_run_command(cmd));
+    _run_command(cmd)?;
 
     let mut cmd = busybox();
     cmd.args(&["brctl", "addif", "children", &eif[..]]);
-    try!(_run_command(cmd));
+    _run_command(cmd)?;
 
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg0("vagga_setup_netns");
@@ -664,8 +663,8 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
-    let mut child = try!(cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let mut child = cmd.spawn()
+            .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
     let pid = child.pid();
 
     let mut cmd = ip_cmd();
@@ -687,7 +686,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
         Err(e) => {
             let mut cmd = ip_cmd();
             cmd.args(&["link", "del", &eif[..]]);
-            try!(_run_command(cmd));
+            _run_command(cmd)?;
             Err(e)
         }
     }
@@ -703,12 +702,12 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     cmd.arg0("vagga_setup_netns");
     cmd.arg("isolated");
     cmd.unshare([Namespace::User, Namespace::Net].iter().cloned());
-    let uid_map = try!(get_max_uidmap());
+    let uid_map = get_max_uidmap()?;
     set_uidmap(&mut cmd, &uid_map, true);
     cmd.env_clear();
     cmd.file_descriptor(3, Fd::piped_read());
-    let mut child = try!(cmd.spawn()
-        .map_err(|e| format!("Error running {:?}: {}", cmd, e)));
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
     let child_pid = child.pid();
 
     let netns_file = try_msg!(
@@ -718,8 +717,8 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
         File::open(PathBuf::from(format!("/proc/{}/ns/user", child_pid))),
         "Cannot open userns file: {err}");
 
-    try!(child.take_pipe_writer(3).unwrap().write_all(b"ok")
-        .map_err(|e| format!("Error writing to pipe: {}", e)));
+    child.take_pipe_writer(3).unwrap().write_all(b"ok")
+        .map_err(|e| format!("Error writing to pipe: {}", e))?;
 
     match child.wait() {
         Ok(status) if status.success() => {}
@@ -752,8 +751,8 @@ impl PortForwardGuard {
         };
     }
     pub fn start_forwarding(&self) -> Result<(), String> {
-        try!(set_namespace(&self.nspath, Namespace::Net)
-            .map_err(|e| format!("Error joining namespace: {}", e)));
+        set_namespace(&self.nspath, Namespace::Net)
+            .map_err(|e| format!("Error joining namespace: {}", e))?;
 
         for port in self.ports.iter() {
             let mut cmd = iptables();
@@ -762,7 +761,7 @@ impl PortForwardGuard {
                        "--dport", &format!("{}", port)[..],
                        "-j", "DNAT",
                        "--to-destination", &self.ip[..]]);
-            try!(_run_command(cmd));
+            _run_command(cmd)?;
         }
 
         Ok(())

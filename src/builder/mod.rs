@@ -133,17 +133,17 @@ fn _build_from_image(container_name: &String, container: &Container,
     let mut ctx = Context::new(config, container_name.clone(),
                                container, settings);
 
-    let (filename, downloaded) = try!(maybe_download_and_check_hashsum(
-        &mut ctx, image_cache_url, None));
+    let (filename, downloaded) = maybe_download_and_check_hashsum(
+        &mut ctx, image_cache_url, None)?;
     match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
         Ok(_) => {
             info!("Succesfully unpack image {}", image_cache_url);
             // If container is okay, we need to store uid_map used for
             // unpacking
-            try!(copy("/proc/self/uid_map", "/vagga/container/uid_map")
-                .map_err(|e| format!("Error copying uid_map: {}", e)));
-            try!(copy("/proc/self/gid_map", "/vagga/container/gid_map")
-                .map_err(|e| format!("Error copying gid_map: {}", e)));
+            copy("/proc/self/uid_map", "/vagga/container/uid_map")
+                .map_err(|e| format!("Error copying uid_map: {}", e))?;
+            copy("/proc/self/gid_map", "/vagga/container/gid_map")
+                .map_err(|e| format!("Error copying gid_map: {}", e))?;
             // Remove image from local cache after unpacking
             if downloaded {
                 remove_file(&filename)

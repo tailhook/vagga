@@ -96,8 +96,8 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     let cont = guard.ctx.config.containers.get(name)
         .expect("Subcontainer not found");  // TODO
     if build {
-        let version = try!(short_version(&cont, &guard.ctx.config)
-            .map_err(|(s, e)| format!("step {}: {}", s, e)));
+        let version = short_version(&cont, &guard.ctx.config)
+            .map_err(|(s, e)| format!("step {}: {}", s, e))?;
         let container = Path::new("/vagga/base/.roots")
             .join(format!("{}.{}", name, version));
         let path = container.join("root")
@@ -114,8 +114,8 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
                 try_msg!(copy_dir(&path, &dest, None, None),
                     "Error copying dir {p:?}: {err}", p=path);
             } else {
-                let path_stat = try!(path.symlink_metadata()
-                    .map_err(|e| StepError::Read(path.clone(), e)));
+                let path_stat = path.symlink_metadata()
+                    .map_err(|e| StepError::Read(path.clone(), e))?;
                 try_msg!(shallow_copy(&path, &path_stat, &dest,
                         None, None, None),
                     "Error copying file {p:?}: {err}", p=path);
@@ -125,8 +125,8 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
                 .join(dest_rel.strip_prefix("/").unwrap());
             try_msg!(Dir::new(&dest).create(),
                 "Error creating destination dir: {err}");
-            try!(BindMount::new(&path, &dest).mount());
-            try!(remount_ro(&dest));
+            BindMount::new(&path, &dest).mount()?;
+            remount_ro(&dest)?;
             guard.ctx.mounted.push(dest);
         }
     }
@@ -136,8 +136,8 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
 fn real_copy(name: &String, cont: &Cont, guard: &mut Guard)
     -> Result<(), StepError>
 {
-    let version = try!(short_version(&cont, &guard.ctx.config)
-        .map_err(|(s, e)| format!("step {}: {}", s, e)));
+    let version = short_version(&cont, &guard.ctx.config)
+        .map_err(|(s, e)| format!("step {}: {}", s, e))?;
     let container = format!("/vagga/base/.roots/{}.{}", name, version);
 
     // Update container use when using it as subcontainer (fixes #267)
@@ -157,11 +157,11 @@ pub fn clone(name: &String, guard: &mut Guard, build: bool)
     let cont = guard.ctx.config.containers.get(name)
         .expect("Subcontainer not found");  // TODO
     for b in cont.setup.iter() {
-        try!(b.build(guard, false)
-            .map_err(|e| E::SubStep(b.0.clone(), Box::new(e))));
+        b.build(guard, false)
+            .map_err(|e| E::SubStep(b.0.clone(), Box::new(e)))?;
     }
     if build {
-        try!(real_copy(name, cont, guard));
+        real_copy(name, cont, guard)?;
     }
     Ok(())
 }
@@ -173,8 +173,8 @@ fn find_config(cfg: &SubConfig, guard: &mut Guard)
         Source::Container(ref container) => {
             let cont = guard.ctx.config.containers.get(container)
                 .expect("Subcontainer not found");  // TODO
-            let version = try!(short_version(&cont, &guard.ctx.config)
-                .map_err(|(s, e)| format!("step {}: {}", s, e)));
+            let version = short_version(&cont, &guard.ctx.config)
+                .map_err(|(s, e)| format!("step {}: {}", s, e))?;
             let container = Path::new("/vagga/base/.roots")
                 .join(format!("{}.{}", container, version));
 
@@ -192,18 +192,18 @@ fn find_config(cfg: &SubConfig, guard: &mut Guard)
             Path::new("/work").join(&cfg.path)
         }
     };
-    Ok(try!(read_config(&path)))
+    Ok(read_config(&path)?)
 }
 
 pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
 {
-    let subcfg = try!(find_config(cfg, guard));
+    let subcfg = find_config(cfg, guard)?;
     let cont = subcfg.containers.get(&cfg.container)
         .expect("Subcontainer not found");  // TODO
     for b in cont.setup.iter() {
-        try!(b.build(guard, build)
-            .map_err(|e| E::SubStep(b.0.clone(), Box::new(e))));
+        b.build(guard, build)
+            .map_err(|e| E::SubStep(b.0.clone(), Box::new(e)))?;
     }
     Ok(())
 }
@@ -212,11 +212,11 @@ impl BuildStep for Container {
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        let cont = try!(cfg.containers.get(&self.0)
-            .ok_or(VersionError::ContainerNotFound(self.0.to_string())));
+        let cont = cfg.containers.get(&self.0)
+            .ok_or(VersionError::ContainerNotFound(self.0.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
-            try!(b.hash(cfg, hash));
+            b.hash(cfg, hash)?;
         }
         Ok(())
     }
@@ -233,11 +233,11 @@ impl BuildStep for Build {
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        let cont = try!(cfg.containers.get(&self.container)
-            .ok_or(VersionError::ContainerNotFound(self.container.to_string())));
+        let cont = cfg.containers.get(&self.container)
+            .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
-            try!(b.hash(cfg, hash));
+            b.hash(cfg, hash)?;
         }
         Ok(())
     }
@@ -256,9 +256,9 @@ impl BuildStep for SubConfig {
     {
         let path = match self.source {
             Source::Container(ref container) => {
-                let cinfo = try!(cfg.containers.get(container)
-                    .ok_or(VersionError::ContainerNotFound(container.clone())));
-                let version = try!(short_version(&cinfo, cfg));
+                let cinfo = cfg.containers.get(container)
+                    .ok_or(VersionError::ContainerNotFound(container.clone()))?;
+                let version = short_version(&cinfo, cfg)?;
                 Path::new("/vagga/base/.roots")
                     .join(format!("{}.{}", container, version))
                     .join("root").join(&self.path)
@@ -273,12 +273,12 @@ impl BuildStep for SubConfig {
         if !path.exists() {
             return Err(VersionError::New);
         }
-        let subcfg = try!(read_config(&path));
-        let cont = try!(subcfg.containers.get(&self.container)
-            .ok_or(VersionError::ContainerNotFound(self.container.to_string())));
+        let subcfg = read_config(&path)?;
+        let cont = subcfg.containers.get(&self.container)
+            .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
-            try!(b.hash(cfg, hash));
+            b.hash(cfg, hash)?;
         }
         Ok(())
     }

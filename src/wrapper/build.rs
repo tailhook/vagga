@@ -28,8 +28,8 @@ use options::version_hash;
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
-        try!(clean_dir(path, true)
-             .map_err(|x| format!("Error removing directory: {}", x)));
+        clean_dir(path, true)
+             .map_err(|x| format!("Error removing directory: {}", x))?;
     }
     try_msg!(Dir::new(path).recursive(true).create(),
          "Error creating directory: {err}");
@@ -72,18 +72,18 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
             tmp_path.file_name().unwrap().to_str()
             .unwrap().to_string() + ".old");
         if rempath.is_dir() {
-            try!(clean_dir(&rempath, true)
-                 .map_err(|x| format!("Error removing old dir: {}", x)));
+            clean_dir(&rempath, true)
+                 .map_err(|x| format!("Error removing old dir: {}", x))?;
         }
-        try!(rename(final_path, &rempath)
-             .map_err(|x| format!("Error renaming old dir: {}", x)));
+        rename(final_path, &rempath)
+             .map_err(|x| format!("Error renaming old dir: {}", x))?;
         path_to_remove = Some(rempath);
     }
-    try!(rename(tmp_path, final_path)
-         .map_err(|x| format!("Error renaming dir: {}", x)));
+    rename(tmp_path, final_path)
+         .map_err(|x| format!("Error renaming dir: {}", x))?;
     if let Some(ref path_to_remove) = path_to_remove {
-        try!(clean_dir(path_to_remove, true)
-             .map_err(|x| format!("Error removing old dir: {}", x)));
+        clean_dir(path_to_remove, true)
+             .map_err(|x| format!("Error removing old dir: {}", x))?;
     }
     return Ok(());
 }
@@ -122,14 +122,14 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
     wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let cconfig = try!(wrapper.config.containers.get(container)
-        .ok_or(format!("Container {} not found", container)));
-    let name = try!(_build_container(container, force, no_image, wrapper));
+    let cconfig = wrapper.config.containers.get(container)
+        .ok_or(format!("Container {} not found", container))?;
+    let name = _build_container(container, force, no_image, wrapper)?;
     let destlink = Path::new("/work/.vagga").join(&container);
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
-        try!(remove_file(&tmplink)
-            .map_err(|e| format!("Error removing temporary link: {}", e)));
+        remove_file(&tmplink)
+            .map_err(|e| format!("Error removing temporary link: {}", e))?;
     }
     let roots = if wrapper.ext_settings.storage_dir.is_some() {
         Path::new(".lnk/.roots")
@@ -140,9 +140,9 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
     if cconfig.auto_clean {
         match read_link(&destlink) {
             Ok(ref oldval) if oldval != &linkval => {
-                let oldname = try!(oldval.iter().rev().nth(1)
+                let oldname = oldval.iter().rev().nth(1)
                     .ok_or(format!("Bad link {:?} -> {:?}",
-                        destlink, oldval)));
+                        destlink, oldval))?;
                 let base = Path::new("/vagga/base/.roots");
                 let dir = base.join(&oldname);
                 let tmpdir = base.join({
@@ -163,10 +163,10 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
             }
         };
     }
-    try!(symlink(&linkval, &tmplink)
-         .map_err(|e| format!("Error symlinking container: {}", e)));
-    try!(rename(&tmplink, &destlink)
-         .map_err(|e| format!("Error renaming symlink: {}", e)));
+    symlink(&linkval, &tmplink)
+         .map_err(|e| format!("Error symlinking container: {}", e))?;
+    rename(&tmplink, &destlink)
+         .map_err(|e| format!("Error renaming symlink: {}", e))?;
     return Ok(name);
 }
 
@@ -175,8 +175,8 @@ fn compare_files<A: AsRef<Path>, B: AsRef<Path>>(a: A, b: B)
 {
     let mut abuf = Vec::with_capacity(1024);
     let mut bbuf = Vec::with_capacity(1024);
-    try!(File::open(a.as_ref()).and_then(|mut f| f.read_to_end(&mut abuf)));
-    try!(File::open(b.as_ref()).and_then(|mut f| f.read_to_end(&mut bbuf)));
+    File::open(a.as_ref()).and_then(|mut f| f.read_to_end(&mut abuf))?;
+    File::open(b.as_ref()).and_then(|mut f| f.read_to_end(&mut bbuf))?;
     Ok(abuf != bbuf)
 }
 
@@ -200,10 +200,10 @@ pub fn _build_container(container: &str,
 
     let lock_name = tmppath.with_file_name(format!(".tmp.{}.lock", container));
     let mut _lock_guard = if wrapper.settings.build_lock_wait {
-        Some(try!(Lock::exclusive_wait(&lock_name,
+        Some(Lock::exclusive_wait(&lock_name,
                 "Other process is doing a build. Waiting...")
             .map_err(|e| format!("Can't lock container build ({}). \
-                                 Aborting...", e))))
+                                 Aborting...", e))?)
 
     } else {
         None // will get lock later
@@ -243,9 +243,9 @@ pub fn _build_container(container: &str,
 
 
     if _lock_guard.is_none() {
-        _lock_guard = Some(try!(Lock::exclusive(&lock_name)
+        _lock_guard = Some(Lock::exclusive(&lock_name)
             .map_err(|e| format!("Can't lock container build ({}). \
-                Probably other process is doing build. Aborting...", e))));
+                Probably other process is doing build. Aborting...", e))?);
     }
 
     match prepare_tmp_root_dir(&tmppath) {
@@ -281,12 +281,12 @@ pub fn _build_container(container: &str,
     }
 
     let result = cmd.status();
-    try!(unmount(&Path::new("/vagga/root")));
-    try!(remove_dir(&Path::new("/vagga/root"))
-        .map_err(|e| format!("Can't unlink root: {}", e)));
-    try!(unmount(&Path::new("/vagga/container")));
-    try!(remove_dir(&Path::new("/vagga/container"))
-        .map_err(|e| format!("Can't unlink root: {}", e)));
+    unmount(&Path::new("/vagga/root"))?;
+    remove_dir(&Path::new("/vagga/root"))
+        .map_err(|e| format!("Can't unlink root: {}", e))?;
+    unmount(&Path::new("/vagga/container"))?;
+    remove_dir(&Path::new("/vagga/container"))
+        .map_err(|e| format!("Can't unlink root: {}", e))?;
     match result {
         Ok(s) if s.success() => {}
         Ok(s) => return Err(format!("Builder {}", s)),
@@ -352,8 +352,8 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             }
         }
     }
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
 
     build_wrapper(&name, force, no_image, wrapper)
     .map(|x| unsafe { File::from_raw_fd(3) }.write_all(x.as_bytes()).unwrap())
@@ -363,13 +363,13 @@ pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let container = try!(wrapper.config.containers.get(name)
-        .ok_or(format!("Container {:?} not found", name)));
+    let container = wrapper.config.containers.get(name)
+        .ok_or(format!("Container {:?} not found", name))?;
     for &Step(ref step) in container.setup.iter() {
         if let Some(name) = step.is_dependent_on() {
-            try!(build_wrapper(name, force, no_image, wrapper)
+            build_wrapper(name, force, no_image, wrapper)
                 .map(|x| debug!("Built container with name {}", x))
-                .map(|()| 0));
+                .map(|()| 0)?;
         }
     }
 
@@ -383,13 +383,13 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         Ok(x) => x,
         Err(e) => return Ok(e),
     };
-    try!(setup::setup_base_filesystem(
-        wrapper.project_root, wrapper.ext_settings));
-    if let Some(hash) = try!(get_version_hash(&opt.container, wrapper)) {
+    setup::setup_base_filesystem(
+        wrapper.project_root, wrapper.ext_settings)?;
+    if let Some(hash) = get_version_hash(&opt.container, wrapper)? {
         let res = if opt.short { &hash[..8] } else { &hash[..] };
         if opt.fd3 {
-            try!(unsafe { File::from_raw_fd(3) }.write_all(res.as_bytes())
-                .map_err(|e| format!("Error writing to fd 3: {}", e)));
+            unsafe { File::from_raw_fd(3) }.write_all(res.as_bytes())
+                .map_err(|e| format!("Error writing to fd 3: {}", e))?;
         } else {
             println!("{}", res);
         }

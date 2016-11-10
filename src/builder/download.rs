@@ -32,10 +32,10 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     let name = hash[..8].to_string() + "-" + name;
     let dir = Path::new("/vagga/cache/downloads");
     if !dir.exists() {
-        try!(create_dir_all(&dir)
-            .map_err(|e| format!("Error moving file: {}", e)));
-        try!(set_permissions(&dir, Permissions::from_mode(0o755))
-            .map_err(|e| format!("Can't chmod file: {}", e)));
+        create_dir_all(&dir)
+            .map_err(|e| format!("Error moving file: {}", e))?;
+        set_permissions(&dir, Permissions::from_mode(0o755))
+            .map_err(|e| format!("Can't chmod file: {}", e))?;
     }
     let filename = dir.join(&name);
     if filename.exists() {
@@ -43,7 +43,7 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     }
     let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
     if https {
-        try!(capsule::ensure_features(ctx, &[capsule::Https]));
+        capsule::ensure_features(ctx, &[capsule::Https])?;
     }
     for url in urls {
         let url = url.as_ref();
@@ -73,8 +73,8 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
                         return Err(e);
                     }
                 }
-                try!(rename(&tmpfilename, &filename)
-                    .map_err(|e| format!("Error moving file: {}", e)));
+                rename(&tmpfilename, &filename)
+                    .map_err(|e| format!("Error moving file: {}", e))?;
                 return Ok(filename);
             }
             Ok(val) => {
@@ -113,10 +113,10 @@ fn check_if_local(url: &str, sha256: &Option<String>)
     if let Some(ref sha256) = *sha256 {
         let mut file = try_msg!(File::open(&path),
             "Cannot open file: {err}");
-        try!(check_stream_hashsum(&mut file, sha256)
+        check_stream_hashsum(&mut file, sha256)
             .map_err(|e| format!(
                 "Error when checking hashsum for file {:?}: {}",
-                &path, e)));
+                &path, e))?;
     }
     Ok(Some(path))
 }
@@ -125,8 +125,8 @@ pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
     url: &str, sha256: Option<String>)
     -> Result<(PathBuf, bool), String>
 {
-    Ok(match try!(check_if_local(url, &sha256)) {
+    Ok(match check_if_local(url, &sha256)? {
         Some(path) => (path, false),
-        None => (try!(download_file(ctx, &[url], sha256)), true),
+        None => (download_file(ctx, &[url], sha256)?, true),
     })
 }

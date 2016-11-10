@@ -102,16 +102,16 @@ pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), StepError>
 {
-    try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
-                           "npm-cache".to_string()));
+    ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
+                           "npm-cache".to_string())?;
     let features = scan_features(&ctx.npm_settings, pkgs);
-    try!(ensure_npm(distro, ctx, &features));
+    ensure_npm(distro, ctx, &features)?;
 
     if pkgs.len() == 0 {
         return Ok(());
     }
 
-    let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
+    let mut cmd = command(ctx, &ctx.npm_settings.npm_exe)?;
     cmd.arg("install");
     cmd.arg("--global");
     cmd.arg("--user=root");
@@ -152,44 +152,44 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
     info: &NpmDependencies)
     -> Result<(), StepError>
 {
-    try!(ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
-                           "npm-cache".to_string()));
+    ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
+                           "npm-cache".to_string())?;
     let mut features = scan_features(&ctx.npm_settings, &Vec::new());
 
-    let json = try!(File::open(&Path::new("/work").join(&info.file))
+    let json = File::open(&Path::new("/work").join(&info.file))
         .map_err(|e| format!("Error opening file {:?}: {}", info.file, e))
         .and_then(|mut f| Json::from_reader(&mut f)
-        .map_err(|e| format!("Error parsing json {:?}: {}", info.file, e))));
+        .map_err(|e| format!("Error parsing json {:?}: {}", info.file, e)))?;
     let mut packages = vec![];
 
     if info.package {
-        try!(scan_dic(&json, "dependencies", &mut packages, &mut features));
+        scan_dic(&json, "dependencies", &mut packages, &mut features)?;
     }
     if info.dev {
-        try!(scan_dic(&json, "devDependencies", &mut packages, &mut features));
+        scan_dic(&json, "devDependencies", &mut packages, &mut features)?;
     }
     if info.peer {
-        try!(scan_dic(&json, "peerDependencies",
-            &mut packages, &mut features));
+        scan_dic(&json, "peerDependencies",
+            &mut packages, &mut features)?;
     }
     if info.bundled {
-        try!(scan_dic(&json, "bundledDependencies",
-            &mut packages, &mut features));
-        try!(scan_dic(&json, "bundleDependencies",
-            &mut packages, &mut features));
+        scan_dic(&json, "bundledDependencies",
+            &mut packages, &mut features)?;
+        scan_dic(&json, "bundleDependencies",
+            &mut packages, &mut features)?;
     }
     if info.optional {
-        try!(scan_dic(&json, "optionalDependencies",
-            &mut packages, &mut features));
+        scan_dic(&json, "optionalDependencies",
+            &mut packages, &mut features)?;
     }
 
-    try!(ensure_npm(distro, ctx, &features));
+    ensure_npm(distro, ctx, &features)?;
 
     if packages.len() == 0 {
         return Ok(());
     }
 
-    let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
+    let mut cmd = command(ctx, &ctx.npm_settings.npm_exe)?;
     cmd.arg("install");
     cmd.arg("--global");
     cmd.arg("--user=root");
@@ -200,9 +200,9 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
 
 pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     let path = Path::new("/vagga/container/npm-list.txt");
-    let file = try!(File::create(&path)
-        .map_err(|e| StepError::Write(path.to_path_buf(), e)));
-    let mut cmd = try!(command(ctx, &ctx.npm_settings.npm_exe));
+    let file = File::create(&path)
+        .map_err(|e| StepError::Write(path.to_path_buf(), e))?;
+    let mut cmd = command(ctx, &ctx.npm_settings.npm_exe)?;
     cmd.arg("ls");
     cmd.arg("--global");
     cmd.stdout(Stdio::from_file(file));
@@ -248,9 +248,9 @@ impl BuildStep for NpmInstall {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(guard.distro.npm_configure(&mut guard.ctx));
+        guard.distro.npm_configure(&mut guard.ctx)?;
         if build {
-            try!(npm_install(&mut guard.distro, &mut guard.ctx, &self.0));
+            npm_install(&mut guard.distro, &mut guard.ctx, &self.0)?;
         }
         Ok(())
     }
@@ -289,9 +289,9 @@ impl BuildStep for NpmDependencies {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        try!(guard.distro.npm_configure(&mut guard.ctx));
+        guard.distro.npm_configure(&mut guard.ctx)?;
         if build {
-            try!(npm_deps(&mut guard.distro, &mut guard.ctx, &self));
+            npm_deps(&mut guard.distro, &mut guard.ctx, &self)?;
         }
         Ok(())
     }

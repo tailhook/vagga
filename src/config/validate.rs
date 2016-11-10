@@ -10,10 +10,10 @@ fn find_name(name: &str, cont: &Container, cfg: &Config) -> Result<(), String>
                 return Err(format!("Container {:?} has cyclic dependency",
                                    name));
             } else {
-                let subcont = try!(cfg.containers.get(subname)
+                let subcont = cfg.containers.get(subname)
                     .ok_or(format!("Container {:?} referenced from {:?} \
-                        is not found", subname, name)));
-                try!(find_name(name, subcont, cfg))
+                        is not found", subname, name))?;
+                find_name(name, subcont, cfg)?
             }
         }
     }
@@ -23,13 +23,13 @@ fn find_name(name: &str, cont: &Container, cfg: &Config) -> Result<(), String>
 pub fn validate_container(name: &str, cont: &Container, cfg: &Config)
     -> Result<(), String>
 {
-    try!(find_name(name, cont, cfg));
+    find_name(name, cont, cfg)?;
     Ok(())
 }
 
 pub fn validate_config(cfg: &Config) -> Result<(), String> {
     for (ref cname, ref cont) in &cfg.containers {
-        try!(validate_container(cname, cont, cfg));
+        validate_container(cname, cont, cfg)?;
     }
     Ok(())
 }
