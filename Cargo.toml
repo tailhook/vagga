@@ -23,7 +23,7 @@ scan_dir = "0.3.1"
 libmount = { version="0.1.2", optional=true }
 zip = "0.1"
 xz2 = "0.1.0"
-tar = { git="git://github.com/alexcrichton/tar-rs", rev="c402adf"}
+tar = "0.4.8"
 flate2 = "0.2.13"
 bzip2 = "0.3.0"
 net2 = "0.2.23"
@@ -33,7 +33,7 @@ docopt = "0.6.83"
 
 [dependencies.quire]
 git = "git://github.com/tailhook/rust-quire"
-rev = "26484d8"
+rev = "d304c60"
 
 [features]
 default = ["containers"]

@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 use quire::{Options, Include, Error, ErrorCollector, Pos, parse_config};
 use quire::validate as V;
-use quire::parser::{parse as parse_yaml};
+use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 
 use super::containers;
@@ -124,7 +124,7 @@ fn include_file(pos: &Pos, include: &Include,
 pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut opt = Options::default();
     opt.allow_include(include_file);
-    let mut config: Config = 
+    let mut config: Config =
         parse_config(filename, &config_validator(), &opt)
         .map_err(|e| format!("{}", e))?;
     for (_, ref mut container) in config.containers.iter_mut() {
