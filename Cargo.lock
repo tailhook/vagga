@@ -17,7 +17,7 @@ dependencies = [
  "net2 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=d304c60)",
+ "quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=0de6323)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -25,7 +25,7 @@ dependencies = [
  "sha2 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "unshare 0.1.11 (git+git://github.com/tailhook/unshare?rev=9bf89d1)",
+ "unshare 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "zip 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -123,6 +123,15 @@ dependencies = [
 name = "gcc"
 version = "0.3.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "humannum"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "num-traits 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "humantime"
@@ -275,6 +284,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-traits"
+version = "0.1.36"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "podio"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -287,10 +301,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quire"
 version = "0.1.8"
-source = "git+git://github.com/tailhook/rust-quire?rev=d304c60#d304c6040c92c04e5849c317791c08cc59d9f827"
+source = "git+git://github.com/tailhook/rust-quire?rev=0de6323#0de632349e9eac9e49cf9dd3fec81e5813419c28"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "humannum 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num-traits 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -421,8 +437,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "unshare"
-version = "0.1.11"
-source = "git+git://github.com/tailhook/unshare?rev=9bf89d1#9bf89d1e0ad6cedeb562846ebb383a975a6bbf3d"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -508,6 +524,7 @@ dependencies = [
 "checksum filetime 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "5363ab8e4139b8568a6237db5248646e5a8a2f89bd5ccb02092182b11fd3e922"
 "checksum flate2 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "3eeb481e957304178d2e782f2da1257f1434dfecbae883bafb61ada2a9fea3bb"
 "checksum gcc 0.3.38 (registry+https://github.com/rust-lang/crates.io-index)" = "553f11439bdefe755bf366b264820f1da70f3aaf3924e594b886beb9c831bcf5"
+"checksum humannum 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2543f51658681860b1ad9aee0aac90182bc8b971f71a3d9eb1d38e23e1158a4b"
 "checksum humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0e9298fffb2a54569e1fcb818e9c2ff77caa2fad68d64b6e409b9f777bdb1960"
 "checksum idna 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1053236e00ce4f668aeca4a769a09b3bf5a682d802abd6f3cb39374f6b162c11"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
@@ -526,9 +543,10 @@ dependencies = [
 "checksum nix 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "444e662ce88e6e5bb768c7dafb72a943aac76c9ead4587d15acd941e84ce8b3f"
 "checksum nix 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7a7bb1da2be7da3cbffda73fc681d509ffd9e665af478d2bee1907cee0bc64b2"
 "checksum nix 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a0d95c5fa8b641c10ad0b8887454ebaafa3c92b5cd5350f8fc693adafd178e7b"
+"checksum num-traits 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "a16a42856a256b39c6d3484f097f6713e14feacd9bfb02290917904fae46c81c"
 "checksum podio 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e5422a1ee1bc57cc47ae717b0137314258138f38fd5f3cea083f43a9725383a0"
 "checksum quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0aad603e8d7fb67da22dbdf1f4b826ce8829e406124109e73cf1b2454b93a71c"
-"checksum quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=d304c60)" = "<none>"
+"checksum quire 0.1.8 (git+git://github.com/tailhook/rust-quire?rev=0de6323)" = "<none>"
 "checksum rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2791d88c6defac799c3f20d74f094ca33b9332612d9aef9078519c82e4fe04a5"
 "checksum regex 0.1.80 (registry+https://github.com/rust-lang/crates.io-index)" = "4fd4ace6a8cf7860714a2c2280d6c1f7e6a413486c13298bbc86fd3da019402f"
 "checksum regex-syntax 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "f9ec002c35e86791825ed294b50008eea9ddfc8def4420124fbc6b08db834957"
@@ -545,7 +563,7 @@ dependencies = [
 "checksum time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)" = "3c7ec6d62a20df54e07ab3b78b9a3932972f4b7981de295563686849eb3989af"
 "checksum unicode-bidi 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c1f7ceb96afdfeedee42bade65a0d585a6a0106f681b6749c8ff4daa8df30b3f"
 "checksum unicode-normalization 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "26643a2f83bac55f1976fb716c10234485f9202dcd65cfbdf9da49867b271172"
-"checksum unshare 0.1.11 (git+git://github.com/tailhook/unshare?rev=9bf89d1)" = "<none>"
+"checksum unshare 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "83fef3d20ff287844b57e240859ca55a1f22a352f6b305e3e41bd956f3e043b6"
 "checksum url 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "48ccf7bd87a81b769cf84ad556e034541fb90e1cd6d4bc375c822ed9500cd9d7"
 "checksum utf8-ranges 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1ca13c08c41c9c3e04224ed9ff80461d97e121589ff27c753a16cb10830ae0f"
 "checksum void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
