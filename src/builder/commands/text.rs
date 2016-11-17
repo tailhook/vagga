@@ -16,7 +16,7 @@ tuple_struct_decode!(Text);
 impl Text {
     pub fn config() -> V::Mapping<'static> {
         V::Mapping::new(
-            V::Directory::new().is_absolute(true),
+            V::Directory::new().absolute(true),
             V::Scalar::new())
     }
 }

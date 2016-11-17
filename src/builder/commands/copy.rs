@@ -104,7 +104,7 @@ impl Copy {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
         .member("source", V::Scalar::new())
-        .member("path", V::Directory::new().is_absolute(true))
+        .member("path", V::Directory::new().absolute(true))
         .member("ignore_regex", V::Scalar::new().default(
             r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
         .member("include_regex", V::Scalar::new().optional())

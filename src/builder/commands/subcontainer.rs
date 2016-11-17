@@ -38,11 +38,11 @@ impl Build {
         V::Structure::new()
         .member("container", V::Scalar::new())
         .member("source".to_string(),
-            V::Directory::new().is_absolute(true).default("/"))
+            V::Directory::new().absolute(true).default("/"))
         .member("path".to_string(),
-            V::Directory::new().is_absolute(true).optional())
+            V::Directory::new().absolute(true).optional())
         .member("temporary_mount".to_string(),
-            V::Directory::new().is_absolute(true).optional())
+            V::Directory::new().absolute(true).optional())
     }
 }
 
@@ -82,7 +82,7 @@ impl SubConfig {
             .optional()
             .default_tag("Directory"))
         .member("path".to_string(), V::Directory::new()
-            .is_absolute(false)
+            .absolute(false)
             .default("vagga.yaml"))
         .member("container", V::Scalar::new())
         .member("cache", V::Scalar::new().optional())

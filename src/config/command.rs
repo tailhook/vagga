@@ -181,7 +181,7 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
         .member("accepts_arguments", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
         .member("volumes", V::Mapping::new(
-            V::Directory::new().is_absolute(true),
+            V::Directory::new().absolute(true),
             volume_validator()))
         .member("write_mode", V::Scalar::new().default("read-only"))
         .member("run", V::Sequence::new(V::Scalar::new())

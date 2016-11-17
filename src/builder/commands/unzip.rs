@@ -25,8 +25,8 @@ impl Unzip {
         V::Structure::new()
         .member("url", V::Scalar::new())
         .member("sha256", V::Scalar::new().optional())
-        .member("path", V::Directory::new().is_absolute(true).default("/"))
-        .member("subdir", V::Directory::new().default("").is_absolute(false))
+        .member("path", V::Directory::new().absolute(true).default("/"))
+        .member("subdir", V::Directory::new().default("").absolute(false))
     }
 }
 

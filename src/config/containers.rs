@@ -41,22 +41,22 @@ pub fn container_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
     .member("setup", V::Sequence::new(builder_validator()))
     .member("data_dirs",
-        V::Sequence::new(V::Directory::new().is_absolute(true)))
+        V::Sequence::new(V::Directory::new().absolute(true)))
     .member("image_cache_url", V::Scalar::new().optional())
     .member("auto_clean", V::Scalar::new().default(false))
     .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
     .member("environ_file", V::Scalar::new().optional())
     .member("resolv_conf_path",
         V::Directory::new()  // Well, should be file
-        .is_absolute(true).optional()
+        .absolute(true).optional()
         .default("/etc/resolv.conf"))
     .member("hosts_file_path",
         V::Directory::new()  // Well, should be file
-        .is_absolute(true).optional()
+        .absolute(true).optional()
         .default("/etc/hosts"))
     .member("uids", V::Sequence::new(V::Scalar::new()))
     .member("gids", V::Sequence::new(V::Scalar::new()))
     .member("volumes", V::Mapping::new(
-        V::Directory::new().is_absolute(true),
+        V::Directory::new().absolute(true),
         volume_validator()))
 }

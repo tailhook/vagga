@@ -36,8 +36,8 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("ubuntu_mirror", V::Scalar::new().optional())
         .member("alpine_mirror", V::Scalar::new().optional())
         .member("external_volumes", V::Mapping::new(
-            V::Directory::new().is_absolute(false),
-            V::Directory::new().is_absolute(true)))
+            V::Directory::new().absolute(false),
+            V::Directory::new().absolute(true)))
         .member("push_image_script", V::Scalar::new().optional())
         .member("build_lock_wait", V::Scalar::new().optional())
         .member("auto_apply_sysctl", V::Scalar::new().optional())

@@ -33,7 +33,7 @@ docopt = "0.6.83"
 
 [dependencies.quire]
 git = "git://github.com/tailhook/rust-quire"
-rev = "0de6323"
+rev = "2e540e9"
 
 [features]
 default = ["containers"]

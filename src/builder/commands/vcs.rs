@@ -28,7 +28,7 @@ impl Git {
         .member("url", V::Scalar::new())
         .member("revision", V::Scalar::new().optional())
         .member("branch", V::Scalar::new().optional())
-        .member("path", V::Directory::new().is_absolute(true))
+        .member("path", V::Directory::new().absolute(true))
     }
 }
 
@@ -48,7 +48,7 @@ impl GitInstall {
         .member("revision", V::Scalar::new().optional())
         .member("branch", V::Scalar::new().optional())
         .member("subdir", V::Directory::new()
-            .default(".").is_absolute(false))
+            .default(".").absolute(false))
         .member("script", V::Scalar::new()
                 .default("./configure --prefix=/usr\n\
                           make\n\

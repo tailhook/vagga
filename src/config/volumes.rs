@@ -56,14 +56,14 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
             .min(0).max(0o1777).default(0o1777))
         .member("subdirs",
             V::Mapping::new(
-                V::Directory::new().is_absolute(false),
+                V::Directory::new().absolute(false),
                 V::Structure::new()
                     .member("mode", V::Numeric::new()
                         .min(0).max(0o1777).default(0o755))
             ))
         .member("files",
             V::Mapping::new(
-                V::Directory::new().is_absolute(false),
+                V::Directory::new().absolute(false),
                 V::Scalar::new().optional(),
             )))
     .option("VaggaBin", V::Nothing)

@@ -17,7 +17,7 @@ tuple_struct_decode!(EnsureDir);
 
 impl EnsureDir {
     pub fn config() -> V::Directory {
-        V::Directory::new().is_absolute(true)
+        V::Directory::new().absolute(true)
     }
 }
 
@@ -27,7 +27,7 @@ tuple_struct_decode!(Remove);
 
 impl Remove {
     pub fn config() -> V::Directory {
-        V::Directory::new().is_absolute(true)
+        V::Directory::new().absolute(true)
     }
 }
 
@@ -37,7 +37,7 @@ tuple_struct_decode!(EmptyDir);
 
 impl EmptyDir {
     pub fn config() -> V::Directory {
-        V::Directory::new().is_absolute(true)
+        V::Directory::new().absolute(true)
     }
 }
 
@@ -48,7 +48,7 @@ tuple_struct_decode!(CacheDirs);
 impl CacheDirs {
     pub fn config() -> V::Mapping<'static> {
         V::Mapping::new(
-            V::Directory::new().is_absolute(true),
+            V::Directory::new().absolute(true),
             V::Scalar::new())
     }
 }

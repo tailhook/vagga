@@ -20,7 +20,7 @@ impl Download {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
         .member("url", V::Scalar::new())
-        .member("path", V::Directory::new().is_absolute(true))
+        .member("path", V::Directory::new().absolute(true))
         .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777))
     }
 }
