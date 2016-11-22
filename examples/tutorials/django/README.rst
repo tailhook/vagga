@@ -619,7 +619,7 @@ Create the database container:
 * ❶ -- Use fixed user id and group id for postgres
 * ❷ -- Vagga command to initialize the volume
 
-The database will be persisted in ``.vagga/.volumes/postgres``.
+.. note:: The database will be persisted in ``.vagga/.volumes/postgres``.
 
 Now add the command to initialize the database:
 

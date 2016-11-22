@@ -5,8 +5,11 @@
 #
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
-Article.create([
-  { title: 'Article 1', body: 'Lorem ipsum dolor sit amet' },
-  { title: 'Article 2', body: 'Lorem ipsum dolor sit amet' },
-  { title: 'Article 3', body: 'Lorem ipsum dolor sit amet' }
-])
+
+if Article.count == 0
+  Article.create([
+    { title: 'Article 1', body: 'Lorem ipsum dolor sit amet' },
+    { title: 'Article 2', body: 'Lorem ipsum dolor sit amet' },
+    { title: 'Article 3', body: 'Lorem ipsum dolor sit amet' }
+  ])
+end
