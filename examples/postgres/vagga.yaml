@@ -22,7 +22,7 @@ containers:
     - !EnsureDir /data
     environ:
       PG_PORT: 5433   # Port of host to use
-      PG_DB: vagga-test
+      PG_DB: vagga
       PGDATA: /data
       PG_BIN: /usr/lib/postgresql/9.5/bin
     volumes:
@@ -64,7 +64,9 @@ commands:
     user-id: 200
     group-id: 200
     run: |
-      exec $PG_BIN/postgres -F --port=$PG_PORT
+      trap "$PG_BIN/pg_ctl -w stop; trap - INT; kill -INT $$" INT
+      $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+      sleep infinity
 
   psql: &psql !Command
     description: Run postgres shell
