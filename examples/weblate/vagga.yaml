@@ -1,0 +1,87 @@
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !Sh |
+        addgroup --system --gid 200 postgres
+        adduser --uid 200 --system --home /data --no-create-home \
+            --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+            postgres
+    - !Install [postgresql-9.5]
+    - !EnsureDir /data
+    environ:
+      PG_PORT: 5433   # Port of host to use
+      PG_DB: weblate.db
+      PGDATA: /data
+      PG_BIN: /usr/lib/postgresql/9.5/bin
+    volumes:
+      /data: !Persistent
+        name: postgres
+        owner-uid: 200
+        owner-gid: 200
+        init-command: _pg-init
+      /run: !Tmpfs
+        subdirs:
+          postgresql: { mode: 0o777 }  # until we have user, group options
+
+  weblate:
+    setup:
+    - !Alpine v3.4
+    - !Repo edge/main
+    - !Install [zlib, git, mercurial, libxml2, libjpeg-turbo, libxslt, py3-psycopg2]
+    - !BuildDeps [build-base, zlib-dev, libxml2-dev, libjpeg-turbo-dev, libxslt-dev]
+    - !Download
+      url: https://raw.githubusercontent.com/nijel/weblate/weblate-2.9/requirements.txt
+      path: /tmp/requirements.txt
+    - !Download
+      url: https://raw.githubusercontent.com/nijel/weblate/weblate-2.9/requirements-optional.txt
+      path: /tmp/requirements-optional.txt
+    - !Env
+      CFLAGS: "-I/usr/include/libxml2"
+    - !PipConfig { dependencies: true }
+    - !Py3Install
+      # We don't use Py3Requirements because we download the file
+      - -r/tmp/requirements-optional.txt
+      - weblate==2.9
+
+commands:
+  _pg-init: !Command
+    description: Init postgres database
+    container: ubuntu
+    user-id: 200
+    group-id: 200
+    run: |
+      set -ex
+      ls -la /data
+      $PG_BIN/pg_ctl initdb
+      $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+      $PG_BIN/createuser -h 127.0.0.1 -p $PG_PORT weblate
+      $PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT weblate.db -O weblate
+      $PG_BIN/pg_ctl stop
+
+  postgres: &postgres !Command
+    description: Run postgres database
+    container: ubuntu
+    user-id: 200
+    group-id: 200
+    run: |
+      trap "$PG_BIN/pg_ctl -w stop; trap - INT; kill -INT $$" INT
+      $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+      sleep infinity
+
+  run: !Supervise
+    description: Run postgres and weblate
+    children:
+      postgres: *postgres
+      weblate:  !Command
+        container: weblate
+        environ:
+          PYTHONPATH: /work/config
+          DJANGO_SETTINGS_MODULE: settings
+        run: |
+          set -ex
+          sleep 0.1
+          mkdir -p /work/data
+          weblate migrate
+          weblate runserver
+
