@@ -12,17 +12,33 @@ containers:
 
 
 commands:
+
   slapd: !Command
     description: Run slapd
     container: slapd
     run:
     - slapd
+    - -F/etc/ldap/slapd.d
     - -hldap://127.0.0.1:8389
     - -dtrace
+
   ldapsearch: !Command
-    description: Run ldapsearc
+    description: Run ldapsearch
     container: slapd
     run:
     - ldapsearch
     - -Hldap://127.0.0.1:8389
 
+  ldapwhoami: !Command
+    description: Run ldapwhoami
+    container: slapd
+    run:
+    - ldapwhoami
+    - -Hldap://127.0.0.1:8389
+
+  ldapadd: !Command
+    description: Run ldapadd
+    container: slapd
+    run:
+    - ldapadd
+    - -Hldap://127.0.0.1:8389
