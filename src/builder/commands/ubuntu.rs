@@ -94,7 +94,7 @@ impl UbuntuRepo {
         .member("url", V::Scalar::new().optional())
         .member("suite", V::Scalar::new().optional())
         .member("components", V::Sequence::new(V::Scalar::new()))
-        .member("trusted", V::Scalar::new().default(false))    
+        .member("trusted", V::Scalar::new().default(false))
     }
 }
 
@@ -489,7 +489,10 @@ impl Distro {
 
     fn build_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
-            packages::BuildEssential => Some(vec!("build-essential")),
+            packages::BuildEssential => Some(vec![
+                "build-essential",
+                "ca-certificates",
+            ]),
             packages::Https => Some(vec!("ca-certificates")),
             // Python
             packages::Python2 => Some(vec!()),

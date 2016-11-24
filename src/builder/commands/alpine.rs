@@ -244,7 +244,10 @@ impl Distro {
 
     fn build_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
-            packages::BuildEssential => Some(vec!("build-base")),
+            packages::BuildEssential => Some(vec![
+                "build-base",
+                "ca-certificates",
+            ]),
             packages::Https => Some(vec!("ca-certificates")),
             // Python
             packages::Python2 => Some(vec!()),
