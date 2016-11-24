@@ -27,7 +27,7 @@ tarball version. Then run the following::
 
 Or you may try more obscure way::
 
-    $ curl http://files.zerogw.com/vagga/vagga-install.sh | sh
+    $ curl -sSf http://files.zerogw.com/vagga/vagga-install.sh | sh
 
 
 .. note:: Similarly we have a `-testing` variant of both ways:
@@ -36,7 +36,7 @@ Or you may try more obscure way::
 
     .. code-block:: bash
 
-       $ curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
+       $ curl -sSf http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
 
 
 Runtime Dependencies
