@@ -5,12 +5,13 @@ containers:
       APP_ENV: development
       APP_DEBUG: true
       APP_KEY: YourRandomGeneratedEncryptionKey
+      DB_CONNECTION: pgsql
     setup:
     - !Ubuntu xenial
     - !UbuntuUniverse
     - !Env { <<: *env }
     - !Install
-      - php-mysql
+      - php-pgsql
       - php-memcached
       - php-dom
       - php-mbstring
@@ -21,34 +22,48 @@ containers:
     - !Alpine v3.4
     - !Install [memcached]
 
-  mysql:
+  postgres:
+    setup:
+    - !Ubuntu xenial
+    - !EnsureDir /data
+    - !Sh |
+        addgroup --system --gid 200 postgres
+        adduser --uid 200 --system --home /data --no-create-home \
+            --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+            postgres
+    - !Install [postgresql-9.5]
+    environ: &db_config
+      PGDATA: /data
+      DB_PORT: 5433
+      DB_DATABASE: vagga
+      DB_USERNAME: vagga
+      DB_PASSWORD: vagga
+      PG_BIN: /usr/lib/postgresql/9.5/bin
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+    volumes:
+      /data: !Persistent
+        name: postgres
+        owner-uid: 200
+        owner-gid: 200
+        init-command: _pg-init
+      /run: !Tmpfs
+        subdirs:
+          postgresql: { mode: 0o777 }
+
+  adminer:
     setup:
     - !Alpine v3.4
     - !Install
-      - mariadb
-      - mariadb-client
       - php5-cli
-      - php5-pdo_mysql
-    - !Remove /var/lib/mysql
-    - !EnsureDir /data
+      - php5-pdo_pgsql
     - !EnsureDir /opt/adminer
     - !Download
-      url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5-mysql.php
+      url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5.php
       path: /opt/adminer/index.php
     - !Download
       url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
       path: /opt/adminer/adminer.css
-    environ: &db_config
-      DB_DATABASE: vagga
-      DB_USERNAME: vagga
-      DB_PASSWORD: vagga
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3307
-      DB_DATA_DIR: /data
-    volumes:
-      /data: !Tmpfs
-        size: 200M
-        mode: 0o700
 
   exporter:
     setup:
@@ -75,12 +90,28 @@ containers:
       /usr/local/src/work: !Snapshot
 
 commands:
+  _pg-init: !Command
+    description: Init postgres database
+    container: postgres
+    user-id: 200
+    group-id: 200
+    run: |
+      set -ex
+      ls -la /data
+      $PG_BIN/pg_ctl initdb
+      $PG_BIN/pg_ctl -w -o '-F --port=$DB_PORT -k /tmp' start
+      $PG_BIN/createuser -h 127.0.0.1 -p $DB_PORT $DB_USERNAME
+      $PG_BIN/createdb -h 127.0.0.1 -p $DB_PORT $DB_DATABASE -O $DB_USERNAME
+      $PG_BIN/psql -h 127.0.0.1 -p $DB_PORT -c "ALTER ROLE $DB_USERNAME WITH ENCRYPTED PASSWORD '$DB_PASSWORD';"
+      $PG_BIN/pg_ctl stop
+
   artisan: !Command
     description: Shortcut for running php artisan
     container: laravel
     run:
     - php
     - artisan
+
   run: !Supervise
     description: run the laravel development server
     children:
@@ -88,28 +119,20 @@ commands:
         container: laravel
         environ: *db_config
         run: &run_app |
-            touch /work/.dbcreation # Create lock file
-            while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
             php artisan cache:clear
             php artisan config:clear
             php artisan migrate
             php artisan db:seed
             php artisan serve
-      db: !Command
-        container: mysql
-        run: &run_db |
-            mysql_install_db --datadir=$DB_DATA_DIR
-            mkdir /run/mysqld
-            mysqld_safe --user=root --datadir=$DB_DATA_DIR \
-              --bind-address=$DB_HOST --port=$DB_PORT \
-              --no-auto-restart --no-watch
-            while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done # wait for server to be ready
-            mysqladmin create $DB_DATABASE
-            mysql -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
-            mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
-            mysql -e "FLUSH PRIVILEGES;"
-            rm /work/.dbcreation # Release lock
-            php -S 127.0.0.1:8800 -t /opt/adminer
+      db: &db_cmd !Command
+        container: postgres
+        user-id: 200
+        group-id: 200
+        run: exec $PG_BIN/postgres -F --port=$DB_PORT
+      adminer: &adminer_cmd !Command
+        container: adminer
+        run: php -S 127.0.0.1:8800 -t /opt/adminer
+
 
   run-cached: !Supervise
     description: Start the laravel development server alongside memcached
@@ -125,9 +148,8 @@ commands:
           MEMCACHED_HOST: 127.0.0.1
           MEMCACHED_PORT: 11211
         run: *run_app
-      db: !Command
-        container: mysql
-        run: *run_db
+      db: *db_cmd
+      adminer: *adminer_cmd
 
   export: !Command
     container: exporter

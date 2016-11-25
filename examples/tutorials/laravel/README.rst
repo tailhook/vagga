@@ -154,38 +154,60 @@ container for our database:
 
     containers:
       # ...
-      mysql:
+      postgres:
         setup:
-        - !Alpine v3.4
-        - !Install
-          - mariadb ❶
-          - mariadb-client
-          - php5-cli ❷
-          - php5-pdo_mysql ❷
+        - !Ubuntu xenial
         - !EnsureDir /data
-        - !EnsureDir /opt/adminer
-        - !Download ❷
-          url: https://www.adminer.org/static/download/4.2.4/adminer-4.2.4-mysql.php
-          path: /opt/adminer/index.php
-        - !Download ❸
-          url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
-          path: /opt/adminer/adminer.css
-        environ: &db_config ❹
+        - !Sh |
+            addgroup --system --gid 200 postgres ❶
+            adduser --uid 200 --system --home /data --no-create-home \
+                --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+                postgres
+        - !Install [postgresql-9.5]
+        environ: &db_config
+          PGDATA: /data
+          DB_PORT: 5433
           DB_DATABASE: vagga
           DB_USERNAME: vagga
           DB_PASSWORD: vagga
+          PG_BIN: /usr/lib/postgresql/9.5/bin
+          DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
-          DB_PORT: 3307
-          DB_DATA_DIR: /data
         volumes:
-          /data: !Tmpfs
-            size: 200M
-            mode: 0o700
+          /data: !Persistent
+            name: postgres
+            owner-uid: 200
+            owner-gid: 200
+            init-command: _pg-init ❷
+          /run: !Tmpfs
+            subdirs:
+              postgresql: { mode: 0o777 }
 
-* ❶ -- `mariadb`_ is a drop in replacement for mysql.
-* ❷ -- we need php to run `adminer`_, a small database administration tool.
-* ❸ -- a better style for adminer.
-* ❹ -- set an yaml anchor so we can reference it in our run command.
+* ❶ -- Use fixed user id and group id for postgres
+* ❷ -- Vagga command to initialize the volume
+
+.. note:: The database will be persisted in ``.vagga/.volumes/postgres``.
+
+Add the command to initialize the database:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      _pg-init: !Command
+        description: Init postgres database
+        container: postgres
+        user-id: 200
+        group-id: 200
+        run: |
+          set -ex
+          ls -la /data
+          $PG_BIN/pg_ctl initdb
+          $PG_BIN/pg_ctl -w -o '-F --port=$DB_PORT -k /tmp' start
+          $PG_BIN/createuser -h 127.0.0.1 -p $DB_PORT $PG_USER
+          $PG_BIN/createdb -h 127.0.0.1 -p $DB_PORT $DB_DATABASE -O $DB_USERNAME
+          $PG_BIN/psql -h 127.0.0.1 -p $DB_PORT -c "ALTER ROLE $DB_USERNAME WITH ENCRYPTED PASSWORD '$DB_PASSWORD';"
+          $PG_BIN/pg_ctl stop
 
 Now change our ``run`` command to start the database alongside our project:
 
@@ -199,36 +221,69 @@ Now change our ``run`` command to start the database alongside our project:
             container: laravel
             environ: *db_config
             run: |
-                touch /work/.dbcreation # Create lock file
-                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
                 php artisan cache:clear
                 php artisan config:clear
                 php artisan serve
           db: !Command
-            container: mysql
-            run: |
-                mysql_install_db --datadir=$DB_DATA_DIR
-                mkdir /run/mysqld
-                mysqld_safe --user=root --datadir=$DB_DATA_DIR \
-                  --bind-address=$DB_HOST --port=$DB_PORT \
-                  --no-auto-restart --no-watch
-                while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done # wait for server to be ready
-                mysqladmin create $DB_DATABASE
-                mysql -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
-                mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
-                mysql -e "FLUSH PRIVILEGES;"
-                rm /work/.dbcreation # Release lock
-                php -S 127.0.0.1:8800 -t /opt/adminer # run adminer
+            container: postgres
+            user-id: 200
+            group-id: 200
+            run: exec $PG_BIN/postgres -F --port=$DB_PORT
 
 And run our project::
 
     $ vagga run
 
+Inspecting the database
+=======================
+
+Now that we have a working database, we can inspect it using a small php utility
+called `adminer`_. Let's create a container for it:
+
+.. code-block:: yaml
+
+    containers:
+      # ...
+      adminer:
+        setup:
+        - !Alpine v3.4
+        - !Install
+          - php5-cli
+          - php5-pdo_pgsql
+        - !EnsureDir /opt/adminer
+        - !Download ❶
+          url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5.php
+          path: /opt/adminer/index.php
+        - !Download ❷
+          url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
+          path: /opt/adminer/adminer.css
+
+- * ❶ -- download the adminer script.
+- * ❷ -- use a better style (optional).
+
+Change our ``run`` command to start the adminer container:
+
+.. code-block:: yaml
+
+    commands:
+      run: !Supervise
+        description: run the laravel development server
+        children:
+          app: !Command
+            # ...
+          db: !Command
+            # ...
+          adminer: !Command
+            container: adminer
+            run: php -S 127.0.0.1:8800 -t /opt/adminer
+
+This command will simply start the php embedded development server with its root
+pointing to the directory containing the adminer files.
+
 To access adminer, visit ``localhost:8800``, fill in the ``server`` field with
-``127.0.0.1:3307`` and the other fields with "vagga" (the username and password
+``127.0.0.1:5433`` and the other fields with "vagga" (the username and password
 we defined).
 
-.. _`mariadb`: http://mariadb.org/
 .. _`adminer`: https://www.adminer.org
 
 Adding some code
@@ -575,7 +630,7 @@ Change ``database/seeds/DatabaseSeeder.php`` to include ``ArticleSeeder``:
         }
     }
 
-Add a the php mysql module to our container:
+Add a the php postgresql module to our container:
 
 .. code-block:: yaml
 
@@ -592,7 +647,7 @@ Add a the php mysql module to our container:
         - !Install
           - php-dom
           - php-mbstring
-          - php-mysql
+          - php-pgsql
         - !Env { <<: *env }
         - !ComposerDependencies
 
@@ -608,14 +663,14 @@ Change the ``run`` command to execute the migrations and seed our database:
           container: laravel
           environ: *db_config
           run: |
-              touch /work/.dbcreation # Create lock file
-              while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
               php artisan cache:clear
               php artisan config:clear
               php artisan migrate
               php artisan db:seed
               php artisan serve
         db: !Command
+          # ...
+        adminer: !Command
           # ...
 
 If you run our project, you will see the articles we defined in the seeder class.
@@ -645,7 +700,7 @@ Activate Universe repository and add ``php5-memcached``, to our container:
         - !Install
           - php-dom
           - php-mbstring
-          - php-mysql
+          - php-pgsql
           - php-memcached
         - !Env { <<: *env }
         - !ComposerDependencies
@@ -674,13 +729,14 @@ Add some yaml anchors on the ``run`` command so we can avoid repetition:
             environ: *db_config
             run: &run_app | # ❶
                 # ...
-          db: !Command
-            container: mysql
-            run: &run_db | # ❷
-                # ...
+          db: &db_cmd !Command ❷
+            # ...
+          adminer: &adminer_cmd !Command ❸
+            # ...
 
 * ❶ -- set an anchor at the ``app`` child command
 * ❷ -- set an anchor at the ``db`` child command
+* ❸ -- set an anchor at the ``adminer`` child command
 
 Create the command to run with caching:
 
@@ -702,9 +758,8 @@ Create the command to run with caching:
               MEMCACHED_HOST: 127.0.0.1
               MEMCACHED_PORT: 11211
             run: *run_app
-          db: !Command
-            container: mysql
-            run: *run_db
+          db: *db_cmd
+          adminer: *adminer_cmd
 
 * ❶ -- run memcached as verbose so we see can see the cache working
 
@@ -896,4 +951,4 @@ to a separate file, for example:
       export: !Command
         container: exporter
         description: export project into tarball
-        run: [sh, export.sh]
+        run: [/bin/sh, export.sh]
