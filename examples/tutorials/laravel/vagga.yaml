@@ -5,22 +5,16 @@ containers:
       APP_ENV: development
       APP_DEBUG: true
       APP_KEY: YourRandomGeneratedEncryptionKey
-      DB_CONNECTION: pgsql
     setup:
     - !Ubuntu xenial
     - !UbuntuUniverse
-    - !Env { <<: *env }
     - !Install
-      - php-pgsql
-      - php-memcached
       - php-dom
       - php-mbstring
+      - php-pgsql
+      - php-memcached
+    - !Env { <<: *env }
     - !ComposerDependencies
-
-  memcached:
-    setup:
-    - !Alpine v3.4
-    - !Install [memcached]
 
   postgres:
     setup:
@@ -51,6 +45,11 @@ containers:
         subdirs:
           postgresql: { mode: 0o777 }
 
+  memcached:
+    setup:
+    - !Alpine v3.4
+    - !Install [memcached]
+
   adminer:
     setup:
     - !Alpine v3.4
@@ -65,13 +64,13 @@ containers:
       url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
       path: /opt/adminer/adminer.css
 
+  containers:
+  # ...
   exporter:
     setup:
     - !Ubuntu xenial
     - !UbuntuUniverse
-    - !Install
-      - php-dom
-      - php-mbstring
+    - !Install [php-mbstring, php-dom]
     - !Depends composer.json
     - !Depends composer.lock
     - !EnsureDir /usr/local/src/
@@ -105,13 +104,6 @@ commands:
       $PG_BIN/psql -h 127.0.0.1 -p $DB_PORT -c "ALTER ROLE $DB_USERNAME WITH ENCRYPTED PASSWORD '$DB_PASSWORD';"
       $PG_BIN/pg_ctl stop
 
-  artisan: !Command
-    description: Shortcut for running php artisan
-    container: laravel
-    run:
-    - php
-    - artisan
-
   run: !Supervise
     description: run the laravel development server
     children:
@@ -133,7 +125,6 @@ commands:
         container: adminer
         run: php -S 127.0.0.1:8800 -t /opt/adminer
 
-
   run-cached: !Supervise
     description: Start the laravel development server alongside memcached
     children:
@@ -150,6 +141,11 @@ commands:
         run: *run_app
       db: *db_cmd
       adminer: *adminer_cmd
+
+  artisan: !Command
+    description: Shortcut for running php artisan
+    container: laravel
+    run: [php, artisan]
 
   export: !Command
     container: exporter
