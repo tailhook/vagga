@@ -10,7 +10,6 @@ This example will show how to create a simple Django project using vagga.
 * `Adding some code`_
 * `Trying out memcached`_
 * `Why not Postgres?`_
-* `Making Postgres data persistent`_
 
 
 Creating the project structure
@@ -29,7 +28,7 @@ Now create the ``vagga.yaml`` file and add the following to it:
       django:
         setup:
         - !Alpine v3.4
-        - !Py3Install ['Django >=1.9,<1.10']
+        - !Py3Install ['Django >=1.10,<1.11']
 
 and then run::
 
@@ -47,11 +46,11 @@ look like::
     ├── manage.py
     └── vagga.yaml
 
-Notice that we used ``'Django >=1.9,<1.10'`` instead of just ``Django``. It is a
+Notice that we used ``'Django >=1.10,<1.11'`` instead of just ``Django``. It is a
 good practice to always specify the major and minor versions of a dependency.
 This prevents an update to an incompatible version of a library breaking you project.
 You can change the Django version if there is a newer version available
-(``'Django >=1.10,<1.11'`` for instance).
+(``'Django >=1.11,<1.12'`` for instance).
 
 Freezing dependencies
 =====================
@@ -93,7 +92,7 @@ Now, build the ``app-freezer`` container::
 
 You will notice the new ``requirements.txt`` file holding a content similar to::
 
-    Django==1.9.7
+    Django==1.10.3
 
 And now let's run our project. Edit ``vagga.yaml`` to add the ``run`` command:
 
@@ -134,7 +133,7 @@ Add ``django-environ`` to our ``app-freezer`` container:
           dependencies: true ❶
         - !Py3Install
           - pip
-          - 'Django >=1.9,<1.10'
+          - 'Django >=1.10,<1.11'
           - 'django-environ >=0.4,<0.5'
         - !Sh pip freeze > requirements.txt
 
@@ -337,6 +336,8 @@ Set the urls:
         url(r'^admin/', admin.site.urls),
     ]
 
+.. note:: Remember to import ``include`` at the first line
+
 Now run our project::
 
     $ vagga run
@@ -365,7 +366,7 @@ Add ``pylibmc`` to our ``app-freezer``, as well as its build dependencies:
           dependencies: true
         - !Py3Install
           - pip
-          - 'Django >=1.9,<1.10'
+          - 'Django >=1.10,<1.11'
           - 'django-environ >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
         - !Sh pip freeze > requirements.txt
@@ -476,8 +477,8 @@ Now, run our project with memcached::
 
     $ vagga run-cached
 
-And visit any article detail page, hit ``Ctrl+r`` to avoid browser cache and watch
-the memcached output on the terminal.
+And visit any article detail page, hit ``Ctrl+r`` to avoid browser cache and
+watch the memcached output on the terminal.
 
 Why not Postgres?
 =================
@@ -501,7 +502,7 @@ First add ``psycopg2`` and its build dependencies to ``app-freezer``:
           dependencies: true
         - !Py3Install
           - pip
-          - 'Django >=1.9,<1.10'
+          - 'Django >=1.10,<1.11'
           - 'django-environ >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
           - 'psycopg2 >=2.6,<2.7' ❷
@@ -587,12 +588,17 @@ Create the database container:
 .. code-block:: yaml
 
     containers:
-      #..
+      # ...
       postgres:
         setup:
         - !Ubuntu xenial
-        - !Install [postgresql]
         - !EnsureDir /data
+        - !Sh |
+            addgroup --system --gid 200 postgres ❶
+            adduser --uid 200 --system --home /data --no-create-home \
+                --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+                postgres
+        - !Install [postgresql-9.5]
         environ:
           PGDATA: /data
           PG_PORT: 5433
@@ -601,15 +607,47 @@ Create the database container:
           PG_PASSWORD: vagga
           PG_BIN: /usr/lib/postgresql/9.5/bin
         volumes:
-          /data: !Tmpfs
-            size: 100M
-            mode: 0o700
+          /data: !Persistent
+            name: postgres
+            owner-uid: 200
+            owner-gid: 200
+            init-command: _pg-init ❷
+          /run: !Tmpfs
+            subdirs:
+              postgresql: { mode: 0o777 }
+
+* ❶ -- Use fixed user id and group id for postgres
+* ❷ -- Vagga command to initialize the volume
+
+.. note:: The database will be persisted in ``.vagga/.volumes/postgres``.
+
+Now add the command to initialize the database:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      _pg-init: !Command
+        description: Init postgres database
+        container: postgres
+        user-id: 200
+        group-id: 200
+        run: |
+          set -ex
+          ls -la /data
+          $PG_BIN/pg_ctl initdb
+          $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+          $PG_BIN/createuser -h 127.0.0.1 -p $PG_PORT $PG_USER
+          $PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER
+          $PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c "ALTER ROLE $PG_USER WITH ENCRYPTED PASSWORD '$PG_PASSWORD';"
+          $PG_BIN/pg_ctl stop
 
 And then add the command to run with Postgres:
 
 .. code-block:: yaml
 
     commands:
+      # ...
       run-postgres: !Supervise
         description: Start the django development server using Postgres database
         children:
@@ -618,21 +656,13 @@ And then add the command to run with Postgres:
             environ:
               DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
             run: |
-                touch /work/.dbcreation # Create lock file
-                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
                 python3 manage.py migrate
                 python3 manage.py runserver
           db: !Command
             container: postgres
-            run: |
-                chown postgres:postgres $PGDATA;
-                su postgres -c "$PG_BIN/pg_ctl initdb";
-                su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
-                su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-                su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
-                su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-                rm /work/.dbcreation # Release lock
-                sleep infinity
+            user-id: 200
+            group-id: 200
+            run: exec $PG_BIN/postgres -F --port=$PG_PORT
 
 Now run::
 
@@ -640,61 +670,3 @@ Now run::
 
 Visit ``localhost:8000/admin`` and try to log in with the user and password we
 defined in the migration.
-
-Making Postgres data persistent
--------------------------------
-
-It is possible to make the data stored in Postgres persist between runs. To do
-so, change our ``postgres`` container as follows:
-
-.. code-block:: yaml
-
-    containers:
-      postgres:
-        setup:
-        - !Ubuntu xenial
-        - !Install [postgresql]
-        - !EnsureDir /data
-        environ:
-          PGDATA: /data
-          PG_PORT: 5433
-          PG_DB: test
-          PG_USER: vagga
-          PG_PASSWORD: vagga
-          PG_BIN: /usr/lib/postgresql/9.5/bin
-        volumes:
-          /data: !Persistent { name: postgres.data } ❶
-
-* ❶ -- bind ``/data`` to a ``!Persistent`` directory instead of ``!Tmpfs``
-
-And also change the ``run-postgres`` command:
-
-.. code-block:: yaml
-
-  commands:
-    run-postgres: !Supervise
-    description: Start the django development server using Postgres database
-    children:
-      # ...
-      db: !Command
-        container: postgres
-        run: |
-            chown postgres:postgres $PGDATA;
-            if [ -z $(ls -A $PGDATA) ]; then ❶
-              su postgres -c "$PG_BIN/pg_ctl initdb";
-              su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
-              su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-              su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
-              su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-            else ❷
-              su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-            fi
-            rm /work/.dbcreation # Release lock
-            sleep infinity
-
-* ❶ -- check if there is already a database created
-* ❷ -- otherwise just start the database
-
-These changes will persist the database files inside ``.vagga/.volumes/postgres.data``
-on the project directory. We will not have any permission on that directory, so
-we would not be able to list its contents nor delete it, unless we are root.

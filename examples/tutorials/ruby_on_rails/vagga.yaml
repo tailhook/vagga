@@ -33,8 +33,13 @@ containers:
   postgres:
     setup:
     - !Ubuntu xenial
-    - !Install [postgresql]
     - !EnsureDir /data
+    - !Sh |
+        addgroup --system --gid 200 postgres
+        adduser --uid 200 --system --home /data --no-create-home \
+            --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+            postgres
+    - !Install [postgresql-9.5]
     environ:
       PGDATA: /data
       PG_PORT: 5433
@@ -43,11 +48,31 @@ containers:
       PG_PASSWORD: vagga
       PG_BIN: /usr/lib/postgresql/9.5/bin
     volumes:
-      /data: !Tmpfs
-        size: 100M
-        mode: 0o700
+      /data: !Persistent
+        name: postgres
+        owner-uid: 200
+        owner-gid: 200
+        init-command: _pg-init
+      /run: !Tmpfs
+        subdirs:
+          postgresql: { mode: 0o777 }
 
 commands:
+  _pg-init: !Command
+    description: Init postgres database
+    container: postgres
+    user-id: 200
+    group-id: 200
+    run: |
+      set -ex
+      ls -la /data
+      $PG_BIN/pg_ctl initdb
+      $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+      $PG_BIN/createuser -h 127.0.0.1 -p $PG_PORT $PG_USER
+      $PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER
+      $PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c "ALTER ROLE $PG_USER WITH ENCRYPTED PASSWORD '$PG_PASSWORD';"
+      $PG_BIN/pg_ctl stop
+
   run: !Command
     container: rails
     description: start rails development server
@@ -77,19 +102,11 @@ commands:
         environ:
           DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
         run: |
-            touch /work/.dbcreation # Create lock file
-            while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
             rake db:migrate
             rake db:seed
             rails server
       db: !Command
         container: postgres
-        run: |
-            chown postgres:postgres $PGDATA;
-            su postgres -c "$PG_BIN/pg_ctl initdb";
-            su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
-            su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-            su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
-            su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-            rm /work/.dbcreation # Release lock
-            sleep infinity
+        user-id: 200
+        group-id: 200
+        run: exec $PG_BIN/postgres -F --port=$PG_PORT

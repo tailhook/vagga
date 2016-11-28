@@ -330,20 +330,56 @@ Create the database container
       # ...
       postgres:
         setup:
-        - !Ubuntu trusty
-        - !Install [postgresql]
+        - !Ubuntu xenial
         - !EnsureDir /data
+        - !Sh |
+            addgroup --system --gid 200 postgres ❶
+            adduser --uid 200 --system --home /data --no-create-home \
+                --shell /bin/bash --group --gecos "PostgreSQL administrator" \
+                postgres
+        - !Install [postgresql-9.5]
         environ:
           PGDATA: /data
           PG_PORT: 5433
           PG_DB: test
           PG_USER: vagga
           PG_PASSWORD: vagga
-          PG_BIN: /usr/lib/postgresql/9.3/bin
+          PG_BIN: /usr/lib/postgresql/9.5/bin
         volumes:
-          /data: !Tmpfs
-            size: 100M
-            mode: 0o700
+          /data: !Persistent
+            name: postgres
+            owner-uid: 200
+            owner-gid: 200
+            init-command: _pg-init ❷
+          /run: !Tmpfs
+            subdirs:
+              postgresql: { mode: 0o777 }
+
+* ❶ -- Use fixed user id and group id for postgres
+* ❷ -- Vagga command to initialize the volume
+
+.. note:: The database will be persisted in ``.vagga/.volumes/postgres``.
+
+Now add the command to initialize the database:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      _pg-init: !Command
+        description: Init postgres database
+        container: postgres
+        user-id: 200
+        group-id: 200
+        run: |
+          set -ex
+          ls -la /data
+          $PG_BIN/pg_ctl initdb
+          $PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start
+          $PG_BIN/createuser -h 127.0.0.1 -p $PG_PORT $PG_USER
+          $PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER
+          $PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c "ALTER ROLE $PG_USER WITH ENCRYPTED PASSWORD '$PG_PASSWORD';"
+          $PG_BIN/pg_ctl stop
 
 And then add the command to run with Postgres:
 
@@ -359,37 +395,31 @@ And then add the command to run with Postgres:
             environ:
               DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
             run: |
-                touch /work/.dbcreation # Create lock file
-                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
                 rake db:migrate
                 rails server
           db: !Command
             container: postgres
-            run: |
-                chown postgres:postgres $PGDATA;
-                su postgres -c "$PG_BIN/pg_ctl initdb";
-                su postgres -c "echo 'host all all all trust' >> $PGDATA/pg_hba.conf"
-                su postgres -c "$PG_BIN/pg_ctl -w -o '-F --port=$PG_PORT -k /tmp' start";
-                su postgres -c "$PG_BIN/psql -h 127.0.0.1 -p $PG_PORT -c \"CREATE USER $PG_USER WITH PASSWORD '$PG_PASSWORD';\""
-                su postgres -c "$PG_BIN/createdb -h 127.0.0.1 -p $PG_PORT $PG_DB -O $PG_USER";
-                rm /work/.dbcreation # Release lock
-                sleep infinity
+            user-id: 200
+            group-id: 200
+            run: exec $PG_BIN/postgres -F --port=$PG_PORT
 
 Now run::
 
     $ vagga run-postgres
 
-We can also add some default records to the database, so we don't have to add
-them everytime we run our project. To do so, add the following to ``db/seeds.rb``:
+We can also add some default records to the database, so we don't start with an
+empty database. To do so, add the following to ``db/seeds.rb``:
 
 .. code-block:: ruby
 
     # db/seeds.rb
-    Article.create([
-      { title: 'Article 1', body: 'Lorem ipsum dolor sit amet' },
-      { title: 'Article 2', body: 'Lorem ipsum dolor sit amet' },
-      { title: 'Article 3', body: 'Lorem ipsum dolor sit amet' }
-    ])
+    if Article.count == 0
+      Article.create([
+        { title: 'Article 1', body: 'Lorem ipsum dolor sit amet' },
+        { title: 'Article 2', body: 'Lorem ipsum dolor sit amet' },
+        { title: 'Article 3', body: 'Lorem ipsum dolor sit amet' }
+      ])
+    end
 
 Now change the ``run-postgres`` command to seed the database:
 
@@ -405,8 +435,6 @@ Now change the ``run-postgres`` command to seed the database:
             environ:
               DATABASE_URL: postgresql://vagga:vagga@127.0.0.1:5433/test
             run: |
-                touch /work/.dbcreation # Create lock file
-                while [ -f /work/.dbcreation ]; do sleep 0.2; done # Acquire lock
                 rake db:migrate
                 rake db:seed ❶
                 rails server
@@ -415,4 +443,4 @@ Now change the ``run-postgres`` command to seed the database:
 
 * ❶ -- populate the database.
 
-Now , everytime we run ``run-postgres``, we will have our database populated.
+Now, we run ``run-postgres``, we will already have our database populated.
