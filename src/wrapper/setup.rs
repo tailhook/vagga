@@ -407,7 +407,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         let dest = tgtroot.join("run");
         Tmpfs::new(&dest)
             .size_bytes(100 << 20)
-            .mode(0o766)
+            .mode(0o755)
             .mount().map_err(|e| format!("{}", e))?;
         try_msg!(Dir::new(&dest.join("shm")).mode(0o1777).create(),
             "Error creating /run/shm: {err}");
