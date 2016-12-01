@@ -1,0 +1,73 @@
+containers:
+  mysql:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+
+    # Use fixed user id and group id for mysql, because in some cases
+    # we may need to upgrade (rebuild) a mysql container, but keep the data
+    # on a `!Persistent` volume still usable. User ids in ubuntu packages are
+    # not guaranteed to be same on every installation.
+    - !Sh |
+        addgroup --system --gid 200 mysql
+        adduser --uid 200 --system --home /data --no-create-home \
+            --shell /bin/bash --group --gecos "MySQL user" \
+            mysql
+    - !Install
+      - mysql-server-5.7
+      - mysql-client-5.7
+    - !Remove /var/lib/mysql
+    - !EnsureDir /data
+    environ: &db_config
+      DB_DATABASE: vagga
+      DB_USERNAME: vagga
+      DB_PASSWORD: vagga
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3307
+      DB_DATA_DIR: /data
+    volumes:
+      /data: !Persistent
+        name: mysql
+        init-command: _mysql-init
+      /run: !Tmpfs
+        subdirs:
+          mysqld: { mode: 0o777 }  # until we have user, group options
+
+commands:
+  _mysql-init: !Command
+      description: Init MySQL data volume
+      container: mysql
+      user-id: 200
+      group-id: 200
+      run: |
+        set -ex
+        ls -la $DB_DATA_DIR
+
+        mysqld --initialize-insecure --datadir=$DB_DATA_DIR \
+          --log-error=log
+
+        mount
+        ls -lad /run
+        ls -la /run
+        mysqld --datadir=$DB_DATA_DIR --skip-networking --log-error=log &
+
+        while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done
+
+        mysqladmin create $DB_DATABASE
+        mysql -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
+        mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
+        mysql -e "FLUSH PRIVILEGES;"
+
+        mysqladmin -u root shutdown
+
+  mysql-server: !Command
+    description: Run MySQL server
+    container: mysql
+    run: |
+      exec mysqld --datadir=$DB_DATA_DIR \
+        --bind-address=$DB_HOST --port=$DB_PORT \
+        --log-error=log --gdb
+
+
+
+
