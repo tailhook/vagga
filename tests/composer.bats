@@ -38,7 +38,7 @@ teardown() {
     run vagga _run php-ubuntu-xenial laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-ubuntu-xenial)
     [[ $link = ".roots/php-ubuntu-xenial.87465c41/root" ]]
 }
@@ -47,7 +47,7 @@ teardown() {
     run vagga _run php-ubuntu-trusty laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-ubuntu-trusty)
     [[ $link = ".roots/php-ubuntu-trusty.ed35312d/root" ]]
 }
@@ -65,7 +65,7 @@ teardown() {
     run vagga _run php-alpine-3_4 laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3_4)
     [[ $link = ".roots/php-alpine-3_4.730f7f8f/root" ]]
 }
@@ -74,7 +74,7 @@ teardown() {
     run vagga _run php-alpine-3_3 laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3_3)
     [[ $link = ".roots/php-alpine-3_3.2a51fce5/root" ]]
 }
@@ -83,7 +83,7 @@ teardown() {
     run vagga _run php-alpine-3_2 laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3_2)
     [[ $link = ".roots/php-alpine-3_2.5153e63b/root" ]]
 }
@@ -92,7 +92,7 @@ teardown() {
     run vagga _run php-composer-deps laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps)
     [[ $link = ".roots/php-composer-deps.e581a959/root" ]]
 }
@@ -101,7 +101,7 @@ teardown() {
     run vagga _run php-composer-deps-ubuntu-xenial laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-ubuntu-xenial)
     [[ $link = ".roots/php-composer-deps-ubuntu-xenial.e3a858bd/root" ]]
 }
@@ -110,7 +110,7 @@ teardown() {
     run vagga _run php-composer-deps-ubuntu-trusty laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-ubuntu-trusty)
     [[ $link = ".roots/php-composer-deps-ubuntu-trusty.592bc51f/root" ]]
 }
@@ -164,7 +164,7 @@ teardown() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"The lock file is not up to date with the latest changes in composer.json"* ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-lock)
     [[ $link = ".roots/php-composer-deps-lock.b416bf95/root" ]]
 }
@@ -175,7 +175,7 @@ teardown() {
     run vagga _run hhvm-ubuntu-xenial laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
+    [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/hhvm-ubuntu-xenial)
     [[ $link = ".roots/hhvm-ubuntu-xenial.189813c0/root" ]]
 }
