@@ -16,6 +16,7 @@ use container::mount::{unmount};
 use builder::context::Context;
 use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
+use builder::dns::revert_name_files;
 use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -248,6 +249,9 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
         };
         unmount(&tmpsub)?;
         res?;
+    }
+    if tar.path == Path::new("/") {
+        revert_name_files()?;
     }
     Ok(())
 }

@@ -16,6 +16,7 @@ use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};
 use builder::distrib::{Distribution, Named, DistroBox};
+use builder::dns::revert_name_files;
 use file_util::{Dir, copy, copy_utime};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use container::util::clean_dir;
@@ -719,10 +720,7 @@ fn init_debian_build(ctx: &mut Context) -> Result<(), String> {
         "#))
         .map_err(|e| format!("Error writing apt config: {}", e))?;
 
-    // Revert resolv.conf back
-    copy(&Path::new("/etc/resolv.conf"),
-              &Path::new("/vagga/root/etc/resolv.conf"))
-        .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
+    revert_name_files()?;
 
     let mut cmd = command(ctx, "locale-gen")?;
     cmd.arg("en_US.UTF-8");

@@ -16,6 +16,7 @@ use process_util::capture_stdout;
 use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use config::version::Version;
+use builder::dns::revert_name_files;
 
 
 pub static LATEST_VERSION: &'static str = "v3.4";
@@ -74,6 +75,7 @@ impl Distribution for Distro {
         if !self.base_setup {
             self.base_setup = true;
             setup_base(ctx, &self.version, &self.mirror)?;
+            revert_name_files()?;
         }
         Ok(())
     }

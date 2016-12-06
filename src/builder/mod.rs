@@ -41,6 +41,7 @@ mod timer;
 mod distrib;
 mod guard;
 mod error;
+mod dns;
 
 
 pub fn run() -> i32 {

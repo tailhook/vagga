@@ -13,6 +13,7 @@ use file_util::{Dir, shallow_copy};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 use builder::error::StepError as E;
+use builder::dns::revert_name_files;
 
 // Build Steps
 #[derive(Debug)]
@@ -223,7 +224,9 @@ impl BuildStep for Container {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        clone(&self.0, guard, build)
+        clone(&self.0, guard, build)?;
+        revert_name_files()?;
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         Some(&self.0)
@@ -285,7 +288,9 @@ impl BuildStep for SubConfig {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        subconfig(self, guard, build)
+        subconfig(self, guard, build)?;
+        revert_name_files()?;
+        Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
         match self.source {
