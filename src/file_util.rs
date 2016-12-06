@@ -12,6 +12,8 @@ use nix;
 use libc::{uid_t, gid_t, c_int, utime, utimbuf};
 use nix::fcntl::{flock, FlockArg};
 
+use path_util::ToCString;
+
 extern "C" {
     fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;
 }
@@ -284,9 +286,8 @@ pub fn force_symlink(target: &Path, linkpath: &Path)
 pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
     -> Result<(), io::Error>
 {
-    let rc = unsafe { lchown(
-        CString::new(target.as_os_str().as_bytes()).unwrap().as_ptr(),
-        uid, gid) };
+    let c_target = target.to_cstring();
+    let rc = unsafe { lchown( c_target.as_ptr(), uid, gid) };
     if rc != 0 {
         warn!("Can't chown {:?}: {}", target, io::Error::last_os_error());
         Ok(())
@@ -349,13 +350,12 @@ pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
     -> io::Result<()>
 {
     let metadata = fs::metadata(from.as_ref())?;
-    let filename = CString::new(to.as_ref().as_os_str().as_bytes())
-                   .unwrap().as_ptr();
+    let filename = CString::new(to.as_ref().as_os_str().as_bytes()).unwrap();
     let utimes = utimbuf {
         actime: metadata.atime(),
         modtime: metadata.mtime(),
     };
-    let rc = unsafe { utime(filename, &utimes) };
+    let rc = unsafe { utime(filename.as_ptr(), &utimes) };
     if rc != 0 {
         return Err(io::Error::last_os_error());
     }

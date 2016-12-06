@@ -30,7 +30,8 @@ pub fn temporary_change_root<P, T, F, E>(path: P, mut fun: F) -> Result<T, E>
           P: AsRef<Path>,
 {
     let path = path.as_ref();
-    if unsafe { chdir(CString::new("/").unwrap().as_ptr()) } != 0 {
+    let c_root = CString::new("/").unwrap();
+    if unsafe { chdir(c_root.as_ptr()) } != 0 {
         return Err(format!("Error chdir to root: {}",
                            IoError::last_os_error()).into());
     }
@@ -39,7 +40,8 @@ pub fn temporary_change_root<P, T, F, E>(path: P, mut fun: F) -> Result<T, E>
                            path, IoError::last_os_error()).into());
     }
     let res = fun();
-    if unsafe { chroot(CString::new(".").unwrap().as_ptr()) } != 0 {
+    let c_pwd = CString::new(".").unwrap();
+    if unsafe { chroot(c_pwd.as_ptr()) } != 0 {
         return Err(format!("Error chroot back: {}",
                            IoError::last_os_error()).into());
     }
@@ -55,12 +57,14 @@ pub fn change_root(new_root: &Path, put_old: &Path) -> Result<(), String>
 #[cfg(feature="containers")]
 pub fn change_root(new_root: &Path, put_old: &Path) -> Result<(), String>
 {
-    if unsafe { pivot_root(CString::new(new_root.to_str().unwrap()).unwrap().as_ptr(),
-                           CString::new(put_old.to_str().unwrap()).unwrap().as_ptr()) } != 0 {
+    let c_new_root = new_root.to_cstring();
+    let c_put_old = put_old.to_cstring();
+    if unsafe { pivot_root(c_new_root.as_ptr(), c_put_old.as_ptr()) } != 0 {
         return Err(format!("Error pivot_root to {:?}: {}", new_root,
                            IoError::last_os_error()));
     }
-    if unsafe { chdir(CString::new("/").unwrap().as_ptr()) } != 0 {
+    let c_root = CString::new("/").unwrap();
+    if unsafe { chdir(c_root.as_ptr()) } != 0 {
         return Err(format!("Error chdir to root: {}",
                            IoError::last_os_error()));
     }
