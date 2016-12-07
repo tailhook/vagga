@@ -126,6 +126,11 @@ impl Command {
     {
         unimplemented!();
     }
+    pub fn set_namespace<F: AsRawFd>(&mut self, file: &F, ns: Namespace)
+        -> io::Result<&mut Command>
+    {
+        unimplemented!();
+    }
     pub fn set_id_maps(&mut self, uid_map: Vec<UidMap>, gid_map: Vec<GidMap>)
         -> &mut Command
     {

@@ -12,7 +12,6 @@ use unshare::{Command, Stdio, Fd, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
 use libc::{geteuid};
-use nix::sched::{setns, CloneFlags};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
 use rustc_serialize::json;
@@ -729,7 +728,10 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     Ok(IsolatedNetwork{userns: userns_file, netns: netns_file})
 }
 
+#[cfg(feature="containers")]
 pub fn isolate_network() -> Result<(), String> {
+    use nix::sched::{setns, CloneFlags};
+
     let isolated_net = try_msg!(
         create_isolated_network(),
         "Cannot create network namespace: {err}");
@@ -740,6 +742,11 @@ pub fn isolate_network() -> Result<(), String> {
             CloneFlags::from_bits_truncate(Namespace::Net.to_clone_flag() as i32)),
         "Cannot set network namespace: {err}");
     Ok(())
+}
+
+#[cfg(not(feature="containers"))]
+pub fn isolate_network() -> Result<(), String> {
+    unimplemented!()
 }
 
 impl PortForwardGuard {

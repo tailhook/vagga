@@ -2,7 +2,7 @@ use std::io;
 use std::path::Path;
 use std::os::unix::io::RawFd;
 
-use nix::fcntl::O_PATH;
+use nix::fcntl;
 use libc::{open, renameat};
 
 use config::volumes::PersistentInfo;
@@ -23,6 +23,7 @@ pub struct PersistentVolumeGuard {
 }
 
 impl PersistentVolumeGuard {
+    #[cfg(feature="containers")]
     pub fn new(vol: &PersistentInfo)
         -> io::Result<Option<PersistentVolumeGuard>>
     {
@@ -47,7 +48,7 @@ impl PersistentVolumeGuard {
             .gid(vol.owner_gid)
             .create()?;
         let volumes_base = unsafe {
-            open(volbase.to_cstring().as_ptr(), O_PATH.bits())
+            open(volbase.to_cstring().as_ptr(), fcntl::O_PATH.bits())
         };
         if volumes_base < 0 {
             return Err(io::Error::last_os_error());
@@ -57,6 +58,12 @@ impl PersistentVolumeGuard {
             volumes_base: volumes_base,
             volume_name: vol.name.clone(),
         }))
+    }
+    #[cfg(not(feature="containers"))]
+    pub fn new(vol: &PersistentInfo)
+        -> io::Result<Option<PersistentVolumeGuard>>
+    {
+        unimplemented!()
     }
 }
 
