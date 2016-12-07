@@ -49,7 +49,7 @@ impl Range {
         self.start
     }
     pub fn end(&self) -> uid_t {
-        self.end + 1
+        self.end
     }
 }
 
