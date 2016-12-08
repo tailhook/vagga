@@ -21,6 +21,7 @@ impl Text {
 }
 
 impl BuildStep for Text {
+    fn name(&self) -> &'static str { "Text" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

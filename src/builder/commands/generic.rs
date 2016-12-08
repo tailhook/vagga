@@ -195,6 +195,7 @@ pub fn run(mut cmd: Command) -> Result<(), StepError> {
 }
 
 impl BuildStep for Sh {
+    fn name(&self) -> &'static str { "Sh" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -218,6 +219,7 @@ impl BuildStep for Sh {
 }
 
 impl BuildStep for Cmd {
+    fn name(&self) -> &'static str { "Cmd" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -238,6 +240,7 @@ impl BuildStep for Cmd {
 }
 
 impl BuildStep for Env {
+    fn name(&self) -> &'static str { "Env" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -260,6 +263,7 @@ impl BuildStep for Env {
 }
 
 impl BuildStep for RunAs {
+    fn name(&self) -> &'static str { "RunAs" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

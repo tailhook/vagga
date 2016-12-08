@@ -209,6 +209,7 @@ pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
 }
 
 impl BuildStep for Container {
+    fn name(&self) -> &'static str { "Container" }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -232,6 +233,7 @@ impl BuildStep for Container {
     }
 }
 impl BuildStep for Build {
+    fn name(&self) -> &'static str { "Build" }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -253,6 +255,7 @@ impl BuildStep for Build {
     }
 }
 impl BuildStep for SubConfig {
+    fn name(&self) -> &'static str { "SubConfig" }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

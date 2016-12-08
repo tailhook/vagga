@@ -35,6 +35,7 @@ impl Repo {
 }
 
 impl BuildStep for Install {
+    fn name(&self) -> &'static str { "Install" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -59,6 +60,7 @@ impl BuildStep for Install {
 }
 
 impl BuildStep for BuildDeps {
+    fn name(&self) -> &'static str { "BuildDeps" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -84,6 +86,7 @@ impl BuildStep for BuildDeps {
 }
 
 impl BuildStep for Repo {
+    fn name(&self) -> &'static str { "Repo" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

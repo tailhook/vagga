@@ -418,6 +418,7 @@ fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
 }
 
 impl BuildStep for ComposerConfig {
+    fn name(&self) -> &'static str { "ComposerConfig" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -441,6 +442,7 @@ impl BuildStep for ComposerConfig {
 }
 
 impl BuildStep for ComposerInstall {
+    fn name(&self) -> &'static str { "ComposerInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -488,6 +490,7 @@ fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
 }
 
 impl BuildStep for ComposerDependencies {
+    fn name(&self) -> &'static str { "ComposerDependencies" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

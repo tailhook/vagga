@@ -56,6 +56,7 @@ impl Depends {
 }
 
 impl BuildStep for Depends {
+    fn name(&self) -> &'static str { "Depends" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -137,6 +138,7 @@ impl Copy {
 }
 
 impl BuildStep for Copy {
+    fn name(&self) -> &'static str { "Copy" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

@@ -296,6 +296,7 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
 }
 
 impl BuildStep for GemInstall {
+    fn name(&self) -> &'static str { "GemInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -316,6 +317,7 @@ impl BuildStep for GemInstall {
 }
 
 impl BuildStep for GemConfig {
+    fn name(&self) -> &'static str { "GemConfig" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -336,6 +338,7 @@ impl BuildStep for GemConfig {
 }
 
 impl BuildStep for GemBundle {
+    fn name(&self) -> &'static str { "GemBundle" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

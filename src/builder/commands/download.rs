@@ -26,6 +26,7 @@ impl Download {
 
 
 impl BuildStep for Download {
+    fn name(&self) -> &'static str { "Download" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

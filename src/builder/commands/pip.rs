@@ -250,6 +250,7 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
 }
 
 impl BuildStep for PipConfig {
+    fn name(&self) -> &'static str { "PipConfig" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -274,6 +275,7 @@ impl BuildStep for PipConfig {
 }
 
 impl BuildStep for Py2Install {
+    fn name(&self) -> &'static str { "Py2Install" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -295,6 +297,7 @@ impl BuildStep for Py2Install {
 }
 
 impl BuildStep for Py3Install {
+    fn name(&self) -> &'static str { "Py3Install" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -361,6 +364,7 @@ fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
 }
 
 impl BuildStep for Py2Requirements {
+    fn name(&self) -> &'static str { "Py2Requirements" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -381,6 +385,7 @@ impl BuildStep for Py2Requirements {
 }
 
 impl BuildStep for Py3Requirements {
+    fn name(&self) -> &'static str { "Py3Requirements" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

@@ -113,6 +113,7 @@ pub fn ensure(path: &PathBuf)
 }
 
 impl BuildStep for EnsureDir {
+    fn name(&self) -> &'static str { "EnsureDir" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -141,6 +142,7 @@ impl BuildStep for EnsureDir {
 }
 
 impl BuildStep for EmptyDir {
+    fn name(&self) -> &'static str { "EmptyDir" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -160,6 +162,7 @@ impl BuildStep for EmptyDir {
 }
 
 impl BuildStep for CacheDirs {
+    fn name(&self) -> &'static str { "CacheDirs" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -183,6 +186,7 @@ impl BuildStep for CacheDirs {
 }
 
 impl BuildStep for Remove {
+    fn name(&self) -> &'static str { "Remove" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

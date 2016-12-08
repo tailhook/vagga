@@ -294,6 +294,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
 }
 
 impl BuildStep for Tar {
+    fn name(&self) -> &'static str { "Tar" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -320,6 +321,7 @@ impl BuildStep for Tar {
 }
 
 impl BuildStep for TarInstall {
+    fn name(&self) -> &'static str { "TarInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

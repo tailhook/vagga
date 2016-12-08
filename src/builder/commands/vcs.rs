@@ -148,6 +148,7 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
 }
 
 impl BuildStep for Git {
+    fn name(&self) -> &'static str { "Git" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -171,6 +172,7 @@ impl BuildStep for Git {
 }
 
 impl BuildStep for GitInstall {
+    fn name(&self) -> &'static str { "GitInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

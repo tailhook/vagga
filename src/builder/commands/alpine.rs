@@ -386,6 +386,7 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 impl BuildStep for Alpine {
+    fn name(&self) -> &'static str { "Alpine" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -409,6 +410,7 @@ impl BuildStep for Alpine {
 }
 
 impl BuildStep for AlpineRepo {
+    fn name(&self) -> &'static str { "AlpineRepo" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

@@ -81,6 +81,7 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
 }
 
 impl BuildStep for Unzip {
+    fn name(&self) -> &'static str { "Unzip" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
