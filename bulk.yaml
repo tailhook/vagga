@@ -27,7 +27,7 @@ versions:
   regex: ^release\s*=\s*'(\S+)'
 
 - file: docs/installation.rst
-  regex: vagga-([\d\.]+)\.tar\.xz
+  regex: vagga-([\d\.ga-f-]+)\.tar\.xz
 
 
 repositories:
