@@ -224,7 +224,7 @@ impl BuildStep for NpmConfig {
         -> Result<(), VersionError>
     {
         hash.field("npm_exe", &self.npm_exe);
-        hash.bool("install_node", self.install_node);
+        hash.field("install_node", self.install_node);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -242,7 +242,7 @@ impl BuildStep for NpmInstall {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("NpmInstall", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

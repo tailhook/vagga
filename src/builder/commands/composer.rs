@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
 use std::io::Write;
-use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command};
 use scan_dir::{self, ScanDir};
@@ -318,7 +317,7 @@ fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
 
 fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     // find php main config directory (/etc/php or /etc/php5 or both)
-    let etc_php: Vec<PathBuf> = 
+    let etc_php: Vec<PathBuf> =
         ScanDir::dirs().skip_symlinks(true).read("/vagga/root/etc", |iter| {
             iter.filter(|&(_, ref name)| name.starts_with("php"))
             .map(|(ref entry, _)| entry.path())
@@ -424,11 +423,10 @@ impl BuildStep for ComposerConfig {
     {
         hash.opt_field("runtime_exe", &self.runtime_exe);
         hash.opt_field("include_path", &self.include_path);
-        hash.bool("install_runtime", self.install_runtime);
-        hash.bool("install_dev", self.install_dev);
-        hash.bool("keep_composer", self.keep_composer);
-        hash.opt_field("vendor_dir",
-            &self.vendor_dir.as_ref().map(|x| x.as_os_str().as_bytes()));
+        hash.field("install_runtime", self.install_runtime);
+        hash.field("install_dev", self.install_dev);
+        hash.field("keep_composer", self.keep_composer);
+        hash.opt_field("vendor_dir", &self.vendor_dir);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -446,7 +444,7 @@ impl BuildStep for ComposerInstall {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("ComposerInstall", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -480,11 +478,10 @@ fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
             .ok_or("'packages' property is not an array".to_owned())?;
         for package in packages.iter() {
             for key in LOCKFILE_RELEVANT_KEYS.iter() {
-                write!(hash, "{}: {}\n", key, get(&package, key)).unwrap();
+                hash.field(key, get(&package, key));
             }
-            write!(hash, "require: {}\n", get(&package, "require")).unwrap();
-            write!(hash, "require-dev: {}\n",
-                get(&package, "require-dev")).unwrap();
+            hash.field("require", get(&package, "require"));
+            hash.field("require-dev", get(&package, "require-dev"));
         }
         Ok(())
     })
@@ -514,22 +511,15 @@ impl BuildStep for ComposerDependencies {
             .map_err(|e| VersionError::Json(e, path.to_path_buf())))
         .map(|data| {
             // Jsons are sorted so should be hash as string predictably
-            write!(hash, "require: {}\n", get(&data, "require")).unwrap();
-            write!(hash, "conflict: {}\n", get(&data, "conflict")).unwrap();
-            write!(hash, "replace: {}\n", get(&data, "replace")).unwrap();
-            write!(hash, "provide: {}\n", get(&data, "provide")).unwrap();
-            write!(hash, "autoload: {}\n", get(&data, "autoload")).unwrap();
-            write!(hash, "repositories: {}\n",
-                get(&data, "repositories")).unwrap();
-            write!(hash, "minimum-stability: {}\n",
-                get(&data, "minimum-stability")).unwrap();
-            write!(hash, "prefer-stable: {}\n",
-                get(&data, "prefer-stable")).unwrap();
-
-            if self.dev {
-                write!(hash, "require-dev: {}\n",
-                    get(&data, "autoload-dev")).unwrap();
-            }
+            hash.field("require", get(&data, "require"));
+            hash.field("conflict", get(&data, "conflict"));
+            hash.field("replace", get(&data, "replace"));
+            hash.field("provide", get(&data, "provide"));
+            hash.field("autoload", get(&data, "autoload"));
+            hash.field("repositories", get(&data, "repositories"));
+            hash.field("minimum-stability", get(&data, "minimum-stability"));
+            hash.field("prefer-stable", get(&data, "prefer-stable"));
+            hash.field("require-dev", get(&data, "autoload-dev"));
         })
     }
     fn build(&self, guard: &mut Guard, build: bool)

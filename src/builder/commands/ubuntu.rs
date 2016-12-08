@@ -348,13 +348,11 @@ impl Distro {
             },
         };
 
-        let mut hash = Digest::new();
+        let mut hash = Digest::new(false, false);
         hash.opt_field("url", &repo.url);
         hash.field("suite", suite);
-        hash.sequence("components", &repo.components);
-        let name = format!("{}-{}.list",
-            hash.result_str()[..8].to_string(),
-            suite);
+        hash.field("components", &repo.components);
+        let name = format!("{:.8x}-{}.list", hash, suite);
 
         File::create(&Path::new("/vagga/root/etc/apt/sources.list.d")
                      .join(&name))
@@ -852,10 +850,10 @@ impl BuildStep for Ubuntu {
 }
 
 impl BuildStep for UbuntuUniverse {
-    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+    fn hash(&self, _cfg: &Config, _hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.item("UbuntuUniverse");
+        // Nothing to do: singleton command
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -903,7 +901,7 @@ impl BuildStep for AptTrust {
         -> Result<(), VersionError>
     {
         hash.opt_field("server", &self.server);
-        hash.sequence("keys", &self.keys);
+        hash.field("keys", &self.keys);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -928,11 +926,8 @@ impl BuildStep for UbuntuRepo {
     {
         hash.opt_field("url", &self.url);
         hash.opt_field("suite", &self.suite);
-        hash.sequence("components", &self.components);
-        if self.trusted {
-            // For backward compatibility hash only non-default
-            hash.bool("trusted", self.trusted);
-        }
+        hash.field("components", &self.components);
+        hash.field("trusted", self.trusted);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -968,7 +963,7 @@ impl BuildStep for UbuntuRelease {
         hash.opt_field("version", &self.version);
         hash.opt_field("url", &self.url);
         hash.field("arch", &self.arch);
-        hash.bool("keep_chfn_command", self.keep_chfn_command);
+        hash.field("keep_chfn_command", self.keep_chfn_command);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

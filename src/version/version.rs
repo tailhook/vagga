@@ -1,4 +1,4 @@
-use std::os::unix::ffi::OsStrExt;
+use std::env;
 
 use config::{Config, Container};
 use super::error::Error;
@@ -10,16 +10,12 @@ fn all(container: &Container, cfg: &Config)
 {
     debug!("Versioning items: {}", container.setup.len());
 
-    let mut hash = Digest::new();
+    let mut hash = Digest::new(
+        env::var("VAGGA_DEBUG_HASH").map(|x| x.len() > 0).unwrap_or(false),
+        env::var("VAGGA_DUMP_HASH").map(|x| x.len() > 0).unwrap_or(false));
 
-    hash.item("uids");
-    for i in &container.uids {
-        hash.item(&format!("{}-{}", i.start(), i.end()));
-    }
-    hash.item("gids");
-    for i in &container.gids {
-        hash.item(&format!("{}-{}", i.start(), i.end()));
-    }
+    hash.field("uids", &container.uids);
+    hash.field("gids", &container.gids);
 
     for b in container.setup.iter() {
         debug!("Versioning setup: {:?}", b);
@@ -27,12 +23,10 @@ fn all(container: &Container, cfg: &Config)
     }
 
     if !container.data_dirs.is_empty() {
-        let str_data_dirs = container.data_dirs.iter()
-            .map(|p| p.as_os_str().as_bytes());
-        hash.sequence("data_dirs", str_data_dirs);
+        hash.field("data_dirs", &container.data_dirs);
     }
 
-    Ok(hash.result_str())
+    Ok(format!("{:x}", hash))
 }
 
 pub fn short_version(container: &Container, cfg: &Config)

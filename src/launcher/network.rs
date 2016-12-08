@@ -20,9 +20,10 @@ use libmount::BindMount;
 use container::uidmap::get_max_uidmap;
 use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
-use sha2::{Sha256, Digest};
+use sha2::{Sha256, Digest as DTrait};
 use file_util::Dir;
 use process_util::{set_uidmap, env_command, run_success, cmd_err, cmd_show};
+use digest::hex;
 
 static MAX_INTERFACES: u32 = 2048;
 
@@ -603,7 +604,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let eif = if name.as_bytes().len() > 14 {
         let mut hash = Sha256::new();
         hash.input(name.as_bytes());
-        "eh".to_string() + &hash.result_str()[..12]
+        format!("eh{:.12x}", hex(&hash))
     } else {
         name.to_string()
     };

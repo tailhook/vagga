@@ -3,7 +3,6 @@ use std::fs::{File, set_permissions, Permissions};
 use std::path::{PathBuf, Path};
 use std::collections::BTreeMap;
 use std::os::unix::fs::PermissionsExt;
-use std::os::unix::ffi::OsStrExt;
 
 use quire::validate as V;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -26,7 +25,8 @@ impl BuildStep for Text {
         -> Result<(), VersionError>
     {
         for (k, v) in &self.0 {
-            hash.field(k.as_os_str().as_bytes(), v);
+            hash.field("path", k);
+            hash.field("data", v);
         }
         Ok(())
     }

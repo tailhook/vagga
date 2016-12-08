@@ -38,7 +38,7 @@ impl BuildStep for Install {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("Install", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -62,7 +62,7 @@ impl BuildStep for BuildDeps {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("BuildDeps", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -87,7 +87,7 @@ impl BuildStep for Repo {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("Repo", &self.0);
+        hash.field("name", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

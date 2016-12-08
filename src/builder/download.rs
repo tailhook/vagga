@@ -11,6 +11,7 @@ use super::capsule;
 use super::context::Context;
 use file_util::check_stream_hashsum;
 use process_util::{cmd_show};
+use digest::hex;
 
 
 pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
@@ -22,8 +23,8 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
         Some(ref sha256) => sha256[..8].to_string(),
         None => {
             let mut hash = Sha256::new();
-            hash.input_str(urls[0].as_ref());
-            hash.result_str()[..8].to_string()
+            hash.input(urls[0].as_ref().as_bytes());
+            format!("{:.8x}", hex(&hash))
         },
     };
     let name = match urlpath.file_name().and_then(|x| x.to_str()) {

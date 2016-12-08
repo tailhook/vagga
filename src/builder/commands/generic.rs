@@ -1,7 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
-use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Namespace};
 use quire::validate as V;
@@ -222,7 +221,7 @@ impl BuildStep for Cmd {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("Cmd", &self.0);
+        hash.field("command-line", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -264,18 +263,12 @@ impl BuildStep for RunAs {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.text("user_id", &self.user_id);
-        hash.text("group_id", &self.group_id);
-        if let Some(euid) = self.external_user_id {
-            hash.text("external_user_id", &euid);
-        }
-        for i in self.supplementary_gids.iter() {
-            hash.text("supplementary_gids", &i);
-        }
-        hash.field("work_dir", self.work_dir.as_os_str().as_bytes());
-        if self.isolate_network {
-            hash.bool("isolate_network", self.isolate_network);
-        }
+        hash.field("user_id", self.user_id);
+        hash.field("group_id", self.group_id);
+        hash.opt_field("external_user_id", &self.external_user_id);
+        hash.field("supplementary_gids", &self.supplementary_gids);
+        hash.field("work_dir", &self.work_dir);
+        hash.field("isolate_network", self.isolate_network);
         hash.field("script", &self.script);
         Ok(())
     }

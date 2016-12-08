@@ -1,5 +1,4 @@
 use std::fs::{File, Permissions, set_permissions};
-use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -90,8 +89,8 @@ impl BuildStep for Unzip {
         } else {
             hash.field("url", &self.url);
         }
-        hash.field("path", self.path.as_os_str().as_bytes());
-        hash.field("subdir", self.subdir.as_os_str().as_bytes());
+        hash.field("path", &self.path);
+        hash.field("subdir", &self.subdir);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
