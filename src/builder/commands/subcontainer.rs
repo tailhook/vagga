@@ -217,6 +217,7 @@ impl BuildStep for Container {
             .ok_or(VersionError::ContainerNotFound(self.0.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
+            hash.command(b.name());
             b.hash(cfg, hash)?;
         }
         Ok(())
@@ -241,6 +242,7 @@ impl BuildStep for Build {
             .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
+            hash.command(b.name());
             b.hash(cfg, hash)?;
         }
         Ok(())
@@ -283,6 +285,7 @@ impl BuildStep for SubConfig {
             .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
+            hash.command(b.name());
             b.hash(cfg, hash)?;
         }
         Ok(())

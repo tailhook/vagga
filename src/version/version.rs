@@ -19,6 +19,7 @@ fn all(container: &Container, cfg: &Config)
 
     for b in container.setup.iter() {
         debug!("Versioning setup: {:?}", b);
+        hash.command(b.name());
         b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e))?;
     }
 

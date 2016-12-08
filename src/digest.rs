@@ -51,6 +51,10 @@ impl Digest {
     pub fn field<D: Digestable>(&mut self, key: &str, value: D) {
         value.digest(key, self);
     }
+    pub fn command(&mut self, name: &str) {
+        write!(&mut self.sha, "COMMAND\0{}\0", name).unwrap();
+        write!(&mut self.debug, "----- Command {} -----", name).unwrap();
+    }
     /// This only outputs if field is not None
     ///
     /// This method may be used for adding fields which are None by default,
