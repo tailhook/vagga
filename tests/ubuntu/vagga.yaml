@@ -81,6 +81,14 @@ containers:
     - !Repo xenial/universe
     - !Install [sysvbanner]
 
+  faketime:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [faketime]
+    - !Sh |
+        faketime @1 date
+
 commands:
   echo-cmd: !Command
     container: trusty

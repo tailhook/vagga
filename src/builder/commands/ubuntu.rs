@@ -3,7 +3,6 @@ use std::os::unix::fs::{PermissionsExt, symlink};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::collections::btree_map::Entry::{Vacant, Occupied};
 use std::ffi::OsStr;
 
 use quire::validate as V;
@@ -120,6 +119,13 @@ enum AptHttps {
     Installed,
 }
 
+#[derive(Debug, PartialEq)]
+enum EatMyData {
+    No,
+    Need,
+    Preload(String),
+}
+
 #[derive(Debug)]
 pub struct Distro {
     config: UbuntuRelease,
@@ -128,7 +134,7 @@ pub struct Distro {
     apt_https: AptHttps,
     has_indices: bool,
     has_universe: bool,
-    do_eatmydata: bool,
+    eatmydata: EatMyData,
 }
 
 impl Named for Distro {
@@ -185,7 +191,6 @@ impl Distribution for Distro {
     fn install(&mut self, ctx: &mut Context, pkgs: &[String])
         -> Result<(), StepError>
     {
-        let mut eatmy = None;
         if self.apt_update {
             if self.apt_https == AptHttps::Need {
                 let apt_https_deps = ["ca-certificates", "apt-transport-https"];
@@ -196,7 +201,7 @@ impl Distribution for Distro {
                     "--no-list-cleanup",
                     "-o", "Dir::Etc::sourcelist=sources.list",
                     "-o", "Dir::Etc::sourceparts=-"])?;
-                apt_get_install(ctx, &apt_https_deps)?;
+                apt_get_install(ctx, &apt_https_deps, &self.eatmydata)?;
                 self.apt_https = AptHttps::Installed;
             }
             if !self.has_indices {
@@ -206,7 +211,8 @@ impl Distribution for Distro {
                     Ignored.", e)).ok();
                 self.has_indices = true;
             }
-            if self.do_eatmydata {
+            let mut eatmy = None;
+            if self.eatmydata == EatMyData::Need {
                 eatmy = EMDParams::find(
                     self.codename.as_ref().unwrap(), &self.config.arch);
                 if let Some(ref params) = eatmy {
@@ -216,31 +222,18 @@ impl Distribution for Distro {
                         self.add_universe(ctx)?;
                     }
                 } else {
-                    info!("Unsupported distribution for eatmydata. Ingoring");
-                    self.do_eatmydata = false;
+                    info!("Unsupported distribution for eatmydata. Ignoring");
+                    self.eatmydata = EatMyData::No;
                 }
             }
             self.apt_update = false;
             apt_get_update::<&str>(ctx, &[])?;
-        }
-        if let Some(ref params) = eatmy {
-            apt_get_install(ctx, &[params.package])?;
-            match ctx.environ.entry("LD_PRELOAD".to_string()) {
-                Vacant(v) => {
-                    v.insert(params.preload.to_string());
-                }
-                Occupied(ref mut o) => {
-                    let mut m = o.get_mut();
-                    if m.len() > 0 {
-                        m.push(':');
-                        m.push_str(params.preload);
-                    } else {
-                        m.push_str(params.preload);
-                    }
-                }
+            if let Some(ref params) = eatmy {
+                apt_get_install(ctx, &[params.package], &EatMyData::No)?;
+                self.eatmydata = EatMyData::Preload(params.preload.to_string());
             }
         }
-        apt_get_install(ctx, &pkgs[..])?;
+        apt_get_install(ctx, &pkgs[..], &self.eatmydata)?;
         Ok(())
     }
     fn ensure_packages(&mut self, ctx: &mut Context,
@@ -748,7 +741,7 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
     -> Result<(), StepError>
 {
     guard.distro.set(Distro {
-        do_eatmydata: config.eatmydata,
+        eatmydata: if config.eatmydata { EatMyData::Need } else { EatMyData::No },
         config: config,
         codename: None, // unknown yet
         apt_update: true,
@@ -798,10 +791,26 @@ fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
          })
 }
 
-fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context, packages: &[T])
+fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
+    packages: &[T], emd: &EatMyData)
     -> Result<(), StepError>
 {
     let mut cmd = command(ctx, "apt-get")?;
+    if let EatMyData::Preload(ref preload) = *emd {
+        let ld_preload = match ctx.environ.get("LD_PRELOAD") {
+            None => {
+                preload.clone()
+            },
+            Some(v) => {
+                if !v.is_empty() {
+                    format!("{}:{}", v, preload)
+                } else {
+                    preload.clone()
+                }
+            },
+        };
+        cmd.env("LD_PRELOAD", ld_preload);
+    }
     cmd.arg("install");
     cmd.arg("-y");
     cmd.args(packages);
