@@ -170,6 +170,12 @@ containers:
     - !Tar
       url: ./tmp.tar.gz
 
+  build-sys-dirs:
+    setup:
+    - !Alpine v3.4
+    - !Sh |
+        mount
+
   run-as:
     setup:
     - !Alpine v3.4

@@ -6,9 +6,10 @@ use std::path::{Path};
 use std::ptr::null;
 
 use libc::{c_ulong, c_int};
-use libmount::BindMount;
+use libmount::{BindMount, Tmpfs};
 
-use super::super::path_util::ToCString;
+use file_util::Dir;
+use path_util::ToCString;
 
 // sys/mount.h
 static MS_RDONLY: c_ulong = 1;                /* Mount read-only.  */
@@ -176,5 +177,15 @@ pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
                 Probably pseudo-ttys will not work", e);
         }
     }
+    Ok(())
+}
+
+pub fn mount_run(run_dir: &Path) -> Result<(), String> {
+    Tmpfs::new(&run_dir)
+        .size_bytes(100 << 20)
+        .mode(0o755)
+        .mount().map_err(|e| format!("{}", e))?;
+    try_msg!(Dir::new(&run_dir.join("shm")).mode(0o1777).create(),
+        "Error creating /vagga/root/run/shm: {err}");
     Ok(())
 }

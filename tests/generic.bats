@@ -307,6 +307,16 @@ setup() {
     [[ $(ls -1 ".vagga/sys-dirs/" | wc -l) = "7" ]]
 }
 
+@test "generic: test system dirs when building container" {
+    run vagga _build build-sys-dirs
+    printf "%s\n" "${lines[@]}"
+    [[ $output = *"/dev "* ]]
+    [[ $output = *"/proc "* ]]
+    [[ $output = *"/sys "* ]]
+    [[ $output = *"/run "* ]]
+    [[ $output != *"/tmp "* ]]
+}
+
 @test "generic: unpack zip archive" {
     curl -o test-file.zip http://files.zerogw.com/test-files/test-file.zip
     hash=($(sha256sum test-file.zip))
