@@ -1,13 +1,12 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
 
-use libmount::BindMount;
+use libmount::{BindMount, Remount};
 
 use quire::validate as V;
 use config::read_config;
 use config::containers::Container as Cont;
 use version::short_version;
-use container::mount::{remount_ro};
 use container::util::{copy_dir};
 use file_util::{Dir, shallow_copy};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -127,7 +126,7 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
             try_msg!(Dir::new(&dest).create(),
                 "Error creating destination dir: {err}");
             BindMount::new(&path, &dest).mount()?;
-            remount_ro(&dest)?;
+            Remount::new(&dest).bind(true).readonly(true).remount()?;
             guard.ctx.mounted.push(dest);
         }
     }

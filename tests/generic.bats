@@ -540,3 +540,20 @@ site_settings:
     [[ "$status" -eq 121 ]]
     [[ ${lines[${#lines[@]}-1]} = "Usage: vagga cmdargs [options]" ]]
 }
+
+@test "generic: respect mount options when remounting read only" {
+    mkdir -p tmp
+    mount -t tmpfs -o "nodev,nosuid" tmpfs tmp
+    cp vagga.yaml tmp/vagga.yaml
+    cd tmp
+    mkdir -p home
+    run vagga check-remount-options
+    cd ..
+    umount tmp
+    rm -rf tmp
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 1 ]]
+    # check there is no "Failed to remount readonly root" warning
+    [[ $output != *"WARN"* ]]
+    [[ $output = *"Read-only file system"* ]]
+}
