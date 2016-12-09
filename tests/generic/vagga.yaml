@@ -401,7 +401,7 @@ commands:
   check-remount-options: !Command
     container: snapshot-check-mode
     volumes:
-      /home/hemingway: !BindRO /work/etc
+      /home/hemingway: !BindRO /work/home
       /var/cache: !Empty
     run: |
       touch /home/hemingway/quote.txt

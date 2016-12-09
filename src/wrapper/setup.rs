@@ -202,9 +202,8 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
              "Error creating /vagga/bin: {err}");
     try_msg!(BindMount::new(&current_exe().unwrap().parent().unwrap(),
                             &bin_dir)
+             .readonly(true)
              .mount(), "mount /vagga/bin: {err}");
-    try_msg!(Remount::new(&bin_dir).bind(true).readonly(true).remount(),
-        "remount /vagga/bin: {err}");
 
     let etc_dir = mnt_dir.join("etc");
     try_msg!(Dir::new(&etc_dir).create(),
@@ -449,10 +448,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     "mount !BindRW: {err}");
             }
             &V::BindRO(ref bindpath) => {
-                try_msg!(BindMount::new(&bindpath, &dest).mount(),
+                try_msg!(BindMount::new(&bindpath, &dest)
+                        .readonly(true)
+                        .mount(),
                     "mount !BindRO: {err}");
-                try_msg!(Remount::new(&dest).bind(true).readonly(true).remount(),
-                    "remount !BindRO: {err}");
             }
             &V::Empty => {
                 Tmpfs::new(&dest)
@@ -481,10 +480,8 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     format!("/work/.vagga/{}", child_cont))?;
                 let target = Path::new("/vagga/base/.roots")
                     .join(container_ver).join("root");
-                try_msg!(BindMount::new(&target, &dest).mount(),
+                try_msg!(BindMount::new(&target, &dest).readonly(true).mount(),
                     "mount !Container: {err}");
-                try_msg!(Remount::new(&dest).bind(true).readonly(true).remount(),
-                    "remount !Container: {err}");
             }
             &V::Persistent(ref info) => {
                 if setup_info.tmp_volumes.contains(&info.name) {

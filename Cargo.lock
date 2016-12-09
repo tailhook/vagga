@@ -10,7 +10,7 @@ dependencies = [
  "flate2 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "libmount 0.1.4 (git+git://github.com/tailhook/libmount?rev=f32ab8c)",
+ "libmount 0.1.4 (git+git://github.com/tailhook/libmount?rev=12764c6)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "mopa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -178,7 +178,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "libmount"
 version = "0.1.4"
-source = "git+git://github.com/tailhook/libmount?rev=f32ab8c#f32ab8c31e6c4de8e1bf5cd450363830cd460e1e"
+source = "git+git://github.com/tailhook/libmount?rev=12764c6#12764c6906acd0ab4faf2552524a4cb91a6e38c5"
 dependencies = [
  "libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -531,7 +531,7 @@ dependencies = [
 "checksum lazy_static 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6abe0ee2e758cd6bc8a2cd56726359007748fbf4128da998b65d0b70f881e19b"
 "checksum libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "e32a70cf75e5846d53a673923498228bbec6a8624708a9ea5645f075d6276122"
 "checksum libc 0.2.17 (registry+https://github.com/rust-lang/crates.io-index)" = "044d1360593a78f5c8e5e710beccdc24ab71d1f01bc19a29bcacdba22e8475d8"
-"checksum libmount 0.1.4 (git+git://github.com/tailhook/libmount?rev=f32ab8c)" = "<none>"
+"checksum libmount 0.1.4 (git+git://github.com/tailhook/libmount?rev=12764c6)" = "<none>"
 "checksum log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "ab83497bf8bf4ed2a74259c1c802351fcd67a65baa86394b6ba73c36f4838054"
 "checksum lzma-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f256d2234a430c39ec96d7a653ba08512dd70c5472174c363ad5b16ca0f376a1"
 "checksum matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "efd7622e3022e1a6eaa602c4cea8912254e5582c9c692e9167714182244801b1"

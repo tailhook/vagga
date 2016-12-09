@@ -546,7 +546,7 @@ site_settings:
     mount -t tmpfs -o "nodev,nosuid" tmpfs tmp
     cp vagga.yaml tmp/vagga.yaml
     cd tmp
-    mkdir -p etc
+    mkdir -p home
     run vagga check-remount-options
     cd ..
     umount tmp

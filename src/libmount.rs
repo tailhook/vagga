@@ -22,6 +22,7 @@ impl BindMount {
         unimplemented!();
     }
     pub fn recursive(mut self, flag: bool) -> BindMount { unimplemented!(); }
+    pub fn readonly(mut self, flag: bool) -> BindMount { unimplemented!(); }
     pub fn bare_mount(self) -> Result<(), OSError> { unimplemented!(); }
     pub fn mount(self) -> Result<(), Error> { unimplemented!(); }
 }
