@@ -6,15 +6,28 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 pub struct Options {
     pub container: String,
     pub short: bool,
+    pub debug_versioning: bool,
+    pub dump_version_data: bool,
     pub fd3: bool,
 }
 
 impl Options {
+    pub fn for_container(container: &str) -> Options {
+        Options {
+            container: container.to_string(),
+            short: false,
+            debug_versioning: false,
+            dump_version_data: false,
+            fd3: false,
+        }
+    }
     pub fn parse(args: &Vec<String>, internal: bool)
         -> Result<Options, i32>
     {
         let mut opt = Options {
             container: String::from(""),
+            debug_versioning: false,
+            dump_version_data: false,
             short: false,
             fd3: false,
         };
@@ -33,6 +46,14 @@ impl Options {
                 .add_option(&["-s", "--short"], StoreTrue, "
                     Print short container version, like used in directory
                     names (8 chars)");
+            ap.refer(&mut opt.debug_versioning)
+                .add_option(&["--debug-versioning"], StoreTrue, "
+                    Print debugging info for versioning to stdout
+                    (WARNING: may contain binary data)");
+            ap.refer(&mut opt.dump_version_data)
+                .add_option(&["--dump-version-data"], StoreTrue, "
+                    Dump the data used for versioning directly to stdout
+                    (WARNING: contains binary data!)");
             if internal {
                 ap.refer(&mut opt.fd3)
                     .add_option(&["--fd3"], StoreTrue,

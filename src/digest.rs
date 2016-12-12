@@ -71,6 +71,20 @@ impl Digest {
         write!(&mut self.debug, "file {:?}", name).unwrap();
         Ok(())
     }
+
+    pub fn print_debug_info(&self) {
+        match self.debug {
+            Opt::Out(ref x) => println!("{}", x),
+            Opt::Sink => {}, // unreachable?
+        }
+    }
+
+    pub fn dump_info(&self) {
+        match self.sha.data {
+            Opt::Out(ref x) => io::stdout().write_all(x).unwrap(),
+            Opt::Sink => {}, // unreachable?
+        }
+    }
 }
 
 impl<W: io::Write> io::Write for Opt<W> {
