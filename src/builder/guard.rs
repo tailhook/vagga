@@ -9,7 +9,7 @@ use builder::commands::{composer, gem, npm, pip, dirs};
 use builder::packages;
 use build_step::BuildStep;
 use container::util::clean_dir;
-use container::mount::{unmount, mount_system_dirs, mount_proc};
+use container::mount::{unmount, mount_system_dirs, mount_proc, mount_run};
 use container::mount::unmount_system_dirs;
 use file_util::{Dir, copy};
 use path_util::IterSelfAndParents;
@@ -46,6 +46,7 @@ impl<'a> Guard<'a> {
 
     pub fn start(&mut self) -> Result<(), String> {
         mount_system_dirs()?;
+        mount_run(&Path::new("/vagga/root/run"))?;
         mount_proc(&Path::new("/proc"))?;
         copy("/proc/self/uid_map", "/vagga/container/uid_map")
             .map_err(|e| format!("Error copying uid_map: {}", e))?;
@@ -87,6 +88,7 @@ impl<'a> Guard<'a> {
         for path in self.ctx.mounted.iter().rev() {
             unmount(path)?;
         }
+        unmount(&Path::new("/vagga/root/run"))?;
         unmount_system_dirs()?;
 
         for path in self.ctx.remove_paths.iter() {

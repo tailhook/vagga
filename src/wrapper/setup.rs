@@ -16,7 +16,7 @@ use config::volumes::Volume;
 use config::volumes::Volume as V;
 use container::root::{change_root};
 use container::mount::{unmount, mount_system_dirs};
-use container::mount::{mount_proc, mount_dev};
+use container::mount::{mount_proc, mount_dev, mount_run};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
@@ -406,13 +406,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
             .mount().map_err(|e| format!("{}", e))?;
     }
     if let None = setup_info.volumes.get(&PathBuf::from("/run")) {
-        let dest = tgtroot.join("run");
-        Tmpfs::new(&dest)
-            .size_bytes(100 << 20)
-            .mode(0o755)
-            .mount().map_err(|e| format!("{}", e))?;
-        try_msg!(Dir::new(&dest.join("shm")).mode(0o1777).create(),
-            "Error creating /run/shm: {err}");
+        mount_run(&tgtroot.join("run"))?;
     }
 
     for (path, vol) in setup_info.volumes.iter() {

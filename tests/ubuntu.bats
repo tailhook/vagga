@@ -194,3 +194,9 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $output = "#     #"* ]]
 }
+
+@test "ubuntu trusty: faketime" {
+    run vagga _build faketime
+    printf "%s\n" "${lines[@]}"
+    [[ $output != *"shm_open:"* ]]
+}
