@@ -123,7 +123,7 @@ enum AptHttps {
 enum EatMyData {
     No,
     Need,
-    Preload(String),
+    Preload(&'static str),
 }
 
 #[derive(Debug)]
@@ -230,7 +230,7 @@ impl Distribution for Distro {
             apt_get_update::<&str>(ctx, &[])?;
             if let Some(ref params) = eatmy {
                 apt_get_install(ctx, &[params.package], &EatMyData::No)?;
-                self.eatmydata = EatMyData::Preload(params.preload.to_string());
+                self.eatmydata = EatMyData::Preload(params.preload);
             }
         }
         apt_get_install(ctx, &pkgs[..], &self.eatmydata)?;
@@ -796,20 +796,19 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
     -> Result<(), StepError>
 {
     let mut cmd = command(ctx, "apt-get")?;
-    if let EatMyData::Preload(ref preload) = *emd {
-        let ld_preload = match ctx.environ.get("LD_PRELOAD") {
+    if let EatMyData::Preload(preload) = *emd {
+        match ctx.environ.get("LD_PRELOAD") {
             None => {
-                preload.clone()
+                cmd.env("LD_PRELOAD", preload);
             },
             Some(v) => {
                 if !v.is_empty() {
-                    format!("{}:{}", v, preload)
+                    cmd.env("LD_PRELOAD", format!("{}:{}", v, preload));
                 } else {
-                    preload.clone()
+                    cmd.env("LD_PRELOAD", preload);
                 }
             },
-        };
-        cmd.env("LD_PRELOAD", ld_preload);
+        }
     }
     cmd.arg("install");
     cmd.arg("-y");
