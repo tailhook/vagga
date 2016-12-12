@@ -48,12 +48,15 @@ impl Digest {
             debug: if debug { Opt::Out(String::new()) } else { Opt::Sink },
         }
     }
+    //
+    // --- adding something to digests
+    //
     pub fn field<D: Digestable>(&mut self, key: &str, value: D) {
         value.digest(key, self);
     }
     pub fn command(&mut self, name: &str) {
         write!(&mut self.sha, "COMMAND\0{}\0", name).unwrap();
-        write!(&mut self.debug, "----- Command {} -----", name).unwrap();
+        write!(&mut self.debug, "----- Command {} -----\n", name).unwrap();
     }
     /// This only outputs if field is not None
     ///
@@ -68,9 +71,12 @@ impl Digest {
         -> Result<(), io::Error>
     {
         io::copy(reader, &mut self.sha)?;
-        write!(&mut self.debug, "file {:?}", name).unwrap();
+        write!(&mut self.debug, "file {:?}\n", name).unwrap();
         Ok(())
     }
+    //
+    // --- End of digest-adding methods
+    //
 
     pub fn print_debug_info(&self) {
         match self.debug {
@@ -177,7 +183,7 @@ impl Digestable for u32 {
 
 fn display_field<T: fmt::Display>(value: T, title: &str, dig: &mut Digest) {
     write!(&mut dig.sha, "{}\0{}\0", title, value).unwrap();
-    write!(&mut dig.debug, "field {:?} {}\0", title, value).unwrap();
+    write!(&mut dig.debug, "field {:?} {}\n", title, value).unwrap();
 }
 
 fn path_field<T: AsRef<Path>>(value: T, title: &str, dig: &mut Digest) {
@@ -185,13 +191,13 @@ fn path_field<T: AsRef<Path>>(value: T, title: &str, dig: &mut Digest) {
     dig.sha.write_all(value.as_ref().as_os_str().as_bytes()).unwrap();
     dig.sha.write_all(&[0]).unwrap();
     write!(&mut dig.debug,
-        "field:path {:?} {:?}\0", title, value.as_ref()).unwrap();
+        "field:path {:?} {:?}\n", title, value.as_ref()).unwrap();
 }
 
 impl Digestable for Json {
     fn digest(&self, title: &str, dig: &mut Digest) {
         write!(&mut dig.sha, "{}\0{}\0", title, self).unwrap();
-        write!(&mut dig.debug, "field:json {:?} {}\0", title, self).unwrap();
+        write!(&mut dig.debug, "field:json {:?} {}\n", title, self).unwrap();
     }
 }
 
@@ -213,7 +219,7 @@ impl<'a> Digestable for &'a Vec<String> {
         for val in *self {
             write!(&mut dig.sha, "{}\0", val).unwrap();
         }
-        write!(&mut dig.debug, "field:list {:?} {:?}\0", title, self).unwrap();
+        write!(&mut dig.debug, "field:list {:?} {:?}\n", title, self).unwrap();
     }
 }
 
@@ -224,7 +230,7 @@ impl<'a> Digestable for &'a Vec<PathBuf> {
             dig.sha.write_all(val.as_os_str().as_bytes()).unwrap();
             dig.sha.write_all(&[0]).unwrap();
         }
-        write!(&mut dig.debug, "field:list {:?} {:?}\0", title, self).unwrap();
+        write!(&mut dig.debug, "field:list {:?} {:?}\n", title, self).unwrap();
     }
 }
 
@@ -234,7 +240,7 @@ impl<'a> Digestable for &'a Vec<Range> {
         for val in *self {
             write!(&mut dig.sha, "{}-{}\0", val.start(), val.end()).unwrap();
         }
-        write!(&mut dig.debug, "field:list {:?} {:?}\0", title, self).unwrap();
+        write!(&mut dig.debug, "field:list {:?} {:?}\n", title, self).unwrap();
     }
 }
 
@@ -244,7 +250,7 @@ impl<'a> Digestable for &'a Vec<u32> {
         for val in *self {
             write!(&mut dig.sha, "{}\0", val).unwrap();
         }
-        write!(&mut dig.debug, "field:list {:?} {:?}\0", title, self).unwrap();
+        write!(&mut dig.debug, "field:list {:?} {:?}\n", title, self).unwrap();
     }
 }
 

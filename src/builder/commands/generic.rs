@@ -199,7 +199,7 @@ impl BuildStep for Sh {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("Sh", &self.0);
+        hash.field("script", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -245,7 +245,8 @@ impl BuildStep for Env {
         -> Result<(), VersionError>
     {
         for (k, v) in &self.0 {
-            hash.field(k, v);
+            hash.field("key", k);
+            hash.field("value", v);
         }
         Ok(())
     }

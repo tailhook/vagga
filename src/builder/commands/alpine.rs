@@ -390,7 +390,7 @@ impl BuildStep for Alpine {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("Alpine", &self.0);
+        hash.field("version", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

@@ -826,7 +826,7 @@ impl BuildStep for Ubuntu {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("Ubuntu", &self.0);
+        hash.field("codename", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -880,7 +880,7 @@ impl BuildStep for UbuntuPPA {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("UbuntuPPA", &self.0);
+        hash.field("ppa_name", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
