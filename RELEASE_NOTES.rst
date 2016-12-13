@@ -2,6 +2,65 @@
 Release Notes
 =============
 
+Vagga 0.7.0
+===========
+
+:Release Date: future
+
+* Added support of custom command-line options with help for all kinds of
+  commands
+* Added ``!Persistent`` volumes (#204)
+* Added ``isolate-network`` option for commands and command-line option
+* Added ``isolate-network`` option for ``!RunAs`` build step
+* Py2/Py3Requirements now properly hashes files containing ``-r`` (basically
+  includes)
+* Added ``include-regex`` option for ``!Copy``
+* ``!Snapshot`` root now preserves ownership and permissions of
+  source directory
+* ``!Depends`` now supports directories and ``include-regex``, being on par
+  with ``!Copy`` command for features
+* Added ``expect-inotify-limit`` option
+* Fixed PHP integration commands for Ubuntu xenial and Alpine v3.4
+* Multiple ``vagga _clean`` can now be run in single directory without
+  issues (this is mostly useful in CI and scripts)
+* Added a warning when ``vagga.yml`` (not ``yaml``) is present
+* Fixes bug with wrong precedence of directories in ``PATH`` when running a
+  command using ``vagga _run``
+* Allow mounting files (not only dirs) as external volumes
+* Added ``files`` option to ``!Tmpfs`` volume
+* Added ``umask`` option to ``!Copy``
+* ``!Copy`` and ``!Depends`` no longer respect mode for generating hashes,
+  only executable bit is used
+* Allow to copy from different container when using ``!Snapshot`` volume
+* Added ``data-dirs`` option for container
+* Added ``AlpineRepo`` and ``Repo`` commands
+* Supports ``!*Include`` directive to compose multiple files
+* Fixed environment variable precedence (#326)
+* ``resolv.conf`` and ``hosts`` are propagated from host more reliably in
+  case of using subcontainers
+* Fixed ``external-user-id`` for ``!RunAs``
+* ``vagga _list -A`` now includes hidden commands as expected
+* ``ca-certificates`` are now added to ``BuildDeps`` whenever any build
+  tools are installed (by ``Py2Install``, ``NpmInstall`` and similar commands)
+* ``/run`` volume mounted by default has now mode ``0o755`` (had ``0o766`` by
+  a mistake)
+* Fixes bug with remounting to readonly on volumes that were previously
+  mounted with ``nosuid``, ``nodev`` or few other options
+* ``eatmydata`` is only enabled for ``!Install`` and ``!BuildDeps`` rather
+  than everything because it conflicts with some other ``LD_PRELOAD``ed
+  things (like faketime)
+* Added ``vagga _clean --volumes`` and ``vagga _clean --unused-volumes``
+* Implemented ``vagga _clean --everything`` (again after 0.2)
+* Upgraded embedded alpine tools (apk-tools 2.6.7, busybox 1.24.2)
+
+
+Vagga 0.6.1
+===========
+
+:Release Date: 14.06.2016
+
+* Blacklists some non-working alpine mirrors
+
 
 Vagga 0.6.0
 ===========
