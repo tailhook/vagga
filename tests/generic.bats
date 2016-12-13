@@ -154,11 +154,11 @@ setup() {
 }
 
 @test "generic: The supervice --only mixed" {
-    run vagga tagged --only first first_and_second
+    run sh -c 'vagga tagged --only first first_and_second  | sort'
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ ${lines[${#lines[@]}-3]} = "hello" ]]
-    [[ ${lines[${#lines[@]}-2]} = "world" ]]
+    [[ ${lines[${#lines[@]}-2]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
 
     run vagga tagged --only third first_and_second
     printf "%s\n" "${lines[@]}"
