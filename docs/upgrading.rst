@@ -2,6 +2,45 @@
 Upgrading
 =========
 
+Upgrading 0.6.x -> 0.7.0
+========================
+
+This release only introduces minor incompatibilities and also changes hashes
+of the containers (so all containers will be rebuild after vagga upgrades).
+
+* Py2/Py3Requirements now properly hashes files containing ``-r`` (basically
+  includes). This means if you had previously ``!Depends`` commands for that
+  files, you may now remove them. But it also means that included files
+  should exist when running vagga (i.e. before containers are built).
+* ``vagga _run`` now searches in the following precedence if no ``PATH`` was
+  set in container
+  ``/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin``.
+  Previously the precedence was reversed. This may influence you if you have
+  commands with the same names both in ``/usr`` and ``/usr/local``
+* ``Copy`` and ``Depends`` do not respect file permissions. Most of the time
+  this means that on machines with different ``umask`` you still have same
+  container hash. But it also means that if you change permissions on the
+  file container does not get rebuilt (executable bit is still versioned).
+* ``!Snapshot`` respects the owner and permissions of the source directory
+  rather than using defaults from tmpfs volume. We consider this a bugfix, but
+  it may break some things if you relied on old behavior
+* :ref:`Environment variable precedence <environment>` changed to be more
+  intuitive
+* ``resolv.conf`` and ``hosts`` files are replaced again after :step:`Tar`,
+  :step:`Ubuntu`, :step:`Container`, :step:`SubConfig`. It's a bugfix in
+  most cases (i.e. some stalled files may be unpacked/copied in old vagga).
+  But it may clobber your files if you expected old behavior.
+* ``eatmydata`` is enabled for built-in commands only, if you relied on
+  fast fsyncs earlier, your builds may be slow. You may use
+  ``!Env { LD_PRELOAD: "/usr/lib/x86_64-linux-gnu/libeatmydata.so" }`` to
+  restore old behavior (for xenial, for other distros path may be different).
+* Previously we have ignored the error when we couldn't remount root file
+  system as read-only (e.g. on ``tmpfs`` or when otherwise some options like
+  ``nosuid`` were enabled), this is no longer the case (we learned how to make
+  those volumes readonly). In some scenarios it may mean that previously
+  writable folders are now read-only.
+
+
 Upgrading 0.5.0 -> 0.6.0
 ========================
 
