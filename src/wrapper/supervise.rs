@@ -15,7 +15,7 @@ use super::util::{find_cmd, warn_if_data_container};
 use super::setup;
 use file_util::Dir;
 use process_util::{run_and_wait, convert_status, copy_env_vars};
-use process_util::{set_fake_uidmap};
+use process_util::{set_fake_uidmap, cmd_err};
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
@@ -133,5 +133,5 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
 
     run_and_wait(&mut cmd)
     .map(convert_status)
-    .map_err(|e| format!("Error running {:?}: {}", cmd, e))
+    .map_err(|e| cmd_err(&cmd, e))
 }

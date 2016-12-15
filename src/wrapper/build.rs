@@ -106,6 +106,9 @@ pub fn get_version_hash(container: &str, wrapper: &Wrapper)
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE", x);
     }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
+    }
     match capture_fd3_status(cmd) {
         Ok((ExitStatus::Exited(0), val)) => {
             String::from_utf8(val)
@@ -278,6 +281,9 @@ pub fn _build_container(container: &str,
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE", x);
+    }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
     }
 
     let result = cmd.status();

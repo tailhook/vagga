@@ -14,7 +14,7 @@ use unshare::Command;
 use libmount::BindMount;
 
 use config::settings::Settings;
-use process_util::squash_stdio;
+use process_util::{squash_stdio, run_success};
 use super::context::Context;
 use super::commands::alpine::{LATEST_VERSION, choose_mirror};
 use super::super::file_util::Dir;
@@ -46,13 +46,7 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     cmd.env("PATH", "/vagga/bin")
         .args(args)
         .args(packages);
-    debug!("Running APK {:?}", cmd);
-    return match cmd.status().map_err(|e| format!("Can't run apk: {}", e))
-    {
-        Ok(s) if s.success() => Ok(()),
-        Ok(val) => Err(format!("Apk exited with status: {}", val)),
-        Err(x) => Err(format!("Error running apk: {}", x)),
-    }
+    run_success(cmd)
 }
 
 

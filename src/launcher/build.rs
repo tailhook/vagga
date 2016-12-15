@@ -43,6 +43,9 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE", x);
     }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
+    }
     if let Ok(x) = env::var("HOME") {
         cmd.env("_VAGGA_HOME", x);
     }
@@ -75,6 +78,9 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     }
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE", x);
+    }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
     }
     if let Ok(x) = env::var("HOME") {
         cmd.env("_VAGGA_HOME", x);

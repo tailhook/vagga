@@ -5,7 +5,7 @@ use std::io::{stdout, stderr, Write};
 use argparse::{ArgumentParser, Store, StoreOption, List};
 use unshare::Command;
 
-use process_util::set_fake_uidmap;
+use process_util::{set_fake_uidmap, cmd_err};
 
 fn run_as(args: Vec<String>) -> Result<i32, String> {
     let mut user_id: Option<u32> = None;
@@ -60,8 +60,8 @@ fn run_as(args: Vec<String>) -> Result<i32, String> {
 
     match cmd.status() {
         Ok(st) if st.success() => Ok(0),
-        Ok(_) => Err(format!("Error when running command: {:?}", cmd)),
-        Err(e) => Err(format!("Error launching command: {:?}: {}", cmd, e)),
+        Ok(s) => Err(cmd_err(&cmd, s)),
+        Err(e) => Err(cmd_err(&cmd, e)),
     }
 }
 

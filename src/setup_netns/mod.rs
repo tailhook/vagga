@@ -12,7 +12,7 @@ use rustc_serialize::json;
 use unshare::{Command, Stdio};
 use argparse::{ArgumentParser, Store, List};
 
-use process_util::env_command;
+use process_util::{env_command, run_success};
 
 fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))
@@ -116,19 +116,8 @@ fn setup_gateway_namespace(args: Vec<String>) {
                "-j", "MASQUERADE"]);
     commands.push(cmd);
 
-    for mut cmd in commands.into_iter() {
-        debug!("Running {:?}", cmd);
-        match cmd.status() {
-            Ok(status) if status.success() => {},
-            Ok(status) => {
-                error!("Error running command {:?}: {}", cmd, status);
-                exit(1);
-            }
-            Err(err) => {
-                error!("Error running command {:?}: {}", cmd, err);
-                exit(1);
-            }
-        };
+    for cmd in commands.into_iter() {
+        run_or_exit(cmd);
     }
 }
 
@@ -226,19 +215,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
         commands.push(cmd);
     }
 
-    for mut cmd in commands.into_iter() {
-        debug!("Running {:?}", cmd);
-        match cmd.status() {
-            Ok(status) if status.success() => {}
-            Ok(status) => {
-                error!("Error running command {:?}: {}", cmd, status);
-                exit(1);
-            }
-            Err(err) => {
-                error!("Error running command {:?}: {}", cmd, err);
-                exit(1);
-            }
-        };
+    for cmd in commands.into_iter() {
+        run_or_exit(cmd);
     }
 }
 
@@ -310,19 +288,18 @@ fn setup_guest_namespace(args: Vec<String>) {
     cmd.args(&["route", "add", "default", "via", &gateway_ip[..]]);
     commands.push(cmd);
 
-    for mut cmd in commands.into_iter() {
-        debug!("Running {:?}", cmd);
-        match cmd.status() {
-            Ok(status) if status.success() => {}
-            Ok(status) => {
-                error!("Error running command {:?}: {}", cmd, status);
-                exit(1);
-            }
-            Err(err) => {
-                error!("Error running command {:?}: {}", cmd, err);
-                exit(1);
-            }
-        };
+    for cmd in commands.into_iter() {
+        run_or_exit(cmd);
+    }
+}
+
+fn run_or_exit(cmd: Command) {
+    match run_success(cmd) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("{}", e);
+            exit(1);
+        }
     }
 }
 
@@ -344,18 +321,7 @@ fn setup_isolated_namespace(args: Vec<String>) {
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", "lo", "up"]);
 
-    debug!("Running {:?}", cmd);
-    match cmd.status() {
-        Ok(status) if status.success() => {}
-        Ok(status) => {
-            error!("Error running command {:?}: {}", cmd, status);
-            exit(1);
-        }
-        Err(err) => {
-            error!("Error running command {:?}: {}", cmd, err);
-            exit(1);
-        }
-    }
+    run_or_exit(cmd);
 
     // Wait while parent process opens namespace files
     let mut buf = vec!();

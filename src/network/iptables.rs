@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use unshare::{Command, Stdio, Namespace};
 
-use process_util::env_path_find;
+use process_util::{env_path_find, cmd_show, cmd_err};
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
 use super::super::container::nsutil::set_namespace;
@@ -30,9 +30,8 @@ fn apply_node(ip: &String, node: &NodeLinks) -> Result<(), String> {
     let mut cmd = Command::new(env_path_find("iptables-restore")
         .unwrap_or(PathBuf::from("/sbin/iptables-restore")));
     cmd.stdin(Stdio::piped());
-    debug!("Running {:?} for {}", cmd, ip);
-    let mut prc = cmd.spawn()
-        .map_err(|e| format!("Can't run iptables-restore {:?}: {}", cmd, e))?;
+    debug!("Running {} for {}", cmd_show(&cmd), ip);
+    let mut prc = cmd.spawn().map_err(|e| cmd_err(&cmd, e))?;
     {
         let ref mut pipe = prc.stdin.take().unwrap();
 

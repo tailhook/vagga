@@ -7,7 +7,7 @@ use unshare::{Command, Stdio};
 use builder::capsule;
 use options::pack::Options;
 use wrapper::Wrapper;
-use process_util::convert_status;
+use process_util::{convert_status, cmd_show, cmd_err};
 use super::setup;
 
 
@@ -57,8 +57,8 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         writeln!(&mut stderr(),
             "Compressing the image... This may take a few minutes.").ok();
     }
-    info!("Running {:?}", tar_cmd);
+    info!("Running {}", cmd_show(&tar_cmd));
     tar_cmd.status()
         .map(convert_status)
-        .map_err(|e| format!("Error running {:?}: {}", tar_cmd, e))
+        .map_err(|e| cmd_err(&tar_cmd, e))
 }

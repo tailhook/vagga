@@ -22,7 +22,7 @@ use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
 use sha2::{Sha256, Digest};
 use file_util::Dir;
-use process_util::{set_uidmap, env_command};
+use process_util::{set_uidmap, env_command, run_success, cmd_err, cmd_show};
 
 static MAX_INTERFACES: u32 = 2048;
 
@@ -164,6 +164,9 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
+    }
     cmd.arg("gateway");
     cmd.arg("--guest-ip");
     cmd.arg(&guest_ip);
@@ -172,8 +175,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg("--network");
     cmd.arg(&network);
     let child = if dry_run { None } else {
-        Some(cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e))?)
+        Some(cmd.spawn().map_err(|e| cmd_err(&cmd, e))?)
     };
     let child_pid = child.as_ref().map(|x| x.pid()).unwrap_or(123456);
 
@@ -267,7 +269,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     println!("");
     println!("The following commands will be run:");
     for cmd in commands.iter() {
-        println!("    {:?}", cmd);
+        println!("    {}", cmd_show(&cmd));
     }
 
 
@@ -279,21 +281,15 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         for rule in iprules.iter() {
             print!("    iptables");
             for i in rule.iter() {
-                print!(" {:?}", i);
+                print!(" {}", i);
             }
             println!("");
         }
     }
 
     if !dry_run {
-        for mut cmd in commands.into_iter() {
-            match cmd.status() {
-                Ok(status) if status.success() => {},
-                Ok(status) => return Err(
-                    format!("Error running command {:?}: {}", cmd, status)),
-                Err(err) => return Err(
-                    format!("Error running command {:?}: {}", cmd, err)),
-            }
+        for cmd in commands.into_iter() {
+            run_success(cmd)?;
         }
 
         match child.unwrap().wait() {
@@ -322,10 +318,8 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 let exists = match cmd.status() {
                     Ok(status) if status.success() => true,
                     Ok(status) if status.code() == Some(1) => false,
-                    Ok(status) => return Err(
-                        format!("Error running command {:?}: {}", cmd, status)),
-                    Err(err) => return Err(
-                        format!("Error running command {:?}: {}", cmd, err)),
+                    Ok(status) => return Err(cmd_err(&cmd, status)),
+                    Err(err) => return Err(cmd_err(&cmd, err)),
                 };
                 debug!("Checked {:?} -> {}", check_rule, exists);
 
@@ -334,13 +328,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                 } else {
                     let mut cmd = sudo_iptables();
                     cmd.args(&rule[..]);
-                    debug!("Running {:?}", rule);
-                    match cmd.status() {
-                        Ok(status) if status.success() => {}
-                        val => return Err(
-                            format!("Error setting up iptables {:?}: {:?}",
-                                cmd, val)),
-                    }
+                    run_success(cmd)?;
                 }
             }
         }
@@ -426,20 +414,12 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
     println!("");
     println!("The following commands will be run:");
     for cmd in commands.iter() {
-        println!("    {:?}", cmd);
+        println!("    {}", cmd_show(&cmd));
     }
 
     if !dry_run {
-        for mut cmd in commands.into_iter() {
-            match cmd.status() {
-                Ok(status) if status.success() => {}
-                Ok(status) => {
-                    error!("Error running command {:?}: {}", cmd, status);
-                }
-                Err(err) => {
-                    error!("Error running command {:?}: {}", cmd, err);
-                }
-            }
+        for cmd in commands.into_iter() {
+            run_success(cmd).map_err(|e| error!("{}", e)).ok();
         }
         if let Err(e) = remove_file(&netns_file) {
             error!("Error removing file: {}", e);
@@ -525,15 +505,6 @@ fn get_unused_inteface_no() -> Result<u32, String> {
     return Err(format!("Can't find unused inteface"));
 }
 
-fn _run_command(mut cmd: Command) -> Result<(), String> {
-    debug!("Running {:?}", cmd);
-    match cmd.status() {
-        Ok(status) if status.success() => Ok(()),
-        Ok(status) => Err(format!("Error running {:?}: {:?}",  cmd, status)),
-        Err(err) => Err(format!("Error running {:?}: {:?}",  cmd, err)),
-    }
-}
-
 pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     -> Result<String, String>
 {
@@ -552,16 +523,16 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",
                "peer", "name", &iif[..]]);
-    _run_command(cmd)?;
+    run_success(cmd)?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["addr", "add"]);
     cmd.arg(eip.clone() + "/30").arg("dev").arg(&eif);
-    _run_command(cmd)?;
+    run_success(cmd)?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
-    _run_command(cmd)?;
+    run_success(cmd)?;
 
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg0("vagga_setup_netns");
@@ -585,15 +556,18 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
+    }
     let mut child = cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
+            .map_err(|e| cmd_err(&cmd, e))?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", child.pid())[..]]);
     let res = BindMount::new(format!("/proc/{}/ns/net", child.pid()), link_to)
         .mount().map_err(|e| e.to_string())
-        .and(_run_command(cmd));
+        .and(run_success(cmd));
     match child.wait() {
         Ok(status) if status.success() => {}
         Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
@@ -604,7 +578,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         Err(e) => {
             let mut cmd = ip_cmd();
             cmd.args(&["link", "del", &eif[..]]);
-            _run_command(cmd)?;
+            run_success(cmd)?;
             Err(e)
         }
     }
@@ -633,15 +607,15 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let mut cmd = ip_cmd();
     cmd.args(&["link", "add", &eif[..], "type", "veth",
                "peer", "name", &iif[..]]);
-    _run_command(cmd)?;
+    run_success(cmd)?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &eif[..], "up"]);
-    _run_command(cmd)?;
+    run_success(cmd)?;
 
     let mut cmd = busybox();
     cmd.args(&["brctl", "addif", "children", &eif[..]]);
-    _run_command(cmd)?;
+    run_success(cmd)?;
 
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg0("vagga_setup_netns");
@@ -662,8 +636,11 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     if let Ok(x) = env::var("RUST_BACKTRACE") {
         cmd.env("RUST_BACKTRACE".to_string(), x);
     }
+    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+        cmd.env("VAGGA_DEBUG_CMDENV", x);
+    }
     let mut child = cmd.spawn()
-            .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
+            .map_err(|e| cmd_err(&cmd, e))?;
     let pid = child.pid();
 
     let mut cmd = ip_cmd();
@@ -672,7 +649,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let res = BindMount::new(format!("/proc/{}/ns/net", pid), link_net).mount()
         .and(BindMount::new(format!("/proc/{}/ns/uts", pid), link_uts).mount())
         .map_err(|e| e.to_string())
-        .and(_run_command(cmd));
+        .and(run_success(cmd));
 
     match child.wait() {
         Ok(status) if status.success() => {}
@@ -685,7 +662,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
         Err(e) => {
             let mut cmd = ip_cmd();
             cmd.args(&["link", "del", &eif[..]]);
-            _run_command(cmd)?;
+            run_success(cmd)?;
             Err(e)
         }
     }
@@ -705,8 +682,7 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     set_uidmap(&mut cmd, &uid_map, true);
     cmd.env_clear();
     cmd.file_descriptor(3, Fd::piped_read());
-    let mut child = cmd.spawn()
-        .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
+    let mut child = cmd.spawn().map_err(|e| cmd_err(&cmd, e))?;
     let child_pid = child.pid();
 
     let netns_file = try_msg!(
@@ -721,8 +697,8 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
 
     match child.wait() {
         Ok(status) if status.success() => {}
-        Ok(status) => return Err(format!("Error running {:?}: {}", cmd, status)),
-        Err(e) => return Err(format!("Error waiting {:?}: {}", cmd, e)),
+        Ok(status) => return Err(cmd_err(&cmd, status)),
+        Err(e) => return Err(cmd_err(&cmd, e)),
     }
 
     Ok(IsolatedNetwork{userns: userns_file, netns: netns_file})
@@ -768,7 +744,7 @@ impl PortForwardGuard {
                        "--dport", &format!("{}", port)[..],
                        "-j", "DNAT",
                        "--to-destination", &self.ip[..]]);
-            _run_command(cmd)?;
+            run_success(cmd)?;
         }
 
         Ok(())
@@ -789,7 +765,7 @@ impl Drop for PortForwardGuard {
                        "--dport", &format!("{}", port)[..],
                        "-j", "DNAT",
                        "--to-destination", &self.ip[..]]);
-            _run_command(cmd)
+            run_success(cmd)
             .unwrap_or_else(|e| error!("Error deleting firewall rule: {}", e));
         }
     }

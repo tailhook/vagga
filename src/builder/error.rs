@@ -9,6 +9,7 @@ use libmount;
 
 use build_step::BuildStep;
 use builder::packages::Package;
+use process_util::{cmd_debug};
 
 
 quick_error! {
@@ -35,11 +36,11 @@ quick_error! {
         }
         /// Error starting external command
         CommandError(cmd: Box<unshare::Command>, err: unshare::Error) {
-            display("error running {:?} {}", cmd, err)
+            display("error running {} {}", cmd_debug(&cmd), err)
         }
         /// Error running external command
         CommandFailed(cmd: Box<unshare::Command>, status: unshare::ExitStatus) {
-            display("error running {:?} {}", cmd, status)
+            display("error running {} {}", cmd_debug(&cmd), status)
         }
         /// Can't copy file
         Copy(src: PathBuf, dest: PathBuf, err: io::Error) {

@@ -7,7 +7,7 @@ use unshare::{Command, Namespace};
 use quire::validate as V;
 
 use super::super::context::Context;
-use process_util::capture_stdout;
+use process_util::{capture_stdout, run_success, cmd_show};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use launcher::network::create_isolated_network;
 
@@ -127,19 +127,7 @@ pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
         cmd.env(k, v);
     }
 
-    debug!("Running {:?}", cmd);
-
-    match cmd.status() {
-        Ok(ref s) if s.success() => {
-            return Ok(());
-        }
-        Ok(s) => {
-            return Err(format!("Command {:?} {}", cmd, s));
-        }
-        Err(e) => {
-            return Err(format!("Couldn't run {:?}: {}", cmd, e));
-        }
-    }
+    run_success(cmd)
 }
 
 pub fn run_command_at(ctx: &mut Context, cmdline: &[String], path: &Path)
@@ -198,7 +186,7 @@ pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
 }
 
 pub fn run(mut cmd: Command) -> Result<(), StepError> {
-    debug!("Running {:?}", cmd);
+    debug!("Running {}", cmd_show(&cmd));
 
     match cmd.status() {
         Ok(ref s) if s.success() => Ok(()),

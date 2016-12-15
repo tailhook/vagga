@@ -1,4 +1,5 @@
 use std::env;
+use std::fmt;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::os::unix::io::FromRawFd;
@@ -9,6 +10,7 @@ use libc::{SIGQUIT, SIGTSTP, SIGSTOP};
 use nix;
 use nix::sys::signal::Signal;
 use nix::unistd::getpid;
+use unshare;
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
@@ -27,6 +29,15 @@ pub static DEFAULT_PATH: &'static str =
 pub static PROXY_ENV_VARS: [&'static str; 5] =
     [ "http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy" ];
 
+lazy_static! {
+    static ref DEBUG_STYLE: unshare::Style = unshare::Style::debug()
+        .env(env::var("VAGGA_DEBUG_CMDENV")
+             .map(|x| x.len() > 0).unwrap_or(false));
+    // TODO(tailhook) Friendly style may turn into debug when some setting
+    // is enabled
+    static ref FRIENDLY_STYLE: unshare::Style = unshare::Style::short();
+}
+
 
 pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
     let fd = nix::unistd::dup(2)
@@ -38,7 +49,7 @@ pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
 
 pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     cmd.stdout(Stdio::piped());
-    info!("Running {:?}", cmd);
+    info!("Running {}", cmd_show(&cmd));
     let mut child = cmd.spawn()
         .map_err(|e| format!("{}", e))?;
     let mut buf = Vec::with_capacity(1024);
@@ -48,19 +59,31 @@ pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
     Ok(buf)
 }
 
+pub fn cmd_debug(cmd: &Command) -> unshare::Printer {
+    cmd.display(&DEBUG_STYLE)
+}
+
+pub fn cmd_show(cmd: &Command) -> unshare::Printer {
+    cmd.display(&FRIENDLY_STYLE)
+}
+
+pub fn cmd_err<E: fmt::Display>(cmd: &Command, err: E) -> String {
+   format!("Error running {}: {}", cmd_debug(cmd), err)
+}
+
 pub fn capture_fd3(mut cmd: Command) -> Result<Vec<u8>, String>
 {
     cmd.file_descriptor(3, Fd::piped_write());
-    info!("Running {:?}", cmd);
+    info!("Running {}", cmd_show(&cmd));
     let mut child = cmd.spawn()
-        .map_err(|e| format!("Command {:?}: {}", cmd, e))?;
+        .map_err(|e| format!("Command {}: {}", cmd_debug(&cmd), e))?;
     let mut buf = Vec::with_capacity(1024);
     child.take_pipe_reader(3).unwrap().read_to_end(&mut buf)
         .map_err(|e| format!("Error reading from pipe: {}", e))?;
     let status = child.wait()
         .map_err(|e| format!("Error waiting for child: {}", e))?;
     if !status.success() {
-        return Err(format!("Command {:?} {}", cmd, status));
+        return Err(format!("Command {} {}", cmd_debug(&cmd), status));
     }
     Ok(buf)
 }
@@ -69,7 +92,7 @@ pub fn capture_fd3_status(mut cmd: Command)
     -> Result<(ExitStatus, Vec<u8>), String>
 {
     cmd.file_descriptor(3, Fd::piped_write());
-    info!("Running {:?}", cmd);
+    info!("Running {}", cmd_show(&cmd));
     let mut child = cmd.spawn()
         .map_err(|e| format!("{}", e))?;
     let mut buf = Vec::with_capacity(1024);
@@ -78,6 +101,15 @@ pub fn capture_fd3_status(mut cmd: Command)
     let status = child.wait()
         .map_err(|e| format!("Error waiting for child: {}", e))?;
     Ok((status, buf))
+}
+
+pub fn run_success(mut cmd: Command) -> Result<(), String> {
+    debug!("Running {}", cmd_show(&cmd));
+    match cmd.status() {
+        Ok(ref st) if st.success() => Ok(()),
+        Ok(status) => Err(cmd_err(&cmd, status)),
+        Err(err) => Err(cmd_err(&cmd, err)),
+    }
 }
 
 pub fn run_and_wait(cmd: &mut Command)
@@ -92,9 +124,8 @@ pub fn run_and_wait(cmd: &mut Command)
         .map_err(|e| format!("Error handling tty: {}", e))?;
     cmd.make_group_leader(true);
 
-    info!("Running {:?}", cmd);
-    let child = cmd.spawn()
-                     .map_err(|e| format!("Error running {:?}: {}", cmd, e))?;
+    info!("Running {}", cmd_show(&cmd));
+    let child = cmd.spawn().map_err(|e| cmd_err(&cmd, e))?;
     let cmd_name = &format!("{:?}", cmd);
     let pid = getpid();
 

@@ -10,6 +10,7 @@ use unshare::{Command, Stdio};
 use super::capsule;
 use super::context::Context;
 use file_util::check_stream_hashsum;
+use process_util::{cmd_show};
 
 
 pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
@@ -59,7 +60,7 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
         cmd.arg(&tmpfilename);
         cmd.arg(url);
 
-        debug!("Running: {:?}", cmd);
+        debug!("Running: {}", cmd_show(&cmd));
         match cmd.status() {
             Ok(st) if st.success() => {
                 if let Some(ref sha256) = sha256 {

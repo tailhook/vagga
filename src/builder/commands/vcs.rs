@@ -12,6 +12,7 @@ use super::super::capsule;
 use super::super::context::Context;
 use super::generic::run_command_at;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use process_util::run_success;
 
 
 #[derive(RustcDecodable, Debug)]
@@ -66,32 +67,14 @@ fn git_cache(url: &String) -> Result<PathBuf, String> {
         cmd.arg("-C").arg(&cache_path);
         cmd.arg("fetch");
         cmd.current_dir(&cache_path);
-        match cmd.status() {
-            Ok(ref st) if st.success() => {}
-            Ok(status) => {
-                return Err(format!("Command {:?} exited with code  {}",
-                    cmd, status));
-            }
-            Err(err) => {
-                return Err(format!("Error running {:?}: {}", cmd, err));
-            }
-        }
+        run_success(cmd)?;
     } else {
         let tmppath = cache_path.with_file_name(".tmp.".to_string() + &dirname);
         let mut cmd = Command::new("/usr/bin/git");
         cmd.stdin(Stdio::null());
         cmd.arg("clone").arg("--bare");
         cmd.arg(url).arg(&tmppath);
-        match cmd.status() {
-            Ok(ref st) if st.success() => {}
-            Ok(status) => {
-                return Err(format!("Command {:?} exited with code  {}",
-                    cmd, status));
-            }
-            Err(err) => {
-                return Err(format!("Error running {:?}: {}", cmd, err));
-            }
-        }
+        run_success(cmd)?;
         rename(&tmppath, &cache_path)
             .map_err(|e| format!("Error renaming cache dir: {}", e))?;
     }
@@ -113,16 +96,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
         cmd.arg(&branch);
     } else {
     }
-    match cmd.status() {
-        Ok(ref st) if st.success() => {}
-        Ok(status) => {
-            return Err(format!("Command {:?} exited with code  {}",
-                cmd, status));
-        }
-        Err(err) => {
-            return Err(format!("Error running {:?}: {}", cmd, err));
-        }
-    }
+    run_success(cmd)?;
     Ok(())
 }
 

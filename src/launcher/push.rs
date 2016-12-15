@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use unshare::{Command, Stdio};
 
+use process_util::{run_success};
 use launcher::Context;
 use launcher::build::build_container;
 use launcher::wrap::Wrapper;
@@ -39,15 +40,7 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
         .arg(&opt.name)
         .arg("-f").arg(&image_path)
         .arg("-J");
-    match pack_cmd.status() {
-        Ok(st) if !st.success() => {
-            return Err(format!("Error when packing image: {:?}", pack_cmd));
-        },
-        Err(e) => {
-            return Err(format!("Error when packing image: {}", e));
-        },
-        _ => {},
-    }
+    run_success(pack_cmd)?;
 
     let roots = if ctx.ext_settings.storage_dir.is_some() {
         Path::new(".lnk/.roots")
@@ -67,16 +60,7 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
                 .env("image_path", tmp_image_path.to_str().unwrap())
                 .env("container_name", &opt.name)
                 .env("short_hash", &short_hash);
-            info!("Running {:?}", upload_cmd);
-            match upload_cmd.status() {
-                Ok(st) if !st.success() => {
-                    return Err(format!("Error when uploading image: {:?}", upload_cmd));
-                },
-                Err(e) => {
-                    return Err(format!("Error when uploading image: {}", e));
-                },
-                _ => {},
-            }
+            run_success(upload_cmd)?;
         },
         None => {
             return Err(format!("You should specify 'push-image-script' setting"));
