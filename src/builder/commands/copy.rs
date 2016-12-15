@@ -148,9 +148,7 @@ impl BuildStep for Copy {
                 &self.ignore_regex, &self.include_regex)?;
             hash_path(hash, src, &filter, |h, p, st| {
                 h.field("filename", p);
-                if let Some(mode) = self.calc_mode(st) {
-                    h.field("mode", mode);
-                }
+                h.opt_field("mode", &self.calc_mode(st));
                 h.field("uid", self.owner_uid.unwrap_or(st.uid()));
                 h.field("gid", self.owner_gid.unwrap_or(st.gid()));
                 hash_file_content(h, p, st)
@@ -166,16 +164,12 @@ impl BuildStep for Copy {
             // inside the container which is ugly
             hash.field("source", src);
             hash.field("path", &self.path);
+            hash.field("preserve_permissions", self.preserve_permissions);
             if !self.preserve_permissions {
-                if let Some(uid) = self.owner_uid {
-                    hash.field("owner_uid", uid);
-                }
-                if let Some(gid) = self.owner_gid {
-                    hash.field("owner_gid", gid);
-                }
+                hash.opt_field("owner_uid", &self.owner_uid);
+                hash.opt_field("owner_gid", &self.owner_gid);
                 hash.field("umask", self.umask);
             }
-            hash.field("preserve_permissions", self.preserve_permissions);
         }
         Ok(())
     }
