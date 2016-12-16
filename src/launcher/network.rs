@@ -174,6 +174,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg(&host_ip);
     cmd.arg("--network");
     cmd.arg(&network);
+    cmd.file_descriptor(3, Fd::piped_read());
     let child = if dry_run { None } else {
         Some(cmd.spawn().map_err(|e| cmd_err(&cmd, e))?)
     };
@@ -292,7 +293,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
             run_success(cmd)?;
         }
 
-        match child.unwrap().wait() {
+        let mut child = child.unwrap();
+        child.take_pipe_writer(3).unwrap().write_all(b"ok")
+            .map_err(|e| format!("Error writing to pipe: {}", e))?;
+
+        match child.wait() {
             Ok(status) if status.success() => {}
             Ok(status) => return Err(
                 format!("vagga_setup_netns {}", status)),
@@ -315,6 +320,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                     }
                 }
                 cmd.args(&check_rule[..]);
+                debug!("Running {:?}", cmd);
                 let exists = match cmd.status() {
                     Ok(status) if status.success() => true,
                     Ok(status) if status.code() == Some(1) => false,
@@ -559,15 +565,21 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
         cmd.env("VAGGA_DEBUG_CMDENV", x);
     }
+    cmd.file_descriptor(3, Fd::piped_read());
     let mut child = cmd.spawn()
             .map_err(|e| cmd_err(&cmd, e))?;
 
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", child.pid())[..]]);
+
     let res = BindMount::new(format!("/proc/{}/ns/net", child.pid()), link_to)
         .mount().map_err(|e| e.to_string())
         .and(run_success(cmd));
+
+    child.take_pipe_writer(3).unwrap().write_all(b"ok")
+        .map_err(|e| format!("Error writing to pipe: {}", e))?;
+
     match child.wait() {
         Ok(status) if status.success() => {}
         Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
@@ -639,6 +651,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
         cmd.env("VAGGA_DEBUG_CMDENV", x);
     }
+    cmd.file_descriptor(3, Fd::piped_read());
     let mut child = cmd.spawn()
             .map_err(|e| cmd_err(&cmd, e))?;
     let pid = child.pid();
@@ -646,11 +659,14 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     let mut cmd = ip_cmd();
     cmd.args(&["link", "set", "dev", &iif[..],
                "netns", &format!("{}", pid)[..]]);
+
     let res = BindMount::new(format!("/proc/{}/ns/net", pid), link_net).mount()
         .and(BindMount::new(format!("/proc/{}/ns/uts", pid), link_uts).mount())
         .map_err(|e| e.to_string())
         .and(run_success(cmd));
 
+    child.take_pipe_writer(3).unwrap().write_all(b"ok")
+        .map_err(|e| format!("Error writing to pipe: {}", e))?;
     match child.wait() {
         Ok(status) if status.success() => {}
         Ok(status) => return Err(format!("vagga_setup_netns {}", status)),
