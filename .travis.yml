@@ -35,6 +35,7 @@ script:
 - |
   set -ex
   if [[ $TRAVIS_OS_NAME != osx ]]; then
+    vagga _create_netns
     tests=($(echo $TESTS))
     for test in ${tests[@]}; do
       if [[ $test = cargo ]]; then
