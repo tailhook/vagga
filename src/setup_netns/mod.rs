@@ -34,6 +34,36 @@ fn has_interface(name: &str) -> Result<bool, String> {
         .map_err(|e| format!("Can't read interfaces: {}", e))
 }
 
+fn wait_interface_or_exit(name: &str) {
+    debug!("Waiting interface: {}", name);
+    loop {
+        match has_interface(name) {
+            Ok(true) => {
+                debug!("Detected interface: {}", name);
+                break;
+            },
+            Ok(false) => {}
+            Err(x) => {
+                error!("Error waiting interface {}: {}", name, x);
+                exit(1);
+            }
+        }
+        sleep(Duration::from_millis(100));
+    }
+}
+
+fn read_fd3_or_exit() -> Vec<u8> {
+    let mut buf = vec!();
+    let mut fd3 = unsafe { File::from_raw_fd(3) };
+    match fd3.read_to_end(&mut buf) {
+        Ok(_) => return buf,
+        Err(e) => {
+            error!("Error reading from fd 3: {}", e);
+            exit(1);
+        },
+    }
+}
+
 fn busybox_cmd() -> Command {
     let mut busybox = Command::new(
         env::current_exe().unwrap()
@@ -76,18 +106,7 @@ fn setup_gateway_namespace(args: Vec<String>) {
             }
         }
     }
-    loop {
-        match has_interface("vagga_guest") {
-            Ok(true) => break,
-            Ok(false) => {}
-            Err(x) => {
-                error!("Error setting interface vagga_guest: {}", x);
-                exit(1);
-            }
-        }
-        sleep(Duration::from_millis(100));
-    }
-
+    wait_interface_or_exit("vagga_guest");
 
     let mut commands = vec!();
 
@@ -119,6 +138,9 @@ fn setup_gateway_namespace(args: Vec<String>) {
     for cmd in commands.into_iter() {
         run_or_exit(cmd);
     }
+
+    // Wait while parent process opens namespace files
+    read_fd3_or_exit();
 }
 
 fn setup_bridge_namespace(args: Vec<String>) {
@@ -157,17 +179,8 @@ fn setup_bridge_namespace(args: Vec<String>) {
     }
     let ports: Vec<(u16, String, u16)> = json::decode(&ports_str)
         .ok().expect("Port-forwards JSON is invalid");
-    loop {
-        match has_interface(&interface) {
-            Ok(true) => break,
-            Ok(false) => {}
-            Err(x) => {
-                error!("Error setting interface {}: {}", interface, x);
-                exit(1);
-            }
-        }
-        sleep(Duration::from_millis(100));
-    }
+    wait_interface_or_exit(&interface);
+
     let mut commands = vec!();
 
     let mut cmd = ip_cmd();
@@ -218,6 +231,9 @@ fn setup_bridge_namespace(args: Vec<String>) {
     for cmd in commands.into_iter() {
         run_or_exit(cmd);
     }
+
+    // Wait while parent process opens namespace files
+    read_fd3_or_exit();
 }
 
 fn setup_guest_namespace(args: Vec<String>) {
@@ -254,17 +270,9 @@ fn setup_guest_namespace(args: Vec<String>) {
             }
         }
     }
-    loop {
-        match has_interface(&interface) {
-            Ok(true) => break,
-            Ok(false) => {}
-            Err(x) => {
-                error!("Error setting interface {}: {}", interface, x);
-                exit(1);
-            }
-        }
-        sleep(Duration::from_millis(100));
-    }
+
+    wait_interface_or_exit(&interface);
+
     let mut commands = vec!();
 
     let mut cmd = ip_cmd();
@@ -291,6 +299,9 @@ fn setup_guest_namespace(args: Vec<String>) {
     for cmd in commands.into_iter() {
         run_or_exit(cmd);
     }
+
+    // Wait while parent process opens namespace files
+    read_fd3_or_exit();
 }
 
 fn run_or_exit(cmd: Command) {
