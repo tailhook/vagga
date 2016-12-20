@@ -3,6 +3,8 @@
 use std::env;
 
 extern crate sha2;
+extern crate blake2;
+extern crate typenum;
 extern crate libc;
 extern crate nix;
 extern crate rand;

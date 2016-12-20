@@ -226,7 +226,7 @@ pub fn _build_container(container: &str,
 
     let ver = match get_version_hash(container, wrapper) {
         Ok(Some(ver)) => {
-            if ver.len() == 64 && ver[..].is_ascii() {
+            if ver.len() == 128 && ver[..].is_ascii() {
                 let name = format!("{}.{}", container, &ver[..8]);
                 let finalpath = Path::new("/vagga/base/.roots")
                     .join(&name);

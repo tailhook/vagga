@@ -4,6 +4,7 @@ version = "0.6.1"
 dependencies = [
  "anymap 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "blake2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bzip2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest-writer 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt 0.6.86 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -27,6 +28,7 @@ dependencies = [
  "sha2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typenum 1.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unshare 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -62,6 +64,17 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "blake2"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byte-tools 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "crypto-ops 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "digest 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic-array 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "byte-tools"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -88,6 +101,15 @@ dependencies = [
 name = "cfg-if"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "crypto-ops"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "gcc 0.3.40 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.18 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "digest"
@@ -585,10 +607,12 @@ dependencies = [
 "checksum argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "37bb99f5e39ee8b23b6e227f5b8f024207e8616f44aa4b8c76ecd828011667ef"
 "checksum bitflags 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "32866f4d103c4e438b1db1158aa1b1a80ee078e5d77a59a2f906fd62a577389c"
 "checksum bitflags 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8dead7461c1127cf637931a1e50934eb6eee8bff2f74433ac7909e9afcee04a3"
+"checksum blake2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b6d932c1127e3a3982d6da2c73ddd909bcacfd2727db44f3a083d574f0c48695"
 "checksum byte-tools 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "742304e40c19c876b1546af6e5fa55e1e24293cf16f0fec3419da34a839518b2"
 "checksum bzip2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c30a578393daf45ee6101aa043afa8d47a7e70f05032b15b88b28a7111c6a53"
 "checksum bzip2-sys 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "81c91586be5d862524de53126d49c11fef83dc1a8e8034235f37372e3b2da311"
 "checksum cfg-if 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de1e760d7b6535af4241fca8bd8adf68e2e7edacc6b29f5d399050c5e48cf88c"
+"checksum crypto-ops 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2826e281ced6ba243a5471476892718a156966f6d5328676b28698b658e8428c"
 "checksum digest 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3db1651ce2f9f649fb9ccc8dcca763e54ca6d034942bd88a501fbafcb282e356"
 "checksum digest-buffer 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8e4e8e55a2338a0e4ee3fa44e20c56b26fafe3544a608b4d233bba36ae938ff8"
 "checksum digest-writer 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8584c31eb1c21996908c5560d036798ee150955c8cc19f78cfeeef3277f811c1"
