@@ -39,6 +39,13 @@ of the containers (so all containers will be rebuild after vagga upgrades).
   ``nosuid`` were enabled), this is no longer the case (we learned how to make
   those volumes readonly). In some scenarios it may mean that previously
   writable folders are now read-only.
+* If you relied on a symlink to ``/tmp/vagga/hosts``, we have removed it
+  because it was rarely useful and sometimes imposed issues (for example
+  when ``/tmp`` is readonly). We are working on a more long term solution. In
+  the meantime you must either rely on hosts from the host system (by default)
+  or create a file yourself (luckily IP addresses are static so it's easy,
+  although may be boring).
+
 
 
 Upgrading 0.5.0 -> 0.6.0

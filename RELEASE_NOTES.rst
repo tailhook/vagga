@@ -54,6 +54,8 @@ Vagga 0.7.0
 * Upgraded embedded alpine tools (apk-tools 2.6.7, busybox 1.24.2)
 * Vagga does not output environment of a running command any more,
   use ``VAGGA_DEBUG_CMDENV`` to show
+* Removed writing ``/tmp/vagga/hosts`` in ``!Supervise`` commands, it was
+  rarely useful and never documented
 
 
 Vagga 0.6.1

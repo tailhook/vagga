@@ -1,6 +1,6 @@
 use std::env;
-use std::fs::{read_link, File};
-use std::io::{stdout, stderr, Write};
+use std::fs::{read_link};
+use std::io::{stdout, stderr};
 use std::path::Path;
 use std::str::FromStr;
 
@@ -13,7 +13,6 @@ use super::super::config::command::ChildCommand as CC;
 use super::Wrapper;
 use super::util::{find_cmd, warn_if_data_container};
 use super::setup;
-use file_util::Dir;
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap, cmd_err};
 
@@ -55,33 +54,8 @@ pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,
     }
 }
 
-fn _write_hosts(supervise: &SuperviseInfo) -> Result<(), String> {
-    let basedir = Path::new("/tmp/vagga");
-    try_msg!(Dir::new(&basedir).create(),
-             "Can't create dir: {err}");
-    let mut file = try_msg!(File::create(&basedir.join("hosts")),
-        "Can't create hosts file: {err}");
-    (writeln!(&mut file, "127.0.0.1 localhost"))
-         .map_err(|e| format!("Error writing hosts: {}", e))?;
-    for (subname, subcommand) in supervise.children.iter() {
-        if let &CC::Command(ref cmd) = subcommand {
-            if let Some(ref netw) = cmd.network {
-                // TODO(tailhook) support multiple commands with same IP
-                if let Some(ref val) = netw.hostname {
-                    writeln!(&mut file, "{} {} {}", netw.ip, val, subname)
-                         .map_err(|e| format!("Error writing hosts: {}", e))?;
-                } else {
-                    writeln!(&mut file, "{} {}", netw.ip, subname)
-                         .map_err(|e| format!("Error writing hosts: {}", e))?;
-                }
-            }
-        }
-    }
-    return Ok(());
-}
-
 fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
-    command: &CommandInfo, wrapper: &Wrapper, supervise: &SuperviseInfo,
+    command: &CommandInfo, wrapper: &Wrapper, _supervise: &SuperviseInfo,
     pid: pid_t)
     -> Result<i32, String>
 {
@@ -99,8 +73,6 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
         .write_mode(write_mode);
     warn_if_data_container(&cconfig);
     setup::setup_filesystem(&setup_info, &cont_ver)?;
-
-    _write_hosts(supervise)?;
 
     let env = setup::get_environment(&wrapper.settings, cconfig,
         Some(&command))?;
