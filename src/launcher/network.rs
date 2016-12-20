@@ -320,7 +320,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                     }
                 }
                 cmd.args(&check_rule[..]);
-                debug!("Running {:?}", cmd);
+                debug!("Running {}", cmd_show(&cmd));
                 let exists = match cmd.status() {
                     Ok(status) if status.success() => true,
                     Ok(status) if status.code() == Some(1) => false,
