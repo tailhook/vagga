@@ -14,7 +14,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine)
-    [[ $link = ".roots/pkg-alpine.a1aa32d6/root" ]]
+    [[ $link = ".roots/pkg-alpine.d41880cf/root" ]]
 }
 
 @test "gem/bundler: alpine pkg no update gem" {
@@ -23,7 +23,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine-no-update-gem)
-    [[ $link = ".roots/pkg-alpine-no-update-gem.642f317e/root" ]]
+    [[ $link = ".roots/pkg-alpine-no-update-gem.ecca9ae2/root" ]]
 }
 
 @test "gem/bundler: ubuntu trusty pkg" {
@@ -32,7 +32,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-ubuntu-trusty)
-    [[ $link = ".roots/pkg-ubuntu-trusty.5a6cb1c0/root" ]]
+    [[ $link = ".roots/pkg-ubuntu-trusty.a7fda1d0/root" ]]
 }
 
 @test "gem/bundler: ubuntu trusty pkg no update gem" {
@@ -41,7 +41,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-ubuntu-trusty-no-update-gem)
-    [[ $link = ".roots/pkg-ubuntu-trusty-no-update-gem.40df6360/root" ]]
+    [[ $link = ".roots/pkg-ubuntu-trusty-no-update-gem.df99a46b/root" ]]
 }
 
 @test "gem/bundler: ubuntu precise pkg" {
@@ -50,7 +50,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 10.5.0" ]]
     link=$(readlink .vagga/pkg-ubuntu-precise)
-    [[ $link = ".roots/pkg-ubuntu-precise.e2f44995/root" ]]
+    [[ $link = ".roots/pkg-ubuntu-precise.6f53261c/root" ]]
 }
 
 @test "gem/bundler: ubuntu precise pkg no update gem" {
@@ -59,7 +59,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 10.5.0" ]]
     link=$(readlink .vagga/pkg-ubuntu-precise-no-update-gem)
-    [[ $link = ".roots/pkg-ubuntu-precise-no-update-gem.364a35e7/root" ]]
+    [[ $link = ".roots/pkg-ubuntu-precise-no-update-gem.193c4b9d/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle" {
@@ -69,7 +69,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.3.0/gems/cuba-3.5.0 ]]
     link=$(readlink .vagga/bundle-alpine)
-    [[ $link = ".roots/bundle-alpine.ea8ae891/root" ]]
+    [[ $link = ".roots/bundle-alpine.f5a177ef/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle without dev" {
@@ -79,7 +79,7 @@ teardown() {
     [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/cuba-3.5.0 ]]
     [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/rake-11.1.1 ]]
     link=$(readlink .vagga/bundle-alpine-no-dev)
-    [[ $link = ".roots/bundle-alpine-no-dev.ea8ae891/root" ]]
+    [[ $link = ".roots/bundle-alpine-no-dev.f5a177ef/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle" {
@@ -89,7 +89,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     [[ -d .vagga/bundle-ubuntu/usr/lib/ruby/gems/1.9.1/gems/cuba-3.5.0 ]]
     link=$(readlink .vagga/bundle-ubuntu)
-    [[ $link = ".roots/bundle-ubuntu.4978e8f7/root" ]]
+    [[ $link = ".roots/bundle-ubuntu.b9dbe811/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle without dev" {
@@ -99,7 +99,7 @@ teardown() {
     [[ -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/cuba-3.5.0 ]]
     [[ ! -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/rake-11.1.1 ]]
     link=$(readlink .vagga/bundle-ubuntu-no-dev)
-    [[ $link = ".roots/bundle-ubuntu-no-dev.4978e8f7/root" ]]
+    [[ $link = ".roots/bundle-ubuntu-no-dev.b9dbe811/root" ]]
 }
 
 @test "gem/bundler: GemBundle invalid trust_policy" {

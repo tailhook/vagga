@@ -15,7 +15,7 @@ teardown() {
     [[ $output = *"Composer version"* ]]
     [[ ! -f ".vagga/composer-lifecycle/usr/local/bin/composer" ]]
     link=$(readlink .vagga/composer-lifecycle)
-    [[ $link = ".roots/composer-lifecycle.e9e6610b/root" ]]
+    [[ $link = ".roots/composer-lifecycle.160821b4/root" ]]
 }
 
 @test "composer: keep composer after build" {
@@ -40,7 +40,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-ubuntu-xenial)
-    [[ $link = ".roots/php-ubuntu-xenial.87465c41/root" ]]
+    [[ $link = ".roots/php-ubuntu-xenial.2533125c/root" ]]
 }
 
 @test "composer: php ubuntu trusty" {
@@ -49,7 +49,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-ubuntu-trusty)
-    [[ $link = ".roots/php-ubuntu-trusty.ed35312d/root" ]]
+    [[ $link = ".roots/php-ubuntu-trusty.6f3ec930/root" ]]
 }
 
 @test "composer: php ubuntu precise" {
@@ -58,7 +58,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "No tests found" ]]
     link=$(readlink .vagga/php-ubuntu-precise)
-    [[ $link = ".roots/php-ubuntu-precise.57872fd3/root" ]]
+    [[ $link = ".roots/php-ubuntu-precise.d34c18db/root" ]]
 }
 
 @test "composer: php alpine 3.4" {
@@ -67,7 +67,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3_4)
-    [[ $link = ".roots/php-alpine-3_4.730f7f8f/root" ]]
+    [[ $link = ".roots/php-alpine-3_4.ea0d9f02/root" ]]
 }
 
 @test "composer: php alpine 3.3" {
@@ -76,7 +76,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3_3)
-    [[ $link = ".roots/php-alpine-3_3.2a51fce5/root" ]]
+    [[ $link = ".roots/php-alpine-3_3.11d9ad5c/root" ]]
 }
 
 @test "composer: php alpine 3.2" {
@@ -85,7 +85,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/php-alpine-3_2)
-    [[ $link = ".roots/php-alpine-3_2.5153e63b/root" ]]
+    [[ $link = ".roots/php-alpine-3_2.14b46cd2/root" ]]
 }
 
 @test "composer: php ComposerDependencies" {
@@ -94,7 +94,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps)
-    [[ $link = ".roots/php-composer-deps.e581a959/root" ]]
+    [[ $link = ".roots/php-composer-deps.1fb5bd2b/root" ]]
 }
 
 @test "composer: php ComposerDependencies ubuntu xenial" {
@@ -103,7 +103,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-ubuntu-xenial)
-    [[ $link = ".roots/php-composer-deps-ubuntu-xenial.e3a858bd/root" ]]
+    [[ $link = ".roots/php-composer-deps-ubuntu-xenial.cb7ffde8/root" ]]
 }
 
 @test "composer: php ComposerDependencies ubuntu trusty" {
@@ -112,7 +112,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-ubuntu-trusty)
-    [[ $link = ".roots/php-composer-deps-ubuntu-trusty.592bc51f/root" ]]
+    [[ $link = ".roots/php-composer-deps-ubuntu-trusty.48543817/root" ]]
 }
 
 @test "composer: php ComposerDependencies dev" {
@@ -121,7 +121,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello, Vagga!" ]]
     link=$(readlink .vagga/php-composer-dev-deps)
-    [[ $link = ".roots/php-composer-dev-deps.5f703887/root" ]]
+    [[ $link = ".roots/php-composer-dev-deps.1fb5bd2b/root" ]]
 }
 
 @test "composer: php ComposerDependencies dev ubuntu xenial" {
@@ -130,7 +130,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello, Vagga!" ]]
     link=$(readlink .vagga/php-composer-dev-deps-ubuntu-xenial)
-    [[ $link = ".roots/php-composer-dev-deps-ubuntu-xenial.d4b00831/root" ]]
+    [[ $link = ".roots/php-composer-dev-deps-ubuntu-xenial.cb7ffde8/root" ]]
 }
 
 @test "composer: php ComposerDependencies dev ubuntu trusty" {
@@ -139,7 +139,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello, Vagga!" ]]
     link=$(readlink .vagga/php-composer-dev-deps-ubuntu-trusty)
-    [[ $link = ".roots/php-composer-dev-deps-ubuntu-trusty.fe7ec5ad/root" ]]
+    [[ $link = ".roots/php-composer-dev-deps-ubuntu-trusty.48543817/root" ]]
 }
 
 @test "composer: php ComposerDependencies prefer dist" {
@@ -148,7 +148,7 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello, Vagga!" ]]
     link=$(readlink .vagga/php-composer-deps-prefer-dist)
-    [[ $link = ".roots/php-composer-deps-prefer-dist.5f703887/root" ]]
+    [[ $link = ".roots/php-composer-deps-prefer-dist.1fb5bd2b/root" ]]
 }
 
 @test "composer: php ComposerDependencies wrong prefer" {
@@ -166,7 +166,7 @@ teardown() {
     [[ $output = *"The lock file is not up to date with the latest changes in composer.json"* ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
     link=$(readlink .vagga/php-composer-deps-lock)
-    [[ $link = ".roots/php-composer-deps-lock.b416bf95/root" ]]
+    [[ $link = ".roots/php-composer-deps-lock.1fb10887/root" ]]
 }
 
 # hhvm
@@ -177,5 +177,5 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/hhvm-ubuntu-xenial)
-    [[ $link = ".roots/hhvm-ubuntu-xenial.189813c0/root" ]]
+    [[ $link = ".roots/hhvm-ubuntu-xenial.246bdda3/root" ]]
 }

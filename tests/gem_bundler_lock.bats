@@ -14,5 +14,5 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.0" ]]
     link=$(readlink .vagga/bundle-lock)
     printf "link: %s\n" "$link"
-    [[ $link = ".roots/bundle-lock.df7f2e55/root" ]]
+    [[ $link = ".roots/bundle-lock.fe593b9a/root" ]]
 }

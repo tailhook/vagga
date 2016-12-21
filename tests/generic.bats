@@ -6,7 +6,7 @@ setup() {
     run vagga _run text cat /etc/shakespeare
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/text)
-    [[ $link = ".roots/text.c6c04e71/root" ]]
+    [[ $link = ".roots/text.efc9a869/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
@@ -62,7 +62,7 @@ setup() {
     run vagga _run cache_dirs echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/cache_dirs)
-    [[ $link = ".roots/cache_dirs.80aeea07/root" ]]
+    [[ $link = ".roots/cache_dirs.2090f8c2/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
 }
 
@@ -70,7 +70,7 @@ setup() {
     run vagga _run ensure_dir echo ok
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ensure_dir)
-    [[ $link = ".roots/ensure_dir.36e6289a/root" ]]
+    [[ $link = ".roots/ensure_dir.998c9d5b/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
     [[ -d ".vagga/ensure_dir/var/lib/mount_point/subdir" ]]
     [[ $output =~ "\"/var/lib/mount_point/subdir\" directory is in the volume: \"/var/lib/mount_point\"" ]]
@@ -81,7 +81,7 @@ setup() {
     run vagga _build remove
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/remove)
-    [[ $link = ".roots/remove.19355f95/root" ]]
+    [[ $link = ".roots/remove.2257142d/root" ]]
 
     [[ $(ls -1 .vagga/remove/opt/ | wc -l) = "0" ]]
 }
@@ -90,7 +90,7 @@ setup() {
     run vagga _build data-container
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/data-container)
-    [[ $link = ".roots/data-container.646137f9/root" ]]
+    [[ $link = ".roots/data-container.e6da9e30/root" ]]
     [[ -d ".vagga/data-container/etc" ]]
     [[ -f ".vagga/data-container/etc/passwd" ]]
     [[ -d ".vagga/data-container/var" ]]
@@ -108,7 +108,7 @@ setup() {
     run vagga two-lines
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
-    [[ $link = ".roots/busybox.4ed6a479/root" ]]
+    [[ $link = ".roots/busybox.d304a005/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
@@ -267,7 +267,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
-    [[ $link = ".roots/vagga.70efbe78/root" ]]
+    [[ $link = ".roots/vagga.557b6240/root" ]]
 }
 
 @test "generic: tar without intermediate dirs" {
@@ -280,7 +280,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     root=".vagga/tar-no-intermediate-dir"
     link=$(readlink "${root}")
-    [[ $link = ".roots/tar-no-intermediate-dir.65adeec0/root" ]]
+    [[ $link = ".roots/tar-no-intermediate-dir.f5b7e571/root" ]]
 
     [[ -d "${root}/opt/tmp/test" ]]
     [[ $(stat -c "%a" "${root}/opt") = "755" ]]
@@ -296,7 +296,7 @@ setup() {
     run vagga _build sys-dirs
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/sys-dirs)
-    [[ $link = ".roots/sys-dirs.308799a9/root" ]]
+    [[ $link = ".roots/sys-dirs.e66f72fd/root" ]]
     [[ $(stat -c "%a" ".vagga/sys-dirs/dev") = "755" ]]
     [[ $(stat -c "%a" ".vagga/sys-dirs/etc") = "755" ]]
     [[ $(stat -c "%a" ".vagga/sys-dirs/proc") = "755" ]]
@@ -327,7 +327,7 @@ setup() {
     run vagga _build unzip-local
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-local)
-    [[ $link = ".roots/unzip-local.9217ec07/root" ]]
+    [[ $link = ".roots/unzip-local.9579aef7/root" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) = "2" ]]
     [[ -x .vagga/unzip-local/root/test/1/install.sh ]]
@@ -350,7 +350,7 @@ setup() {
     run vagga _build unzip-downloaded
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-downloaded)
-    [[ $link = ".roots/unzip-downloaded.1de0c4d8/root" ]]
+    [[ $link = ".roots/unzip-downloaded.fae32fd7/root" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) = "2" ]]
     [[ -f $cached_file ]]
@@ -393,7 +393,7 @@ setup() {
     run vagga _build run-as
     printf "%s\n" "${lines[@]}"
     link=$(readlink ".vagga/run-as")
-    [[ $link = ".roots/run-as.d4040425/root" ]]
+    [[ $link = ".roots/run-as.b0a77478/root" ]]
 
     [[ $(cat .vagga/run-as/ids-11) = "uid=1 gid=1" ]]
     [[ $(cat .vagga/run-as/ids-10) = "uid=1 gid=0" ]]
@@ -418,7 +418,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     root=".vagga/isolated-run-as"
     link=$(readlink "${root}")
-    [[ $link = ".roots/isolated-run-as.c7a1130a/root" ]]
+    [[ $link = ".roots/isolated-run-as.832bc83e/root" ]]
 
     isolated_out=$(cat "${root}/var/ip-addr-isolated.out")
     [[ $isolated_out = *"inet 127.0.0.1/8"* ]]
@@ -434,7 +434,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     root=".vagga/isolated-run-as-with-external-uid"
     link=$(readlink "${root}")
-    [[ $link = ".roots/isolated-run-as-with-external-uid.3a2a25fb/root" ]]
+    [[ $link = ".roots/isolated-run-as-with-external-uid.59a8d2d6/root" ]]
 
     [[ $(cat "${root}/var/ip-link-isolated.out" | wc -l) = 2 ]]
 }
@@ -456,7 +456,7 @@ setup() {
     run vagga _run path-precedence hello
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/path-precedence)
-    [[ $link = ".roots/path-precedence.c3ea6f51/root" ]]
+    [[ $link = ".roots/path-precedence.e2636a55/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello world!" ]]
 }
 
@@ -464,7 +464,7 @@ setup() {
     run vagga _build environ
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/environ)
-    [[ $link = ".roots/environ.4ed6a479/root" ]]
+    [[ $link = ".roots/environ.d304a005/root" ]]
 
     [[ $(vagga _run environ env | grep 'EDITOR=') = "EDITOR=vi" ]]
     [[ $(vagga _run environ env | grep 'SHELL=') = "SHELL=/bin/bash" ]]
