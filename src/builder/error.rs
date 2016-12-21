@@ -58,6 +58,10 @@ quick_error! {
         Write(path: PathBuf, err: io::Error) {
             display("can't write {:?}: {}", path, err)
         }
+        /// Can't acquire lock
+        Lock(msg: &'static str, err: io::Error) {
+            display("{}: {}", msg, err)
+        }
         /// Can't read directory for copying
         ScanDir(errors: Vec<scan_dir::Error>) {
             from()

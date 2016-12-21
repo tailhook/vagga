@@ -16,7 +16,7 @@ use super::super::packages;
 use builder::commands::generic::{command, run};
 use builder::distrib::{Distribution, Named, DistroBox};
 use builder::dns::revert_name_files;
-use file_util::{Dir, copy, copy_utime};
+use file_util::{Dir, Lock, copy, copy_utime};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use container::util::clean_dir;
 
@@ -813,6 +813,13 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
     cmd.arg("install");
     cmd.arg("-y");
     cmd.args(packages);
+
+    let _lock = Lock::exclusive_wait(
+            Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
+            "Another build process is executing `apt-get install` command \
+             against the same apt cache. Waiting ...")
+        .map_err(|e| StepError::Lock(
+            "Cannot aquire lock before running `apt-get install`", e))?;
     run(cmd)
 }
 
