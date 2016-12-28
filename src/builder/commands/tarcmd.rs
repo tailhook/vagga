@@ -2,7 +2,6 @@ use std::io::{self, Read, Seek, SeekFrom};
 use std::fs::{File, Permissions};
 use std::fs::{create_dir_all, set_permissions, hard_link};
 use std::os::unix::fs::{PermissionsExt, symlink};
-use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 use tar::Archive;
@@ -295,6 +294,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
 }
 
 impl BuildStep for Tar {
+    fn name(&self) -> &'static str { "Tar" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -303,8 +303,8 @@ impl BuildStep for Tar {
         } else {
             hash.field("url", &self.url);
         }
-        hash.field("path", self.path.as_os_str().as_bytes());
-        hash.field("subdir", self.subdir.as_os_str().as_bytes());
+        hash.field("path", &self.path);
+        hash.field("subdir", &self.subdir);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -321,6 +321,7 @@ impl BuildStep for Tar {
 }
 
 impl BuildStep for TarInstall {
+    fn name(&self) -> &'static str { "TarInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -329,8 +330,7 @@ impl BuildStep for TarInstall {
         } else {
             hash.field("url", &self.url);
         }
-        hash.opt_field("subdir",
-            &self.subdir.as_ref().map(|x| x.as_os_str().as_bytes()));
+        hash.opt_field("subdir", &self.subdir);
         hash.field("script", &self.script);
         Ok(())
     }

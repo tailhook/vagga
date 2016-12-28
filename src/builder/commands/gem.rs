@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{Read, Write, BufReader, BufRead};
-use std::os::unix::ffi::OsStrExt;
 
 use regex::Regex;
 use quire::validate as V;
@@ -297,10 +296,11 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
 }
 
 impl BuildStep for GemInstall {
+    fn name(&self) -> &'static str { "GemInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("GemInstall", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -317,12 +317,13 @@ impl BuildStep for GemInstall {
 }
 
 impl BuildStep for GemConfig {
+    fn name(&self) -> &'static str { "GemConfig" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.bool("install_ruby", self.install_ruby);
+        hash.field("install_ruby", self.install_ruby);
         hash.opt_field("gem_exe", &self.gem_exe);
-        hash.bool("update_gem", self.update_gem);
+        hash.field("update_gem", self.update_gem);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -337,19 +338,20 @@ impl BuildStep for GemConfig {
 }
 
 impl BuildStep for GemBundle {
+    fn name(&self) -> &'static str { "GemBundle" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.gemfile);
 
-        hash.item(&self.gemfile.as_os_str().as_bytes());
+        hash.field("gemfile", &self.gemfile);
         let gemlock = path.parent()
             .map(|dir| dir.join("Gemfile.lock"))
             .ok_or("Gemfile should be under /work".to_owned())?;
         if gemlock.exists() {
             let mut lockfile = File::open(&path)
                 .map_err(|e| VersionError::Io(e, gemlock.clone()))?;
-            hash.stream(&mut lockfile)
+            hash.file(&path, &mut lockfile)
                 .map_err(|e| VersionError::Io(e, gemlock.clone()))?;
         }
 
@@ -364,7 +366,7 @@ impl BuildStep for GemBundle {
             if line.is_empty() || line.starts_with("#") {
                 continue
             }
-            hash.item(line);
+            hash.field("line", line);
         }
 
         Ok(())

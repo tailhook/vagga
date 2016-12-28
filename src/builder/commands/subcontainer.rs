@@ -209,6 +209,7 @@ pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
 }
 
 impl BuildStep for Container {
+    fn name(&self) -> &'static str { "Container" }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -216,6 +217,7 @@ impl BuildStep for Container {
             .ok_or(VersionError::ContainerNotFound(self.0.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
+            hash.command(b.name());
             b.hash(cfg, hash)?;
         }
         Ok(())
@@ -232,6 +234,7 @@ impl BuildStep for Container {
     }
 }
 impl BuildStep for Build {
+    fn name(&self) -> &'static str { "Build" }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -239,6 +242,7 @@ impl BuildStep for Build {
             .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
+            hash.command(b.name());
             b.hash(cfg, hash)?;
         }
         Ok(())
@@ -253,6 +257,7 @@ impl BuildStep for Build {
     }
 }
 impl BuildStep for SubConfig {
+    fn name(&self) -> &'static str { "SubConfig" }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -280,6 +285,7 @@ impl BuildStep for SubConfig {
             .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
+            hash.command(b.name());
             b.hash(cfg, hash)?;
         }
         Ok(())

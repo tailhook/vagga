@@ -23,7 +23,7 @@ use process_util::{capture_fd3_status, copy_env_vars};
 use super::Wrapper;
 use super::setup;
 use build_step::Step;
-use options::version_hash;
+use options::version_hash::Options;
 
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
@@ -91,13 +91,25 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
 pub fn get_version_hash(container: &str, wrapper: &Wrapper)
     -> Result<Option<String>, String>
 {
+    _get_version_hash(&Options::for_container(container), wrapper)
+}
+
+fn _get_version_hash(options: &Options, wrapper: &Wrapper)
+    -> Result<Option<String>, String>
+{
     let mut cmd = Command::new("/vagga/bin/vagga");
     cmd.arg0("vagga_version");
     cmd.gid(0);
     cmd.groups(Vec::new());
-    cmd.arg(&container);
+    cmd.arg(&options.container);
     cmd.arg("--settings");
     cmd.arg(json::encode(wrapper.settings).unwrap());
+    if options.debug_versioning {
+        cmd.arg("--debug-versioning");
+    }
+    if options.dump_version_data {
+        cmd.arg("--dump-version-data");
+    }
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
     if let Ok(x) = env::var("RUST_LOG") {
@@ -214,7 +226,7 @@ pub fn _build_container(container: &str,
 
     let ver = match get_version_hash(container, wrapper) {
         Ok(Some(ver)) => {
-            if ver.len() == 64 && ver[..].is_ascii() {
+            if ver.len() == 128 && ver[..].is_ascii() {
                 let name = format!("{}.{}", container, &ver[..8]);
                 let finalpath = Path::new("/vagga/base/.roots")
                     .join(&name);
@@ -385,13 +397,13 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     -> Result<i32, String>
 {
-    let opt = match version_hash::Options::parse(&cmdline, true) {
+    let opt = match Options::parse(&cmdline, true) {
         Ok(x) => x,
         Err(e) => return Ok(e),
     };
     setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)?;
-    if let Some(hash) = get_version_hash(&opt.container, wrapper)? {
+    if let Some(hash) = _get_version_hash(&opt, wrapper)? {
         let res = if opt.short { &hash[..8] } else { &hash[..] };
         if opt.fd3 {
             unsafe { File::from_raw_fd(3) }.write_all(res.as_bytes())

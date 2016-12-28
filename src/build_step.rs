@@ -13,6 +13,7 @@ pub struct Step(pub Rc<BuildStep>);
 
 
 pub trait BuildStep: Debug {
+    fn name(&self) -> &'static str;
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>;
     fn build(&self, guard: &mut Guard, build: bool)
@@ -21,6 +22,9 @@ pub trait BuildStep: Debug {
 }
 
 impl BuildStep for Step {
+    fn name(&self) -> &'static str {
+        self.0.name()
+    }
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

@@ -259,14 +259,17 @@ impl Drop for Lock {
     }
 }
 
-pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String) -> Result<(), String>
+pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String)
+    -> Result<(), String>
 {
-    use digest::Digest;
+    use sha2::Sha256;
+    use digest_writer::Writer;
+    use digest::hex;
 
-    let mut hash = Digest::new();
-    try_msg!(hash.stream(&mut reader),
+    let mut hash = Writer::new(Sha256::new());
+    try_msg!(io::copy(&mut reader, &mut hash),
         "Error when calculating hashsum: {err}");
-    let hash_str = hash.result_str();
+    let hash_str = format!("{:x}", hex(&hash.into_inner()));
     if !hash_str.starts_with(sha256) {
         return Err(format!("Hashsum mismatch: expected {} but was {}",
             sha256, hash_str));

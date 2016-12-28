@@ -3,6 +3,8 @@
 use std::env;
 
 extern crate sha2;
+extern crate blake2;
+extern crate typenum;
 extern crate libc;
 extern crate nix;
 extern crate rand;
@@ -21,6 +23,7 @@ extern crate bzip2;
 extern crate net2;
 extern crate docopt;
 extern crate humantime;
+extern crate digest_writer;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;

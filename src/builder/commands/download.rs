@@ -1,7 +1,6 @@
 use std::path::{PathBuf};
 use std::fs::{set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
-use std::os::unix::ffi::OsStrExt;
 
 use quire::validate as V;
 use file_util::copy;
@@ -27,12 +26,13 @@ impl Download {
 
 
 impl BuildStep for Download {
+    fn name(&self) -> &'static str { "Download" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);
-        hash.field("path", self.path.as_os_str().as_bytes());
-        hash.text("mode", self.mode);
+        hash.field("path", &self.path);
+        hash.field("mode", self.mode);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

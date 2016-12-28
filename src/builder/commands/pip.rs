@@ -250,15 +250,16 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
 }
 
 impl BuildStep for PipConfig {
+    fn name(&self) -> &'static str { "PipConfig" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("find_links", &self.find_links);
-        hash.sequence("index_urls", &self.index_urls);
-        hash.sequence("trusted_hosts", &self.trusted_hosts);
-        hash.bool("dependencies", self.dependencies);
-        hash.bool("cache_wheels", self.cache_wheels);
-        hash.bool("install_python", self.install_python);
+        hash.field("find_links", &self.find_links);
+        hash.field("index_urls", &self.index_urls);
+        hash.field("trusted_hosts", &self.trusted_hosts);
+        hash.field("dependencies", self.dependencies);
+        hash.field("cache_wheels", self.cache_wheels);
+        hash.field("install_python", self.install_python);
         hash.opt_field("python_exe", &self.python_exe);
         Ok(())
     }
@@ -274,10 +275,11 @@ impl BuildStep for PipConfig {
 }
 
 impl BuildStep for Py2Install {
+    fn name(&self) -> &'static str { "Py2Install" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("Py2Install", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -295,10 +297,11 @@ impl BuildStep for Py2Install {
 }
 
 impl BuildStep for Py3Install {
+    fn name(&self) -> &'static str { "Py3Install" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.sequence("Py3Install", &self.0);
+        hash.field("packages", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -355,12 +358,13 @@ fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
             continue;
         }
         // Should we also ignore the order?
-        hash.item(chunk);
+        hash.field("line", chunk);
     }
     Ok(())
 }
 
 impl BuildStep for Py2Requirements {
+    fn name(&self) -> &'static str { "Py2Requirements" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -381,6 +385,7 @@ impl BuildStep for Py2Requirements {
 }
 
 impl BuildStep for Py3Requirements {
+    fn name(&self) -> &'static str { "Py3Requirements" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {

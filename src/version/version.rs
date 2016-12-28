@@ -1,50 +1,48 @@
-use std::os::unix::ffi::OsStrExt;
-
 use config::{Config, Container};
 use super::error::Error;
 use build_step::{BuildStep, Digest};
 
 
-fn all(container: &Container, cfg: &Config)
+fn all(container: &Container, cfg: &Config, debug_info: bool, dump: bool)
     -> Result<String, (String, Error)>
 {
     debug!("Versioning items: {}", container.setup.len());
 
-    let mut hash = Digest::new();
+    let mut hash = Digest::new(debug_info, dump);
 
-    hash.item("uids");
-    for i in &container.uids {
-        hash.item(&format!("{}-{}", i.start(), i.end()));
-    }
-    hash.item("gids");
-    for i in &container.gids {
-        hash.item(&format!("{}-{}", i.start(), i.end()));
-    }
+    hash.field("uids", &container.uids);
+    hash.field("gids", &container.gids);
 
     for b in container.setup.iter() {
         debug!("Versioning setup: {:?}", b);
+        hash.command(b.name());
         b.hash(&cfg, &mut hash).map_err(|e| (format!("{:?}", b), e))?;
     }
 
     if !container.data_dirs.is_empty() {
-        let str_data_dirs = container.data_dirs.iter()
-            .map(|p| p.as_os_str().as_bytes());
-        hash.sequence("data_dirs", str_data_dirs);
+        hash.field("data_dirs", &container.data_dirs);
+    }
+    if debug_info {
+        hash.print_debug_info();
+    }
+    if dump {
+        hash.dump_info();
     }
 
-    Ok(hash.result_str())
+    Ok(format!("{:x}", hash))
 }
 
 pub fn short_version(container: &Container, cfg: &Config)
     -> Result<String, (String, Error)>
 {
-    let hash_str = all(container, cfg)?;
+    let hash_str = all(container, cfg, false, false)?;
     Ok(hash_str[..8].to_string())
 }
 
-pub fn long_version(container: &Container, cfg: &Config)
+pub fn long_version(container: &Container, cfg: &Config,
+    debug_info: bool, dump: bool)
     -> Result<String, (String, Error)>
 {
-    let hash_str = all(&container, cfg)?;
+    let hash_str = all(&container, cfg, debug_info, dump)?;
     Ok(hash_str)
 }

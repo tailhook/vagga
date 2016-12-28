@@ -348,13 +348,11 @@ impl Distro {
             },
         };
 
-        let mut hash = Digest::new();
+        let mut hash = Digest::new(false, false);
         hash.opt_field("url", &repo.url);
         hash.field("suite", suite);
-        hash.sequence("components", &repo.components);
-        let name = format!("{}-{}.list",
-            hash.result_str()[..8].to_string(),
-            suite);
+        hash.field("components", &repo.components);
+        let name = format!("{:.8x}-{}.list", hash, suite);
 
         File::create(&Path::new("/vagga/root/etc/apt/sources.list.d")
                      .join(&name))
@@ -824,10 +822,11 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
 }
 
 impl BuildStep for Ubuntu {
+    fn name(&self) -> &'static str { "Ubuntu" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("Ubuntu", &self.0);
+        hash.field("codename", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -852,10 +851,11 @@ impl BuildStep for Ubuntu {
 }
 
 impl BuildStep for UbuntuUniverse {
-    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+    fn name(&self) -> &'static str { "UbuntuUniverse" }
+    fn hash(&self, _cfg: &Config, _hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.item("UbuntuUniverse");
+        // Nothing to do: singleton command
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -876,10 +876,11 @@ impl BuildStep for UbuntuUniverse {
 }
 
 impl BuildStep for UbuntuPPA {
+    fn name(&self) -> &'static str { "UbuntuPPA" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("UbuntuPPA", &self.0);
+        hash.field("ppa_name", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -899,11 +900,12 @@ impl BuildStep for UbuntuPPA {
 }
 
 impl BuildStep for AptTrust {
+    fn name(&self) -> &'static str { "AptTrust" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.opt_field("server", &self.server);
-        hash.sequence("keys", &self.keys);
+        hash.field("keys", &self.keys);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -923,16 +925,14 @@ impl BuildStep for AptTrust {
 }
 
 impl BuildStep for UbuntuRepo {
+    fn name(&self) -> &'static str { "UbuntuRepo" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.opt_field("url", &self.url);
         hash.opt_field("suite", &self.suite);
-        hash.sequence("components", &self.components);
-        if self.trusted {
-            // For backward compatibility hash only non-default
-            hash.bool("trusted", self.trusted);
-        }
+        hash.field("components", &self.components);
+        hash.field("trusted", self.trusted);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -961,6 +961,7 @@ impl BuildStep for UbuntuRepo {
 }
 
 impl BuildStep for UbuntuRelease {
+    fn name(&self) -> &'static str { "UbuntuRelease" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -968,7 +969,7 @@ impl BuildStep for UbuntuRelease {
         hash.opt_field("version", &self.version);
         hash.opt_field("url", &self.url);
         hash.field("arch", &self.arch);
-        hash.bool("keep_chfn_command", self.keep_chfn_command);
+        hash.field("keep_chfn_command", self.keep_chfn_command);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)

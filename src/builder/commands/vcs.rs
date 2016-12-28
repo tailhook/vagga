@@ -1,7 +1,6 @@
 use std::fs::rename;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
-use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Stdio};
 
@@ -149,13 +148,14 @@ pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
 }
 
 impl BuildStep for Git {
+    fn name(&self) -> &'static str { "Git" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);
         hash.opt_field("revision", &self.revision);
         hash.opt_field("branch", &self.branch);
-        hash.field("path", self.path.as_os_str().as_bytes());
+        hash.field("path", &self.path);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, build: bool)
@@ -172,13 +172,14 @@ impl BuildStep for Git {
 }
 
 impl BuildStep for GitInstall {
+    fn name(&self) -> &'static str { "GitInstall" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("url", &self.url);
         hash.opt_field("revision", &self.revision);
         hash.opt_field("branch", &self.branch);
-        hash.field("subdir", self.subdir.as_os_str().as_bytes());
+        hash.field("subdir", &self.subdir);
         hash.field("script", &self.script);
         Ok(())
     }

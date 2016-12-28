@@ -1,6 +1,5 @@
 use std::io;
 use std::fs::remove_file;
-use std::os::unix::ffi::OsStrExt;
 use std::collections::BTreeMap;
 
 use quire::validate as V;
@@ -114,10 +113,11 @@ pub fn ensure(path: &PathBuf)
 }
 
 impl BuildStep for EnsureDir {
+    fn name(&self) -> &'static str { "EnsureDir" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("EnsureDir", self.0.as_os_str().as_bytes());
+        hash.field("path", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -142,10 +142,11 @@ impl BuildStep for EnsureDir {
 }
 
 impl BuildStep for EmptyDir {
+    fn name(&self) -> &'static str { "EmptyDir" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("EmptyDir", self.0.as_os_str().as_bytes());
+        hash.field("path", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -161,11 +162,13 @@ impl BuildStep for EmptyDir {
 }
 
 impl BuildStep for CacheDirs {
+    fn name(&self) -> &'static str { "CacheDirs" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         for (k, v) in self.0.iter() {
-            hash.field(k.as_os_str().as_bytes(), v);
+            hash.field("source", k);
+            hash.field("name", v);
         }
         Ok(())
     }
@@ -183,10 +186,11 @@ impl BuildStep for CacheDirs {
 }
 
 impl BuildStep for Remove {
+    fn name(&self) -> &'static str { "Remove" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("Remove", self.0.as_os_str().as_bytes());
+        hash.field("path", &self.0);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)

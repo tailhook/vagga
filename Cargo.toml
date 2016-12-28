@@ -6,7 +6,10 @@ authors = ["Paul Colomiets"]
 [dependencies]
 libc = "0.2.10"
 nix = "0.7.0"
-sha2 = "0.1.2"
+sha2 = "0.3.0"
+blake2 = "0.3.0"
+typenum = "1.5.1"
+digest-writer = "0.1.1"
 rand = "0.3.14"
 argparse = "0.2.1"
 rustc-serialize = "0.3.19"

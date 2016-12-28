@@ -35,7 +35,7 @@ setup() {
 }
 
 @test "image: push & pull" {
-    container_dir="alpine.cb6ceadc"
+    container_dir="alpine.375a2970"
     image_name="${container_dir}.tar.xz"
 
     rm -rf /work/tmp/cache/downloads/*-${image_name}

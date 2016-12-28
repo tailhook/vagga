@@ -2,7 +2,6 @@ use std::io::{self, ErrorKind};
 use std::fs::{File, Metadata, read_link};
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
-use std::os::unix::ffi::OsStrExt;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use libc::{uid_t, gid_t};
@@ -57,6 +56,7 @@ impl Depends {
 }
 
 impl BuildStep for Depends {
+    fn name(&self) -> &'static str { "Depends" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -64,13 +64,13 @@ impl BuildStep for Depends {
         let filter = Filter::new(
             &self.ignore_regex, &self.include_regex)?;
         hash_path(hash, &path, &filter, |h, p, st| {
-            h.field("filename", p.as_os_str().as_bytes());
+            h.field("filename", p);
             // We hash only executable flag for files
             // as mode depends on the host system umask
             if st.is_file() {
                 let mode = st.permissions().mode();
                 let is_executable = mode & EXE_CHECK_MASK > 0;
-                h.bool("is_executable", is_executable);
+                h.field("is_executable", is_executable);
             }
             hash_file_content(h, p, st)
                 .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
@@ -138,6 +138,7 @@ impl Copy {
 }
 
 impl BuildStep for Copy {
+    fn name(&self) -> &'static str { "Copy" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -146,35 +147,29 @@ impl BuildStep for Copy {
             let filter = Filter::new(
                 &self.ignore_regex, &self.include_regex)?;
             hash_path(hash, src, &filter, |h, p, st| {
-                h.field("filename", p.as_os_str().as_bytes());
-                if let Some(mode) = self.calc_mode(st) {
-                    h.text("mode", mode);
-                }
-                h.text("uid", self.owner_uid.unwrap_or(st.uid()));
-                h.text("gid", self.owner_gid.unwrap_or(st.gid()));
+                h.field("filename", p);
+                h.opt_field("mode", &self.calc_mode(st));
+                h.field("uid", self.owner_uid.unwrap_or(st.uid()));
+                h.field("gid", self.owner_gid.unwrap_or(st.gid()));
                 hash_file_content(h, p, st)
                     .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
                 Ok(())
             })?;
-            hash.field("path", self.path.to_str().unwrap());
+            hash.field("path", &self.path);
         } else {
             // We don't version the files outside of the /work because
             // we believe they are result of the commands run above
             //
             // And we need already built container to version the files
             // inside the container which is ugly
-            hash.field("source", src.to_str().unwrap());
-            hash.field("path", self.path.to_str().unwrap());
+            hash.field("source", src);
+            hash.field("path", &self.path);
+            hash.field("preserve_permissions", self.preserve_permissions);
             if !self.preserve_permissions {
-                if let Some(uid) = self.owner_uid {
-                    hash.field("owner_uid", uid.to_string());
-                }
-                if let Some(gid) = self.owner_gid {
-                    hash.field("owner_gid", gid.to_string());
-                }
-                hash.field("umask", self.umask.to_string());
+                hash.opt_field("owner_uid", &self.owner_uid);
+                hash.opt_field("owner_gid", &self.owner_gid);
+                hash.field("umask", self.umask);
             }
-            hash.bool("preserve_permissions", self.preserve_permissions);
         }
         Ok(())
     }
@@ -295,10 +290,10 @@ fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
 {
     if stat.file_type().is_file() {
         let mut file = File::open(&path)?;
-        hash.stream(&mut file)?;
+        hash.file(&path, &mut file)?;
     } else if stat.file_type().is_symlink() {
         let data = read_link(path)?;
-        hash.input(data.as_os_str().as_bytes());
+        hash.field("symlink", data);
     }
     Ok(())
 }
