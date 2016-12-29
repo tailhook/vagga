@@ -774,7 +774,7 @@ fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
     run(cmd)
          .map_err(|error| {
              if ctx.settings.ubuntu_mirror.is_none() {
-                 warn!("The `apt-get update` failed. You have no mirror\
+                 warn!("The `apt-get update` failed. You have no mirror \
                      setup, and default one is not always perfect.\n\
                      Add the following to your ~/.vagga.yaml:\
                      \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
