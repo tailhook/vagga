@@ -9,3 +9,7 @@ containers:
     gids: [0-1000000000]
     setup:
     - !Ubuntu trusty
+
+  norm-uids:
+    setup:
+    - !Alpine v3.4

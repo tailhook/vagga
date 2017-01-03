@@ -58,9 +58,9 @@ pub fn match_ranges(req: &Vec<Range>, allowed: &Vec<Range>, own_id: uid_t)
 {
     let mut res = vec!((0, own_id, 1));
     let mut reqiter = req.iter();
-    let mut reqval = *reqiter.next().unwrap();
+    let mut reqval = *reqiter.next().ok_or(())?;
     let mut allowiter = allowed.iter();
-    let mut allowval = *allowiter.next().unwrap();
+    let mut allowval = *allowiter.next().ok_or(())?;
     loop {
         if reqval.start() == 0 {
             reqval = reqval.shift(1);
