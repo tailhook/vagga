@@ -18,8 +18,23 @@ setup() {
     [[ $output =~ "Number of allowed subgids is too small" ]]
 }
 
+@test "uidmap: Bad subuid" {
+    echo user:0:65535 > /tmp/subuid
+    echo root:x:0:0::/root:/bin/sh > /tmp/passwd
+    echo user:x:1000:100::/home/user:/bin/sh >> /tmp/passwd
+    mount --bind /tmp/passwd /etc/passwd
+    mount --bind /tmp/subuid /etc/subuid
+    run su user -c "vagga --ignore-owner-check _clean"
+    umount /etc/subuid
+    umount /etc/passwd
+    printf "%s\n" "${lines[@]}"
+    echo "Status: $status"
+    [[ $status = 121 ]]
+    [[ $output =~ "includes original id" ]]
+}
+
 @test "uidmap: Bad subgid" {
-    echo user:0:65535 > /tmp/subgid
+    echo user:0:65536 > /tmp/subgid
     echo root:x:0:0::/root:/bin/sh > /tmp/passwd
     echo user:x:1000:100::/home/user:/bin/sh >> /tmp/passwd
     mount --bind /tmp/passwd /etc/passwd
@@ -30,5 +45,5 @@ setup() {
     printf "%s\n" "${lines[@]}"
     echo "Status: $status"
     [[ $status = 121 ]]
-    [[ $output =~ "Number of allowed subuids is too small" ]]
+    [[ $output =~ "includes original id" ]]
 }

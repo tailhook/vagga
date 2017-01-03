@@ -22,7 +22,8 @@ pub enum Uidmap {
 }
 
 
-fn read_id_map(file_path: &str, username: &str) -> Result<Vec<Range>,String>
+fn read_id_map(file_path: &str, username: &str, id: uid_t)
+    -> Result<Vec<Range>,String>
 {
     let file = try_msg!(File::open(&Path::new(file_path)),
         "Can't open {path}: {err}", path=file_path);
@@ -40,13 +41,27 @@ fn read_id_map(file_path: &str, username: &str) -> Result<Vec<Range>,String>
         }
         let start = FromStr::from_str(parts[1]);
         let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
-        if parts.len() != 3 || start.is_err() || count.is_err() {
+        if parts.len() != 3 || start.is_err() ||
+            count.is_err() || count == Ok(0)
+        {
             return Err(format!("{}:{}: Bad syntax: {:?}",
                 file_path, num+1, line));
         }
         if parts[0].eq(username) {
             let start: uid_t = start.unwrap();
             let end = start + count.unwrap() - 1;
+            if start < 65536 {
+                warn!("{}:{}: range starts with small value {}, \
+                    but should start with least at 65536",
+                    file_path, num+1, start);
+            }
+            if id >= start && id < end {
+                return Err(format!(
+                    "{}:{}: range {}..{} includes original id, \
+                    they should only include additional ranges \
+                    not user's own uid/gid",
+                    file_path, num+1, start, end));
+            }
             res.push(Range::new(start, end));
         }
     }
@@ -116,9 +131,9 @@ fn make_uidmap<F>(fun: F) -> Result<Uidmap, String>
         .map_err(|e| format!("Error running `id -u -n`: {}", e))
         .and_then(|val| from_utf8(&val).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e)))?;
-    let uid_map = read_id_map("/etc/subuid", &username)
+    let uid_map = read_id_map("/etc/subuid", &username, uid)
         .map_err(|e| error!("Error reading uidmap: {}", e));
-    let gid_map = read_id_map("/etc/subgid", &username)
+    let gid_map = read_id_map("/etc/subgid", &username, gid)
         .map_err(|e| error!("Error reading gidmap: {}", e));
 
     if let (Ok(uid_map), Ok(gid_map)) = (uid_map, gid_map) {
