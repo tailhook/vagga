@@ -17,6 +17,7 @@ pub struct Settings {
     pub build_lock_wait: bool,
     pub auto_apply_sysctl: bool,
     pub environ: BTreeMap<String, String>,
+    pub index_all_images: bool,
 }
 
 impl FromStr for Settings {

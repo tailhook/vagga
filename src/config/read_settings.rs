@@ -22,6 +22,7 @@ struct SecureSettings {
     push_image_script: Option<String>,
     build_lock_wait: Option<bool>,
     auto_apply_sysctl: Option<bool>,
+    index_all_images: Option<bool>,
     environ: BTreeMap<String, String>,
 }
 
@@ -41,6 +42,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("push_image_script", V::Scalar::new().optional())
         .member("build_lock_wait", V::Scalar::new().optional())
         .member("auto_apply_sysctl", V::Scalar::new().optional())
+        .member("index_all_images", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
             V::Scalar::new(), V::Scalar::new()));
     if has_children {
@@ -119,6 +121,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.auto_apply_sysctl {
         int_settings.auto_apply_sysctl = val;
     }
+    if let Some(val) = cfg.index_all_images {
+        int_settings.index_all_images = val;
+    }
     for (k, v) in &cfg.environ {
         int_settings.environ.insert(k.clone(), v.clone());
     }
@@ -151,6 +156,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.auto_apply_sysctl {
             int_settings.auto_apply_sysctl = val;
         }
+        if let Some(val) = cfg.index_all_images {
+            int_settings.index_all_images = val;
+        }
         for (k, v) in &cfg.environ {
             int_settings.environ.insert(k.clone(), v.clone());
         }
@@ -178,6 +186,7 @@ pub fn read_settings(project_root: &Path)
         build_lock_wait: false,
         auto_apply_sysctl: false,
         environ: BTreeMap::new(),
+        index_all_images: false,
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {

@@ -1,6 +1,10 @@
 use std::path::Path;
+use std::io::BufWriter;
 use std::fs::{File, remove_file};
 use std::collections::HashMap;
+
+use dir_signature::{v1, ScannerConfig as Sig};
+use dir_signature::HashType::Blake2b_256 as Blake;
 
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
@@ -137,6 +141,19 @@ impl<'a> Guard<'a> {
 
         File::create("/vagga/container/last_use")
             .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
+
+        if self.ctx.settings.index_all_images {
+            self.ctx.timelog.mark(format_args!("Indexing"))
+                .map_err(|e| format!("Can't write timelog: {}", e))?;
+            let index = File::create("/vagga/container/index.ds1")
+                .map_err(|e| format!("Can't write index: {}", e))?;
+            v1::scan(Sig::new()
+                    .hash(Blake)
+                    .add_dir("/vagga/root", "/"),
+                &mut BufWriter::new(index)
+            ).map_err(|e| format!("Error indexing: {}", e))?;
+
+        }
 
         self.ctx.timelog.mark(format_args!("Finish"))
             .map_err(|e| format!("Can't write timelog: {}", e))?;
