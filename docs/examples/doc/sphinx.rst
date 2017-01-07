@@ -13,5 +13,10 @@ the following once (and answer the questions)::
 
     vagga _run doc sphinx-quickstart ./doc
 
+And add it to the git repository::
+
+    echo "/_build" >> doc/.gitignore
+    git add doc
+
 
 

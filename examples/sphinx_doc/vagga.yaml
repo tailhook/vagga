@@ -6,7 +6,7 @@ containers:
     - !Repo edge/main  # because in 3.4 sphinx is broken
     - !Install [alpine-base, py-sphinx, py-requests, make]
     # If you require additional packages to build docs uncomment this
-    # - !Py2Requirements docs/requirements.txt
+    # - !Py2Requirements doc/requirements.txt
 
 commands:
 
@@ -14,7 +14,7 @@ commands:
     description: Build documentation
     container: doc
     run: [make, html]
-    work-dir: docs
+    work-dir: doc
     epilog: |
       --------------------------------------------------------
       Documentation is built under doc/_build/html/index.html
