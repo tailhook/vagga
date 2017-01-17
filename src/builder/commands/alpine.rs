@@ -215,10 +215,8 @@ impl Distro {
 
         if current_version < version_with_php5 {
             vec!("php")
-        } else if current_version == version_with_php5 {
-            vec!("php5")
         } else {
-            vec!("php7")
+            vec!("php5")
         }
     }
 
@@ -231,15 +229,10 @@ impl Distro {
                 "php", "php-cli", "php-openssl", "php-phar",
                 "php-json", "php-pdo", "php-dom", "php-zip"
             )
-        } else if current_version == version_with_php5 {
+        } else {
             vec!(
                 "php5", "php5-cli", "php5-openssl", "php5-phar",
                 "php5-json", "php5-pdo", "php5-dom", "php5-zip"
-            )
-        } else {
-            vec!(
-                "php7", "php7-cli", "php7-openssl", "php7-phar",
-                "php7-json", "php7-pdo", "php7-dom", "php7-zip"
             )
         }
     }

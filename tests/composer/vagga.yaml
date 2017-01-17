@@ -39,6 +39,33 @@ containers:
     - !Install [php5-cgi]
     - !ComposerInstall ["nette/tester:1.7.0"]
 
+  php-alpine-3_5:
+    setup:
+    - !Alpine v3.5
+    - !ComposerInstall ["laravel/installer:1.3.0"]
+
+  php-alpine-3_5-php7:
+    setup:
+    - !Alpine v3.5
+    - !Repo community
+    - !Install
+      - bash
+      - php7
+      - php7-openssl
+      - php7-phar
+      - php7-json
+      - php7-pdo
+      - php7-dom
+      - php7-zip
+    - !Cmd
+      - /bin/ln
+      - -s
+      - /usr/bin/php7
+      - /usr/bin/php
+    - !ComposerConfig
+      install_runtime: false
+    - !ComposerInstall ["laravel/installer:1.3.0"]
+
   php-alpine-3_4:
     setup:
     - !Alpine v3.4
