@@ -5,7 +5,7 @@ Release Notes
 Vagga 0.7.0
 ===========
 
-:Release Date: future
+:Release Date: 19.01.2017
 
 * Added support of custom command-line options with help for all kinds of
   commands
