@@ -1400,7 +1400,7 @@ PHP/Composer Commands
 
       - !ComposerConfig
         install_runtime: false
-        runtime_exe: hhvm
+        runtime_exe: /usr/bin/hhvm
       - !ComposerInstall [phpunit/phpunit]
 
    .. note:: Every time :step:`ComposerConfig` is specified, options are
@@ -1412,7 +1412,10 @@ PHP/Composer Commands
    All options:
 
    runtime_exe
-        (default ``php``) The command to use for running Composer.
+        (default ``/usr/bin/php``) The command to use for running Composer. When
+        setting this option, be sure to specify the full path for the binary. A
+        symlink to the provided value will be created at ``/usr/bin/php`` if it
+        not exists, otherwise, ``/usr/bin/php`` will remain the same.
 
    install_runtime
         (default ``true``) Whether to install the default runtime (php)

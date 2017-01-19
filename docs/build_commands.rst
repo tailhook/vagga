@@ -507,7 +507,14 @@ runtime:
     - !Ubuntu xenial
     - !ComposerConfig
       install_runtime: false
-      runtime_exe: hhvm
+      runtime_exe: /usr/bin/hhvm
+
+.. note:: When setting the ``runtime_exe`` option, be sure to specify the full
+   path of the binary (e.g ``/usr/bin/hhvm``).
+
+.. note:: Vagga will try to create a symlink from ``runtime_exe`` into
+   ``/usr/bin/php``. If that location already exists, Vagga will **not**
+   overwrite it.
 
 Note that you will have to manually `install hhvm`_ and set the ``include_path``:
 
@@ -515,17 +522,38 @@ Note that you will have to manually `install hhvm`_ and set the ``include_path``
 
     setup:
     - !Ubuntu xenial
-    - !UbuntuUniverse
-    - !AptTrust keys: ["hhvm apt key here"]
-    - !UbuntuRepo
-      url: http://dl.hhvm.com/ubuntu
-      suite: xenial
-      components: [main]
+    - !Repo universe
     - !Install [hhvm]
     - !ComposerConfig
       install_runtime: false
-      runtime_exe: hhvm
-    - !Sh echo '.:/usr/local/lib/composer' >> /etc/hhvm/php.ini
+      runtime_exe: /usr/bin/hhvm
+    - !Sh echo 'include_path=.:/usr/local/lib/composer' >> /etc/hhvm/php.ini ❶
+    environ:
+      HHVM_REPO_CENTRAL_PATH: /run/hhvm.hhbc ❷
+
+* ❶ -- setup ``include_path`` in hhvm config
+* ❷ -- tell hhvm to store the build cache database in a writeable directory
+
+Alpine v3.5 added support for php7 in their "community" repository while keeping
+php5 as the default runtime. In order to use php7, you have to specify all the
+packages required by composer (and any other php packages you may need):
+
+.. code-block:: yaml
+
+    setup:
+    - !Alpine v3.5
+    - !Repo community
+    - !Install
+      - php7
+      - php7-openssl
+      - php7-phar
+      - php7-json
+      - php7-pdo
+      - php7-dom
+      - php7-zip
+    - !ComposerConfig
+      install_runtime: false
+      runtime_exe: /usr/bin/php7
 
 
 .. note:: Composer executable and additional utilities (like
