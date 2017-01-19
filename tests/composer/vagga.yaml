@@ -150,6 +150,7 @@ containers:
     - !Install [hhvm]
     - !ComposerConfig
       install_runtime: false
+      runtime_exe: /usr/bin/hhvm
     - !Sh echo 'include_path=.:/usr/local/lib/composer' >> /etc/hhvm/php.ini
     - !ComposerInstall ["laravel/installer:1.3.0"]
     environ:

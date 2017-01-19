@@ -225,5 +225,5 @@ teardown() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
     link=$(readlink .vagga/hhvm-ubuntu-xenial)
-    [[ $link = ".roots/hhvm-ubuntu-xenial.246bdda3/root" ]]
+    [[ $link = ".roots/hhvm-ubuntu-xenial.1664cbd2/root" ]]
 }

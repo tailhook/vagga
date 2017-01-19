@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{self, Write};
 use std::os::unix;
 
 use unshare::{Command};
@@ -233,11 +233,14 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
         .join(DEFAULT_RUNTIME.trim_left_matches('/'));
     // if using a custom runtime, link it to '/usr/bin/php' so that packages expecting the `php`
     // binary to be on PATH can work correctly
-    if runtime_exe != DEFAULT_RUNTIME && !default_runtime.exists() {
-        try_msg!(
-            unix::fs::symlink(&runtime_exe, &default_runtime),
-            "Error creating symlink '{s}' to '{d}': {err}", s=runtime_exe, d=DEFAULT_RUNTIME
-        );
+    if runtime_exe != DEFAULT_RUNTIME {
+        unix::fs::symlink(&runtime_exe, &default_runtime)
+            .or_else(|e| { // Ignore error if link destination already exists
+                if e.kind() != io::ErrorKind::AlreadyExists { Err(e) }
+                else { Ok(()) }
+            })
+            .map_err(|e| format!("Error creating symlink '{s}' to '{d}': {err}",
+                                 s=runtime_exe, d=DEFAULT_RUNTIME, err=e))?;
     }
 
     let cached_composer = format!("/vagga/root{}/composer.phar", COMPOSER_SELF_CACHE);
