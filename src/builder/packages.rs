@@ -32,7 +32,7 @@ pub enum Package {
     NodeJsDev,
     Npm,
 
-    Php,
+    Php,        // not build dep
     PhpDev,
     Composer,
 

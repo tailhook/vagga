@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{self, Write};
+use std::os::unix;
 
 use unshare::{Command};
 use scan_dir::{self, ScanDir};
@@ -224,10 +225,23 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
     try_msg!(Dir::new(COMPOSER_HOME).recursive(true).create(),
         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
 
-    let runtime_exe = ctx.composer_settings
-        .runtime_exe
+    let runtime_exe = ctx.composer_settings.runtime_exe
         .clone()
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
+
+    let default_runtime = Path::new("/vagga/root")
+        .join(DEFAULT_RUNTIME.trim_left_matches('/'));
+    // if using a custom runtime, link it to '/usr/bin/php' so that packages expecting the `php`
+    // binary to be on PATH can work correctly
+    if runtime_exe != DEFAULT_RUNTIME {
+        unix::fs::symlink(&runtime_exe, &default_runtime)
+            .or_else(|e| { // Ignore error if link destination already exists
+                if e.kind() != io::ErrorKind::AlreadyExists { Err(e) }
+                else { Ok(()) }
+            })
+            .map_err(|e| format!("Error creating symlink '{s}' to '{d}': {err}",
+                                 s=runtime_exe, d=DEFAULT_RUNTIME, err=e))?;
+    }
 
     let cached_composer = format!("/vagga/root{}/composer.phar", COMPOSER_SELF_CACHE);
     if Path::new(&cached_composer).exists() {
