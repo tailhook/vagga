@@ -147,6 +147,19 @@ vagga _push_image IMAGE_NAME
   and running :opt:`push-image-script`, see the documentation of the setting
   to find out how to configure image cache.
 
+vagga _base_dir
+  Displays (writes to stdout) directory where active ``vagga.yaml`` is.
+
+vagga _relative_work_dir
+  Displays (writes to stdout) current working directory relative to the
+  base directory. Basically, this means that
+  ``$(vagga _base_dir)/$(vagga _relative_work_dir)`` is current working
+  directory.
+
+  When current working directory contains ``vagga.yaml`` this command returns
+  empty string (output still contains a newline), not a single dot, as one
+  may expect.
+
 
 Normal Commands
 ===============

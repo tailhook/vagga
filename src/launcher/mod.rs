@@ -227,6 +227,14 @@ pub fn run() -> i32 {
         "_build_shell" | "_clean" | "_check_overlayfs_support" => {
             underscore::passthrough(&context, &cname, args)
         }
+        "_base_dir" => {
+            println!("{}", cfg_dir.display());
+            Ok(1)
+        }
+        "_relative_work_dir" => {
+            println!("{}", int_workdir.display());
+            Ok(1)
+        }
         "_build" => {
             build::build_command(&context, args)
         }

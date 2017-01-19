@@ -75,6 +75,11 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
                                     optionally building container\n\
                 _clean              Clean containers and build artifacts\n\
                 _list               List of built-in commands\n\
+                _base_dir           Display a directory which contains \
+                                    vagga.yaml\n\
+                _relative_work_dir  Display a relative path from the current\n\
+                                    working directory to the directory\n\
+                                    containing vagga.yaml\n\
             ").ok();
         }
     }

@@ -293,6 +293,16 @@ const BUILTIN_COMMANDS:
         accept_container: false,
         options: &[]
     },
+    &BuiltinCommand {
+        name: "_base_dir",
+        accept_container: false,
+        options: &[]
+    },
+    &BuiltinCommand {
+        name: "_relative_work_dir",
+        accept_container: false,
+        options: &[]
+    },
 ];
 
 
