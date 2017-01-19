@@ -289,7 +289,11 @@ impl Distribution for Distro {
         }
         let mut cmd = command(ctx, "apt-get")?;
         cmd.arg("autoremove").arg("-y");
-        run(cmd)?;
+
+        {
+            let _lock = apt_get_lock()?;
+            run(cmd)?;
+        }
 
         let pkglist = "/vagga/container/debian-packages.txt";
         let output = File::create(pkglist)
@@ -789,6 +793,15 @@ fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
          })
 }
 
+fn apt_get_lock() -> Result<Lock, StepError> {
+    Lock::exclusive_wait(
+        Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
+        "Another build process is executing `apt-get install` command \
+         against the same apt cache. Waiting ...")
+    .map_err(|e| StepError::Lock(
+        "Cannot aquire lock before running `apt-get install`", e))
+}
+
 fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
     packages: &[T], emd: &EatMyData)
     -> Result<(), StepError>
@@ -812,12 +825,7 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
     cmd.arg("-y");
     cmd.args(packages);
 
-    let _lock = Lock::exclusive_wait(
-            Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
-            "Another build process is executing `apt-get install` command \
-             against the same apt cache. Waiting ...")
-        .map_err(|e| StepError::Lock(
-            "Cannot aquire lock before running `apt-get install`", e))?;
+    let _lock = apt_get_lock()?;
     run(cmd)
 }
 
