@@ -23,7 +23,7 @@ anymap = "0.11.1"
 matches = "0.1.2"
 regex = "0.1.41"
 scan_dir = "0.3.1"
-libmount = { git="git://github.com/tailhook/libmount", rev="12764c6", optional=true }
+libmount = { version="0.1.5", optional=true }
 zip = "0.1"
 xz2 = "0.1.0"
 tar = "0.4.8"
