@@ -51,7 +51,7 @@ Vagga 0.7.0
   things (like faketime)
 * Added ``vagga _clean --volumes`` and ``vagga _clean --unused-volumes``
 * Implemented ``vagga _clean --everything`` (again after 0.2)
-* Upgraded embedded alpine tools (apk-tools 2.6.7, busybox 1.24.2)
+* Upgraded embedded alpine tools (apk-tools 2.6.8, busybox 1.25.1)
 * Vagga does not output environment of a running command any more,
   use ``VAGGA_DEBUG_CMDENV`` to show
 * Removed writing ``/tmp/vagga/hosts`` in ``!Supervise`` commands, it was

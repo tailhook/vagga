@@ -1,17 +1,14 @@
 #!/bin/sh -ex
-ALPINE_VERSION=v3.4
-APK_TOOLS=apk-tools-static-2.6.7-r0.apk
-BUSYBOX=busybox-static-1.24.2-r12.apk
-ALPINE_KEYS=alpine-keys-1.1-r0.apk
+ALPINE_VERSION=v3.5
+APK_TOOLS=apk-tools-static-2.6.8-r1.apk
+BUSYBOX=busybox-static-1.25.1-r0.apk
+ALPINE_KEYS=alpine-keys-1.3-r0.apk
 
 
 mkdir alpine 2>/dev/null || true
 cd alpine
 rm MIRRORS.txt 2>/dev/null || true
-wget --no-use-server-timestamp http://nl.alpinelinux.org/alpine/MIRRORS.txt -O MIRRORS.txt
-
-# Temporarily remove non-working mirror
-sed -i.bak /lax-noc.com/D MIRRORS.txt
+wget --no-use-server-timestamp http://dl-cdn.alpinelinux.org/alpine/MIRRORS.txt -O MIRRORS.txt
 
 # OS X doesn't have --random-sort
 mirror=$(head -n 1 MIRRORS.txt)
@@ -20,9 +17,9 @@ wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$BUSYBOX -O 
 wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$ALPINE_KEYS -O $ALPINE_KEYS
 
 sha1sum -c - <<SHA1SUMS
-eba31757fd5dd94f11475ab45036351ae157d260  $APK_TOOLS
-09ccb88149a7b1bfc4f473c98426cf082c83e113  $BUSYBOX
-43e2920260f598d37fe4b1157cd44f1f2581613f  $ALPINE_KEYS
+1524748c146152b8c59d969b85b85625a3bb19b9  $APK_TOOLS
+b609218d7b0a1c9ec2e457c7665db8b703c4ef10  $BUSYBOX
+f1c6e5f7209885fec5c8dd8c99446036852988a0  $ALPINE_KEYS
 SHA1SUMS
 cd ..
 

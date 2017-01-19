@@ -19,7 +19,7 @@ use config::version::Version;
 use builder::dns::revert_name_files;
 
 
-pub static LATEST_VERSION: &'static str = "v3.4";
+pub static LATEST_VERSION: &'static str = "v3.5";
 static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
 
