@@ -21,8 +21,10 @@ containers:
 
   example-chat:
     setup:
-    - !Alpine v3.4
-    - !Install [python]  # for node-gyp
+    - !Alpine v3.5
+    - !Install
+      - python          # for node-gyp
+      - netcat-openbsd  # to check when rethinkdb is ready
     - !NpmInstall [git://github.com/rethinkdb/rethinkdb-example-nodejs-chat.git]
 
 commands:
@@ -39,4 +41,8 @@ commands:
       chat: !Command
         container: example-chat
         work-dir: /usr/lib/node_modules/awesome_chat2k/
-        run: [node, app]
+        run: |
+            while ! nc -z 127.0.0.1 28015; do
+              sleep 1
+            done
+            node app
