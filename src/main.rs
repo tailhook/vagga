@@ -1,6 +1,7 @@
 #![recursion_limit="100"]
 
 use std::env;
+use std::process::exit;
 
 extern crate sha2;
 extern crate blake2;
@@ -71,21 +72,34 @@ fn init_logging() {
 #[cfg(feature="containers")]
 fn main() {
     init_logging();
-    match env::args().next().as_ref().map(|x| &x[..]) {
-        Some("vagga") => launcher::main(),
-        Some("vagga_launcher") => launcher::main(),
-        Some("vagga_network") => network::main(),
-        Some("vagga_setup_netns") => setup_netns::main(),
-        Some("vagga_version") => version::main(),
-        Some("vagga_wrapper") => wrapper::main(),
-        Some("vagga_build") => builder::main(),
-        Some("vagga_runner") => runner::main(),
-        _ => launcher::main(),
-    }
+    let mut args = env::args().collect::<Vec<_>>();
+    // TODO(tailhook) check if arg0 is "vagga" or "/proc/self/exe", maybe
+    let cmd;
+    let ep = if args.get(1).map(|x| x.starts_with("__") && x.ends_with("__"))
+                .unwrap_or(false)
+    {
+        cmd = args.remove(1);
+        cmd[2..cmd.len()-2].to_string()
+    } else if args.get(0).map(|x| x.starts_with("vagga_")).unwrap_or(false) {
+        args[0][6..].to_string()
+    } else {
+        "".to_string()
+    };
+    let code = match &ep[..] {
+        "launcher" => launcher::run(args),
+        "network" => network::run(args),
+        "setup_netns" => setup_netns::run(args),
+        "version" => version::run(args),
+        "wrapper" => wrapper::run(args),
+        "build" | "builder" => builder::run(args),
+        "runner" => runner::run(args),
+        _ => launcher::run(args),
+    };
+    exit(code);
 }
 
 #[cfg(feature="docker_runner")]
 fn main() {
     init_logging();
-    launcher::main();
+    exit(launcher::main(env::args().collect()));
 }

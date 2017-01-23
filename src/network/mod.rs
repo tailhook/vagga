@@ -1,6 +1,4 @@
-use std::env;
 use std::io::{stdout, stderr};
-use std::process::exit;
 use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
@@ -86,8 +84,4 @@ pub fn run_command(cfg: &Config, kind: String, args: Vec<String>)
     };
     apply_graph(graph).map_err(Err)?;
     Ok(())
-}
-
-pub fn main() {
-    exit(run(env::args().collect()));
 }

@@ -299,7 +299,7 @@ impl BuildStep for RunAs {
             };
 
             let mut cmd = Command::new(env::current_exe().unwrap());
-            cmd.arg0("vagga_runner");
+            cmd.arg("__runner__");
             cmd.arg("run_as");
             set_environ(&guard.ctx, &mut cmd);
             cmd.arg("--work-dir").arg(&Path::new("/work").join(&self.work_dir));

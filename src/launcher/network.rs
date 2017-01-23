@@ -149,7 +149,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     }
 
     let mut cmd = Command::new(env::current_exe().unwrap());
-    cmd.arg0("vagga_setup_netns");
+    cmd.arg("__setup_netns__");
     cmd.unshare([Namespace::Net].iter().cloned());
     set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
     cmd.env_clear();
@@ -542,7 +542,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
     run_success(cmd)?;
 
     let mut cmd = Command::new(env::current_exe().unwrap());
-    cmd.arg0("vagga_setup_netns");
+    cmd.arg("__setup_netns__");
     cmd.args(&["bridge",
         "--interface", &iif[..],
         "--ip", &iip[..],
@@ -631,7 +631,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
     run_success(cmd)?;
 
     let mut cmd = Command::new(env::current_exe().unwrap());
-    cmd.arg0("vagga_setup_netns");
+    cmd.arg("__setup_netns__");
     cmd.args(&["guest", "--interface", &iif[..],
                         "--ip", &ip[..],
                         "--hostname", hostname,
@@ -692,7 +692,7 @@ pub struct IsolatedNetwork {
 
 pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     let mut cmd = Command::new(env::current_exe().unwrap());
-    cmd.arg0("vagga_setup_netns");
+    cmd.arg("__setup_netns__");
     cmd.arg("isolated");
     cmd.unshare([Namespace::User, Namespace::Net].iter().cloned());
     let uid_map = get_max_uidmap()?;

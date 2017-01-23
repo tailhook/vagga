@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::exit;
 use std::io::{stdout, stderr, Write};
 
 use argparse::{ArgumentParser, Store, StoreOption, List};
@@ -65,7 +64,7 @@ fn run_as(args: Vec<String>) -> Result<i32, String> {
     }
 }
 
-fn run() -> i32 {
+pub fn run(input_args: Vec<String>) -> i32 {
     let mut cmd = "".to_string();
     let mut args: Vec<String> = vec!();
     {
@@ -80,7 +79,10 @@ fn run() -> i32 {
             .add_argument("options", List,
                 "Options specific for this command");
         ap.stop_on_first_argument(true);
-        ap.parse_args_or_exit();
+        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(x) => return x,
+        }
     }
     args.insert(0, format!("vagga_runner {}", cmd));
     let res: Result<i32, String> = match &cmd[..] {
@@ -95,9 +97,4 @@ fn run() -> i32 {
             return 121;
         }
     }
-}
-
-pub fn main() {
-    let val = run();
-    exit(val);
 }

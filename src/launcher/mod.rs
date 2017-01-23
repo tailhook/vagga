@@ -1,7 +1,6 @@
 use std::env;
-use std::io::{stderr, Write};
+use std::io::{stdout, stderr, Write};
 use std::path::{Path, PathBuf};
-use std::process::exit;
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 
@@ -45,7 +44,7 @@ pub struct Context {
     isolate_network: bool
 }
 
-pub fn run() -> i32 {
+pub fn run(input_args: Vec<String>) -> i32 {
     let mut err = stderr();
     let mut commands = Vec::<String>::new();
     let mut cname = "".to_string();
@@ -101,7 +100,7 @@ pub fn run() -> i32 {
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         ap.silence_double_dash(false);
-        match ap.parse_args() {
+        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return 0,
             Err(_) => return 122,
@@ -274,9 +273,4 @@ pub fn run() -> i32 {
             return 121;
         }
     }
-}
-
-pub fn main() {
-    let val = run();
-    exit(val);
 }

@@ -1,8 +1,7 @@
 use std::default::Default;
 use std::fs::File;
 use std::path::Path;
-use std::process::exit;
-use std::io::{Write};
+use std::io::{stdout, stderr, Write};
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
@@ -18,7 +17,7 @@ pub use self::version::short_version;
 pub use self::error::Error;
 
 
-pub fn run() -> i32 {
+pub fn run(input_args: Vec<String>) -> i32 {
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();
     let mut debug_info = false;
@@ -43,7 +42,7 @@ pub fn run() -> i32 {
             .add_option(&["--dump-version-data"], StoreTrue, "
                 Dump the data used for versioning directly to stdout
                 (WARNING: contains binary data!)");
-        match ap.parse_args() {
+        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return 0,
             Err(_) => return 122,
@@ -76,9 +75,4 @@ pub fn run() -> i32 {
         }
     }
     return 0;
-}
-
-pub fn main() {
-    let val = run();
-    exit(val);
 }

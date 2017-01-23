@@ -1,6 +1,6 @@
+use std::io::{stdout, stderr};
 use std::default::Default;
 use std::path::Path;
-use std::process::exit;
 use std::fs::remove_file;
 use rand;
 
@@ -44,7 +44,7 @@ mod error;
 mod dns;
 
 
-pub fn run() -> i32 {
+pub fn run(input_args: Vec<String>) -> i32 {
     // Initialize thread random generator to avoid stack overflow (see #161)
     rand::thread_rng();
 
@@ -74,7 +74,7 @@ pub fn run() -> i32 {
         ap.refer(&mut no_image)
           .add_option(&["--no-image-download"], StoreTrue,
                 "Do not download container image");
-        match ap.parse_args() {
+        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return 0,
             Err(_) => return 122,
@@ -173,9 +173,4 @@ fn _fetch_sources(_container: &Container, _settings: &Settings)
     -> Result<(), String>
 {
     unimplemented!();
-}
-
-pub fn main() {
-    let val = run();
-    exit(val);
 }

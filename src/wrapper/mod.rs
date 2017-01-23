@@ -1,7 +1,6 @@
 use std::env::{current_dir};
-use std::io::{stderr, Write};
+use std::io::{stdout, stderr, Write};
 use std::path::Path;
-use std::process::exit;
 
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
@@ -32,7 +31,7 @@ pub struct Wrapper<'a> {
 }
 
 
-pub fn run() -> i32 {
+pub fn run(input_args: Vec<String>) -> i32 {
     let mut err = stderr();
     let mut cmd: String = "".to_string();
     let mut args: Vec<String> = Vec::new();
@@ -54,7 +53,7 @@ pub fn run() -> i32 {
           .add_argument("args", List,
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
-        match ap.parse_args() {
+        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return 0,
             Err(_) => {
@@ -122,9 +121,4 @@ pub fn run() -> i32 {
             return 124;
         }
     };
-}
-
-pub fn main() {
-    let val = run();
-    exit(val);
 }

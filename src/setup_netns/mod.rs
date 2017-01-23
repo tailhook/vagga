@@ -346,7 +346,7 @@ fn setup_isolated_namespace(args: Vec<String>) {
     }
 }
 
-pub fn main() {
+pub fn run(input_args: Vec<String>) -> i32 {
     let mut kind = "".to_string();
     let mut args: Vec<String> = vec!();
     {
@@ -361,7 +361,10 @@ pub fn main() {
             .add_argument("options", List,
                 "Options specific for this kind");
         ap.stop_on_first_argument(true);
-        ap.parse_args_or_exit();
+        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(x) => return x,
+        }
     }
     args.insert(0, format!("vagga_setup_netns {}", kind));
     match &kind[..] {
@@ -371,7 +374,8 @@ pub fn main() {
         "isolated" => setup_isolated_namespace(args),
         _ => {
             error!("Unknown command {}", kind);
-            exit(1);
+            return 1;
         }
     }
+    return 0;
 }

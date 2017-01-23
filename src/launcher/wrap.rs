@@ -20,7 +20,7 @@ pub trait Wrapper {
 impl Wrapper for Command {
     fn new(root: Option<&str>, settings: &Settings) -> Self {
         let mut cmd = Command::new("/proc/self/exe");
-        cmd.arg0("vagga_wrapper");
+        cmd.arg("__wrapper__");
         if let Some(root) = root {
             cmd.arg("--root");
             cmd.arg(root);

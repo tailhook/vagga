@@ -66,7 +66,6 @@ fn build_internal(context: &Context, name: &str, args: &[String])
 {
     let mut cmd = Wrapper::new(None, &context.settings);
     squash_stdio(&mut cmd)?;
-    cmd.arg0("vagga_wrapper");
     cmd.arg("_build");
     cmd.arg(name);
     cmd.args(&args);

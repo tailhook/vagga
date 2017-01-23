@@ -98,7 +98,7 @@ fn _get_version_hash(options: &Options, wrapper: &Wrapper)
     -> Result<Option<String>, String>
 {
     let mut cmd = Command::new("/vagga/bin/vagga");
-    cmd.arg0("vagga_version");
+    cmd.arg("__version__");
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.arg(&options.container);
@@ -271,7 +271,7 @@ pub fn _build_container(container: &str,
     }
 
     let mut cmd = Command::new("/vagga/bin/vagga");
-    cmd.arg0("vagga_build");
+    cmd.arg("__builder__");
     cmd.gid(0);
     cmd.groups(Vec::new());
     cmd.unshare(
