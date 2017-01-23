@@ -54,6 +54,8 @@ pub struct CommandInfo {
     pub prerequisites: Vec<String>,
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
+    pub link_as: Option<String>,
+    pub linked_path_translation: bool,
 
     // Command
     pub tags: Vec<String>,  // Only for supervise chidlren
@@ -82,6 +84,8 @@ pub struct SuperviseInfo {
     pub prerequisites: Vec<String>,
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
+    pub link_as: Option<String>,
+    pub linked_path_translation: bool,
 
     // Supervise
     pub mode: SuperviseMode,
@@ -95,6 +99,12 @@ pub enum MainCommand {
     Command(CommandInfo),
     Supervise(SuperviseInfo),
 }
+
+pub struct LinkInfo<'a> {
+    pub name: &'a str,
+    pub path_translation: bool,
+}
+
 
 impl MainCommand {
     pub fn description<'x>(&'x self) -> Option<&'x String> {
@@ -110,6 +120,26 @@ impl MainCommand {
             },
             MainCommand::Supervise(ref cmd) => SystemInfo {
                 expect_inotify_limit: cmd.expect_inotify_limit,
+            },
+        }
+    }
+    pub fn link(&self) -> Option<LinkInfo> {
+        match *self {
+            MainCommand::Command(ref cmd) => {
+                cmd.link_as.as_ref().map(|name| {
+                    LinkInfo {
+                        name: name,
+                        path_translation: cmd.linked_path_translation,
+                    }
+                })
+            },
+            MainCommand::Supervise(ref cmd) => {
+                cmd.link_as.as_ref().map(|name| {
+                    LinkInfo {
+                        name: name,
+                        path_translation: cmd.linked_path_translation,
+                    }
+                })
             },
         }
     }
@@ -215,6 +245,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("tags", V::Sequence::new(V::Scalar::new()))
         .member("pass_tcp_socket", V::Scalar::new().optional())
         .member("expect_inotify_limit", V::Scalar::new().optional())
+        .member("link_as", V::Scalar::new().optional())
+        .member("linked_path_translation", V::Scalar::new().default(false))
         .member("prerequisites", V::Sequence::new(V::Scalar::new()));
     if toplevel {
         cmd = cmd.member("options", V::Scalar::new().optional());

@@ -20,6 +20,7 @@ mod build;
 mod storage;
 mod underscore;
 mod completion;
+mod commands;
 
 mod supervisor;
 mod simple;
@@ -255,6 +256,9 @@ pub fn run() -> i32 {
         }
         "_compgen" => {
             completion::generate_completions(&context.config, args)
+        }
+        "_update_commands" => {
+            commands::update_commands(&context, args)
         }
         _ => {
             user::run_user_command(&context, cname, args)
