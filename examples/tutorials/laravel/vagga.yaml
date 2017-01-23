@@ -47,12 +47,12 @@ containers:
 
   memcached:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [memcached]
 
   adminer:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install
       - php5-cli
       - php5-pdo_pgsql

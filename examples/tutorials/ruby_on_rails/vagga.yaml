@@ -1,17 +1,18 @@
 containers:
   base:
     setup:
-    - !Ubuntu xenial
-    - !UbuntuUniverse
+    - !Alpine v3.5
     - !Install
-      - zlib1g
-      - libsqlite3-0
+      - zlib
+      - sqlite-libs
       - nodejs
-      - libpq5
+      - libpq
+      - tzdata
     - !BuildDeps
-      - zlib1g-dev
-      - libsqlite3-dev
-      - libpq-dev
+      - zlib-dev
+      - sqlite-dev
+      - postgresql-dev
+      - libffi-dev
     - !GemInstall
       - ffi
       - nokogiri
@@ -27,7 +28,7 @@ containers:
 
   memcached:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [memcached]
 
   postgres:
