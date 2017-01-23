@@ -139,12 +139,13 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[@]} = "_build _build_shell _clean _create_netns \
 _destroy_netns _init_storage_dir _list _pack_image _push_image _run \
-_run_in_netns _version_hash _check_overlayfs_support" ]]
+_run_in_netns _version_hash _check_overlayfs_support \
+_base_dir _relative_work_dir" ]]
 
     run vagga _compgen -- _r
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[@]} = "_run _run_in_netns" ]]
+    [[ ${lines[@]} = "_run _run_in_netns _relative_work_dir" ]]
 
     run vagga _compgen -- _ran
     printf "%s\n" "${lines[@]}"
