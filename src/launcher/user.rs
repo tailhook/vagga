@@ -67,6 +67,9 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
                 };
                 Args::Simple(info, a)
             }
+            MainCommand::CapsuleCommand(_) => {
+                unimplemented!();
+            }
             MainCommand::Supervise(ref info) => {
                 let a = match supervisor::parse_args(info, context, cmd, args)
                 {

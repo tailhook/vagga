@@ -74,6 +74,28 @@ pub struct CommandInfo {
 }
 
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
+pub struct CapsuleInfo {
+    // Common for toplevel commands
+    // TODO(tailhook) remove unuseful fields here
+    pub description: Option<String>,
+    pub banner: Option<String>,
+    pub banner_delay: Option<u32>,
+    pub epilog: Option<String>,
+    pub pass_tcp_socket: Option<String>,
+    pub prerequisites: Vec<String>,
+    pub options: Option<String>,  // Only for toplevel
+    pub expect_inotify_limit: Option<usize>,
+    pub link_as: Option<String>,
+    pub linked_path_translation: bool,
+
+    // Command
+    pub work_dir: Option<String>,
+    pub accepts_arguments: Option<bool>,
+    pub environ: BTreeMap<String, String>,
+    pub run: Vec<String>,
+}
+
+#[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SuperviseInfo {
     // Common
     pub description: Option<String>,
@@ -96,6 +118,7 @@ pub struct SuperviseInfo {
 #[derive(RustcDecodable, PartialEq, Eq, Clone)]
 pub enum MainCommand {
     Command(CommandInfo),
+    CapsuleCommand(CapsuleInfo),
     Supervise(SuperviseInfo),
 }
 
@@ -110,6 +133,7 @@ impl MainCommand {
         match *self {
             MainCommand::Command(ref cmd) => cmd.description.as_ref(),
             MainCommand::Supervise(ref cmd) => cmd.description.as_ref(),
+            MainCommand::CapsuleCommand(ref cmd) => cmd.description.as_ref(),
         }
     }
     pub fn system<'x>(&'x self) -> SystemInfo {
@@ -120,11 +144,22 @@ impl MainCommand {
             MainCommand::Supervise(ref cmd) => SystemInfo {
                 expect_inotify_limit: cmd.expect_inotify_limit,
             },
+            MainCommand::CapsuleCommand(ref cmd) => SystemInfo {
+                expect_inotify_limit: cmd.expect_inotify_limit,
+            },
         }
     }
     pub fn link(&self) -> Option<LinkInfo> {
         match *self {
             MainCommand::Command(ref cmd) => {
+                cmd.link_as.as_ref().map(|name| {
+                    LinkInfo {
+                        name: name,
+                        path_translation: cmd.linked_path_translation,
+                    }
+                })
+            },
+            MainCommand::CapsuleCommand(ref cmd) => {
                 cmd.link_as.as_ref().map(|name| {
                     LinkInfo {
                         name: name,
@@ -264,6 +299,7 @@ fn subcommand_validator<'a>() -> V::Enum<'a> {
 pub fn command_validator<'a>() -> V::Enum<'a> {
     let cmd = run_fields(command_fields(V::Structure::new(), true), false);
     let sup = command_fields(V::Structure::new(), true);
+    let caps = command_fields(V::Structure::new(), true);
 
     let sup = sup
         .member("mode", V::Scalar::new().default("stop-on-failure"))
@@ -274,8 +310,16 @@ pub fn command_validator<'a>() -> V::Enum<'a> {
         .member("kill_unresponsive_after",
             V::Numeric::new().default(2).min(1).max(86400));
 
+    let caps = caps
+        .member("work_dir", V::Scalar::new().optional())
+        .member("run", V::Sequence::new(V::Scalar::new())
+            .parser(shell_command as fn(Ast) -> Vec<Ast>))
+        .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
+        .member("accepts_arguments", V::Scalar::new().optional());
+
     return V::Enum::new()
         .option("Command", cmd)
+        .option("CapsuleCommand", caps)
         .option("Supervise", sup);
 }
 

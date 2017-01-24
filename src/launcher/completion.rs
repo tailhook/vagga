@@ -507,6 +507,9 @@ impl<'a> CompletionState<'a> {
                 MainCommand::Command(_) => {
                     return Some(States::UserCmd);
                 },
+                MainCommand::CapsuleCommand(_) => {
+                    return Some(States::UserCmd);
+                },
                 MainCommand::Supervise(_) => {
                     return Some(States::SuperviseCmd(cmd_name));
                 },

@@ -15,7 +15,7 @@ use super::setup;
 use super::Wrapper;
 use container::util::clean_dir;
 use config::volumes::Volume::Persistent;
-use config::command::MainCommand::{Supervise, Command};
+use config::command::MainCommand::{Supervise, Command, CapsuleCommand};
 use file_util::{read_visible_entries, Lock};
 use wrapper::build::get_version_hash;
 
@@ -404,6 +404,9 @@ fn clean_volumes(wrapper: &Wrapper, global: bool, dry_run: bool, all: bool)
                         }
                     }
                 }
+                CapsuleCommand(_) => {
+                    // novolumes
+                },
                 Supervise(ref cmd) => {
                     for (_, child) in &cmd.children {
                         for (_, vol) in child.get_volumes() {

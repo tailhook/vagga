@@ -40,6 +40,9 @@ pub fn scan(ctx: &Context, src: Vec<String>) -> Vec<String> {
                     .map(|cont|
                         _check_volumes(ctx, cont.volumes.values(), &mut all));
                 }
+                &MainCommand::CapsuleCommand(_) => {
+                    // Should be nothing
+                },
                 &MainCommand::Supervise(ref sup) => {
                     all.extend(sup.prerequisites.iter());
                     for cmd in sup.children.values() {

@@ -5,7 +5,7 @@ use std::path::Path;
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
 use super::config::{find_config, Config, Settings};
-use super::config::command::MainCommand::{Command, Supervise};
+use super::config::command::MainCommand::{Command, Supervise, CapsuleCommand};
 use config::read_settings::{read_settings, MergedSettings};
 
 
@@ -103,6 +103,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
                 Some(&Command(ref cmd_info)) => {
                     commandline::commandline_cmd(&cmd,
                         cmd_info, &wrapper, args)
+                }
+                Some(&CapsuleCommand(_)) => {
+                    unimplemented!();
                 }
                 Some(&Supervise(ref svc_info)) => {
                     supervise::supervise_cmd(&cmd, svc_info, &wrapper, args)
