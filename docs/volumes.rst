@@ -172,7 +172,7 @@ Available volume types:
            ...
          deploy-tools:
            setup:
-           - !Alpine v3.4
+           - !Alpine v3.5
            - !Install [rsync]
            volumes:
              /mnt: !Container app
