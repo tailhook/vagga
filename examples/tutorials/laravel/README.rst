@@ -251,7 +251,7 @@ called `adminer`_. Let's create a container for it:
       # ...
       adminer:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install
           - php5-cli
           - php5-pdo_pgsql
@@ -722,7 +722,7 @@ Create a container for ``memcached``:
       # ...
       memcached:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install [memcached]
 
 Add some yaml anchors on the ``run`` command so we can avoid repetition:
