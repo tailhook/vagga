@@ -74,7 +74,7 @@ teardown() {
     run vagga _run php-alpine-3_5-php7 php --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-3]} = "PHP 7.0.14 (cli)"* ]]
+    [[ ${lines[${#lines[@]}-3]} = "PHP 7.0."*" (cli)"* ]]
 
     run vagga _run php-alpine-3_5-php7 laravel --version
     printf "%s\n" "${lines[@]}"
@@ -125,7 +125,7 @@ teardown() {
     run vagga _run php-alpine-3_5-php7 php --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-3]} = "PHP 7.0.14 (cli)"* ]]
+    [[ ${lines[${#lines[@]}-3]} = "PHP 7.0."*" (cli)"* ]]
 
     run vagga _run php-composer-deps-alpine-3_5-php7 laravel --version
     printf "%s\n" "${lines[@]}"
