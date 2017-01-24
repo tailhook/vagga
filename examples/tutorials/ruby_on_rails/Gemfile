@@ -30,9 +30,7 @@ gem 'jbuilder', '~> 2.5'
 # Use Capistrano for deployment
 # gem 'capistrano-rails', group: :development
 
-gem 'bigdecimal'
 gem 'dalli'
-gem 'json'
 gem 'pg'
 
 group :development, :test do

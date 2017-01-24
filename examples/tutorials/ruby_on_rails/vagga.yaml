@@ -1,19 +1,18 @@
 containers:
   base:
     setup:
-    - !Alpine v3.5
+    - !Ubuntu xenial
+    - !UbuntuUniverse
     - !Install
-      - zlib
-      - sqlite-libs
+      - zlib1g
+      - libsqlite3-0
       - nodejs
-      - libpq
-      - tzdata
+      - libpq5
     - !BuildDeps
-      - zlib-dev
-      - sqlite-dev
-      - postgresql-dev
-      - libffi-dev
-    - !GemInstall
+      - zlib1g-dev
+      - libsqlite3-dev
+      - libpq-dev
+    - &common-gems !GemInstall
       - ffi
       - nokogiri
       - sqlite3
@@ -22,6 +21,31 @@ containers:
   rails:
     setup:
     - !Container base
+    - !GemBundle
+    environ:
+      DATABASE_URL: sqlite3:db/development.sqlite3
+
+  base-alpine:
+    setup:
+    - !Alpine v3.5
+    - !Install
+      - zlib
+      - sqlite-libs
+      - nodejs
+      - libpq
+      - tzdata
+      - ruby-bigdecimal
+      - ruby-json
+    - !BuildDeps
+      - zlib-dev
+      - sqlite-dev
+      - postgresql-dev
+      - libffi-dev
+    - *common-gems
+
+  rails-alpine:
+    setup:
+    - !Container base-alpine
     - !GemBundle
     environ:
       DATABASE_URL: sqlite3:db/development.sqlite3
@@ -77,6 +101,11 @@ commands:
   run: !Command
     container: rails
     description: start rails development server
+    run: rails server
+
+  run-alpine: !Command
+    container: rails-alpine
+    description: Start the rails development server on Alpine container
     run: rails server
 
   run-cached: !Supervise
