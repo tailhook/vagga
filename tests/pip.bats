@@ -26,7 +26,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2-git-ubuntu)
-    [[ $link = ".roots/py2-git-ubuntu.d218b052/root" ]]
+    [[ $link = ".roots/py2-git-ubuntu.ebda7dbd/root" ]]
 }
 
 @test "py2: alpine git" {
@@ -35,7 +35,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2-git-alpine)
-    [[ $link = ".roots/py2-git-alpine.297d98e8/root" ]]
+    [[ $link = ".roots/py2-git-alpine.4839be1d/root" ]]
 }
 
 @test "py3: ubuntu pkg" {
@@ -73,7 +73,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py3-git-ubuntu)
-    [[ $link = ".roots/py3-git-ubuntu.7df3b403/root" ]]
+    [[ $link = ".roots/py3-git-ubuntu.ce381ca9/root" ]]
 }
 
 @test "py2: ubuntu req.txt" {

@@ -13,12 +13,14 @@ containers:
   py2-git-ubuntu:
     setup:
     - !Ubuntu trusty
-    - !Py2Install [setuptools, "git+git://github.com/jdp/urp"]
+    - !Py2Install [appdirs, pyparsing, packaging, six, setuptools,
+                   "git+git://github.com/jdp/urp"]
 
   py2-git-alpine:
     setup:
     - !Alpine v3.4
-    - !Py2Install [setuptools, "git+git://github.com/jdp/urp"]
+    - !Py2Install [appdirs, pyparsing, packaging, six, setuptools,
+                   "git+git://github.com/jdp/urp"]
 
   py3-ubuntu:
     setup:
@@ -46,7 +48,8 @@ containers:
   py3-git-ubuntu:
     setup:
     - !Ubuntu trusty
-    - !Py3Install [setuptools, "git+git://github.com/jdp/urp"]
+    - !Py3Install [appdirs, pyparsing, packaging, six, setuptools,
+                   "git+git://github.com/jdp/urp"]
 
   py2req-ubuntu:
     setup:
