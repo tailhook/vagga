@@ -1,7 +1,7 @@
-use config::command::{MainCommand, CommandInfo, SuperviseInfo};
+use config::command::{MainCommand, CommandInfo, SuperviseInfo, CapsuleInfo};
 use launcher::prerequisites;
 use launcher::system;
-use launcher::{supervisor, simple};
+use launcher::{supervisor, simple, capsule};
 use launcher::Context;
 
 
@@ -12,11 +12,13 @@ pub enum ArgError {
 
 enum Args<'a> {
     Simple(&'a CommandInfo, simple::Args),
+    Capsule(&'a CapsuleInfo, capsule::Args),
     Supervise(&'a SuperviseInfo, supervisor::Args),
 }
 
 enum Data<'a> {
     Simple(&'a CommandInfo, simple::Args, simple::Version),
+    Capsule(&'a CapsuleInfo, capsule::Args, capsule::Data),
     Supervise(&'a SuperviseInfo, supervisor::Args, supervisor::Data),
 }
 
@@ -67,8 +69,13 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
                 };
                 Args::Simple(info, a)
             }
-            MainCommand::CapsuleCommand(_) => {
-                unimplemented!();
+            MainCommand::CapsuleCommand(ref info) => {
+                let a = match capsule::parse_args(info, context, cmd, args) {
+                    Ok(a) => a,
+                    Err(Exit(x)) => return Ok(x),
+                    Err(Error(e)) => return Err(e),
+                };
+                Args::Capsule(info, a)
             }
             MainCommand::Supervise(ref info) => {
                 let a = match supervisor::parse_args(info, context, cmd, args)
@@ -86,13 +93,15 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
     for arg in all_args.into_iter() {
         let data = match arg {
             Args::Simple(info, arg) => {
-                let v = simple::prepare_containers(
-                    info, &arg, context)?;
+                let v = simple::prepare_containers(info, &arg, context)?;
                 Data::Simple(info, arg, v)
             }
+            Args::Capsule(info, arg) => {
+                let v = capsule::prepare_containers(info, &arg, context)?;
+                Data::Capsule(info, arg, v)
+            }
             Args::Supervise(info, arg) => {
-                let v = supervisor::prepare_containers(
-                    info, &arg, context)?;
+                let v = supervisor::prepare_containers(info, &arg, context)?;
                 Data::Supervise(info, arg, v)
             }
         };
@@ -102,6 +111,9 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
         let result = match data {
             Data::Simple(info, arg, data) => {
                 simple::run(info, arg, data, context)
+            }
+            Data::Capsule(info, arg, data) => {
+                capsule::run(info, arg, data, context)
             }
             Data::Supervise(info, arg, data) => {
                 supervisor::run(info, arg, data, context)

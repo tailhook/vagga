@@ -4,7 +4,7 @@ use libc::uid_t;
 use rustc_serialize::{Decoder, Decodable};
 
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub struct Range {
     start: uid_t,
     end: uid_t,

@@ -7,6 +7,7 @@ use quire::ast::Ast;
 use quire::ast::Tag::{NonSpecific};
 use quire::ast::ScalarKind::{Plain};
 
+use config::Range;
 use super::volumes::{Volume, volume_validator};
 use launcher::system::SystemInfo;
 
@@ -88,7 +89,9 @@ pub struct CapsuleInfo {
     pub link_as: Option<String>,
     pub linked_path_translation: bool,
 
-    // Command
+    // CapsuleCommand
+    pub uids: Vec<Range>,
+    pub gids: Vec<Range>,
     pub work_dir: Option<String>,
     pub accepts_arguments: Option<bool>,
     pub environ: BTreeMap<String, String>,
@@ -311,6 +314,8 @@ pub fn command_validator<'a>() -> V::Enum<'a> {
             V::Numeric::new().default(2).min(1).max(86400));
 
     let caps = caps
+        .member("uids", V::Sequence::new(V::Scalar::new()))
+        .member("gids", V::Sequence::new(V::Scalar::new()))
         .member("work_dir", V::Scalar::new().optional())
         .member("run", V::Sequence::new(V::Scalar::new())
             .parser(shell_command as fn(Ast) -> Vec<Ast>))

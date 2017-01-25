@@ -1,0 +1,10 @@
+containers:
+  v35-calc:
+    setup:
+    - !Alpine v3.5
+    - !Install [bc]
+
+commands:
+  build_v35_calc: !CapsuleCommand
+    run: |
+      vagga

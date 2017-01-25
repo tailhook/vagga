@@ -23,6 +23,7 @@ mod commands;
 
 mod supervisor;
 mod simple;
+mod capsule;
 
 mod wrap;
 pub mod system;
