@@ -20,7 +20,6 @@ containers:
     setup:
     - !Ubuntu xenial
     - !UbuntuUniverse
-
     - !Sh |
         addgroup --system --gid 200 mysql
         adduser --uid 200 --system --home /data --no-create-home \
@@ -58,7 +57,7 @@ containers:
     - !Alpine v3.5
     - !Install
       - php5-cli
-      - php5-pdo_pgsql
+      - php5-pdo_mysql
     - !EnsureDir /opt/adminer
     - !Download
       url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5-mysql.php
@@ -97,14 +96,10 @@ commands:
     group-id: 200
     run: |
       set -ex
-      ls -la $DB_DATA_DIR
 
       mysqld --initialize-insecure --datadir=$DB_DATA_DIR \
         --log-error=log
 
-      mount
-      ls -lad /run
-      ls -la /run
       mysqld --datadir=$DB_DATA_DIR --skip-networking --log-error=log &
 
       while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done
@@ -123,16 +118,17 @@ commands:
         container: laravel
         environ: *db_config
         run: &run_app |
-            dsn="mysql:host=$DB_HOST;port=$DB_PORT"
-            while ! php -r "new PDO('$dsn', '$DB_USERNAME', '$DB_PASSWORD');" 2> /dev/null; do
-              echo 'waiting for database'
-              sleep 1
-            done
-            php artisan cache:clear
-            php artisan config:clear
-            php artisan migrate
-            php artisan db:seed
-            php artisan serve
+          # wait for database to be ready before starting
+          dsn="mysql:host=$DB_HOST;port=$DB_PORT"
+          while ! php -r "new PDO('$dsn', '$DB_USERNAME', '$DB_PASSWORD');" 2> /dev/null; do
+            echo 'Waiting for database'
+            sleep 2
+          done
+          php artisan cache:clear
+          php artisan config:clear
+          php artisan migrate
+          php artisan db:seed
+          php artisan serve
 
       db: &db_cmd !Command
         container: mysql
@@ -172,21 +168,21 @@ commands:
     container: exporter
     description: export project into tarball
     run: |
-        cd /usr/local/src/work
-        rm -f .env
-        rm -f database/database.sqlite
-        php artisan cache:clear
-        php artisan config:clear
-        php artisan route:clear
-        php artisan view:clear
-        rm storage/framework/sessions/*
-        rm -rf tests
-        echo APP_ENV=production >> .env
-        echo APP_KEY=random >> .env
-        php artisan key:generate
-        php artisan optimize
-        php artisan route:cache
-        php artisan config:cache
-        php artisan vendor:publish
-        tar -czf export.tar.gz .env *
-        cp -f export.tar.gz /work/
+      cd /usr/local/src/work
+      rm -f .env
+      rm -f database/database.sqlite
+      php artisan cache:clear
+      php artisan config:clear
+      php artisan route:clear
+      php artisan view:clear
+      rm storage/framework/sessions/*
+      rm -rf tests
+      echo APP_ENV=production >> .env
+      echo APP_KEY=random >> .env
+      php artisan key:generate
+      php artisan optimize
+      php artisan route:cache
+      php artisan config:cache
+      php artisan vendor:publish
+      tar -czf export.tar.gz .env *
+      cp -f export.tar.gz /work/
