@@ -156,40 +156,42 @@ container for our database:
 
     containers:
       # ...
-      postgres:
+      mysql:
         setup:
         - !Ubuntu xenial
-        - !EnsureDir /data
+        - !UbuntuUniverse
         - !Sh |
-            addgroup --system --gid 200 postgres ❶
+            addgroup --system --gid 200 mysql ❶
             adduser --uid 200 --system --home /data --no-create-home \
-                --shell /bin/bash --group --gecos "PostgreSQL administrator" \
-                postgres
-        - !Install [postgresql-9.5]
+                --shell /bin/bash --group --gecos "MySQL user" \
+                mysql
+        - !Install
+          - mysql-server-5.7
+          - mysql-client-5.7
+        - !Remove /var/lib/mysql
+        - !EnsureDir /data
         environ: &db_config ❷
-          PGDATA: /data
-          DB_PORT: 5433
           DB_DATABASE: vagga
           DB_USERNAME: vagga
           DB_PASSWORD: vagga
-          PG_BIN: /usr/lib/postgresql/9.5/bin
-          DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
+          DB_PORT: 3307
+          DB_DATA_DIR: /data
         volumes:
           /data: !Persistent
-            name: postgres
+            name: mysql
             owner-uid: 200
             owner-gid: 200
-            init-command: _pg-init ❸
+            init-command: _mysql-init ❸
           /run: !Tmpfs
             subdirs:
-              postgresql: { mode: 0o777 }
+              mysqld: { mode: 0o777 }
 
-* ❶ -- Use fixed user id and group id for postgres
+* ❶ -- Use fixed user id and group id for mysql
 * ❷ -- Put an anchor at the database environment so we can reference it later
 * ❸ -- Vagga command to initialize the volume
 
-.. note:: The database will be persisted in ``.vagga/.volumes/postgres``.
+.. note:: The database will be persisted in ``.vagga/.volumes/mysql``.
 
 Add the command to initialize the database:
 
@@ -197,20 +199,27 @@ Add the command to initialize the database:
 
     commands:
       # ...
-      _pg-init: !Command
-        description: Init postgres database
-        container: postgres
+      _mysql-init: !Command
+        description: Init MySQL data volume
+        container: mysql
         user-id: 200
         group-id: 200
         run: |
           set -ex
-          ls -la /data
-          $PG_BIN/pg_ctl initdb
-          $PG_BIN/pg_ctl -w -o '-F --port=$DB_PORT -k /tmp' start
-          $PG_BIN/createuser -h 127.0.0.1 -p $DB_PORT $PG_USER
-          $PG_BIN/createdb -h 127.0.0.1 -p $DB_PORT $DB_DATABASE -O $DB_USERNAME
-          $PG_BIN/psql -h 127.0.0.1 -p $DB_PORT -c "ALTER ROLE $DB_USERNAME WITH ENCRYPTED PASSWORD '$DB_PASSWORD';"
-          $PG_BIN/pg_ctl stop
+
+          mysqld --initialize-insecure --datadir=$DB_DATA_DIR \
+            --log-error=log
+
+          mysqld --datadir=$DB_DATA_DIR --skip-networking --log-error=log &
+
+          while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done
+
+          mysqladmin -u root create $DB_DATABASE
+          mysql -u root -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
+          mysql -u root -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
+          mysql -u root -e "FLUSH PRIVILEGES;"
+
+          mysqladmin -u root shutdown
 
 Now change our ``run`` command to start the database alongside our project:
 
@@ -228,10 +237,13 @@ Now change our ``run`` command to start the database alongside our project:
                 php artisan config:clear
                 php artisan serve
           db: !Command
-            container: postgres
+            container: mysql
             user-id: 200
             group-id: 200
-            run: exec $PG_BIN/postgres -F --port=$DB_PORT
+            run: |
+              exec mysqld --datadir=$DB_DATA_DIR \
+                --bind-address=$DB_HOST --port=$DB_PORT \
+                --log-error=log --gdb
 
 * ❶ -- Reference the database environment
 
@@ -254,10 +266,10 @@ called `adminer`_. Let's create a container for it:
         - !Alpine v3.5
         - !Install
           - php5-cli
-          - php5-pdo_pgsql
+          - php5-pdo_mysql
         - !EnsureDir /opt/adminer
         - !Download ❶
-          url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5.php
+          url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5-mysql.php
           path: /opt/adminer/index.php
         - !Download ❷
           url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
@@ -639,24 +651,20 @@ Change ``database/seeds/DatabaseSeeder.php`` to include ``ArticleSeeder``:
         }
     }
 
-Add a the php postgresql module to our container:
+Add a the php mysql module to our container:
 
 .. code-block:: yaml
 
     containers:
       laravel:
-        environ: &env
-          ENV_CONTAINER: 1
-          APP_ENV: development
-          APP_DEBUG: true
-          APP_KEY: YourRandomGeneratedEncryptionKey
+        # ...
         setup:
         - !Ubuntu xenial
         - !UbuntuUniverse
         - !Install
           - php-dom
           - php-mbstring
-          - php-pgsql
+          - php-mysql
         - !Env { <<: *env }
         - !ComposerDependencies
 
@@ -672,11 +680,18 @@ Change the ``run`` command to execute the migrations and seed our database:
           container: laravel
           environ: *db_config
           run: |
-              php artisan cache:clear
-              php artisan config:clear
-              php artisan migrate
-              php artisan db:seed
-              php artisan serve
+            # wait for database to be ready before starting
+            dsn="mysql:host=$DB_HOST;port=$DB_PORT"
+            while ! php -r "new PDO('$dsn', '$DB_USERNAME', '$DB_PASSWORD');" 2> /dev/null; do
+              echo 'Waiting for database'
+              sleep 2
+            done
+
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan migrate
+            php artisan db:seed
+            php artisan serve
         db: !Command
           # ...
         adminer: !Command
@@ -698,18 +713,14 @@ Activate Universe repository and add ``php-memcached``, to our container:
 
     containers:
       laravel:
-        environ: &env
-          ENV_CONTAINER: 1
-          APP_ENV: development
-          APP_DEBUG: true
-          APP_KEY: YourRandomGeneratedEncryptionKey
+        # ...
         setup:
         - !Ubuntu xenial
         - !UbuntuUniverse
         - !Install
           - php-dom
           - php-mbstring
-          - php-pgsql
+          - php-mysql
           - php-memcached
         - !Env { <<: *env }
         - !ComposerDependencies
@@ -895,10 +906,10 @@ Before going to the command part, we will need a new container for this task:
         - !Env
           COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor ❹
         - !Sh |
-            cd /usr/local/src/work
-            rm -f export.tar.gz
-            composer install \ ❺
-              --no-dev --prefer-dist --optimize-autoloader
+          cd /usr/local/src/work
+          rm -f export.tar.gz
+          composer install --no-dev --prefer-dist \ ❺
+            --optimize-autoloader
         volumes:
           /usr/local/src/work: !Snapshot ❻
 
