@@ -7,9 +7,14 @@ use libmount::Overlay;
 use process_util::convert_status;
 use super::Wrapper;
 use super::setup::setup_base_filesystem;
+use wrapper::capsule;
 
 
 pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
+    // Make symlinks to make interactive life easier
+    capsule::symlink_busybox_commands()
+        .map_err(|e| error!("{}", e)).ok();
+
     if let Err(text) = setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)
     {

@@ -11,7 +11,7 @@ use libc::pid_t;
 use libmount::{BindMount, Tmpfs, Remount};
 
 use config::{Container, Settings};
-use config::command::CommandInfo;
+use config::command::{CommandInfo, CapsuleInfo};
 use config::volumes::Volume;
 use config::volumes::Volume as V;
 use container::root::{change_root};
@@ -275,9 +275,25 @@ pub fn get_environment(settings: &Settings, container: &Container,
     command: Option<&CommandInfo>)
     -> Result<BTreeMap<String, String>, String>
 {
+    _get_environment(DEFAULT_PATH, settings, Some(container),
+        command.map(|c| &c.environ))
+}
+
+pub fn get_capsule_environment(settings: &Settings,
+    command: &CapsuleInfo)
+    -> Result<BTreeMap<String, String>, String>
+{
+    _get_environment("/vagga/bin:/bin", settings, None, Some(&command.environ))
+}
+
+fn _get_environment(default_path: &str, settings: &Settings,
+    container: Option<&Container>,
+    command_env: Option<&BTreeMap<String, String>>)
+    -> Result<BTreeMap<String, String>, String>
+{
     let mut result = BTreeMap::new();
     result.insert("PATH".to_string(),
-                  DEFAULT_PATH.to_string());
+                  default_path.to_string());
     if settings.proxy_env_vars {
         for k in &PROXY_ENV_VARS {
             if let Ok(v) = env::var(k) {
@@ -285,7 +301,7 @@ pub fn get_environment(settings: &Settings, container: &Container,
             }
         }
     }
-    if let Some(ref filename) = container.environ_file {
+    if let Some(ref filename) = container.and_then(|x| x.environ_file.as_ref()) {
         let f = BufReader::new(
                 File::open(filename)
                 .map_err(|e| format!("Error reading environment file {:?}: {}",
@@ -305,11 +321,13 @@ pub fn get_environment(settings: &Settings, container: &Container,
             result.insert(key.to_string(), value.to_string());
         }
     }
-    for (ref k, ref v) in container.environ.iter() {
-        result.insert(k.to_string(), v.to_string());
+    if let Some(container) = container {
+        for (ref k, ref v) in container.environ.iter() {
+            result.insert(k.to_string(), v.to_string());
+        }
     }
-    if let Some(command) = command {
-        for (ref k, ref v) in command.environ.iter() {
+    if let Some(command_env) = command_env {
+        for (ref k, ref v) in command_env.iter() {
             result.insert(k.to_string(), v.to_string());
         }
     }

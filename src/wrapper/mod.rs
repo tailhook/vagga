@@ -12,14 +12,16 @@ use config::read_settings::{read_settings, MergedSettings};
 mod debug;
 mod build;
 mod run;
-mod supervise;
-mod commandline;
 mod setup;
 mod util;
 mod clean;
 mod pack;
 mod snapshot;
 mod init_persistent;
+// Command types
+mod supervise;
+mod commandline;
+mod capsule;
 
 
 pub struct Wrapper<'a> {
@@ -104,8 +106,8 @@ pub fn run(input_args: Vec<String>) -> i32 {
                     commandline::commandline_cmd(&cmd,
                         cmd_info, &wrapper, args)
                 }
-                Some(&CapsuleCommand(_)) => {
-                    unimplemented!();
+                Some(&CapsuleCommand(ref cmd_info)) => {
+                    capsule::commandline_cmd(&cmd, cmd_info, &wrapper, args)
                 }
                 Some(&Supervise(ref svc_info)) => {
                     supervise::supervise_cmd(&cmd, svc_info, &wrapper, args)

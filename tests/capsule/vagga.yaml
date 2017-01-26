@@ -5,6 +5,6 @@ containers:
     - !Install [bc]
 
 commands:
-  build_v35_calc: !CapsuleCommand
-    run: |
-      vagga
+  vagga: !CapsuleCommand
+    description: Recursive vagga
+    run: [vagga]
