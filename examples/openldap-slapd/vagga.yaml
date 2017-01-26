@@ -4,11 +4,17 @@ containers:
     - !Ubuntu xenial
     - !UbuntuUniverse
     - !Install [slapd, ldap-utils]
-    volumes:
-      /var/lib/ldap: !Persistent ldap-db
-      /run: !Tmpfs
-        subdirs:
-          slapd:
+    - !Text
+      /etc/ldap/slapd.conf: |
+        include     /etc/ldap/schema/core.schema
+        include     /etc/ldap/schema/cosine.schema
+        include     /etc/ldap/schema/nis.schema
+        include     /etc/ldap/schema/inetorgperson.schema
+        database    ldif
+        suffix      "dc=ldap,dc=example,dc=org"
+        rootdn      "cn=Manager,dc=ldap,dc=example,dc=org"
+        rootpw      1234
+        directory   /var/lib/ldap
 
 
 commands:
@@ -18,9 +24,16 @@ commands:
     container: slapd
     run:
     - slapd
-    - -F/etc/ldap/slapd.d
+    - -f/etc/ldap/slapd.conf
     - -hldap://127.0.0.1:8389
-    - -dtrace
+    - -dnone
+    volumes: &ldapvolumes
+      /var/lib/ldap: !Persistent
+        name: ldap-db
+        init-command: _ldap-init
+      /run: !Tmpfs
+        subdirs:
+          slapd:
 
   ldapsearch: !Command
     description: Run ldapsearch
@@ -28,6 +41,10 @@ commands:
     run:
     - ldapsearch
     - -Hldap://127.0.0.1:8389
+    - "-Dcn=Manager,dc=ldap,dc=example,dc=org"
+    - "-w1234"
+    - "-x"
+
 
   ldapwhoami: !Command
     description: Run ldapwhoami
@@ -35,6 +52,9 @@ commands:
     run:
     - ldapwhoami
     - -Hldap://127.0.0.1:8389
+    - "-Dcn=Manager,dc=ldap,dc=example,dc=org"
+    - "-w1234"
+    - "-x"
 
   ldapadd: !Command
     description: Run ldapadd
@@ -42,3 +62,16 @@ commands:
     run:
     - ldapadd
     - -Hldap://127.0.0.1:8389
+    - "-Dcn=Manager,dc=ldap,dc=example,dc=org"
+    - "-w1234"
+    - "-x"
+
+  _ldap-init: !Command
+    description: Initialize ldap volume
+    container: slapd
+    volumes: *ldapvolumes
+    run: |
+      slapd -f/etc/ldap/slapd.conf -hldap://127.0.0.1:8389
+      ldapadd -Hldap://127.0.0.1:8389 \
+        -Dcn=Manager,dc=ldap,dc=example,dc=org -w1234 -x \
+        -f init.ldif

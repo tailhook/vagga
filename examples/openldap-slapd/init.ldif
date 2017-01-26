@@ -1,0 +1,6 @@
+dn: dc=ldap,dc=example,dc=org
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: example
+dc: ldap

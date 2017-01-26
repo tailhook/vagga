@@ -1,0 +1,15 @@
+dn: uid=newuser,dc=ldap,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: newuser
+cn: newuser
+sn: Doe
+loginShell: /bin/bash
+uidNumber: 88888
+gidNumber: 88888
+homeDirectory: /home/newuser/
+userPassword: {SSHA}9jA01JlieepnbrBgbz9pXK+4u6+mRwby
