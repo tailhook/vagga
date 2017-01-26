@@ -1,24 +1,24 @@
 containers:
   app-freezer:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - &build_deps !BuildDeps
       - libmemcached-dev
       - zlib-dev
+      - cyrus-sasl-dev
       - postgresql-dev
     - !PipConfig
       dependencies: true
     - !Py3Install
-      - pip
       - 'Django >=1.10,<1.11'
       - 'django-environ >=0.4,<0.5'
       - 'pylibmc >=1.5,<1.6'
       - 'psycopg2 >=2.6,<2.7'
-    - !Sh pip freeze > requirements.txt
+    - !Sh python3 -m pip freeze > requirements.txt
 
   django:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - *build_deps
     - !Install
       - libmemcached
@@ -31,7 +31,7 @@ containers:
 
   memcached:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [memcached]
 
   postgres:

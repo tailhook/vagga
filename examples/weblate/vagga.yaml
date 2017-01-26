@@ -26,7 +26,7 @@ containers:
 
   weblate:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Repo edge/main
     - !Install [zlib, git, mercurial, libxml2, libjpeg-turbo, libxslt, py3-psycopg2]
     - !BuildDeps [build-base, zlib-dev, libxml2-dev, libjpeg-turbo-dev, libxslt-dev]
@@ -84,4 +84,3 @@ commands:
           mkdir -p /work/data
           weblate migrate
           weblate runserver
-

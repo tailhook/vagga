@@ -2,11 +2,10 @@ containers:
 
   doc:
     setup:
-    - !Alpine v3.4
-    - !Repo edge/main  # because in 3.4 sphinx is broken
-    - !Install [alpine-base, py-sphinx, py-requests, make]
+    - !Alpine v3.5
+    - !Install [alpine-base, py-sphinx, make]
     # If you require additional packages to build docs uncomment this
-    # - !Py2Requirements doc/requirements.txt
+    # - !Py3Requirements doc/requirements.txt
 
 commands:
 

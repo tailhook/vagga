@@ -200,7 +200,7 @@ Create a container for memcached:
       # ...
       memcached:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install [memcached]
 
 Create the command to run with caching:
@@ -444,3 +444,61 @@ Now change the ``run-postgres`` command to seed the database:
 * ❶ -- populate the database.
 
 Now, we run ``run-postgres``, we will already have our database populated.
+
+Running on Alpine linux
+=======================
+
+Alpine is a distribution focused on containers, being able to produce smaller
+smaller images than other distributions.
+
+To run our project on alpine, we just need two more containers:
+
+.. code-block:: yaml
+
+    containers:
+      # ...
+      base-alpine:
+        setup:
+        - !Alpine v3.5
+        - !Install
+          - zlib
+          - sqlite-libs
+          - nodejs
+          - libpq
+          - tzdata ❶
+          - ruby-bigdecimal ❶
+          - ruby-json ❶
+        - !BuildDeps
+          - zlib-dev
+          - sqlite-dev
+          - postgresql-dev
+          - libffi-dev
+        - !GemInstall
+          - ffi
+          - nokogiri
+          - sqlite3
+          - pg
+
+      rails-alpine:
+        setup:
+        - !Container base-alpine
+        - !GemBundle
+        environ:
+          DATABASE_URL: sqlite3:db/development.sqlite3
+
+* ❶ -- Rails needs these packages to work properly on Alpine. The packages
+    ``ruby-bigdecimal`` and ``ruby-json`` could be added in ``Gemfile`` as well.
+
+With our containers set up, we just need a command:
+
+.. code-block:: yaml
+
+    commands:
+      # ...
+      run-alpine: !Command
+        container: rails-alpine
+        description: Start the rails development server on Alpine container
+        run: rails server
+
+The command is almost identical to the first ``run``, with the only difference
+being the container used.

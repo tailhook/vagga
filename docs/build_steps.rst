@@ -219,7 +219,7 @@ Alpine Commands
 ::
 
    setup:
-   - !Alpine v3.4
+   - !Alpine v3.5
 
 .. step:: AlpineRepo
 
@@ -282,12 +282,12 @@ config if you use :step:`SubConfig` or :step:`Container`)
      - !Repo universe # The same as "xenial/universe"
 
      setup:
-     - !Alpine v3.4
+     - !Alpine v3.5
      - !Repo edge/testing
 
      setup:
-     - !Alpine v3.4
-     - !Repo community # The same as "v3.4/community"
+     - !Alpine v3.5
+     - !Repo community # The same as "v3.5/community"
 
 .. step:: Install
 
@@ -326,7 +326,7 @@ Generic Commands
     If you have more than one-liner you may use YAMLy *literal* syntax for it::
 
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Sh |
            if [ ! -z "$(which apk)" ] && [ ! -z "$(which lbu)" ]; then
              echo "Alpine"
@@ -539,7 +539,7 @@ Generic Commands
    Example::
 
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install [python3]
         - !Git
           url: git://github.com/tailhook/injections
@@ -576,7 +576,7 @@ Generic Commands
    Example::
 
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install [python, py-setuptools]
         - !GitInstall
           url: git://github.com/tailhook/injections
@@ -832,7 +832,7 @@ Sub-Containers
 
       docker-parser: ❶
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install [python]
         - !Depends Dockerfile ❷
         - !Depends docker2vagga.py ❷
@@ -889,7 +889,7 @@ Sub-Containers
               container: packages
           alpine:
             setup:
-            - !Alpine v3.4
+            - !Alpine v3.5
             - !SubConfig
               path: packages.yaml
               container: packages
@@ -923,7 +923,7 @@ Sub-Containers
             auto-clean: true ❸
           nginx:
             setup:
-            - !Alpine v3.4
+            - !Alpine v3.5
             - !Install [nginx]
             - !Build
               container: jsstatic
@@ -1248,7 +1248,7 @@ Python Commands
    .. code-block:: yaml
 
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Py3Install [sphinx]
 
    See :step:`Py2Install` for more details on package installation and
@@ -1262,7 +1262,7 @@ Python Commands
    .. code-block:: yaml
 
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Py3Requirements "requirements.txt"
 
    See :step:`Py2Install` for more details on package installation and
@@ -1328,7 +1328,7 @@ PHP/Composer Commands
    Example::
 
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !ComposerInstall ["phpunit/phpunit:~5.2.0"]
 
    Install a list of php packages using ``composer global require --prefer-dist

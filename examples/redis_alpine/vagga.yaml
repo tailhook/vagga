@@ -1,7 +1,7 @@
 containers:
   redis:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [redis]
 
 commands:

@@ -12,7 +12,7 @@ containers:
 
   test:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [iptables]
     - !EnsureDir /vagga
     volumes:
@@ -22,7 +22,7 @@ containers:
 
   bench:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Repo edge/testing
     - !Install [wrk]
 

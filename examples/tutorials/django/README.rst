@@ -27,7 +27,7 @@ Now create the ``vagga.yaml`` file and add the following to it:
     containers:
       django:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Py3Install ['Django >=1.10,<1.11']
 
 and then run::
@@ -68,20 +68,18 @@ output the requirements file.
     containers:
       app-freezer: ❶
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Py3Install
-          - pip ❷
-          - 'Django >=1.9,<1.10'
-        - !Sh pip freeze > requirements.txt ❸
+          - 'Django >=1.10,<1.11'
+        - !Sh python3 -m pip freeze > requirements.txt ❷
       django:
         setup:
-        - !Alpine v3.4
-        - !Py3Requirements requirements.txt ❹
+        - !Alpine v3.5
+        - !Py3Requirements requirements.txt ❸
 
 * ❶ -- our new container
-* ❷ -- we need pip available to freeze dependencies
-* ❸ -- generate the requirements file
-* ❹ -- just reference the requirements file from ``django`` container
+* ❷ -- call pip trough ``python3 -m`` to generate the requirements file
+* ❸ -- just reference the requirements file from ``django`` container
 
 Every time we add a new dependency, we need to rebuild the ``app-freezer``
 container to generate the updated ``requirements.txt``.
@@ -92,7 +90,7 @@ Now, build the ``app-freezer`` container::
 
 You will notice the new ``requirements.txt`` file holding a content similar to::
 
-    Django==1.10.3
+    Django==1.10.5
 
 And now let's run our project. Edit ``vagga.yaml`` to add the ``run`` command:
 
@@ -128,14 +126,13 @@ Add ``django-environ`` to our ``app-freezer`` container:
     containers:
       app-freezer:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !PipConfig
           dependencies: true ❶
         - !Py3Install
-          - pip
           - 'Django >=1.10,<1.11'
           - 'django-environ >=0.4,<0.5'
-        - !Sh pip freeze > requirements.txt
+        - !Sh python3 -m pip freeze > requirements.txt
 
 * ❶ -- ``django-environ`` have a dependency on the package ``six`` which would
   not be installed unless we tell pip to do so
@@ -154,7 +151,7 @@ Set the environment variable:
         environ:
           DATABASE_URL: sqlite:///db.sqlite3 ❶
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Py3Requirements requirements.txt
 
 * ❶ -- will point to /work/db.sqlite3
@@ -358,23 +355,23 @@ Add ``pylibmc`` to our ``app-freezer``, as well as its build dependencies:
     containers:
       app-freezer:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - &build_deps !BuildDeps ❶
           - libmemcached-dev ❷
           - zlib-dev ❷
+          - cyrus-sasl-dev ❷
         - !PipConfig
           dependencies: true
         - !Py3Install
-          - pip
           - 'Django >=1.10,<1.11'
           - 'django-environ >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
-        - !Sh pip freeze > requirements.txt
+        - !Sh python3 -m pip freeze > requirements.txt
       django:
         environ:
           DATABASE_URL: sqlite:///db.sqlite3
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - *build_deps ❸
         - !Py3Requirements requirements.txt
 
@@ -397,7 +394,7 @@ Add the ``pylibmc`` runtime dependencies to our ``django`` container:
       # ...
       django:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - *build_deps
         - !Install
           - libmemcached ❶
@@ -417,7 +414,7 @@ Crate a new container called ``memcached``:
       # ...
       memcached:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !Install [memcached]
 
 Create the command to run with caching:
@@ -493,20 +490,20 @@ First add ``psycopg2`` and its build dependencies to ``app-freezer``:
     containers:
       app-freezer:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !BuildDeps
           - libmemcached-dev
           - zlib-dev
+          - cyrus-sasl-dev
           - postgresql-dev ❶
         - !PipConfig
           dependencies: true
         - !Py3Install
-          - pip
           - 'Django >=1.10,<1.11'
           - 'django-environ >=0.4,<0.5'
           - 'pylibmc >=1.5,<1.6'
           - 'psycopg2 >=2.6,<2.7' ❷
-        - !Sh pip freeze > requirements.txt
+        - !Sh python3 -m pip freeze > requirements.txt
 
 * ❶ -- library needed to build psycopg2
 * ❷ -- psycopg2 dependency
@@ -522,7 +519,7 @@ Add the runtime dependencies of ``psycopg2``:
     containers:
       django:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - *build_deps
         - !Install
           - libmemcached

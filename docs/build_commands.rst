@@ -80,7 +80,7 @@ To install a package of any (supported) linux distribution just use
 
      alpine:
        setup:
-       - !Alpine v3.4
+       - !Alpine v3.5
        - !Install [python]
 
 Occasionally you need some additional packages to use for container building,
@@ -301,7 +301,7 @@ To install base alpine system use:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
 
 Potentially any alpine version instead of ``v3.4`` should work.
 
@@ -310,7 +310,7 @@ To install any alpine package use generic ``!Install`` command:
 .. code-block:: yaml
 
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [python]
 
 
@@ -328,7 +328,7 @@ command. For example:
 
 All node packages are installed as ``--global`` which should be expected. If
 no distribution is specified before the ``!NpmInstall`` command, the implicit
-``!Alpine v3.4`` (in fact the latest version) will be executed.
+``!Alpine v3.5`` (in fact the latest version) will be executed.
 
 .. code-block:: yaml
 
@@ -697,7 +697,7 @@ config:
 
   docker-parser: ❶
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.5
     - !Install [python]
     - !Depends Dockerfile ❷
     - !Depends docker2vagga.py ❷
@@ -754,7 +754,7 @@ the base distribution) can be set by original container:
           container: packages
       alpine:
         setup:
-        - !Alpine v3.4
+        - !Alpine v3.5
         - !SubConfig
           path: packages.yaml
           container: packages
