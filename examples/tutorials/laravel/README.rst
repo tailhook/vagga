@@ -221,6 +221,23 @@ Add the command to initialize the database:
 
           mysqladmin -u root shutdown
 
+Add a the php mysql module to our container:
+
+.. code-block:: yaml
+
+    containers:
+      laravel:
+        # ...
+        setup:
+        - !Ubuntu xenial
+        - !UbuntuUniverse
+        - !Install
+          - php-dom
+          - php-mbstring
+          - php-mysql # mysql module
+        - !Env { <<: *env }
+        - !ComposerDependencies
+
 Now change our ``run`` command to start the database alongside our project:
 
 .. code-block:: yaml
@@ -650,23 +667,6 @@ Change ``database/seeds/DatabaseSeeder.php`` to include ``ArticleSeeder``:
             $this->call(ArticleSeeder::class);
         }
     }
-
-Add a the php mysql module to our container:
-
-.. code-block:: yaml
-
-    containers:
-      laravel:
-        # ...
-        setup:
-        - !Ubuntu xenial
-        - !UbuntuUniverse
-        - !Install
-          - php-dom
-          - php-mbstring
-          - php-mysql
-        - !Env { <<: *env }
-        - !ComposerDependencies
 
 Change the ``run`` command to execute the migrations and seed our database:
 
