@@ -52,9 +52,9 @@ fn check_export(cmd: &String) -> Option<String> {
         Some(slash) => {
             let exe = &cmd[slash+1..];
             if exe == "vagga" || exe.starts_with("vagga_") {
-                Some(exe.to_owned())
-            } else {
                 None
+            } else {
+                Some(exe.to_owned())
             }
         }
         None => Some(cmd.clone()),
