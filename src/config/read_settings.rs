@@ -23,6 +23,7 @@ struct SecureSettings {
     build_lock_wait: Option<bool>,
     auto_apply_sysctl: Option<bool>,
     index_all_images: Option<bool>,
+    run_symlinks_as_commands: Option<bool>,
     environ: BTreeMap<String, String>,
 }
 
@@ -43,6 +44,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("build_lock_wait", V::Scalar::new().optional())
         .member("auto_apply_sysctl", V::Scalar::new().optional())
         .member("index_all_images", V::Scalar::new().optional())
+        .member("run_symlinks_as_commands", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
             V::Scalar::new(), V::Scalar::new()));
     if has_children {
@@ -60,6 +62,7 @@ struct InsecureSettings {
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
     build_lock_wait: Option<bool>,
+    run_symlinks_as_commands: Option<bool>,
     environ: BTreeMap<String, String>,
 }
 
@@ -69,6 +72,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
     .member("shared_cache", V::Scalar::new().optional())
     .member("ubuntu_mirror", V::Scalar::new().optional())
     .member("alpine_mirror", V::Scalar::new().optional())
+    .member("run_symlinks_as_commands", V::Scalar::new().optional())
     .member("environ", V::Mapping::new(
         V::Scalar::new(), V::Scalar::new())))
 }
@@ -124,6 +128,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.index_all_images {
         int_settings.index_all_images = val;
     }
+    if let Some(val) = cfg.run_symlinks_as_commands {
+        int_settings.run_symlinks_as_commands = val;
+    }
     for (k, v) in &cfg.environ {
         int_settings.environ.insert(k.clone(), v.clone());
     }
@@ -159,6 +166,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.index_all_images {
             int_settings.index_all_images = val;
         }
+        if let Some(val) = cfg.run_symlinks_as_commands {
+            int_settings.run_symlinks_as_commands = val;
+        }
         for (k, v) in &cfg.environ {
             int_settings.environ.insert(k.clone(), v.clone());
         }
@@ -185,8 +195,10 @@ pub fn read_settings(project_root: &Path)
         push_image_script: None,
         build_lock_wait: false,
         auto_apply_sysctl: false,
-        environ: BTreeMap::new(),
         index_all_images: false,
+        // This will be changed to `true` in some future release
+        run_symlinks_as_commands: false,
+        environ: BTreeMap::new(),
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {
@@ -237,6 +249,9 @@ pub fn read_settings(project_root: &Path)
         }
         if let Some(val) = cfg.build_lock_wait {
             int_settings.build_lock_wait = val;
+        }
+        if let Some(val) = cfg.run_symlinks_as_commands {
+            int_settings.run_symlinks_as_commands = val;
         }
         for (k, v) in &cfg.environ {
             int_settings.environ.insert(k.clone(), v.clone());

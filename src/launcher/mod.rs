@@ -44,8 +44,49 @@ pub struct Context {
     isolate_network: bool
 }
 
+fn check_export(cmd: &String) -> Option<String> {
+    if cmd == "/proc/self/exe" {
+        return None;
+    }
+    match cmd.rfind("/") {
+        Some(slash) => {
+            let exe = &cmd[slash+1..];
+            if exe == "vagga" || exe.starts_with("vagga_") {
+                Some(exe.to_owned())
+            } else {
+                None
+            }
+        }
+        None => Some(cmd.clone()),
+    }
+}
+
 pub fn run(input_args: Vec<String>) -> i32 {
     let mut err = stderr();
+    let workdir = env::current_dir().unwrap();
+
+    let (config, cfg_dir) = match find_config(&workdir, true) {
+        Ok(tup) => tup,
+        Err(e) => {
+            writeln!(&mut err, "{}", e).ok();
+            return 126;
+        }
+    };
+    // Not sure this is a best place, but the variable is needed for correct
+    // reading of settings
+    if let Some(x) = env::var_os("HOME") {
+        env::set_var("_VAGGA_HOME", x);
+    }
+
+    let (ext_settings, int_settings) = match read_settings(&cfg_dir)
+    {
+        Ok(tup) => tup,
+        Err(e) => {
+            writeln!(&mut err, "{}", e).ok();
+            return 126;
+        }
+    };
+
     let mut commands = Vec::<String>::new();
     let mut cname = "".to_string();
     let mut args = vec!();
@@ -55,7 +96,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
     let mut owner_check = true;
     let mut prerequisites = true;
     let mut isolate_network = false;
-    {
+
+    let export_command = input_args.get(0).and_then(check_export);
+    if !int_settings.run_symlinks_as_commands || export_command.is_none() {
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Runs a command in container, optionally builds container if that
@@ -81,8 +124,10 @@ pub fn run(input_args: Vec<String>) -> i32 {
             .add_option(&["--no-prerequisites"], StoreFalse,
             "Run only specified command(s), don't run prerequisites");
         ap.refer(&mut isolate_network)
-            .add_option(&["--isolate-network", "--no-network", "--no-net"], StoreTrue,
-            "Run command(s) inside isolated network");
+            .add_option(
+                &["--isolate-network", "--no-network", "--no-net"],
+                StoreTrue,
+                "Run command(s) inside isolated network");
         build_mode(&mut ap, &mut bmode);
         ap.refer(&mut commands)
           .add_option(&["-m", "--run-multi"], List, "
@@ -105,22 +150,26 @@ pub fn run(input_args: Vec<String>) -> i32 {
             Err(0) => return 0,
             Err(_) => return 122,
         }
+    } else {
+        let export_command = export_command.unwrap();
+        for (name, cmd) in &config.commands {
+            match cmd.link() {
+                Some(ref lnk) if lnk.name == export_command => {
+                    cname = name.clone();
+                }
+                _ => {}
+            }
+        }
+        if cname == "" {
+            writeln!(&mut err, "Can't find command {:?}", export_command).ok();
+            return 127;
+        }
     }
 
     if &cname[..] == "_network" {
         args.insert(0, "vagga _network".to_string());
         return ::network::run(args);
     }
-
-    let workdir = env::current_dir().unwrap();
-
-    let (config, cfg_dir) = match find_config(&workdir, true) {
-        Ok(tup) => tup,
-        Err(e) => {
-            writeln!(&mut err, "{}", e).ok();
-            return 126;
-        }
-    };
 
     if owner_check {
         let uid = unsafe { getuid() };
@@ -145,20 +194,6 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
     }
 
-    // Not sure this is a best place, but the variable is needed for correct
-    // reading of settings
-    if let Some(x) = env::var_os("HOME") {
-        env::set_var("_VAGGA_HOME", x);
-    }
-
-    let (ext_settings, int_settings) = match read_settings(&cfg_dir)
-    {
-        Ok(tup) => tup,
-        Err(e) => {
-            writeln!(&mut err, "{}", e).ok();
-            return 126;
-        }
-    };
     let int_workdir = workdir.strip_prefix(&cfg_dir)
                              .unwrap_or(&Path::new("."));
 

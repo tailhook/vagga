@@ -18,6 +18,7 @@ pub struct Settings {
     pub auto_apply_sysctl: bool,
     pub environ: BTreeMap<String, String>,
     pub index_all_images: bool,
+    pub run_symlinks_as_commands: bool,
 }
 
 impl FromStr for Settings {
