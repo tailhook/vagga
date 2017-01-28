@@ -28,21 +28,22 @@ setup() {
         rm -r /work/tmp/cache/cachedir-volume-test-add-files
     fi
 
-    run vagga _run cachedir-add-files sh -c "touch /var/cache/test1"
+    run vagga _run cachedir-add-files touch /var/cache/test1
     [[ $status = 0 ]]
 
-    run vagga _run cachedir-add-files sh -c "ls -1 /var/cache | wc -l"
+    run vagga _run cachedir-add-files ls -1 /var/cache
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "1" ]]
+    [[ ${lines[${#lines[@]}-1]} = "test1" ]]
 
-    run vagga _run cachedir-add-files sh -c "touch /var/cache/test2"
+    run vagga _run cachedir-add-files touch /var/cache/test2
     [[ $status = 0 ]]
 
-    run vagga _run cachedir-add-files sh -c "ls -1 /var/cache | wc -l"
+    run vagga _run cachedir-add-files ls -1 /var/cache
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "2" ]]
+    [[ ${lines[${#lines[@]}-2]} = "test1" ]]
+    [[ ${lines[${#lines[@]}-1]} = "test2" ]]
 
     link=$(readlink .vagga/cachedir-add-files)
     [[ $link = ".roots/cachedir-add-files.e8007744/root" ]]
