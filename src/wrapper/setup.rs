@@ -448,9 +448,18 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     "mount !BindRO: {err}");
             }
             &V::CacheDir(ref bindpath) => {
+                // if bindpath == "/", mount the cache root
+                let bindpath = if bindpath == "/" {
+                    Path::new("")
+                } else {
+                    bindpath
+                };
+
+                // bind path must be relative to cache root
                 if bindpath.is_absolute() {
                     return Err(format!("mount !CacheDir {:?}: path must not be absolute", &bindpath))
                 }
+
                 let source = Path::new("/vagga/cache").join(bindpath);
                 try_msg!(BindMount::new(&source, &dest).mount(),
                     "mount !CacheDir: {err}");
