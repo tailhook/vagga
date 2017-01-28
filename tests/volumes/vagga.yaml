@@ -1,0 +1,32 @@
+containers:
+
+  # !CacheDir
+  cachedir:
+    setup:
+    - !Alpine v3.5
+    - !EnsureDir /var/cache
+    - !CacheDirs
+      /var/cache: cachedir-volume-test
+    - !Sh echo "test cache" > /var/cache/test
+
+  cachedir-add-files:
+    setup:
+    - !Alpine v3.5
+    - !EnsureDir /var/cache
+    - !CacheDirs
+      /var/cache: cachedir-volume-test-add-files
+    volumes:
+      /var/cache: !CacheDir cachedir-volume-test-add-files
+
+commands:
+
+  # !CacheDir
+  cachedir-with-mounted-volume: !Command
+    container: cachedir
+    volumes:
+      /var/cache: !CacheDir cachedir-volume-test
+    run: ls -1 /var/cache | wc -l
+
+  cachedir-without-mounted-volume: !Command
+    container: cachedir
+    run: ls -1 /var/cache | wc -l
