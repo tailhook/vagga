@@ -105,6 +105,12 @@ Available volume types:
    Read-only bind mount of a folder inside a container to another folder. See
    :volume:`BindRW` for more info.
 
+.. volume:: CacheDir
+
+   Mounts a subdirectory of the cache directory, which can be either the
+   directory set in the vagga ``settings.yaml`` or ``.vagga/.cache`` if no cache
+   directory is configured
+
 .. volume:: Empty
 
    Mounts an empty read-only directory. Technically mounts a new `Tmpfs` system
