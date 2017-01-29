@@ -107,9 +107,18 @@ Available volume types:
 
 .. volume:: CacheDir
 
-   Mounts a subdirectory of the cache directory, which can be either the
-   directory set in the vagga ``settings.yaml`` or ``.vagga/.cache`` if no cache
-   directory is configured
+   Mounts a directory cached by vagga. Useful if you need access to the cache
+   during container run.
+
+   For example::
+
+       setup:
+       # ...
+       - !CacheDirs
+         /root/.m2/repository: maven-cache
+       # ...
+       volumes:
+         /root/.m2/reposiory: !CacheDir maven-cache
 
 .. volume:: Empty
 
