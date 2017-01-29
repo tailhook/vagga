@@ -70,7 +70,7 @@ pub fn volume_validator<'x>() -> V::Enum<'x> {
     .option("VaggaBin", V::Nothing)
     .option("BindRW", V::Scalar::new())
     .option("BindRO", V::Scalar::new())
-    .option("CacheDir", V::Scalar::new())
+    .option("CacheDir", V::Scalar::new().optional().default(""))
     .option("Empty", V::Nothing)
     .option("Snapshot", V::Structure::new()
         .member("container", V::Scalar::new().optional())

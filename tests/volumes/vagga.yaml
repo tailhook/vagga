@@ -9,6 +9,8 @@ containers:
     - !CacheDirs
       /mnt/cache: cachedir-volume-test
     - !Sh touch /mnt/cache/file.txt
+    volumes:
+      /mnt/cache: !CacheDir cachedir-volume-test
 
   cachedir-ubuntu:
     setup:
@@ -25,7 +27,7 @@ containers:
     - !Alpine v3.5
     - !EnsureDir /mnt/cache-root
     volumes:
-      /mnt/cache-root: !CacheDir /
+      /mnt/cache-root: !CacheDir
 
   cachedir-add-files:
     setup:
@@ -41,16 +43,8 @@ commands:
   # !CacheDir
   cachedir-count-files: !Command
     container: cachedir
-    volumes:
-      /mnt/cache: !CacheDir cachedir-volume-test
     run: ls -1 /mnt/cache | wc -l
 
   cachedir-ubuntu-count-files: !Command
     container: cachedir-ubuntu
     run: ls -1 /mnt/cache | wc -l
-
-  cachedir-mount-cache-root-list-files: !Command
-    container: cachedir
-    volumes:
-      /mnt/cache-root: !CacheDir /
-    run: ls -1 /mnt/cache-root
