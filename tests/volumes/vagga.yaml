@@ -38,6 +38,13 @@ containers:
     volumes:
       /mnt/cache: !CacheDir cachedir-volume-test-add-files
 
+  cachedir-mount-absolute-path:
+    setup:
+      - !Alpine v3.5
+      - !EnsureDir /mnt/cache
+    volumes:
+      /mnt/cache: !CacheDir /cache
+
 commands:
 
   # !CacheDir

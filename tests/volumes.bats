@@ -60,3 +60,10 @@ setup() {
     link=$(readlink .vagga/cachedir-add-files)
     [[ $link = ".roots/cachedir-add-files.c12b46ac/root" ]]
 }
+
+@test "volumes: !CacheDir mount absolute path should fail" {
+    run vagga _run cachedir-mount-absolute-path date
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 124 ]]
+    [[ ${lines[${#lines[@]}-1]} = *'mount !CacheDir "/cache": path must not be absolute' ]]
+}
