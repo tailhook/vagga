@@ -448,6 +448,11 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                     "mount !BindRO: {err}");
             }
             &V::CacheDir(ref bindpath) => {
+                // avoid mounting cache root
+                if bindpath == Path::new("") {
+                    return Err("mount !CacheDir: path must not be empty".into())
+                }
+
                 // bind path must be relative to cache root
                 if bindpath.is_absolute() {
                     return Err(format!(

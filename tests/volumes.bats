@@ -22,16 +22,6 @@ setup() {
     [[ $link = ".roots/cachedir-ubuntu.3b309058/root" ]]
 }
 
-@test "volumes: !CacheDir mount cache root" {
-    run vagga _run cachedir-mount-cache-root ls /mnt/cache-root
-    printf "%s\n" "${lines[@]}"
-    [[ $status = 0 ]]
-    [[ ${lines[@]} = *"cachedir-volume-test"* ]]
-
-    link=$(readlink .vagga/cachedir-mount-cache-root)
-    [[ $link = ".roots/cachedir-mount-cache-root.6fc500ad/root" ]]
-}
-
 @test "volumes: !CacheDir add files to cache" {
     # clear cache directory if exists
     if [ -d /work/tmp/cache/cachedir-volume-test-add-files ]; then
@@ -59,6 +49,13 @@ setup() {
 
     link=$(readlink .vagga/cachedir-add-files)
     [[ $link = ".roots/cachedir-add-files.c12b46ac/root" ]]
+}
+
+@test "volumes: !CacheDir mount empty path should fail" {
+    run vagga _run cachedir-mount-empty-path date
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 124 ]]
+    [[ ${lines[${#lines[@]}-1]} = *'mount !CacheDir: path must not be empty' ]]
 }
 
 @test "volumes: !CacheDir mount absolute path should fail" {
