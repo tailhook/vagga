@@ -303,6 +303,11 @@ const BUILTIN_COMMANDS:
         accept_container: false,
         options: &[]
     },
+    &BuiltinCommand {
+        name: "_update_symlinks",
+        accept_container: false,
+        options: &[]
+    },
 ];
 
 

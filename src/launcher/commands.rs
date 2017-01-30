@@ -1,13 +1,12 @@
-use std::io::{stdout, stderr, Write, BufWriter};
-use std::fs::{File, Permissions, rename, set_permissions};
+use std::io::{self, stdout, stderr};
+use std::fs::{read_link};
 use std::env;
 use std::path::Path;
-use std::os::unix::fs::PermissionsExt;
 use launcher::Context;
 
 use argparse::{ArgumentParser, StoreConst};
 
-use file_util::{safe_ensure_dir};
+use file_util::{safe_ensure_dir, force_symlink};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Which {
@@ -17,17 +16,17 @@ pub enum Which {
 }
 
 
-pub fn update_commands(ctx: &Context, mut args: Vec<String>)
+pub fn update_symlinks(ctx: &Context, mut args: Vec<String>)
     -> Result<i32, String>
 {
     use self::Which::*;
 
     let mut which = All;
     {
-        args.insert(0, "vagga _update_commands".to_string());
+        args.insert(0, "vagga _update_symlinks".to_string());
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            Update scripts in `.vagga/cmd` and `~/.vagga/cmd`
+            Update symlinks in `.vagga/cmd` and `~/.vagga/cmd`
             ");
         ap.refer(&mut which)
             .add_option(&["--local-only"], StoreConst(Local),
@@ -42,18 +41,22 @@ pub fn update_commands(ctx: &Context, mut args: Vec<String>)
             }
         }
     }
+    if !ctx.settings.run_symlinks_as_commands {
+        warn!("To make these symlinks useful, \
+            you should enable: `run-symlinks-as-commands` setting");
+    }
 
     if which == All || which == Local {
-        update_local_scripts(ctx)?;
+        update_local_links(ctx)?;
     }
     if which == All || which == User {
-        update_user_scripts(ctx)?;
+        update_user_links(ctx)?;
     }
 
     Ok(0)
 }
 
-fn update_user_scripts(ctx: &Context) -> Result<(), String> {
+fn update_user_links(ctx: &Context) -> Result<(), String> {
 
     let home = if let Ok(home) = env::var("_VAGGA_HOME") {
         home
@@ -65,68 +68,45 @@ fn update_user_scripts(ctx: &Context) -> Result<(), String> {
     safe_ensure_dir(&vagga)?;
     let cmddir = vagga.join("cmd");
     safe_ensure_dir(&cmddir)?;
+    let vagga_exe = read_link("/proc/self/exe")
+        .map_err(|e| format!("can't find vagga's executable: {}", e))?;
 
     for (_, ref cmd) in &ctx.config.commands {
         if let Some(link) = cmd.link() {
-            let tmpname = cmddir.join(format!("{}.tmp", link.name));
-            let mut f = BufWriter::new(
-                File::create(&tmpname)
-                .map_err(|e| format!("Can't write file {:?}: {}",
-                    tmpname, e))?);
-            // TODO(tailhook) properly escape command name
-            // TODO(tailhook) running the script in `.vagga` is insecure
-            write!(&mut f, "#!/bin/sh\n\
-                    dir=$(${{VAGGA:-vagga}} _base_dir)\n\
-                    exec $dir/.vagga/.cmd/{} \"$*\"\n", link.name)
-                .map_err(|e| format!("Can't write file {:?}: {}",
-                    tmpname, e))?;
-            set_permissions(&tmpname, Permissions::from_mode(0o755))
-                .map_err(|e| format!("Can't set permissions for {:?}: {}",
-                    tmpname, e))?;
             let dest = cmddir.join(link.name);
-            rename(&tmpname, &dest)
-                .map_err(|e| format!("Can't rename file {:?} -> {:?}: {}",
-                    tmpname, dest, e))?;
+            match read_link(&dest) {
+                Ok(ref value) if value == &vagga_exe => continue,
+                Ok(_) => {},
+                Err(ref e) if e.kind() == io::ErrorKind::NotFound => {}
+                Err(e) => return Err(format!("read_link error: {:?}", e)),
+            };
+            force_symlink(&vagga_exe, &dest)
+                .map_err(|e| format!("Error symlinking: {}", e))?;
         }
     }
 
     Ok(())
 }
 
-fn update_local_scripts(ctx: &Context) -> Result<(), String> {
+fn update_local_links(ctx: &Context) -> Result<(), String> {
     let vagga = ctx.config_dir.join(".vagga");
     safe_ensure_dir(&vagga)?;
     let cmddir = vagga.join(".cmd");
     safe_ensure_dir(&cmddir)?;
+    let vagga_exe = read_link("/proc/self/exe")
+        .map_err(|e| format!("can't find vagga's executable: {}", e))?;
 
-    for (ref name, ref cmd) in &ctx.config.commands {
+    for (_, ref cmd) in &ctx.config.commands {
         if let Some(link) = cmd.link() {
-            let tmpname = cmddir.join(format!("{}.tmp", link.name));
-            let mut f = BufWriter::new(
-                File::create(&tmpname)
-                .map_err(|e| format!("Can't write file {:?}: {}",
-                    tmpname, e))?);
-            if link.path_translation {
-                write!(&mut f, "#!/bin/sh\n\
-                        dir=$(${{VAGGA:-vagga}} _base_dir)\n\
-                        ${{VAGGA:-vagga}} {:?} \"$*\" 2>&1 \
-                        | sed \"s@/work/@$dir/@g\"\n", name)
-                    .map_err(|e| format!("Can't write file {:?}: {}",
-                        tmpname, e))?;
-            } else {
-                // TODO(tailhook) properly escape command name
-                write!(&mut f, "#!/bin/sh\n\
-                        exec ${{VAGGA:-vagga}} {:?} \"$*\"\n", name)
-                    .map_err(|e| format!("Can't write file {:?}: {}",
-                        tmpname, e))?;
-            }
-            set_permissions(&tmpname, Permissions::from_mode(0o755))
-                .map_err(|e| format!("Can't set permissions for {:?}: {}",
-                    tmpname, e))?;
             let dest = cmddir.join(link.name);
-            rename(&tmpname, &dest)
-                .map_err(|e| format!("Can't rename file {:?} -> {:?}: {}",
-                    tmpname, dest, e))?;
+            match read_link(&dest) {
+                Ok(ref value) if value == &vagga_exe => continue,
+                Ok(_) => {},
+                Err(ref e) if e.kind() == io::ErrorKind::NotFound => {}
+                Err(e) => return Err(format!("read_link error: {:?}", e)),
+            };
+            force_symlink(&vagga_exe, &dest)
+                .map_err(|e| format!("Error symlinking: {}", e))?;
         }
     }
 
