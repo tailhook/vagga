@@ -2,13 +2,13 @@ _defaults:
   linux: &linux
     os: linux
     dist: trusty
-    sudo: required    
+    sudo: required
 
 language: rust
 matrix:
   include:
     - <<: *linux
-      env: TESTS="cargo alpine badcmd copy cyclic completion generic image network prerequisites readonly uidmap vcs version"
+      env: TESTS="cargo alpine badcmd copy cyclic completion generic image network prerequisites readonly uidmap vcs version volumes"
     - <<: *linux
       env: TESTS="inheritance subconfig ubuntu ubuntu_release"
     - <<: *linux
