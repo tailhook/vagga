@@ -447,6 +447,23 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                         .mount(),
                     "mount !BindRO: {err}");
             }
+            &V::CacheDir(ref bindpath) => {
+                // avoid mounting cache root
+                if bindpath == Path::new("") {
+                    return Err("mount !CacheDir: path must not be empty".into())
+                }
+
+                // bind path must be relative to cache root
+                if bindpath.is_absolute() {
+                    return Err(format!(
+                        "mount !CacheDir {:?}: path must not be absolute",
+                        &bindpath))
+                }
+
+                let source = Path::new("/vagga/cache").join(bindpath);
+                try_msg!(BindMount::new(&source, &dest).mount(),
+                    "mount !CacheDir: {err}");
+            }
             &V::Empty => {
                 Tmpfs::new(&dest)
                     .size_bytes(1)
@@ -544,4 +561,3 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
          .map_err(|e| format!("Error unmounting `/tmp`: {}", e))?;
     Ok(())
 }
-

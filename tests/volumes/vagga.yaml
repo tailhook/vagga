@@ -1,0 +1,57 @@
+containers:
+
+  # !CacheDir
+  cachedir:
+    setup:
+    - !Alpine v3.5
+    - !EnsureDir /mnt/cache
+    - !EnsureDir /mnt/cache-root
+    - !CacheDirs
+      /mnt/cache: cachedir-volume-test
+    - !Sh touch /mnt/cache/file.txt
+    volumes:
+      /mnt/cache: !CacheDir cachedir-volume-test
+
+  cachedir-ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !EnsureDir /mnt/cache
+    - !CacheDirs
+      /mnt/cache: cachedir-volume-test
+    - !Sh touch /mnt/cache/file.txt
+    volumes:
+      /mnt/cache: !CacheDir cachedir-volume-test
+
+  cachedir-add-files:
+    setup:
+    - !Alpine v3.5
+    - !EnsureDir /mnt/cache
+    - !CacheDirs
+      /mnt/cache: cachedir-volume-test-add-files
+    volumes:
+      /mnt/cache: !CacheDir cachedir-volume-test-add-files
+
+  cachedir-mount-empty-path:
+    setup:
+    - !Alpine v3.5
+    - !EnsureDir /mnt/cache
+    volumes:
+      /mnt/cache: !CacheDir ""
+
+  cachedir-mount-absolute-path:
+    setup:
+      - !Alpine v3.5
+      - !EnsureDir /mnt/cache
+    volumes:
+      /mnt/cache: !CacheDir /cache
+
+commands:
+
+  # !CacheDir
+  cachedir-count-files: !Command
+    container: cachedir
+    run: ls -1 /mnt/cache | wc -l
+
+  cachedir-ubuntu-count-files: !Command
+    container: cachedir-ubuntu
+    run: ls -1 /mnt/cache | wc -l

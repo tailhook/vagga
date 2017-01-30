@@ -105,6 +105,21 @@ Available volume types:
    Read-only bind mount of a folder inside a container to another folder. See
    :volume:`BindRW` for more info.
 
+.. volume:: CacheDir
+
+   Mounts a directory cached by vagga. Useful if you need access to the cache
+   during container run.
+
+   For example::
+
+       setup:
+       # ...
+       - !CacheDirs
+         /root/.m2/repository: maven-cache
+       # ...
+       volumes:
+         /root/.m2/reposiory: !CacheDir maven-cache
+
 .. volume:: Empty
 
    Mounts an empty read-only directory. Technically mounts a new `Tmpfs` system
