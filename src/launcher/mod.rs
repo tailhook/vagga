@@ -164,6 +164,8 @@ pub fn run(input_args: Vec<String>) -> i32 {
             writeln!(&mut err, "Can't find command {:?}", export_command).ok();
             return 127;
         }
+        args = input_args;
+        args.remove(0);  // the command itself
     }
 
     if &cname[..] == "_network" {
