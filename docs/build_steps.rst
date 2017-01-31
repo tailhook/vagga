@@ -694,8 +694,8 @@ Files and Directories
 
 .. step:: Remove
 
-   Remove file or a directory from the container and keep it clean on the end
-   of container build. Useful for removing cache directories.
+   Remove file or a directory from the container and **keep it clean on the end
+   of container build**. Useful for removing cache directories.
 
    This is also inherited by subcontainers. So if you know that some installer
    leaves temporary (or other unneeded files) after a build you may add this
