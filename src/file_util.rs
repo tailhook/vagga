@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::fs;
 use std::fs::Metadata;
 use std::ffi::CString;
+use std::time::{Instant, Duration};
 use std::os::unix::fs::{PermissionsExt, MetadataExt, symlink};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
@@ -232,6 +233,7 @@ impl Lock {
             Ok(()) => {}
             Err(nix::Error::Sys(nix::Errno::EAGAIN)) => {
                 warn!("{}", message);
+                let lock_start = Instant::now();
                 flock(f.as_raw_fd(), FlockArg::LockExclusive)
                     .map_err(|e| match e {
                         nix::Error::Sys(code) => {
@@ -239,6 +241,11 @@ impl Lock {
                         },
                         nix::Error::InvalidPath => unreachable!(),
                     })?;
+                let elapsed = lock_start.elapsed();
+                if elapsed > Duration::new(5, 0) {
+                    warn!("Lock was held {} seconds. Proceeding...",
+                        elapsed.as_secs());
+                }
             }
             Err(nix::Error::Sys(code)) => {
                 return Err(Error::from_raw_os_error(code as i32))
