@@ -9,6 +9,7 @@ use std::io::{self, Read, Write};
 use std::io::{stdout, stderr};
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
+use std::time::{Instant};
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
@@ -293,6 +294,7 @@ pub fn _build_container(container: &str,
         cmd.env("VAGGA_DEBUG_CMDENV", x);
     }
 
+    let build_start = Instant::now();
     let result = cmd.status();
     unmount(&Path::new("/vagga/root"))?;
     remove_dir(&Path::new("/vagga/root"))
@@ -334,6 +336,9 @@ pub fn _build_container(container: &str,
             return Err(format!("Error committing root dir: {}", x));
         }
     }
+    let duration = build_start.elapsed();
+    warn!("Container {} ({}) built in {} seconds.",
+        container, &ver[..8], duration.as_secs());
     return Ok(name);
 }
 
