@@ -213,17 +213,6 @@ pub fn _build_container(container: &str,
     let tmppath = PathBuf::from(
         &format!("/vagga/base/.roots/.tmp.{}", container));
 
-    let lock_name = tmppath.with_file_name(format!(".tmp.{}.lock", container));
-    let mut _lock_guard = if wrapper.settings.build_lock_wait {
-        Some(Lock::exclusive_wait(&lock_name,
-                "Other process is doing a build. Waiting...")
-            .map_err(|e| format!("Can't lock container build ({}). \
-                                 Aborting...", e))?)
-
-    } else {
-        None // will get lock later
-    };
-
     let ver = match get_version_hash(container, wrapper) {
         Ok(Some(ver)) => {
             if ver.len() == 128 && ver[..].is_ascii() {
@@ -256,12 +245,18 @@ pub fn _build_container(container: &str,
     };
     debug!("Container version: {:?}", ver);
 
+    let lock_name = tmppath.with_file_name(format!(".tmp.{}.lock", container));
+    let mut _lock_guard = if wrapper.settings.build_lock_wait {
+        Lock::exclusive_wait(&lock_name,
+            "Other process is doing a build. Waiting...")
+        .map_err(|e| format!("Can't lock container build ({}). \
+                              Aborting...", e))?
 
-    if _lock_guard.is_none() {
-        _lock_guard = Some(Lock::exclusive(&lock_name)
-            .map_err(|e| format!("Can't lock container build ({}). \
-                Probably other process is doing build. Aborting...", e))?);
-    }
+    } else {
+        Lock::exclusive(&lock_name)
+        .map_err(|e| format!("Can't lock container build ({}). \
+            Probably other process is doing build. Aborting...", e))?
+    };
 
     match prepare_tmp_root_dir(&tmppath) {
         Ok(()) => {}
