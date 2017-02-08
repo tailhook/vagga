@@ -61,6 +61,7 @@ mod version;
 mod wrapper;
 mod builder;
 mod runner;
+mod capsule;
 
 fn init_logging() {
     if let Err(_) = env::var("RUST_LOG") {

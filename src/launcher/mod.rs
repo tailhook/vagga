@@ -297,6 +297,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
         "_update_symlinks" => {
             commands::update_symlinks(&context, args)
         }
+        "_capsule" => {
+            ::capsule::run_command(&context, args)
+        }
         _ => {
             user::run_user_command(&context, cname, args)
         }
