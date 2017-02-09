@@ -71,7 +71,8 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     cmd.args(&args);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &context.settings);
-    // TODO(tailhook) move these to copy_env_vars, or at least reuse in ver?
+    // TODO(tailhook) move these to copy_env_vars, or at least
+    // reuse in ver and capsule?
     if let Ok(x) = env::var("RUST_LOG") {
         cmd.env("RUST_LOG", x);
     }

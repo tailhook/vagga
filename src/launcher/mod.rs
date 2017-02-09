@@ -15,7 +15,7 @@ mod list;
 mod user;
 mod pack;
 mod push;
-mod build;
+pub mod build;
 mod storage;
 mod underscore;
 mod completion;
@@ -25,7 +25,7 @@ mod supervisor;
 mod simple;
 mod capsule;
 
-mod wrap;
+pub mod wrap;
 pub mod system;
 pub mod network;
 mod socket;
@@ -35,14 +35,14 @@ mod prerequisites;
 
 
 pub struct Context {
-    config: Config,
-    settings: Settings,
-    ext_settings: MergedSettings,
-    workdir: PathBuf,
-    config_dir: PathBuf,
-    build_mode: BuildMode,
-    prerequisites: bool,
-    isolate_network: bool
+    pub config: Config,
+    pub settings: Settings,
+    pub ext_settings: MergedSettings,
+    pub workdir: PathBuf,
+    pub config_dir: PathBuf,
+    pub build_mode: BuildMode,
+    pub prerequisites: bool,
+    pub isolate_network: bool
 }
 
 fn check_export(cmd: &String) -> Option<String> {

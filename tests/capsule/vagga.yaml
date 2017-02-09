@@ -8,3 +8,7 @@ commands:
   vagga: !CapsuleCommand
     description: Recursive vagga
     run: [vagga]
+
+  sh: !CapsuleCommand
+    description: Recursive vagga
+    run: [sh]

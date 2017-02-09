@@ -127,12 +127,27 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut config: Config =
         parse_config(filename, &config_validator(), &opt)
         .map_err(|e| format!("{}", e))?;
+
+    // Is this a good place for such defaults?
     for (_, ref mut container) in config.containers.iter_mut() {
         if container.uids.len() == 0 {
             container.uids.push(Range::new(0, 65535));
         }
         if container.gids.len() == 0 {
             container.gids.push(Range::new(0, 65535));
+        }
+    }
+    for (_, cmd) in config.commands.iter_mut() {
+        match *cmd {
+            MainCommand::CapsuleCommand(ref mut cmd) => {
+                if cmd.uids.len() == 0 {
+                    cmd.uids.push(Range::new(0, 65535));
+                }
+                if cmd.gids.len() == 0 {
+                    cmd.gids.push(Range::new(0, 65535));
+                }
+            }
+            _ => {}
         }
     }
     return Ok(config);
