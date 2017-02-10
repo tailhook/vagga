@@ -20,6 +20,7 @@ use super::version::MinimumVagga;
 #[derive(RustcDecodable)]
 pub struct Config {
     pub minimum_vagga: Option<String>,
+    pub mixins: Vec<String>,
     pub commands: BTreeMap<String, MainCommand>,
     pub containers: BTreeMap<String, Container>,
 }
@@ -36,6 +37,7 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
     .member("minimum_vagga", MinimumVagga::new()
         .optional()
         .current_version(env!("VAGGA_VERSION").to_string()))
+    .member("mixins", V::Sequence::new(V::Scalar::new()))
     .member("containers", V::Mapping::new(
         V::Scalar::new(),
         containers::container_validator()))
@@ -85,25 +87,36 @@ pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
     return Ok((cfg, cfg_dir));
 }
 
+fn join_path<A, B>(base: A, relative: B) -> Result<PathBuf, String>
+    where A: AsRef<Path>, B: AsRef<Path>,
+{
+    let mut path = PathBuf::from(base.as_ref());
+    path.pop(); // pop original filename
+    for component in relative.as_ref().components() {
+        match component {
+            Component::Normal(x) => path.push(x),
+            _ => {
+                return Err(format!("Only relative paths without parent \
+                             directories can be included"));
+            }
+        }
+    }
+    return Ok(path);
+}
+
 fn include_file(pos: &Pos, include: &Include,
     err: &ErrorCollector, options: &Options)
     -> Ast
 {
     match *include {
         Include::File { filename } => {
-            let mut path = PathBuf::from(&*pos.filename);
-            path.pop(); // pop original filename
-            for component in Path::new(filename).components() {
-                match component {
-                    Component::Normal(x) => path.push(x),
-                    _ => {
-                        err.add_error(Error::preprocess_error(pos,
-                            format!("Only relative paths without parent \
-                                     directories can be included")));
-                        return Ast::void(pos);
-                    }
+            let path = match join_path(&*pos.filename, &filename) {
+                Ok(path) => path,
+                Err(e) => {
+                    err.add_error(Error::preprocess_error(pos, e));
+                    return Ast::void(pos);
                 }
-            }
+            };
 
             debug!("{} Including {:?}", pos, path);
 
@@ -127,6 +140,31 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut config: Config =
         parse_config(filename, &config_validator(), &opt)
         .map_err(|e| format!("{}", e))?;
+
+    for mixin in &config.mixins {
+        let mixin_result: Result<Config, _> =
+            join_path(filename, mixin)
+            .and_then(|path| {
+                parse_config(path, &config_validator(), &opt)
+                .map_err(|e| format!("{}", e))
+            });
+        match mixin_result {
+            Ok(subcfg) => {
+                // TODO(tailhook) recursively apply mixins
+                for (cname, cont) in subcfg.containers.into_iter() {
+                    // TODO(tailhook) what to do with conflicts?
+                    config.containers.insert(cname, cont);
+                }
+                for (cname, cmd) in subcfg.commands.into_iter() {
+                    // TODO(tailhook) what to do with conflicts?
+                    config.commands.insert(cname, cmd);
+                }
+            }
+            Err(e) => {
+                warn!("Skipping mixin because of error. Error: {}", e);
+            }
+        }
+    }
 
     // Is this a good place for such defaults?
     for (_, ref mut container) in config.containers.iter_mut() {
