@@ -1,4 +1,5 @@
 mod build;
+mod run;
 
 use std::io::{Write, stdout, stderr};
 
@@ -36,6 +37,7 @@ pub fn run_command(context: &Context, mut input_args: Vec<String>)
     }
     match &cname[..] {
         "build" => build::build_command(context, args),
+        "run" => run::run_command(context, args),
         _ => {
             writeln!(&mut stderr(), "Unknown command {:?}", cname).ok();
             Ok(127)
