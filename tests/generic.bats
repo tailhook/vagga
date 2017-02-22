@@ -564,6 +564,6 @@ site_settings:
     printf "%s\n" "${lines[@]}"
     [[ $status = 1 ]]
     # check there is no "Failed to remount readonly root" warning
-    [[ $output != *"WARN"* ]]
+    [[ $output != *"Failed to remount"* ]]
     [[ $output = *"Read-only file system"* ]]
 }
