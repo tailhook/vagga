@@ -21,8 +21,7 @@ There are three basic modes of operation:
 
 * ``stop-on-failure`` -- stops all processes as soon as any single one is dead
   (default)
-* ``wait-all`` -- wait for all processes to finish
-* ``restart`` -- always restart dead processes
+* ``wait-all-successful`` -- waits until all successful processes finish
 
 In any mode of operation supervisor itself never exits until all the children
 are dead. Even when you kill supervisor with ``kill -9`` or ``kill -KILL`` all
@@ -68,41 +67,28 @@ time-wasting.
 
 With ``stop-on-failure`` you'll notice that some service is down immediately.
 
-In this mode vagga returns ``1`` if some process is dead before vagga received
-``SIGINT`` or ``SIGTERM`` signal. Exit code is ``0`` if one of the two received
-by vagga. And an ``128+signal`` code when any other singal was sent to
-supervisor (and propagated to other processes).
+In this mode vagga returns exit code of first process exited. And an
+``128+signal`` code when any other singal was sent to supervisor (and
+propagated to other processes).
 
 
-Wait
-----
+Wait All Successful
+-------------------
 
-In ``wait`` mode vagga waits that all processes are exited before shutting
-down. If any is dead, it's ok, all other will continue as usual.
+In ``wait-all-successful`` mode vagga works same as in ``stop-on-failure``
+mode, except processes that exit with exit code ``0`` (which is known as
+sucessful error code) do not trigger failure condition, so other processes
+continue to work. If any process exits on signal or with non-zero exit code
+"failure" mode is switched on and vagga exits the same as in
+``stop-on-failure`` mode.
 
 This mode is intended for running some batch processing of multiple commands
 in multiple containers. All processes are run in parallel, like with other
 modes.
 
-.. note:: Depending on ``pid1mode`` of each proccess in each container vagga will
-   wait either only for process spawned by vagga (``pid1mode: wait`` or
-   ``pidmode: exec``), or for all (including daemonized) processes spawned by
-   that command (``pid1mode: wait-all-children``). See :ref:`pid1mode` for
-   details.
-
-
-Restart
--------
-
-This is a supervision mode that most other supervisors obey. If one of the
-processes is dead, it will be restarted without messing with other processes.
-
-It's not recommended mode for workstations but may be useful for staging
-server (Currently, we do not recommend running vagga in production at all).
-
-.. note:: The whole container is restarted on process failure, so ``/tmp`` is
-   clean, all daemonized processes are killed, etc. See also :ref:`pid1mode`.
-
+In this mode vagga returns exit code zero if all processes exited successfully
+and exit code of the first failing process (or ``128+signal`` if it was dead
+by signal) otherwise.
 
 
 Tips

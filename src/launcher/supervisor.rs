@@ -15,7 +15,7 @@ use unshare::{Command, Child, Namespace, reap_zombies, Fd};
 use options::build_mode::{build_mode, BuildMode};
 use container::nsutil::{set_namespace, unshare_namespace};
 use config::command::{SuperviseInfo, Networking};
-use config::command::SuperviseMode::{stop_on_failure};
+use config::command::SuperviseMode::{wait_all_successful};
 use config::command::ChildCommand::{BridgeCommand};
 use tty_util::{TtyGuard};
 use super::network;
@@ -77,10 +77,6 @@ pub fn parse_args(sup: &SuperviseInfo, context: &Context,
         let mut only: Vec<String> = Vec::new();
         let mut exclude: Vec<String> = Vec::new();
         let mut bmode = context.build_mode;
-        if sup.mode != stop_on_failure {
-            return Err(ArgError::Error(
-                format!("Only stop-on-failure mode implemented")));
-        }
         {
             args.insert(0, "vagga ".to_string() + &cmd);
             let mut ap = ArgumentParser::new();
@@ -378,6 +374,10 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     for (pid, status) in reap_zombies() {
                         if let Some((name, _)) = children.remove(&pid) {
                             errcode = convert_status(status);
+                            if sup.mode == wait_all_successful && errcode == 0
+                            {
+                                continue;
+                            }
                             println!(
                                 "---------- \
                                 Process {}:{} {}. Shutting down \

@@ -23,9 +23,8 @@ pub enum Pid1Mode {
 #[derive(RustcDecodable, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum SuperviseMode {
-    wait_all,
+    wait_all_successful,
     stop_on_failure,
-    restart,
 }
 
 #[derive(RustcDecodable, Debug, Clone, PartialEq, Eq, Copy)]
