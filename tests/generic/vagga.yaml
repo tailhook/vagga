@@ -269,6 +269,18 @@ commands:
           echo hello
           sleep 0.1
 
+  wait-all: !Supervise
+    mode: wait-all-successful
+    children:
+      second-line: !Command
+        container: busybox
+        run: |
+          sleep 0.1
+          echo world
+      first-line: !Command
+        container: busybox
+        run: |
+          echo hello
 
   args: !Supervise
     description: Test of arg parsing

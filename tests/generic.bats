@@ -113,6 +113,15 @@ setup() {
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
+@test "generic: The supervise wait-all-successful command works" {
+    run vagga wait-all
+    printf "%s\n" "${lines[@]}"
+    link=$(readlink .vagga/busybox)
+    [[ $link = ".roots/busybox.d304a005/root" ]]
+    [[ ${lines[${#lines[@]}-2]} = "hello" ]]
+    [[ ${lines[${#lines[@]}-1]} = "world" ]]
+}
+
 @test "generic: The supervise fail-fast works" {
     run vagga one-kills-another
     printf "%s\n" "${lines[@]}"
