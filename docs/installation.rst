@@ -17,26 +17,26 @@ Binary Installation
 .. note:: If you're ubuntu user you should use package.
    See :ref:`instructions below<ubuntu>`.
 
-Visit http://files.zerogw.com/vagga/latest.html to find out latest
+Visit https://files.zerogw.com/vagga/latest.html to find out latest
 tarball version. Then run the following::
 
-    $ wget http://files.zerogw.com/vagga/vagga-0.7.0.tar.xz
+    $ wget https://files.zerogw.com/vagga/vagga-0.7.0.tar.xz
     $ tar -xJf vagga-0.7.0.tar.xz
     $ cd vagga
     $ sudo ./install.sh
 
 Or you may try more obscure way::
 
-    $ curl -sSf http://files.zerogw.com/vagga/vagga-install.sh | sh
+    $ curl -sSf https://files.zerogw.com/vagga/vagga-install.sh | sh
 
 
 .. note:: Similarly we have a `-testing` variant of both ways:
 
-    * http://files.zerogw.com/vagga/latest-testing.html
+    * https://files.zerogw.com/vagga/latest-testing.html
 
     .. code-block:: bash
 
-       $ curl -sSf http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
+       $ curl -sSf https://files.zerogw.com/vagga/vagga-install-testing.sh | sh
 
 
 Runtime Dependencies
@@ -305,4 +305,4 @@ If you'd like something more stable, try:
 
 .. _vagga-docker: https://github.com/tailhook/vagga-docker
 .. _vagga-box: https://github.com/tailhook/vagga-box
-.. _this faq entry: http://vagga.readthedocs.io/en/latest/errors.html#don-t-run-vagga-on-shared-folders
+.. _this faq entry: https://vagga.readthedocs.io/en/latest/errors.html#don-t-run-vagga-on-shared-folders
