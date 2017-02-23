@@ -38,8 +38,16 @@ Supported settings:
 
 .. opt:: site-settings
 
-    (experimental) The mapping of project paths to settings for this specific
+    The mapping of project paths to settings for this specific
     project.
+
+    Example:
+
+    .. code-block:: yaml
+
+       site-settings:
+         /home/myuser/myproject:
+           cache-dir: /home/myuser/.cache/myproject
 
 .. opt:: proxy-env-vars
 
