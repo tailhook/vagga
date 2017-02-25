@@ -135,7 +135,7 @@ pub fn prepare_containers(sup: &SuperviseInfo, args: &Args, context: &Context)
             containers.insert(cont.to_string());
             let continfo = context.config.containers.get(cont)
                 .ok_or_else(|| format!("Container {:?} not found", cont))?;
-            let ver = build_container(context, cont, args.build_mode)?;
+            let ver = build_container(context, cont, args.build_mode, false)?;
             prepare_volumes(continfo.volumes.values(), context)?;
             prepare_volumes(child.get_volumes().values(), context)?;
             versions.insert(cont.to_string(), ver);

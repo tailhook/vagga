@@ -12,7 +12,7 @@ pub fn prepare_volumes<'x, I>(volumes: I, context: &Context)
         match *v {
             Container(ref name) |
             Snapshot(SnapshotInfo { container: Some(ref name), .. }) => {
-                build_container(context, name, context.build_mode)?;
+                build_container(context, name, context.build_mode, false)?;
             }
             _ => {}
         }

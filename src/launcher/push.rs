@@ -21,7 +21,7 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
 
     let cinfo = ctx.config.get_container(&opt.name)?;
 
-    let ver = build_container(ctx, &opt.name, opt.build_mode)?;
+    let ver = build_container(ctx, &opt.name, opt.build_mode, false)?;
     let short_hash = match ver.rsplitn(2, ".").next() {
         Some(v) => v,
         None => return Err(format!("Incorrect container version")),

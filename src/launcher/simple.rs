@@ -59,7 +59,7 @@ pub fn prepare_containers(cinfo: &CommandInfo, _: &Args, context: &Context)
     -> Result<Version, String>
 {
     let ver = build_container(context, &cinfo.container,
-        context.build_mode)?;
+        context.build_mode, false)?;
     let cont = context.config.containers.get(&cinfo.container)
         .ok_or_else(|| format!("Container {:?} not found", cinfo.container))?;
     prepare_volumes(cont.volumes.values(), context)?;

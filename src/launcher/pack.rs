@@ -17,7 +17,7 @@ pub fn pack_command(context: &Context, args: Vec<String>)
         Err(code) => return Ok(code),
     };
 
-    let ver = build_container(context, &opt.name, opt.build_mode)?;
+    let ver = build_container(context, &opt.name, opt.build_mode, false)?;
 
     let mut cmd: Command = Wrapper::new(Some(&ver), &context.settings);
     cmd.map_users_for(

@@ -11,14 +11,15 @@ use process_util::{capture_fd3, copy_env_vars, squash_stdio};
 use container::util::version_from_symlink;
 
 
-pub fn build_container(context: &Context, name: &String, mode: BuildMode)
+pub fn build_container(context: &Context, name: &String, mode: BuildMode,
+    capsule: bool)
     -> Result<String, String>
 {
     use options::build_mode::BuildMode::*;
     let ver = match mode {
-        Normal => build_internal(context, name, &[])?,
+        Normal => build_internal(context, name, &[], capsule)?,
         NoImage => build_internal(context, name,
-            &["--no-image-download".to_string()])?,
+            &["--no-image-download".to_string()], capsule)?,
         NoBuild => format!("{}.{}", &name, get_version(context, &name)?),
         NoVersion => {
             version_from_symlink(format!(".vagga/{}", name))?
@@ -61,7 +62,8 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
                   .map_err(|e| format!("Can't decode version: {}", e)))
 }
 
-fn build_internal(context: &Context, name: &str, args: &[String])
+fn build_internal(context: &Context, name: &str, args: &[String],
+    capsule: bool)
     -> Result<String, String>
 {
     let mut cmd = Wrapper::new(None, &context.settings);
@@ -90,7 +92,12 @@ fn build_internal(context: &Context, name: &str, args: &[String])
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    cmd.map_users_for(context.config.get_container(name)?, &context.settings)?;
+    if capsule {
+        // TODO(tailhook) check that uid map matches
+    } else {
+        cmd.map_users_for(
+            context.config.get_container(name)?, &context.settings)?;
+    }
 
     capture_fd3(cmd)
     .and_then(|x| String::from_utf8(x)
@@ -131,7 +138,7 @@ pub fn build_command(context: &Context, args: Vec<String>)
         args.push("--no-image-download".to_string());
     }
 
-    build_internal(context, &name, &args)
-    .map(|v| debug!("Container {:?} build with version {:?}", name, v))
+    build_internal(context, &name, &args, false)
+    .map(|v| debug!("Container {:?} is built with version {:?}", name, v))
     .map(|()| 0)
 }

@@ -58,7 +58,7 @@ pub fn run_command(context: &Context, mut args: Vec<String>)
         }
     }
     let cinfo = context.config.get_container(&container)?;
-    let ver = build_container(context, &container, bmode)?;
+    let ver = build_container(context, &container, bmode, false)?;
     prepare_volumes(cinfo.volumes.values(), context)?;
 
     if context.isolate_network {
@@ -128,7 +128,7 @@ pub fn run_in_netns(context: &Context, cname: String, mut args: Vec<String>)
             }
         }
     }
-    let ver = build_container(context, &container, bmode)?;
+    let ver = build_container(context, &container, bmode, false)?;
     network::join_gateway_namespaces()?;
     if let Some::<i32>(pid) = pid {
         set_namespace(format!("/proc/{}/ns/net", pid), Namespace::Net)
