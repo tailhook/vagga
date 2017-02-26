@@ -20,3 +20,10 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
 }
+
+@test "capsule: Vagga can run local capsule script" {
+    run vagga vagga _capsule script ./script.sh 33+27
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "60" ]]
+}
