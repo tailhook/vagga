@@ -1,20 +1,37 @@
 containers:
-  laravel:
+  app:
     environ: &env
-      ENV_CONTAINER: 1
       APP_ENV: development
       APP_DEBUG: true
       APP_KEY: YourRandomGeneratedEncryptionKey
     setup:
-    - !Ubuntu xenial
-    - !UbuntuUniverse
+    - !Alpine v3.5
+    - !Repo community
     - !Install
-      - php-dom
-      - php-mbstring
-      - php-mysql
-      - php-memcached
+      - php7
+      - php7-openssl
+      - php7-pdo_mysql
+      - php7-mbstring
+      - php7-xml
+      - php7-session
+      - php7-dom
+      - php7-phar
+      - php7-json
+      - php7-posix
+      - php7-ctype
+    - !Sh ln -s /usr/bin/php7 /usr/bin/php
     - !Env { <<: *env }
+    - !ComposerConfig
+      install-runtime: false
+      runtime-exe: /usr/bin/php7
+    - !Remove /work/vendor
+    - !Sh ln -s /usr/local/lib/composer/vendor /work/vendor
     - !ComposerDependencies
+    - !Sh rm /work/vendor
+    - !EnsureDir /work/vendor
+    - !NpmDependencies
+    volumes:
+      /work/vendor: !BindRO /vagga/root/usr/local/lib/composer/vendor
 
   mysql:
     setup:
@@ -47,48 +64,62 @@ containers:
         subdirs:
           mysqld: { mode: 0o777 }
 
-  memcached:
-    setup:
-    - !Alpine v3.5
-    - !Install [memcached]
-
   adminer:
     setup:
     - !Alpine v3.5
+    - !Repo community
     - !Install
-      - php5-cli
-      - php5-pdo_mysql
+      - php7
+      - php7-pdo_mysql
+      - php7-session
     - !EnsureDir /opt/adminer
+    - !EnsureDir /opt/adminer/plugins
     - !Download
       url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5-mysql.php
-      path: /opt/adminer/index.php
+      path: /opt/adminer/adminer.php
     - !Download
       url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css
       path: /opt/adminer/adminer.css
-
-  exporter:
-    setup:
-    - !Ubuntu xenial
-    - !UbuntuUniverse
-    - !Install [php-mbstring, php-dom]
-    - !Depends composer.json
-    - !Depends composer.lock
-    - !EnsureDir /usr/local/src/
-    - !Copy
-      source: /work
-      path: /usr/local/src/work
-    - !ComposerInstall
-    - !Env
-      COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor
-    - !Sh |
-        cd /usr/local/src/work
-        rm -f export.tar.gz
-        composer install \
-          --no-dev --prefer-dist --optimize-autoloader
-    volumes:
-      /usr/local/src/work: !Snapshot
+    - !Download
+      url: https://raw.github.com/vrana/adminer/master/plugins/plugin.php
+      path: /opt/adminer/plugins/plugin.php
+    - !Download
+      url: https://raw.github.com/vrana/adminer/master/plugins/login-servers.php
+      path: /opt/adminer/plugins/login-servers.php
+    - !Text
+      /opt/adminer/index.php: |
+          <?php
+          function adminer_object() {
+              include_once "./plugins/plugin.php";
+              foreach (glob("plugins/*.php") as $filename) { include_once "./$filename"; }
+              $plugins = [new AdminerLoginServers(['127.0.0.1:3307' => 'Dev DB'])];
+              return new AdminerPlugin($plugins);
+          }
+          include "./adminer.php";
 
 commands:
+  run: !Supervise
+    description: run the laravel development server
+    children:
+      app: !Command
+        container: app
+        environ: *db_config
+        run: |
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan serve
+      db: !Command
+        container: mysql
+        user-id: 200
+        group-id: 200
+        run: |
+          exec mysqld --datadir=$DB_DATA_DIR \
+            --bind-address=$DB_HOST --port=$DB_PORT \
+            --log-error=log --gdb
+      adminer: !Command
+        container: adminer
+        run: php7 -S 127.0.0.1:8001 -t /opt/adminer
+
   _mysql-init: !Command
     description: Init MySQL data volume
     container: mysql
@@ -110,79 +141,3 @@ commands:
       mysql -u root -e "FLUSH PRIVILEGES;"
 
       mysqladmin -u root shutdown
-
-  run: !Supervise
-    description: run the laravel development server
-    children:
-      app: !Command
-        container: laravel
-        environ: *db_config
-        run: &run_app |
-          # wait for database to be ready before starting
-          dsn="mysql:host=$DB_HOST;port=$DB_PORT"
-          while ! php -r "new PDO('$dsn', '$DB_USERNAME', '$DB_PASSWORD');" 2> /dev/null; do
-            echo 'Waiting for database'
-            sleep 2
-          done
-          php artisan cache:clear
-          php artisan config:clear
-          php artisan migrate
-          php artisan db:seed
-          php artisan serve
-
-      db: &db_cmd !Command
-        container: mysql
-        user-id: 200
-        group-id: 200
-        run: |
-          exec mysqld --datadir=$DB_DATA_DIR \
-            --bind-address=$DB_HOST --port=$DB_PORT \
-            --log-error=log --gdb
-      adminer: &adminer_cmd !Command
-        container: adminer
-        run: php -S 127.0.0.1:8800 -t /opt/adminer
-
-  run-cached: !Supervise
-    description: Start the laravel development server alongside memcached
-    children:
-      cache: !Command
-        container: memcached
-        run: memcached -u memcached -vv
-      app: !Command
-        container: laravel
-        environ:
-          <<: *db_config
-          CACHE_DRIVER: memcached
-          MEMCACHED_HOST: 127.0.0.1
-          MEMCACHED_PORT: 11211
-        run: *run_app
-      db: *db_cmd
-      adminer: *adminer_cmd
-
-  artisan: !Command
-    description: Shortcut for running php artisan
-    container: laravel
-    run: [php, artisan]
-
-  export: !Command
-    container: exporter
-    description: export project into tarball
-    run: |
-      cd /usr/local/src/work
-      rm -f .env
-      rm -f database/database.sqlite
-      php artisan cache:clear
-      php artisan config:clear
-      php artisan route:clear
-      php artisan view:clear
-      rm storage/framework/sessions/*
-      rm -rf tests
-      echo APP_ENV=production >> .env
-      echo APP_KEY=random >> .env
-      php artisan key:generate
-      php artisan optimize
-      php artisan route:cache
-      php artisan config:cache
-      php artisan vendor:publish
-      tar -czf export.tar.gz .env *
-      cp -f export.tar.gz /work/
