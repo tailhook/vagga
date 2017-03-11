@@ -14,7 +14,7 @@ use builder::commands::composer::ComposerConfig;
 use builder::commands::gem::GemConfig;
 use builder::commands::pip::PipConfig;
 use builder::commands::npm::NpmConfig;
-use super::capsule;
+use capsule;
 use super::packages;
 use super::timer;
 use file_util::Dir;

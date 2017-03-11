@@ -7,7 +7,7 @@ use unshare::{Command, Stdio};
 use quire::validate as V;
 use config::settings::Settings;
 use builder::commands::subcontainer::GitSource;
-use super::super::capsule;
+use capsule::packages as capsule;
 use super::super::context::Context;
 use super::generic::run_command_at;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};

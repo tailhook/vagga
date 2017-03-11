@@ -4,7 +4,7 @@ use std::path::Path;
 
 use unshare::{Command, Stdio};
 
-use builder::capsule;
+use capsule::packages as capsule;
 use options::pack::Options;
 use wrapper::Wrapper;
 use process_util::{convert_status, cmd_show, cmd_err};

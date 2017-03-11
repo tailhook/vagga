@@ -15,9 +15,9 @@ use libmount::BindMount;
 
 use config::settings::Settings;
 use process_util::{squash_stdio, run_success};
-use super::context::Context;
-use super::commands::alpine::{LATEST_VERSION, choose_mirror};
-use super::super::file_util::Dir;
+use builder::context::Context;
+use builder::commands::alpine::{LATEST_VERSION, choose_mirror};
+use file_util::Dir;
 
 pub use self::Feature::*;
 

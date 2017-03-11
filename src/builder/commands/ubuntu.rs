@@ -9,8 +9,8 @@ use quire::validate as V;
 use unshare::Stdio;
 use scan_dir::ScanDir;
 
+use capsule::download::download_file;
 use super::super::context::{Context};
-use super::super::download::download_file;
 use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
 use builder::commands::generic::{command, run};

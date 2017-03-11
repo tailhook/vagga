@@ -9,11 +9,11 @@ use flate2::FlateReadExt;
 use xz2::read::XzDecoder;
 use bzip2::read::BzDecoder;
 use libmount::BindMount;
-
 use quire::validate as V;
+
+use capsule::download::{maybe_download_and_check_hashsum};
 use container::mount::{unmount};
 use builder::context::Context;
-use builder::download::{maybe_download_and_check_hashsum};
 use builder::commands::generic::run_command_at;
 use builder::dns::revert_name_files;
 use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};

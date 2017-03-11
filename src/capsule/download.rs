@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 use unshare::{Command, Stdio};
 
-use super::capsule;
-use super::context::Context;
+use capsule::packages as capsule;
+use builder::context::Context;  // FIXME
 use file_util::check_stream_hashsum;
 use process_util::{cmd_show};
 use digest::hex;

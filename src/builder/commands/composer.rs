@@ -14,7 +14,7 @@ use super::super::packages;
 use super::generic::{run_command, capture_command};
 use builder::distrib::Distribution;
 use builder::commands::generic::{command, run};
-use builder::download;
+use capsule::download;
 use file_util::Dir;
 use process_util::capture_stdout;
 use file_util;

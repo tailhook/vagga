@@ -1,6 +1,6 @@
 use argparse::{ArgumentParser, StoreConst};
 
-use builder::capsule;
+use capsule::packages as capsule;
 
 
 #[derive(Clone, Copy, Debug)]

@@ -9,7 +9,7 @@ use rand::{thread_rng, Rng};
 use regex::Regex;
 
 use super::super::context::{Context};
-use super::super::capsule;
+use capsule::packages as capsule;
 use super::super::packages;
 use file_util::Dir;
 use process_util::capture_stdout;

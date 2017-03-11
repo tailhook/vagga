@@ -6,7 +6,7 @@ use zip::ZipArchive;
 
 use quire::validate as V;
 use builder::context::Context;
-use builder::download::maybe_download_and_check_hashsum;
+use capsule::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use file_util::{Dir, copy_stream};
 

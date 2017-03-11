@@ -1,6 +1,8 @@
 mod build;
 mod run;
 mod script;
+pub mod packages;
+pub mod download;
 
 use std::io::{Write, stdout, stderr};
 
@@ -8,6 +10,7 @@ use argparse::{ArgumentParser, Store, List};
 
 use launcher;
 
+pub use self::packages::State;
 pub type Context = launcher::Context;
 
 

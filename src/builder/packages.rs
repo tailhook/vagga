@@ -3,7 +3,7 @@ use std::path::Path;
 use super::context::Context;
 use super::commands::generic::run_command_at_env;
 use super::commands::gem;
-use super::download;
+use capsule::download;
 use builder::error::StepError;
 use builder::distrib::Distribution;
 use builder::commands::composer;

@@ -11,12 +11,11 @@ use argparse::{ArgumentParser, Store, StoreTrue};
 use file_util::copy;
 use self::context::{Context};
 use self::commands::tarcmd::unpack_file;
-use self::download::maybe_download_and_check_hashsum;
+use capsule::download::maybe_download_and_check_hashsum;
 pub use self::guard::Guard;
 pub use self::error::StepError;
 
 pub mod context;
-mod download;
 pub mod commands {
     pub mod ubuntu;
     pub mod generic;
@@ -35,7 +34,6 @@ pub mod commands {
     pub mod tarcmd;
     pub mod unzip;
 }
-pub mod capsule;
 mod packages;
 mod timer;
 mod distrib;

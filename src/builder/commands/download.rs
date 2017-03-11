@@ -4,7 +4,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use quire::validate as V;
 use file_util::copy;
-use builder::download::download_file;
+use capsule::download::download_file;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
