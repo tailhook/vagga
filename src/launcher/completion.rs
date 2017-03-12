@@ -1,8 +1,15 @@
+use std::io::{stdout, stderr};
 use std::collections::{BTreeMap, HashSet};
+
+use argparse::{ArgumentParser, Store, StoreTrue};
 
 use config::Config;
 use config::command::MainCommand;
 use config::containers::Container;
+
+use launcher::{Context};
+use launcher::user;
+use launcher::list;
 
 
 #[derive(PartialEq, Eq, Hash)]
@@ -709,4 +716,48 @@ pub fn generate_completions(config: &Config, args: Vec<String>)
     }
 
     Ok(0)
+}
+
+pub fn generate_command_help(context: &Context, args: Vec<String>)
+    -> Result<i32, String>
+{
+    let mut cname: String = "".to_string();
+    let mut help = false;
+    {
+        let mut cmdline = args.clone();
+        cmdline.insert(0, "vagga _help".to_string());
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Show command help message, can be used for shell completions
+            ");
+        ap.refer(&mut cname)
+            .add_argument("command_name", Store,
+                "Command name to show help message of");
+        ap.refer(&mut help)
+            .add_option(&["-h", "--help"], StoreTrue,
+                "Optional argument, can be ignored");
+        match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    if cname == "" {
+        return list::print_help(&context.config)
+    }
+
+    let command = context.config.commands.get(&cname)
+        .ok_or(format!("Command {} not found.", cname))?;
+
+    if command.options().is_some() {
+        return user::run_user_command(&context, cname,
+            vec!["--help".to_string()]);
+    } else {
+        println!("{description}\n\nUsage:\n  vagga {cname} <OPTIONS>",
+            description=command.description().unwrap_or(&"".to_string()),
+            cname=cname);
+        return Ok(0);
+    }
 }
