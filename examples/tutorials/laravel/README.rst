@@ -62,17 +62,14 @@ Now that we have our project created, change our container as follows:
 .. code-block:: yaml
 
     containers:
-      app:
-        environ: &env
-          APP_ENV: development ❶
-          APP_DEBUG: true ❷
-          APP_KEY: YourRandomGeneratedEncryptionKey ❸
+      app-base:
         setup:
         - !Alpine v3.5
         - !Repo community
         - !Install
           - php7
           - php7-openssl
+          - php7-pdo_mysql
           - php7-mbstring
           - php7-xml
           - php7-session
@@ -81,39 +78,103 @@ Now that we have our project created, change our container as follows:
           - php7-json
           - php7-posix
           - php7-ctype
-        - !Env { <<: *env } ❺
-        - !Sh ln -s /usr/local/lib/composer/vendor /work/vendor ❻
-        - !ComposerDependencies ❻
-        - !Sh rm /work/vendor ❻
+        - !Sh ln -s /usr/bin/php7 /usr/bin/php
+      app:
+        environ: &env
+          APP_ENV: development
+          APP_DEBUG: true
+          APP_KEY: YourRandomGeneratedEncryptionKey
+        setup:
+        - !Container app-base
+        - !Env { <<: *env }
+        - !ComposerConfig
+          install-runtime: false
+          runtime-exe: /usr/bin/php7
         - !EnsureDir /work/vendor
-        - !NpmDependencies ❼
+        - !EnsureDir /usr/local/lib/composer/vendor
+        - !Sh mount --bind,ro /usr/local/lib/composer/vendor /work/vendor
+        - !ComposerDependencies
+        - !Sh umount /work/vendor
         volumes:
-          /work/vendor: !BindRO /vagga/root/usr/local/lib/composer/vendor ❽
+          /work/vendor: !BindRO /vagga/root/usr/local/lib/composer/vendor
 
-* ❶ -- the "environment" our application will run (development, testing, production).
-* ❷ -- enable debug mode.
-* ❸ -- a random, 32 character string used by encryption service.
-* ❹ -- php modules needed by laravel
-* ❺ -- inherit environment during build.
-* ❻ -- install dependencies from ``composer.json``. Since our composer file have
-  have some post install hooks that depend on the ``vendor`` directory, we link
-  it during build time and remove the link after build.
-* ❼ -- install nodejs dependencies (for frontend development)
-* ❽ -- mount the composer dependencies directory to ``/work/vendor`` so our
-  application can find it
+This might look complex, but let's break it down:
 
-.. note:: The Laravel project provides some utilities to help frontend
-  development, that's why we are installing nodejs dependencies
+.. code-block:: yaml
 
-Laravel uses `dotenv`_ to load configuration into environment automatically from
-a ``.env`` file, but we won't use that. Instead, we tell vagga to set the
-environment for us.
+    app-base:
+      setup:
+      - !Alpine v3.5
+      - !Repo community
+      - !Install
+        - php7
+        - php7-openssl
+        - php7-pdo_mysql
+        - php7-mbstring
+        - php7-xml
+        - php7-session
+        - php7-dom
+        - php7-phar
+        - php7-json
+        - php7-posix
+        - php7-ctype
+      - !Sh ln -s /usr/bin/php7 /usr/bin/php
 
-We are also mouting a volume from the directory where the composer dependencies
-are installed. PHP projects usually search for the composer dependencies from
-the ``vendor`` directory at project root, but since vagga install the
-dependencies at ``/usr/local/lib/composer/vendor``, we mount that directory at
-the path where Laravel expects it.
+The container for our application is based on Alpine linux v3.5 and we will use
+PHP7, so we need to enable the "community" repository from Alpine and install
+php7 and the modules needed for both Laravel and Composer.
+
+We also link the php7 executable into ``/usr/bin/php`` to make it available as
+just ``php``.
+
+This container will be used as the base for another container in order to speed
+up builds.
+
+.. code-block:: yaml
+
+    environ: &env
+      APP_ENV: development
+      APP_DEBUG: true
+      APP_KEY: YourRandomGeneratedEncryptionKey
+
+Here we are configuring our application. Laravel comes out of the box with its
+configuration done through environment variables, so we are setting these to
+what we need to a development environment. The default project template uses
+`dotenv`_ to load configuration into environment automatically from a ``.env``
+file, but we won't use that. Instead, we tell vagga to set the environment for us.
+
+We are also setting and yaml anchor (``&env``) so we can reference it later.
+
+.. code-block:: yaml
+
+    setup:
+    - !Container app-base
+    - !Env { <<: *env }
+
+We are extending the ``app-base`` container and referencing the yaml anchor we
+defined earlier to make the environment available during build.
+
+.. code-block:: yaml
+
+    - !ComposerConfig
+      install-runtime: false
+      runtime-exe: /usr/bin/php7
+
+Since we installed php by ourselves, we tell vagga to use version we installed
+instead of the default version from Alpine.
+
+.. code-block:: yaml
+
+    - !EnsureDir /work/vendor
+    - !EnsureDir /usr/local/lib/composer/vendor
+    - !Sh mount --bind,ro /usr/local/lib/composer/vendor /work/vendor
+    - !ComposerDependencies
+    - !Sh umount /work/vendor
+
+Applications using Composer usually expect the ``vendor`` directory to be
+available at the project root, but vagga install composer dependencies under
+``/usr/local/lib/composer``. To make it available to our application, we mount
+that directory into ``/work/vendor`` and ``umount`` after build.
 
 To test if everything is ok, let's add a command to run our project:
 

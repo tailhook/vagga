@@ -1,9 +1,5 @@
 containers:
-  app:
-    environ: &env
-      APP_ENV: development
-      APP_DEBUG: true
-      APP_KEY: YourRandomGeneratedEncryptionKey
+  app-base:
     setup:
     - !Alpine v3.5
     - !Repo community
@@ -20,16 +16,28 @@ containers:
       - php7-posix
       - php7-ctype
     - !Sh ln -s /usr/bin/php7 /usr/bin/php
+  app:
+    environ: &env
+      APP_ENV: development
+      APP_DEBUG: true
+      APP_KEY: YourRandomGeneratedEncryptionKey
+    setup:
+    - !Container app-base
     - !Env { <<: *env }
     - !ComposerConfig
       install-runtime: false
       runtime-exe: /usr/bin/php7
-    - !Remove /work/vendor
-    - !Sh ln -s /usr/local/lib/composer/vendor /work/vendor
-    - !ComposerDependencies
-    - !Sh rm /work/vendor
     - !EnsureDir /work/vendor
-    - !NpmDependencies
+    - !EnsureDir /usr/local/lib/composer/vendor
+    - !Sh mount --bind,ro /usr/local/lib/composer/vendor /work/vendor
+    - !ComposerDependencies
+    - !Sh umount /work/vendor
+    # frontend assets built here
+    - !Build
+      container: frontend
+      source: /var/build
+      temporary-mount: /tmp/frontend
+    - !Sh cp -r /tmp/frontend/public/{js,css}/ /work/public
     volumes:
       /work/vendor: !BindRO /vagga/root/usr/local/lib/composer/vendor
 
@@ -98,6 +106,14 @@ containers:
           include "./adminer.php";
 
 commands:
+  run: !Command
+    container: app
+    description: run the laravel development server
+    run: |
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan serve
+
   run: !Supervise
     description: run the laravel development server
     children:
