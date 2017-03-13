@@ -1,6 +1,7 @@
 use std::env::{current_dir};
 use std::io::{stdout, stderr, Write};
 use std::path::Path;
+use std::sync::Arc;
 
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
@@ -26,7 +27,7 @@ mod capsule;
 
 pub struct Wrapper<'a> {
     config: &'a Config,
-    settings: &'a Settings,
+    settings: &'a Arc<Settings>,
     project_root: &'a Path,
     ext_settings: &'a MergedSettings,
     root: Option<String>,
@@ -85,7 +86,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
     let wrapper = Wrapper {
         root: root,
         config: &config,
-        settings: &int_settings,
+        settings: &Arc::new(int_settings),
         project_root: &project_root,
         ext_settings: &ext_settings,
     };

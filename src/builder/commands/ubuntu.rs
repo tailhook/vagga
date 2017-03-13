@@ -650,7 +650,7 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
             `codename` (preferred), `version` (deprecated) \
             or `url` (if you need something special)"));
     };
-    let filename = download_file(ctx, &urls, None)?;
+    let filename = download_file(&mut ctx.capsule, &urls, None)?;
     unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
         &[Path::new("dev"),
           Path::new("sys"),

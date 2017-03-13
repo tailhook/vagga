@@ -1,4 +1,3 @@
-use std::default::Default;
 use std::io::{stderr, Write};
 use std::path::Path;
 
@@ -48,9 +47,8 @@ pub fn pack_image_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
         .arg(".");
 
     if capsule_features.len() > 0 {
-        let mut capsule_state = Default::default();
-        capsule::ensure(
-            &mut capsule_state, &wrapper.settings, &capsule_features)?;
+        let mut capsule_state = capsule::State::new(&wrapper.settings);
+        capsule::ensure(&mut capsule_state, &capsule_features)?;
     }
 
     if let Some(_) = options.compression_type {

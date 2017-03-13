@@ -323,7 +323,7 @@ fn check_version(version: &String) -> Result<(), String> {
 fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
     -> Result<(), String>
 {
-    capsule::ensure_features(ctx, &[capsule::AlpineInstaller])?;
+    capsule::ensure(&mut ctx.capsule, &[capsule::AlpineInstaller])?;
     check_version(version)?;
     try_msg!(Dir::new("/vagga/root/etc/apk").recursive(true).create(),
         "Error creating apk dir: {err}");

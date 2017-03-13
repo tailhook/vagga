@@ -56,7 +56,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     "/tmp/get-pip.py".to_string(),
                     "--target=/tmp/pip-install".to_string(),
                     );
-                let pip_inst = download::download_file(ctx,
+                let pip_inst = download::download_file(&mut ctx.capsule,
                     &["https://bootstrap.pypa.io/get-pip.py"], None)?;
                 copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
                     .map_err(|e| format!("Error copying pip: {}", e))?;

@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use unshare::{Command, Stdio};
 
 use quire::validate as V;
-use config::settings::Settings;
 use builder::commands::subcontainer::GitSource;
 use capsule::packages as capsule;
 use super::super::context::Context;
@@ -102,7 +101,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
 
 pub fn git_command(ctx: &mut Context, git: &Git) -> Result<(), String>
 {
-    capsule::ensure_features(ctx, &[capsule::Git])?;
+    capsule::ensure(&mut ctx.capsule, &[capsule::Git])?;
     let dest = PathBuf::from("/vagga/root")
         .join(&git.path.strip_prefix("/").unwrap());
     let cache_path = git_cache(&git.url)?;
@@ -115,7 +114,7 @@ pub fn git_command(ctx: &mut Context, git: &Git) -> Result<(), String>
 pub fn git_install(ctx: &mut Context, git: &GitInstall)
     -> Result<(), String>
 {
-    capsule::ensure_features(ctx, &[capsule::Git])?;
+    capsule::ensure(&mut ctx.capsule, &[capsule::Git])?;
     let cache_path = git_cache(&git.url)?;
     let tmppath = Path::new("/vagga/root/tmp")
         .join(cache_path.file_name().unwrap());
@@ -133,11 +132,10 @@ pub fn git_install(ctx: &mut Context, git: &GitInstall)
 }
 
 #[allow(unused)]
-pub fn fetch_git_source(capsule: &mut capsule::State, settings: &Settings,
-    git: &GitSource)
+pub fn fetch_git_source(capsule: &mut capsule::State, git: &GitSource)
     -> Result<(), String>
 {
-    capsule::ensure(capsule, settings, &[capsule::Git])?;
+    capsule::ensure(capsule, &[capsule::Git])?;
     let cache_path = git_cache(&git.url)?;
     let dest = Path::new("/vagga/sources")
         .join(cache_path.file_name().unwrap());

@@ -9,13 +9,13 @@ use std::collections::HashSet;
 use std::fs::{File};
 use std::io::{Write};
 use std::path::Path;
+use std::sync::Arc;
 
 use unshare::Command;
 use libmount::BindMount;
 
 use config::settings::Settings;
 use process_util::{squash_stdio, run_success};
-use builder::context::Context;
 use builder::commands::alpine::{LATEST_VERSION, choose_mirror};
 use file_util::Dir;
 
@@ -32,11 +32,21 @@ pub enum Feature {
     Git,
 }
 
-#[derive(Default)]
 pub struct State {
     capsule_base: bool,
     //alpine_ready: bool,
     installed_packages: HashSet<String>,
+    settings: Arc<Settings>,
+}
+
+impl State {
+    pub fn new(settings: &Arc<Settings>) -> State {
+        State {
+            capsule_base: false,
+            installed_packages: HashSet::new(),
+            settings: settings.clone(),
+        }
+    }
 }
 
 // Also used in alpine
@@ -49,14 +59,7 @@ pub fn apk_run(args: &[&str], packages: &[String]) -> Result<(), String> {
     run_success(cmd)
 }
 
-
-pub fn ensure_features(ctx: &mut Context, features: &[Feature])
-    -> Result<(), String>
-{
-    return ensure(&mut ctx.capsule, &ctx.settings, features);
-}
-
-pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
+pub fn ensure(capsule: &mut State, features: &[Feature])
     -> Result<(), String>
 {
     if features.len() == 0 {
@@ -81,7 +84,7 @@ pub fn ensure(capsule: &mut State, settings: &Settings, features: &[Feature])
             "--force",
             "/vagga/bin/alpine-keys.apk",
             ], &[])?;
-        let mirror = settings.alpine_mirror.clone()
+        let mirror = capsule.settings.alpine_mirror.clone()
             .unwrap_or(choose_mirror());
         File::create(&Path::new("/etc/apk/repositories"))
             .and_then(|mut f| write!(&mut f, "{}{}/main\n",

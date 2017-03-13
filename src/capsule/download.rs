@@ -8,13 +8,13 @@ use sha2::{Digest, Sha256};
 use unshare::{Command, Stdio};
 
 use capsule::packages as capsule;
-use builder::context::Context;  // FIXME
+use capsule::packages::State;
 use file_util::check_stream_hashsum;
 use process_util::{cmd_show};
 use digest::hex;
 
 
-pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
+pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>)
     -> Result<PathBuf, String>
     where S: AsRef<str>
 {
@@ -45,7 +45,7 @@ pub fn download_file<S>(ctx: &mut Context, urls: &[S], sha256: Option<String>)
     }
     let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
     if https {
-        capsule::ensure_features(ctx, &[capsule::Https])?;
+        capsule::ensure(state, &[capsule::Https])?;
     }
     for url in urls {
         let url = url.as_ref();
@@ -123,12 +123,12 @@ fn check_if_local(url: &str, sha256: &Option<String>)
     Ok(Some(path))
 }
 
-pub fn maybe_download_and_check_hashsum(ctx: &mut Context,
+pub fn maybe_download_and_check_hashsum(state: &mut State,
     url: &str, sha256: Option<String>)
     -> Result<(PathBuf, bool), String>
 {
     Ok(match check_if_local(url, &sha256)? {
         Some(path) => (path, false),
-        None => (download_file(ctx, &[url], sha256)?, true),
+        None => (download_file(state, &[url], sha256)?, true),
     })
 }

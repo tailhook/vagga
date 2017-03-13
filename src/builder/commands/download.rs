@@ -44,7 +44,7 @@ impl BuildStep for Download {
             let filename = if self.url.starts_with(".") {
                 PathBuf::from("/work").join(&self.url)
             } else {
-                download_file(&mut guard.ctx, &[&self.url], None)?
+                download_file(&mut guard.ctx.capsule, &[&self.url], None)?
             };
             copy(&filename, &fpath)
                 .map_err(|e| format!("Error copying {:?} to {:?}: {}",

@@ -1,8 +1,9 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::default::Default;
 use std::env;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::default::Default;
-use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use libmount::BindMount;
 
@@ -39,7 +40,7 @@ pub struct Context<'a> {
     /// that is not usable.
     pub binary_ident: String,
 
-    pub settings: Settings,
+    pub settings: Arc<Settings>,
     pub pip_settings: PipConfig,
     pub gem_settings: GemConfig,
     pub npm_settings: NpmConfig,
@@ -71,6 +72,7 @@ impl<'a> Context<'a> {
                 }
             }
         }
+        let settings = Arc::new(settings);
         return Context {
             config: cfg,
             container_name: name,
@@ -92,12 +94,12 @@ impl<'a> Context<'a> {
             cache_dirs: BTreeMap::new(),
             environ: env,
             binary_ident: "amd64".to_string(),
-            settings: settings,
+            settings: settings.clone(),
             pip_settings: Default::default(),
             gem_settings: Default::default(),
             npm_settings: Default::default(),
             composer_settings: Default::default(),
-            capsule: Default::default(),
+            capsule: capsule::State::new(&settings),
             packages: BTreeSet::new(),
             build_deps: BTreeSet::new(),
             featured_packages: BTreeSet::new(),

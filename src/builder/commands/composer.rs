@@ -272,7 +272,7 @@ fn update_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
 }
 
 fn install_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
-    let composer_inst = download::download_file(ctx,
+    let composer_inst = download::download_file(&mut ctx.capsule,
         &[COMPOSER_BOOTSTRAP], None)?;
     file_util::copy(&composer_inst,
                          &Path::new("/vagga/root/tmp/composer-setup.php"))
