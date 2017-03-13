@@ -28,15 +28,25 @@ Create the ``vagga.yaml`` file and add the following to it:
     containers:
       app:
         setup:
-        - !Ubuntu xenial
-        - !ComposerInstall
+        - !Alpine v3.5
+        - !Repo community
+        - !Install
+          - ca-certificates
+          - php7
+          - php7-openssl
+          - php7-mbstring
+          - php7-phar
+          - php7-json
         - !ComposerConfig
+          install-runtime: false
+          runtime-exe: /usr/bin/php7
           keep-composer: true
+        - !ComposerInstall
         environ:
           HOME: /tmp
 
-Here we are building a container from Ubuntu and telling it to install PHP and
-setup Composer. Now let's create our new project::
+Here we are building a container from Alpine v3.5 and telling it to install PHP7
+and everything needed to run Composer. Now let's create our new project::
 
     $ vagga _run app composer create-project \
         --prefer-dist --no-install --no-scripts \
@@ -67,6 +77,7 @@ Now that we have our project created, change our container as follows:
         - !Alpine v3.5
         - !Repo community
         - !Install
+          - ca-certificates
           - php7
           - php7-openssl
           - php7-pdo_mysql
@@ -107,6 +118,7 @@ This might look complex, but let's break it down:
       - !Alpine v3.5
       - !Repo community
       - !Install
+        - ca-certificates
         - php7
         - php7-openssl
         - php7-pdo_mysql
@@ -283,10 +295,11 @@ Add a the php mysql module to our container:
 .. code-block:: yaml
 
     containers:
-      app:
+      app-base:
         - !Alpine v3.5
         - !Repo community
         - !Install
+          - ca-certificates
           - php7
           # ...
           - php7-pdo_mysql # mysql module
@@ -356,8 +369,8 @@ called `adminer`_. Let's create a container for it:
           path: /opt/adminer/plugins/login-servers.php
         - !Text
           /opt/adminer/index.php: |
-              <?php
-              function adminer_object() { ❺
+              <?php ❺
+              function adminer_object() {
                   include_once "./plugins/plugin.php";
                   foreach (glob("plugins/*.php") as $filename) { include_once "./$filename"; }
                   $plugins = [new AdminerLoginServers(['127.0.0.1:3307' => 'Dev DB'])];
@@ -387,8 +400,8 @@ Change our ``run`` command to start the adminer container:
             container: adminer
             run: php7 -S 127.0.0.1:8001 -t /opt/adminer
 
-This command will simply start the php embedded development server with its root
-pointing to the directory containing the adminer files.
+This command will start the php embedded server with its root pointing to the
+directory we setup for Adminer.
 
 To access adminer, visit ``localhost:8001`` and fill the username and password
 fields with "vagga".
@@ -407,8 +420,8 @@ Let's add a shortcut command for running artisan
     commands:
       # ...
       artisan: !Command
-        description: Shortcut for running php artisan
-        container: laravel
+        description: Shortcut for running artisan cli
+        container: app
         run: [php, artisan]
 
 Now, we need a layout. Fortunately, Laravel can give us one, we just have to
@@ -773,7 +786,7 @@ Change the ``run`` command to execute the migrations and seed our database:
           # ...
 
 If you run our project, you will see the articles we defined in the seeder class.
-Try adding some articles, then access adminer at ``localhost:8800`` to inspect
+Try adding some articles, then access adminer at ``localhost:8001`` to inspect
 the database.
 
 Trying out memcached

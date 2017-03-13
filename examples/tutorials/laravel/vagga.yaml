@@ -4,9 +4,9 @@ containers:
     - !Alpine v3.5
     - !Repo community
     - !Install
+      - ca-certificates
       - php7
       - php7-openssl
-      - php7-pdo_mysql
       - php7-mbstring
       - php7-xml
       - php7-session
@@ -15,6 +15,7 @@ containers:
       - php7-json
       - php7-posix
       - php7-ctype
+      - php7-pdo_mysql
     - !Sh ln -s /usr/bin/php7 /usr/bin/php
   app:
     environ: &env
@@ -32,12 +33,6 @@ containers:
     - !Sh mount --bind,ro /usr/local/lib/composer/vendor /work/vendor
     - !ComposerDependencies
     - !Sh umount /work/vendor
-    # frontend assets built here
-    - !Build
-      container: frontend
-      source: /var/build
-      temporary-mount: /tmp/frontend
-    - !Sh cp -r /tmp/frontend/public/{js,css}/ /work/public
     volumes:
       /work/vendor: !BindRO /vagga/root/usr/local/lib/composer/vendor
 
@@ -106,14 +101,6 @@ containers:
           include "./adminer.php";
 
 commands:
-  run: !Command
-    container: app
-    description: run the laravel development server
-    run: |
-        php artisan cache:clear
-        php artisan config:clear
-        php artisan serve
-
   run: !Supervise
     description: run the laravel development server
     children:
@@ -121,9 +108,18 @@ commands:
         container: app
         environ: *db_config
         run: |
-            php artisan cache:clear
-            php artisan config:clear
-            php artisan serve
+          # wait for database to be ready before starting
+          dsn="mysql:host=$DB_HOST;port=$DB_PORT"
+          while ! php -r "new PDO('$dsn', '$DB_USERNAME', '$DB_PASSWORD');" 2> /dev/null; do
+            echo 'Waiting for database'
+            sleep 2
+          done
+
+          php artisan cache:clear
+          php artisan config:clear
+          php artisan migrate
+          php artisan db:seed
+          php artisan serve
       db: !Command
         container: mysql
         user-id: 200
@@ -135,6 +131,11 @@ commands:
       adminer: !Command
         container: adminer
         run: php7 -S 127.0.0.1:8001 -t /opt/adminer
+
+  artisan: !Command
+    description: Shortcut for running artisan cli
+    container: app
+    run: [php, artisan]
 
   _mysql-init: !Command
     description: Init MySQL data volume
