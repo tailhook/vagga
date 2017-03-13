@@ -139,6 +139,13 @@ impl MainCommand {
             MainCommand::CapsuleCommand(ref cmd) => cmd.description.as_ref(),
         }
     }
+    pub fn options<'x>(&'x self) -> Option<&'x String> {
+        match *self {
+            MainCommand::Command(ref cmd) => cmd.options.as_ref(),
+            MainCommand::Supervise(ref cmd) => cmd.options.as_ref(),
+            MainCommand::CapsuleCommand(ref cmd) => cmd.options.as_ref(),
+        }
+    }
     pub fn system<'x>(&'x self) -> SystemInfo {
         match *self {
             MainCommand::Command(ref cmd) => SystemInfo {

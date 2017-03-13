@@ -294,6 +294,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
         "_compgen" => {
             completion::generate_completions(&context.config, args)
         }
+        "_help" => {
+            completion::generate_command_help(&context, args)
+        }
         "_update_symlinks" => {
             commands::update_symlinks(&context, args)
         }
