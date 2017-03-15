@@ -1,10 +1,13 @@
 use std::io::{stdout, stderr};
+use std::sync::Arc;
 
 use argparse::{ArgumentParser};
-use argparse::{List, Store};
+use argparse::{List, Store, StoreOption};
 use unshare::{Command};
 
 use capsule::Context;
+use capsule::packages::State;
+use capsule::download;
 use launcher::wrap::Wrapper;
 use process_util::{run_and_wait, convert_status};
 
@@ -14,12 +17,16 @@ pub fn run_script(context: &Context, mut args: Vec<String>)
 {
     let mut cmdargs = Vec::<String>::new();
     let mut url = "".to_string();
+    let mut sha256 = None;
     {
         args.insert(0, "vagga _capsule script".to_string());
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Downloads script if not cached, puts it into a cache and starts.
             ");
+        ap.refer(&mut sha256)
+            .add_option(&["--sha256"], StoreOption,
+                "A SHA256 hashsum of a script (if you want to check)");
         ap.refer(&mut url)
             .add_argument("url", Store,
                 "A script to run")
@@ -35,16 +42,10 @@ pub fn run_script(context: &Context, mut args: Vec<String>)
             }
         }
     }
-    let path = if url.starts_with("http://") || url.starts_with("https://") {
-        unimplemented!();
-    } else if url.starts_with('.') {
-        url
-    } else {
-        error!("Wrong url {:?}. Url must start \
-            either with a `http://` or `https://` or with a dot `./something`\
-            for local paths", url);
-        return Ok(122);
-    };
+    // TODO(tailhook) wrap settings into Arc in the launcher's main
+    let mut capsule = State::new(&Arc::new(context.settings.clone()));
+    let (path, _) = download::maybe_download_and_check_hashsum(
+        &mut capsule, &url, sha256)?;
 
     let mut cmd: Command = Command::new("/bin/sh");
     cmd.workdir(&context.workdir);
