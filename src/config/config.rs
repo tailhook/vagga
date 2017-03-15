@@ -1,7 +1,8 @@
-use std::io::{Read};
-use std::rc::Rc;
 use std::fs::File;
+use std::io::{Read};
+use std::mem;
 use std::path::{PathBuf, Path, Component};
+use std::rc::Rc;
 
 use std::collections::BTreeMap;
 
@@ -134,6 +135,43 @@ fn include_file(pos: &Pos, include: &Include,
     }
 }
 
+fn read_mixins(filename: &Path, mixins: &Vec<String>, dest: &mut Config,
+    opt: &Options)
+    -> Result<(), String>
+{
+    for mixin in mixins.iter().rev() {
+        let mixin_result: Result<(PathBuf, Config), _> =
+            join_path(filename, mixin)
+            .and_then(|path| {
+                parse_config(&path, &config_validator(), opt)
+                .map(move |c| (path, c))
+                .map_err(|e| format!("{}", e))
+            });
+        match mixin_result {
+            Ok((path, subcfg)) => {
+                for (cname, cont) in subcfg.containers.into_iter() {
+                    if !dest.containers.contains_key(&cname) {
+                        info!("Container {:?} imported from {:?}",
+                            cname, path);
+                        dest.containers.insert(cname, cont);
+                    }
+                }
+                for (cname, cmd) in subcfg.commands.into_iter() {
+                    if !dest.commands.contains_key(&cname) {
+                        info!("Command {:?} imported from {:?}", cname, path);
+                        dest.commands.insert(cname, cmd);
+                    }
+                }
+                read_mixins(&path, &subcfg.mixins, dest, opt)?;
+            }
+            Err(e) => {
+                warn!("Skipping mixin because of error. Error: {}", e);
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut opt = Options::default();
     opt.allow_include(include_file);
@@ -141,30 +179,10 @@ pub fn read_config(filename: &Path) -> Result<Config, String> {
         parse_config(filename, &config_validator(), &opt)
         .map_err(|e| format!("{}", e))?;
 
-    for mixin in &config.mixins {
-        let mixin_result: Result<Config, _> =
-            join_path(filename, mixin)
-            .and_then(|path| {
-                parse_config(path, &config_validator(), &opt)
-                .map_err(|e| format!("{}", e))
-            });
-        match mixin_result {
-            Ok(subcfg) => {
-                // TODO(tailhook) recursively apply mixins
-                for (cname, cont) in subcfg.containers.into_iter() {
-                    // TODO(tailhook) what to do with conflicts?
-                    config.containers.insert(cname, cont);
-                }
-                for (cname, cmd) in subcfg.commands.into_iter() {
-                    // TODO(tailhook) what to do with conflicts?
-                    config.commands.insert(cname, cmd);
-                }
-            }
-            Err(e) => {
-                warn!("Skipping mixin because of error. Error: {}", e);
-            }
-        }
-    }
+    read_mixins(filename,
+        &mem::replace(&mut config.mixins, Vec::new()),
+        &mut config,
+        &opt)?;
 
     // Is this a good place for such defaults?
     for (_, ref mut container) in config.containers.iter_mut() {
