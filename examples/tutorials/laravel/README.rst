@@ -7,7 +7,7 @@ This tutorial will show how to create a simple Laravel_ project using vagga.
 * `Creating the project`_
 * `Setup the database`_
 * `Adding some code`_
-* `Trying out memcached`_
+* `Setup Redis`_
 * `Deploying to a shared server`_
 
 .. _Laravel: https://laravel.com/
@@ -101,6 +101,7 @@ Now that we have our project created, change our container as follows:
         - !ComposerConfig
           install-runtime: false
           runtime-exe: /usr/bin/php7
+          keep-composer: true
         - !EnsureDir /work/vendor
         - !EnsureDir /usr/local/lib/composer/vendor
         - !Sh mount --bind,ro /usr/local/lib/composer/vendor /work/vendor
@@ -171,6 +172,7 @@ defined earlier to make the environment available during build.
     - !ComposerConfig
       install-runtime: false
       runtime-exe: /usr/bin/php7
+      keep-composer: true
 
 Since we installed php by ourselves, we tell vagga to use version we installed
 instead of the default version from Alpine.
@@ -359,7 +361,7 @@ called `adminer`_. Let's create a container for it:
           url: https://www.adminer.org/static/download/4.2.5/adminer-4.2.5-mysql.php ❶
           path: /opt/adminer/adminer.php
         - !Download
-          url: https://raw.githubusercontent.com/vrana/adminer/master/designs/nette/adminer.css ❷
+          url: https://raw.github.com/vrana/adminer/master/designs/nette/adminer.css ❷
           path: /opt/adminer/adminer.css
         - !Download
           url: https://raw.github.com/vrana/adminer/master/plugins/plugin.php ❸
@@ -384,7 +386,13 @@ called `adminer`_. Let's create a container for it:
 * ❹ -- login-servers plugin to avoid typing server address and port
 * ❺ -- setup adminer
 
-Change our ``run`` command to start the adminer container:
+The container above will install PHP7 along with the mysql and session modules,
+then it will download adminer itself, the optional style, the plugin support and
+the "login-servers" plugin. This plugin will allow us to select the database we
+are connecting to from a list instead of filling in the host and port. The last
+part of the container setup configures adminer with our database.
+
+Now change our ``run`` command to start the adminer container:
 
 .. code-block:: yaml
 
@@ -789,40 +797,52 @@ If you run our project, you will see the articles we defined in the seeder class
 Try adding some articles, then access adminer at ``localhost:8001`` to inspect
 the database.
 
-Trying out memcached
-====================
+Setup Redis
+===========
 
-Many projects use `memcached <http://memcached.org/>`_ to speed up things, so
-let's try it out.
-
-Activate Universe repository and add ``php-memcached``, to our container:
-
-.. code-block:: yaml
-
-    containers:
-      laravel:
-        # ...
-        setup:
-        - !Ubuntu xenial
-        - !UbuntuUniverse
-        - !Install
-          - php-dom
-          - php-mbstring
-          - php-mysql
-          - php-memcached
-        - !Env { <<: *env }
-        - !ComposerDependencies
-
-Create a container for ``memcached``:
+Laravel can make use of `redis <https://redis.io/>`_ to perform tasks like
+queues and events. In our project, we will use it to cache data from the
+database. First, let's create a command to call composer:
 
 .. code-block:: yaml
 
-    containers:
+    commands:
       # ...
-      memcached:
+      composer: !Command
+        container: app
+        description: run compose cli
+        environ: ❶
+          COMPOSER_HOME: /usr/local/lib/composer
+          COMPOSER_VENDOR_DIR: /usr/local/lib/composer/vendor
+          COMPOSER_CACHE_DIR: /tmp
+          COMPOSER_ALLOW_SUPERUSER: 1
+        volumes:
+          /usr/local/lib/composer/vendor: !Tmpfs ❷
+          /tmp: !CacheDir composer-cache ❸
+        run: [/usr/local/bin/composer]
+
+* ❶ -- setup composer home, vendor dir, cache dir and allow running as root
+* ❷ -- mount directory as Tmpfs to make it writeable
+* ❸ -- mount composer cache directory
+
+This command setup the environment needed by composer to run properly and mount
+the composer cache volume to avoid downloading cached packages. The directory
+``/usr/local/lib/composer/vendor`` needs to be writeable (composer will will put
+packages there) so we mount it as Tmpfs.
+
+Now let's install ``predis/predis``::
+
+    $ vagga composer require predis/predis
+
+With ``predis`` installed, we can proceed to create a container for Redis:
+
+.. code-block:: yaml
+
+    containers:
+      redis:
         setup:
         - !Alpine v3.5
-        - !Install [memcached]
+        - !Install [redis]
 
 Add some yaml anchors on the ``run`` command so we can avoid repetition:
 
@@ -833,9 +853,9 @@ Add some yaml anchors on the ``run`` command so we can avoid repetition:
         description: run the laravel development server
         children:
           app: !Command
-            container: laravel
+            container: app
             environ: *db_config
-            run: &run_app | # ❶
+            run: &app_cmd | # ❶
                 # ...
           db: &db_cmd !Command ❷
             # ...
@@ -853,23 +873,23 @@ Create the command to run with caching:
     commands:
       # ...
       run-cached: !Supervise
-        description: Start the laravel development server alongside memcached
+        description: Start the laravel development server alongside redis
         children:
           cache: !Command
-            container: memcached
-            run: memcached -u memcached -vv ❶
+            container: redis
+            run: redis-server --daemonize no --port 6380 --loglevel verbose ❶
           app: !Command
-            container: laravel
+            container: app
             environ:
               <<: *db_config
-              CACHE_DRIVER: memcached
-              MEMCACHED_HOST: 127.0.0.1
-              MEMCACHED_PORT: 11211
-            run: *run_app
+              CACHE_DRIVER: redis
+              REDIS_HOST: 127.0.0.1
+              REDIS_PORT: 6380
+            run: *app_cmd
           db: *db_cmd
           adminer: *adminer_cmd
 
-* ❶ -- run memcached as verbose so we see can see the cache working
+* ❶ -- run redis as verbose so we see can see the cache working
 
 Now let's change our controller to use caching:
 
@@ -881,8 +901,6 @@ Now let's change our controller to use caching:
 
     use Illuminate\Http\Request;
 
-    use App\Http\Requests;
-    use App\Http\Controllers\Controller;
     use App\Article;
 
     use Cache;
@@ -931,7 +949,7 @@ Now let's change our controller to use caching:
             ]);
         }
 
-        public function edit($id)
+        public function edit(Article article)
         {
             return view('article.edit', [
                 'article' => $article
@@ -963,7 +981,10 @@ Now run our project with caching::
 
     $ vagga run-cached
 
-Keep an eye on the console to see Laravel talking to memcached.
+Keep an eye on the console to see Laravel talking to redis, you will see
+something like::
+
+    3:M 15 Mar 15:20:06.418 - DB 0: 5 keys (0 volatile) in 8 slots HT.
 
 Deploying to a shared server
 ============================

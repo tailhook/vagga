@@ -28,6 +28,7 @@ containers:
     - !ComposerConfig
       install-runtime: false
       runtime-exe: /usr/bin/php7
+      keep-composer: true
     - !EnsureDir /work/vendor
     - !EnsureDir /usr/local/lib/composer/vendor
     - !Sh mount --bind,ro /usr/local/lib/composer/vendor /work/vendor
@@ -66,6 +67,11 @@ containers:
       /run: !Tmpfs
         subdirs:
           mysqld: { mode: 0o777 }
+
+  redis:
+    setup:
+    - !Alpine v3.5
+    - !Install [redis]
 
   adminer:
     setup:
@@ -107,7 +113,7 @@ commands:
       app: !Command
         container: app
         environ: *db_config
-        run: |
+        run: &app_cmd |
           # wait for database to be ready before starting
           dsn="mysql:host=$DB_HOST;port=$DB_PORT"
           while ! php -r "new PDO('$dsn', '$DB_USERNAME', '$DB_PASSWORD');" 2> /dev/null; do
@@ -120,7 +126,7 @@ commands:
           php artisan migrate
           php artisan db:seed
           php artisan serve
-      db: !Command
+      db: &db_cmd !Command
         container: mysql
         user-id: 200
         group-id: 200
@@ -128,14 +134,44 @@ commands:
           exec mysqld --datadir=$DB_DATA_DIR \
             --bind-address=$DB_HOST --port=$DB_PORT \
             --log-error=log --gdb
-      adminer: !Command
+      adminer: &adminer_cmd !Command
         container: adminer
         run: php7 -S 127.0.0.1:8001 -t /opt/adminer
+
+  run-cached: !Supervise
+    description: Start the laravel development server alongside redis
+    children:
+      cache: !Command
+        container: redis
+        run: redis-server --daemonize no --port 6380 --loglevel verbose
+      app: !Command
+        container: app
+        environ:
+          <<: *db_config
+          CACHE_DRIVER: redis
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6380
+        run: *app_cmd
+      db: *db_cmd
+      adminer: *adminer_cmd
 
   artisan: !Command
     description: Shortcut for running artisan cli
     container: app
     run: [php, artisan]
+
+  composer: !Command
+    container: app
+    description: run compose cli
+    environ:
+      COMPOSER_HOME: /usr/local/lib/composer
+      COMPOSER_VENDOR_DIR: /usr/local/lib/composer/vendor
+      COMPOSER_CACHE_DIR: /tmp
+      COMPOSER_ALLOW_SUPERUSER: 1
+    volumes:
+      /usr/local/lib/composer/vendor: !Tmpfs
+      /tmp: !CacheDir composer-cache
+    run: [/usr/local/bin/composer]
 
   _mysql-init: !Command
     description: Init MySQL data volume

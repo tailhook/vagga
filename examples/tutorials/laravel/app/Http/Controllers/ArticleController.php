@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 
 use App\Article;
 
+use Cache;
+
 class ArticleController extends Controller
 {
     /**
@@ -15,7 +17,9 @@ class ArticleController extends Controller
      */
     public function index()
     {
-        $articles = Article::orderBy('created_at', 'asc')->get();
+        $articles = Cache::rememberForever('article:all', function() {
+            return Article::orderBy('created_at', 'asc')->get();
+        });
         return view('article.index', [
            'articles' => $articles
         ]);
@@ -49,17 +53,22 @@ class ArticleController extends Controller
         $article->body = $request->body;
         $article->save();
 
+        Cache::forget('article:all');
+
         return redirect('/');
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  Article article
+     * @param  id
      * @return \Illuminate\Http\Response
      */
-    public function show(Article $article)
+    public function show($id)
     {
+        $article = Cache::rememberForever('article:'.$id, function() use ($id) {
+            return Article::find($id);
+        });
         return view('article.show', [
             'article' => $article
         ]);
@@ -91,6 +100,9 @@ class ArticleController extends Controller
         $article->body = $request->body;
         $article->save();
 
+        Cache::forget('article:'.$article->id);
+        Cache::forget('article:all');
+
         return redirect('/');
     }
 
@@ -103,6 +115,8 @@ class ArticleController extends Controller
     public function destroy(Article $article)
     {
         $article->delete();
+        Cache::forget('article:'.$article->id);
+        Cache::forget('article:all');
         return redirect('/');
     }
 }
