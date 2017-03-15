@@ -1,0 +1,13 @@
+commands:
+
+  m1: !Command
+    container: alpine
+    run: [echo, m1]
+
+  m1x: !Command
+    container: alpine
+    run: [echo, m1]
+
+  overrides: !Command
+    container: alpine
+    run: [echo, m1]

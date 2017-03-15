@@ -1,0 +1,9 @@
+commands:
+
+  m1x: !Command
+    container: alpine
+    run: [echo, m2]
+
+  m2: !Command
+    container: alpine
+    run: [echo, m2]

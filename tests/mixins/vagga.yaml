@@ -1,0 +1,19 @@
+mixins:
+- mixins1.yaml
+- mixins2.yaml
+
+containers:
+  alpine:
+    setup:
+    - !Alpine v3.5
+
+commands:
+
+  top: !Command
+    container: alpine
+    run: [echo, top]
+
+  overrides: !Command
+    container: alpine
+    run: [echo, overrides]
+
