@@ -32,6 +32,12 @@ pub struct GidMap {
     pub count: gid_t,
 }
 
+pub struct Printer {
+}
+
+pub struct Style {
+}
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Namespace {
     Mount,
@@ -169,6 +175,9 @@ impl Command {
         unimplemented!();
     }
     pub fn reset_fds(&mut self) -> &mut Command { unimplemented!(); }
+    pub fn display(&self, style: &Style) -> Printer {
+        unimplemented!();
+    }
 }
 
 impl ExitStatus {
@@ -280,6 +289,24 @@ impl Iterator for ChildEventsIterator {
     type Item = ChildEvent;
 
     fn next(&mut self) -> Option<ChildEvent> {
+        unimplemented!();
+    }
+}
+
+impl fmt::Display for Printer {
+    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!();
+    }
+}
+
+impl Style {
+    pub fn debug() -> Style {
+        unimplemented!();
+    }
+    pub fn short() -> Style {
+        unimplemented!();
+    }
+    pub fn env(&mut self, _: bool) -> Style {
         unimplemented!();
     }
 }

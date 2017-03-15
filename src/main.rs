@@ -25,7 +25,6 @@ extern crate net2;
 extern crate docopt;
 extern crate humantime;
 extern crate digest_writer;
-extern crate dir_signature;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;
@@ -36,6 +35,8 @@ extern crate dir_signature;
 extern crate unshare;
 #[cfg(feature="containers")]
 extern crate libmount;
+#[cfg(feature="containers")]
+extern crate dir_signature;
 
 #[macro_use] mod macros;
 mod config;
@@ -52,6 +53,8 @@ mod build_step;
 mod unshare;
 #[cfg(not(feature="containers"))]
 mod libmount;
+#[cfg(not(feature="containers"))]
+mod dir_signature;
 
 // Commands
 mod launcher;
@@ -102,5 +105,5 @@ fn main() {
 #[cfg(feature="docker_runner")]
 fn main() {
     init_logging();
-    exit(launcher::main(env::args().collect()));
+    exit(launcher::run(env::args().collect()));
 }

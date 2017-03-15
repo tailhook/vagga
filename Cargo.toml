@@ -35,11 +35,11 @@ quick-error = "1.1.0"
 docopt = "0.6.83"
 quire = "0.2.1"
 lazy_static = "0.2.2"
-dir-signature = "0.1.0"
+dir-signature = { version="0.1.0", optional=true }
 
 [features]
 default = ["containers"]
-containers = ["unshare", "libmount"]
+containers = ["unshare", "libmount", "dir-signature"]
 docker_runner = []
 
 [[bin]]
