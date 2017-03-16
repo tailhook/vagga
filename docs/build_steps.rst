@@ -131,7 +131,7 @@ Ubuntu Commands
 
        - !AptTrust
          server: hkp://pgp.mit.edu
-         keys: 1572C52609D
+         keys: [1572C52609D]
 
    This is used to get rid of the error similar to the following::
 
