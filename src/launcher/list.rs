@@ -67,6 +67,10 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
             "Display a relative path from the current \
             working directory to the directory \
             containing vagga.yaml".to_string()));
+        commands.push((
+            "_update_symlinks".to_string(),
+            "Updates symlinks to vagga for commands having ``symlink-name`` \
+            in this project".to_string()));
 
         let mut out = stdout();
         for (name, description) in commands {
