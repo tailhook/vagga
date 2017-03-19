@@ -267,11 +267,11 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
         "_base_dir" => {
             println!("{}", cfg_dir.display());
-            Ok(1)
+            Ok(0)
         }
         "_relative_work_dir" => {
             println!("{}", int_workdir.display());
-            Ok(1)
+            Ok(0)
         }
         "_build" => {
             build::build_command(&context, args)
