@@ -1,7 +1,7 @@
 #compdef vagga
 #autoload
 
-_cmds () {
+_list () {
     local cmds listopts
 
     # Show hidden options only when underscore is typed
@@ -12,16 +12,21 @@ _cmds () {
     # Check if in folder with correct vagga.yaml file
     vagga _list 1>/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
-        IFS=$'\n' cmds=($(vagga _list --zsh $listopts))
+        IFS=$'\n' cmds=($(vagga _list "$1" $listopts))
     else
         cmds=()
     fi
     _describe -t commands 'Available commands' cmds
 }
 
-_arguments -C -s "1: :_cmds" '*::arg:->args' --
+_arguments -C -s "1: :{_list --zsh}" '*::arg:->args' --
 case $state in
     (args)
-        words[1]="vagga _help ${words[1]}"
-        _arguments -C -s --
+        cmd=${words[1]}
+        if [[ ${cmd} = "_run" ]] then;
+            _arguments -C -s "1: :{_list --containers}"
+        else
+            words[1]="vagga _help ${cmd}"
+            _arguments -C -s --
+        fi
 esac
