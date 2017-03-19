@@ -7,7 +7,7 @@ use config::Config;
 use config::command::MainCommand;
 use config::containers::Container;
 
-use launcher::{Context};
+use launcher::{Context, run};
 use launcher::user;
 use launcher::list;
 
@@ -746,6 +746,11 @@ pub fn generate_command_help(context: &Context, args: Vec<String>)
     }
     if cname == "" {
         return list::print_help(&context.config)
+    }
+
+    if cname.starts_with('_') {
+        return Ok(run(
+            vec!["vagga".to_string(), cname, "--help".to_string()]));
     }
 
     let command = context.config.commands.get(&cname)
