@@ -54,8 +54,7 @@ pub struct CommandInfo {
     pub prerequisites: Vec<String>,
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
-    pub link_as: Option<String>,
-    pub linked_path_translation: bool,
+    pub symlink_name: Option<String>,
 
     // Command
     pub tags: Vec<String>,  // Only for supervise chidlren
@@ -86,8 +85,7 @@ pub struct CapsuleInfo {
     pub prerequisites: Vec<String>,
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
-    pub link_as: Option<String>,
-    pub linked_path_translation: bool,
+    pub symlink_name: Option<String>,
 
     // CapsuleCommand
     pub uids: Vec<Range>,
@@ -108,8 +106,7 @@ pub struct SuperviseInfo {
     pub prerequisites: Vec<String>,
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
-    pub link_as: Option<String>,
-    pub linked_path_translation: bool,
+    pub symlink_name: Option<String>,
 
     // Supervise
     pub mode: SuperviseMode,
@@ -127,7 +124,6 @@ pub enum MainCommand {
 
 pub struct LinkInfo<'a> {
     pub name: &'a str,
-    pub path_translation: bool,
 }
 
 
@@ -162,26 +158,23 @@ impl MainCommand {
     pub fn link(&self) -> Option<LinkInfo> {
         match *self {
             MainCommand::Command(ref cmd) => {
-                cmd.link_as.as_ref().map(|name| {
+                cmd.symlink_name.as_ref().map(|name| {
                     LinkInfo {
                         name: name,
-                        path_translation: cmd.linked_path_translation,
                     }
                 })
             },
             MainCommand::CapsuleCommand(ref cmd) => {
-                cmd.link_as.as_ref().map(|name| {
+                cmd.symlink_name.as_ref().map(|name| {
                     LinkInfo {
                         name: name,
-                        path_translation: cmd.linked_path_translation,
                     }
                 })
             },
             MainCommand::Supervise(ref cmd) => {
-                cmd.link_as.as_ref().map(|name| {
+                cmd.symlink_name.as_ref().map(|name| {
                     LinkInfo {
                         name: name,
-                        path_translation: cmd.linked_path_translation,
                     }
                 })
             },
@@ -289,8 +282,7 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("tags", V::Sequence::new(V::Scalar::new()))
         .member("pass_tcp_socket", V::Scalar::new().optional())
         .member("expect_inotify_limit", V::Scalar::new().optional())
-        .member("link_as", V::Scalar::new().optional())
-        .member("linked_path_translation", V::Scalar::new().default(false))
+        .member("symlink_name", V::Scalar::new().optional())
         .member("prerequisites", V::Sequence::new(V::Scalar::new()));
     if toplevel {
         cmd = cmd.member("options", V::Scalar::new().optional());

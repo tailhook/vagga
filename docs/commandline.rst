@@ -160,6 +160,44 @@ vagga _relative_work_dir
   empty string (output still contains a newline), not a single dot, as one
   may expect.
 
+.. _update_symlinks:
+
+vagga _update_symlinks
+  **This functionality is experimental**. Some details can change in future.
+
+  Creates a set of symlinks in your home directory (`~/.vagga/cmd`) and in
+  current vagga directory (`.vagga/.cmd`) which point to commands named in
+  vagga. Symlinks are created to the current vagga binary (which is resolved
+  using ``readlink /proc/self/exe`` not, ``argv[0]``).
+
+  These directories can be added to ``PATH`` either in your shell or in
+  your text editor, IDE, or any other kind of shell. Or you can pass them
+  to scripts which allow customization
+  (``make RSYNC=/myproj/.vagga/.cmd/rsync``).
+
+  Only comands which have ``symlink-name`` are linked with the name specified
+  in the parameter. So you make create a hidden (underscored) name for some
+  public command.
+
+  There are two directories, so basically two modes of operation:
+
+  1. User home directory ``~/.vagga/cmd``. It meant to use for utilities
+     you're going to use in multiple projects. When running such a command in
+     some project dir, exact command from this project dir will be invoked. So
+     if you run ``flake8`` (a linter for python), correct version of linter
+     for this project will be run. If you ``cd`` to another project, correct
+     version of the tool with specific plugins and python interpreter will be
+     picked there immediately.
+
+  2. Project directory ``proj/.vagga/.cmd``. This directory may be used to
+     specify utility directly or to point your IDE to in project settings. It's
+     not recommended to add this directory to your search ``PATH``.
+
+  Note: for (1) it's expected that single version of vagga is used for all of
+  the projects, which is usually the case.
+
+  .. versionadded:: 0.7.1
+
 
 Normal Commands
 ===============

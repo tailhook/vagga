@@ -203,6 +203,17 @@ These parameters work for both kinds of commands:
 
         eval somecmd $VAGGACLI_TEST
 
+.. opt:: symlink-name
+
+   **This functionality is experimental**. Some details can change in future.
+
+   If parameter is set to some name, then ``vagga _update_symlinks`` will
+   add a symlink to a ``vagga`` binary with this name. This should be used
+   for commands that you want to run from your shell without ``vagga␣``
+   prefix. See ``_update_symlinks`` command for more info.
+
+   .. versionadded:: 0.7.1
+
 .. _docopt: http://docopt.org/
 
 

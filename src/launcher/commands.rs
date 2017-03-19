@@ -26,11 +26,11 @@ pub fn update_symlinks(ctx: &Context, mut args: Vec<String>)
         args.insert(0, "vagga _update_symlinks".to_string());
         let mut ap = ArgumentParser::new();
         ap.set_description("
-            Update symlinks in `.vagga/cmd` and `~/.vagga/cmd`
+            Update symlinks in `.vagga/.cmd` and `~/.vagga/cmd`
             ");
         ap.refer(&mut which)
             .add_option(&["--local-only"], StoreConst(Local),
-                "Only update local shell scripts (`.vagga/cmd`)")
+                "Only update local shell scripts (`.vagga/.cmd`)")
             .add_option(&["--user-only"], StoreConst(User), "
                 Only update shell script in user's home (`$HOME/.vagga/cmd`)");
         match ap.parse(args.clone(), &mut stdout(), &mut stderr()) {
