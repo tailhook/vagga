@@ -19,5 +19,6 @@ the project dir.
    upgrading
    supervision
    pid1mode
+   capsule_commands
 
 .. _YAML: http://yaml.org

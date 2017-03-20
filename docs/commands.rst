@@ -30,6 +30,9 @@ and ``!Supervise`` illustrated by the following example:
             run: wget https://partner-images.canonical.com/core/xenial/current/ubuntu-xenial-core-cloudimg-i386-root.tar.gz
 
 
+Since 0.7.1 there is a third *experimental* kind which is ``!CapsuleCommand``.
+
+
 Common Parameters
 =================
 
@@ -426,3 +429,43 @@ Parameters of `!Supervise`
    For example, it is possible to run several test suites each start service
    that binds the same port. Also you can run arbitrary command inside isolated
    network using ``--isolate-network`` commandline option.
+
+
+Parameters of `!CapsuleCommand`
+===============================
+
+**This functionality is experimental**. Some details can change in future.
+
+It's generally not recommended to use, unless you know what are you doing.
+
+.. opt:: uids
+.. opt:: gids
+
+   If you need to build container non-standard uid/gid mapping, you might
+   want to configure these to match container's settings.
+
+   Note: all containers built in this CapsuleCommand must match uids/gids with
+   these. Defaults are usually okay.
+
+.. opt:: work-dir
+
+   The working directory to run in. Path relative to project root. By
+   default command is run in the same directory where vagga started (sans
+   the it's mounted as ``/work`` so the output of ``pwd`` would seem to be
+   different)
+
+.. opt:: environ
+
+   The mapping of environment to pass to command. This overrides environment
+   specified in container on value by value basis.
+
+   This is also a good way to pass some variables to a script that bootstraps
+   a capsule.
+
+.. opt:: run
+
+   The command to run. Rules are the same as in normal command, but usually
+   this option either specifies a local script to run (committed in repository)
+   or a single pattern like ``vagga _capsule script https://some/location.sh``.
+   See :ref:`Capsule Commands <capsule_commands>` for more info.
+
