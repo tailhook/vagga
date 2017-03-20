@@ -1,10 +1,12 @@
+use std::collections::BTreeMap;
 use std::env;
-use std::os::unix::fs::symlink;
 use std::io::{stdout, stderr};
+use std::os::unix::fs::symlink;
 use std::path::Path;
 
 use argparse::{ArgumentParser};
 use unshare::{Command};
+use rustc_serialize::json;
 
 use config::command::CapsuleInfo;
 
@@ -60,6 +62,18 @@ const BUSYBOX_COMMANDS: &'static [&'static str] = &[
     "whois", "xargs", "xzcat", "yes", "zcat"
 ];
 
+#[derive(RustcEncodable, Clone, Debug)]
+pub struct Settings<'a> {
+    pub version_check: bool,
+    pub proxy_env_vars: bool,
+    pub ubuntu_mirror: &'a Option<String>,
+    pub alpine_mirror: &'a Option<String>,
+    pub build_lock_wait: bool,
+    pub environ: &'a BTreeMap<String, String>,
+    pub index_all_images: bool,
+    pub run_symlinks_as_commands: bool,
+}
+
 
 pub fn symlink_busybox_commands() -> Result<(), String> {
     Dir::new("/bin").create()
@@ -114,6 +128,17 @@ pub fn commandline_cmd(_cmd_name: &str, command: &CapsuleInfo,
     cmd.args(&cmdline);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
+    let ref s = wrapper.settings;
+    cmd.env("VAGGA_SETTINGS", json::encode(&Settings {
+            version_check: s.version_check,
+            proxy_env_vars: s.proxy_env_vars,
+            ubuntu_mirror: &s.ubuntu_mirror,
+            alpine_mirror: &s.alpine_mirror,
+            build_lock_wait: s.build_lock_wait,
+            environ: &s.environ,
+            index_all_images: s.index_all_images,
+            run_symlinks_as_commands: s.run_symlinks_as_commands,
+        }).unwrap());
     if let Some(ref wd) = command.work_dir {
         cmd.current_dir(Path::new("/work").join(&wd));
     } else {
