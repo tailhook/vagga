@@ -1,6 +1,8 @@
 #compdef vagga
 #autoload
 
+VAGGA=${VAGGA:-vagga}
+
 _list () {
     local cmds listopts
 
@@ -10,9 +12,9 @@ _list () {
     fi
 
     # Check if in folder with correct vagga.yaml file
-    vagga _list 1>/dev/null 2>/dev/null
+    $VAGGA _list 1>/dev/null 2>/dev/null
     if [ $? -eq 0 ]; then
-        IFS=$'\n' cmds=($(vagga _list "$1" $listopts))
+        IFS=$'\n' cmds=($($VAGGA _list "$1" $listopts))
     else
         cmds=()
     fi
@@ -26,7 +28,7 @@ case $state in
         if [[ ${cmd} = "_run" ]] then;
             _arguments -C -s "1: :{_list --containers}"
         else
-            words[1]="vagga _help ${cmd}"
+            words[1]="$VAGGA _help ${cmd}"
             _arguments -C -s --
         fi
 esac
