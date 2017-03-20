@@ -7,7 +7,33 @@ The ``vagga.yaml`` has two sections:
 * ``containers`` -- description of the containers
 * ``commands`` -- a set of commands defined for the project
 
-There is also additional top-level option:
+There is also two top-level options:
+
+.. opt:: mixins
+
+   This is a list of vagga configs that will be "mixed in" into current config.
+   This basically means that we import all the commands and containers from
+   them literally.
+
+   When adding mixins, latter one overrides commands and containers in
+   the former configs. And the ones in ``vagga.yaml`` override all the mixins.
+
+   There are a few use-cases for mixins:
+
+   1. Splitting config into several groups of things, while putting together
+      containers and commands (latter contrasts to using includes_).
+   2. Use a generated parts of configs. Because non-existing or invalid mixins
+      are ignored (with a warning) you can generate or update mixins by vagga
+      commands without risk of making defunct vagga config.
+   3. Use vagga config from a subproject (but be aware that paths resolve to
+      original ``vagga.yaml``, not the included one)
+   4. Override things from git-commited ``vagga.yaml`` to custom one (note the
+      latter requires not to commit ``vagga.yaml`` itself, but only mixed in
+      things)
+
+   .. versionadded:: 0.7.1
+
+   .. _includes: http://rust-quire.readthedocs.io/en/latest/user.html#includes
 
 .. opt:: minimum-vagga
 
