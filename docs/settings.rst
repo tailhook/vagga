@@ -195,3 +195,13 @@ not to do so.
 .. opt:: environ
 
     The mapping, that overrides environment variables set in container or command.
+
+.. opt:: run-symlinks-as-commands
+
+    (default ``true``) If the setting is true, when there is a symlink named
+    ``yyy`` that points to a vagga, and vagga is run by calling the name of
+    that symlink vagga finds a command with ``symlink-name`` which equals to
+    this command and runs it directly, passing all the arguments to that
+    command (i.e. vagga doesn't try to parse command-line itself).
+
+    .. versionadded:: 0.7.1
