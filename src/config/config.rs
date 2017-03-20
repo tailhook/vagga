@@ -143,9 +143,8 @@ fn read_mixins(filename: &Path, mixins: &Vec<String>, dest: &mut Config,
         let mixin_result: Result<(PathBuf, Config), _> =
             join_path(filename, mixin)
             .and_then(|path| {
-                parse_config(&path, &config_validator(), opt)
+                single_file(&path, opt)
                 .map(move |c| (path, c))
-                .map_err(|e| format!("{}", e))
             });
         match mixin_result {
             Ok((path, subcfg)) => {
@@ -172,13 +171,25 @@ fn read_mixins(filename: &Path, mixins: &Vec<String>, dest: &mut Config,
     Ok(())
 }
 
+fn single_file(filename: &Path, opt: &Options) -> Result<Config, String> {
+    let filename = Rc::new(filename.to_path_buf());
+    parse_config(&*filename, &config_validator(), &opt)
+    .map_err(|e| format!("{}", e))
+    .map(|mut cfg: Config| {
+        for (_, ref mut command) in &mut cfg.commands {
+            command.set_source(filename.clone());
+        }
+        for (_, ref mut container) in &mut cfg.containers {
+            container.source = Some(filename.clone());
+        }
+        cfg
+    })
+}
+
 pub fn read_config(filename: &Path) -> Result<Config, String> {
     let mut opt = Options::default();
     opt.allow_include(include_file);
-    let mut config: Config =
-        parse_config(filename, &config_validator(), &opt)
-        .map_err(|e| format!("{}", e))?;
-
+    let mut config = single_file(filename, &opt)?;
     read_mixins(filename,
         &mem::replace(&mut config.mixins, Vec::new()),
         &mut config,

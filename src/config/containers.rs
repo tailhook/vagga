@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use quire::validate as V;
 
@@ -24,6 +25,8 @@ pub struct Container {
     pub resolv_conf_path: Option<PathBuf>,
     pub hosts_file_path: Option<PathBuf>,
     pub volumes: BTreeMap<PathBuf, Volume>,
+
+    pub source: Option<Rc<PathBuf>>,
 }
 
 impl Container {

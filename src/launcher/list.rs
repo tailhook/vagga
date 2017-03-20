@@ -1,4 +1,5 @@
 use std::io::{stdout, stderr, Write};
+use std::rc::Rc;
 
 use argparse::{ArgumentParser, StoreTrue};
 
@@ -13,6 +14,7 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
     let mut hidden = false;
     let mut containers = false;
     let mut zsh = false;
+    let mut verbose = false;
     {
         args.insert(0, String::from("vagga _list"));
         let mut ap = ArgumentParser::new();
@@ -31,49 +33,67 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
         ap.refer(&mut zsh)
             .add_option(&["--zsh"], StoreTrue,
                 "Use zsh completion compatible format");
+        ap.refer(&mut verbose)
+            .add_option(&["-v", "--verbose"], StoreTrue,
+                "Verbose output (show source files
+                 for containers and commands)");
         match ap.parse(args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(x) => return Ok(x),
         }
     }
     if containers {
-        for (cname, _) in config.containers.iter() {
+        for (cname, container) in config.containers.iter() {
             println!("{}", cname);
+            if let Some(ref src) = container.source {
+                if verbose {
+                    println!("{:19} (from {:?})", " ", &src);
+                }
+            }
         }
     } else {
-        let mut commands: Vec<(String, String)> = config.commands.iter()
+        let ref builtins = Some(Rc::new("<builtins>".into()));
+        let mut commands: Vec<_> = config.commands.iter()
             .map(|(name, cmd)|
-                (name.to_string(),
-                 cmd.description().unwrap_or(&"".to_string()).to_string()))
+                (&name[..],
+                 cmd.description().unwrap_or(&"".to_string()).to_string(),
+                 cmd.source()))
             .collect();
         // TODO(tailhook) fetch builtins from completion code
         commands.push(
-            ("_build".to_string(),
-             "Build a container".to_string()));
+            ("_build",
+             "Build a container".to_string(),
+             &builtins));
         commands.push(
-            ("_run".to_string(),
-             "Run arbitrary command, optionally building container".to_string()));
+            ("_run",
+             "Run arbitrary command, optionally building container".to_string(),
+             &builtins));
         commands.push((
-            "_clean".to_string(),
-            "Clean containers and build artifacts".to_string()));
+            "_clean",
+            "Clean containers and build artifacts".to_string(),
+            &builtins));
         commands.push((
-            "_list".to_string(),
-            "List of built-in commands".to_string()));
+            "_list",
+            "List of built-in commands".to_string(),
+            &builtins));
         commands.push((
-            "_base_dir".to_string(),
-            "Display a directory which contains vagga.yaml".to_string()));
+            "_base_dir",
+            "Display a directory which contains vagga.yaml".to_string(),
+            &builtins));
         commands.push((
-            "_relative_work_dir".to_string(),
+            "_relative_work_dir",
             "Display a relative path from the current \
             working directory to the directory \
-            containing vagga.yaml".to_string()));
+            containing vagga.yaml".to_string(),
+            &builtins));
         commands.push((
-            "_update_symlinks".to_string(),
+            "_update_symlinks",
             "Updates symlinks to vagga for commands having ``symlink-name`` \
-            in this project".to_string()));
+            in this project".to_string(),
+            &builtins));
 
         let mut out = stdout();
-        for (name, description) in commands {
+        for (name, description, source) in commands {
             if name.starts_with("_") && !(hidden || all) {
                 continue;
             }
@@ -103,6 +123,11 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
                     out.write_all(description.as_bytes()).ok();
                 }
                 out.write_all(b"\n").ok();
+                if let Some(ref src) = *source {
+                    if verbose {
+                        println!("{:19} (from {:?})", " ", &src);
+                    }
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use quire::validate as V;
 use quire::ast::Ast as A;
@@ -46,6 +47,7 @@ pub struct Network {
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common for toplevel commands
+    pub source: Option<Rc<PathBuf>>,
     pub description: Option<String>,
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
@@ -77,6 +79,7 @@ pub struct CommandInfo {
 pub struct CapsuleInfo {
     // Common for toplevel commands
     // TODO(tailhook) remove unuseful fields here
+    pub source: Option<Rc<PathBuf>>,
     pub description: Option<String>,
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
@@ -99,6 +102,7 @@ pub struct CapsuleInfo {
 #[derive(RustcDecodable, Clone, PartialEq, Eq)]
 pub struct SuperviseInfo {
     // Common
+    pub source: Option<Rc<PathBuf>>,
     pub description: Option<String>,
     pub banner: Option<String>,
     pub banner_delay: Option<u32>,
@@ -178,6 +182,20 @@ impl MainCommand {
                     }
                 })
             },
+        }
+    }
+    pub fn set_source(&mut self, fname: Rc<PathBuf>) {
+        match *self {
+            MainCommand::Command(ref mut c) => c.source = Some(fname),
+            MainCommand::CapsuleCommand(ref mut c) => c.source = Some(fname),
+            MainCommand::Supervise(ref mut c) => c.source = Some(fname),
+        }
+    }
+    pub fn source(&self) -> &Option<Rc<PathBuf>> {
+        match *self {
+            MainCommand::Command(ref c) => &c.source,
+            MainCommand::CapsuleCommand(ref c) => &c.source,
+            MainCommand::Supervise(ref c) => &c.source,
         }
     }
 }
