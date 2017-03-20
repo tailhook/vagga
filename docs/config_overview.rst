@@ -10,6 +10,7 @@ The ``vagga.yaml`` has two sections:
 There is also two top-level options:
 
 .. opt:: mixins
+   **This functionality is experimental**. Some details can change in future.
 
    This is a list of vagga configs that will be "mixed in" into current config.
    This basically means that we import all the commands and containers from
