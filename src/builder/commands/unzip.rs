@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{File, Permissions, set_permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -41,6 +42,7 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
         "Error when unpacking zip archive: {err}");
 
     let no_subdir = &subdir == &Path::new("") || &subdir == &Path::new(".");
+    let mut dirs = HashSet::new();
     let mut found_subdir = no_subdir;
     for i in 0..zip.len() {
         let mut fin = zip.by_index(i).unwrap();
@@ -58,9 +60,16 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
             continue;
         }
         if fin_name.ends_with("/") {
+            dirs.insert(fout_path.clone());
             try_msg!(Dir::new(&fout_path).recursive(true).create(),
                 "Error creating dir: {err}");
         } else {
+            let fout_base = fout_path.parent().unwrap();
+            if !dirs.contains(fout_base) {
+                try_msg!(Dir::new(&fout_base).recursive(true).create(),
+                    "Error creating dir: {err}");
+                dirs.insert(fout_base.to_path_buf());
+            }
             let mut fout = try_msg!(File::create(&fout_path),
                 "Error creating file: {err}");
             try_msg!(copy_stream(&mut fin, &mut fout),
