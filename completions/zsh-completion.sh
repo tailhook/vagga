@@ -25,7 +25,7 @@ _arguments -C -s "1: :{_list --zsh}" '*::arg:->args' --
 case $state in
     (args)
         cmd=${words[1]}
-        if [[ ${cmd} = "_run" ]] then;
+        if [[ ${cmd} = "_run" || $cmd = "_build" ]] then;
             _arguments -C -s "1: :{_list --containers}"
         else
             words[1]="$VAGGA _help ${cmd}"
