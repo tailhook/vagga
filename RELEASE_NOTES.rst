@@ -2,6 +2,27 @@
 Release Notes
 =============
 
+
+Vagga 0.7.1
+===========
+
+:Release Date: future
+
+* Added ``symlink-name`` parameter and ``vagga _update_symlinks``
+* Added experimental ``mixins`` setting
+* Implemented ``wait-all-successful`` supervision mode for letting multiple
+  commands finish successfully in parallel
+* Added long-awaited ``!CacheDir`` volume
+* Added some zsh completion
+* Added experimental ``!CapsuleCommand`` and ``vagga _capsule`` command family
+* Added ``vagga _base_dir`` and ``vagga _relative_work_dir`` commands for
+  easier script usage
+* Changed internal commands to ``vagga __cmd__``  of arg zero,
+  this allows symlinking vagga to different names
+* Added optional auto-indexing of all images (not useful for now)
+* Added lock on ``apt-get remove`` to remove race condition on parallel builds
+
+
 Vagga 0.7.0
 ===========
 
