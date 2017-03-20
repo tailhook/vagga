@@ -46,7 +46,7 @@ pub struct Context {
 }
 
 fn check_export(cmd: &String) -> Option<String> {
-    if cmd == "/proc/self/exe" {
+    if cmd == "/proc/self/exe" || cmd == "vagga" {
         return None;
     }
     match cmd.rfind("/") {
