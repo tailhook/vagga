@@ -196,8 +196,7 @@ pub fn read_settings(project_root: &Path)
         build_lock_wait: false,
         auto_apply_sysctl: false,
         index_all_images: false,
-        // This will be changed to `true` in some future release
-        run_symlinks_as_commands: false,
+        run_symlinks_as_commands: true,
         environ: BTreeMap::new(),
     };
     let mut secure_files = vec!();
