@@ -209,7 +209,7 @@ to ``/etc/pacman.conf``::
 
         [linux-user-ns]
         SigLevel = Never
-        Server = http://files.zerogw.com/arch-kernel/$arch
+        Server = https://files.zerogw.com/arch-kernel/$arch
 
 .. note:: alternatively you may use a package from AUR::
 
