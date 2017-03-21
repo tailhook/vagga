@@ -71,7 +71,8 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
           .required();
         ap.refer(&mut global)
           .add_option(&["--global"], StoreTrue,
-                "Apply cleanup command to all containers. Works only \
+                "Apply cleanup command to all the projects
+                in the `storage-dir`. Works only \
                 if `storage-dir` is configured in settings");
         ap.refer(&mut dry_run)
           .add_option(&["-n", "--dry-run"], StoreTrue,
