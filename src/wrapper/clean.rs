@@ -100,7 +100,15 @@ pub fn clean_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
             Action::Temporary => clean_temporary(wrapper, global, dry_run),
             Action::Old => clean_old(wrapper, global, dry_run),
             Action::Unused => {
-                clean_unused(wrapper, global, duration, dry_run)
+                if global {
+                    if let Some(duration) = duration {
+                        global_clean_unused(wrapper, duration, dry_run)
+                    } else {
+                        panic!("no global cleanup without --at-least");
+                    }
+                } else {
+                    clean_unused(wrapper, duration, dry_run)
+                }
             }
             Action::Transient => clean_transient(wrapper, global, dry_run),
             Action::Everything => clean_everything(wrapper, global, dry_run),
@@ -325,13 +333,71 @@ fn clean_dirs_except<P: AsRef<Path>>(roots: P, useful: &HashSet<String>,
     Ok(())
 }
 
-fn clean_unused(wrapper: &Wrapper, global: bool, duration: Option<Duration>,
+fn global_clean_unused(wrapper: &Wrapper, duration: Duration,
     dry_run: bool)
     -> Result<(), String>
 {
-    if global {
-        panic!("Global cleanup is not implemented yet");
-    }
+    let unixtime = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    let cut_off = (unixtime - duration).as_secs() as i64;
+    let is_cache_dir = |p: &Path| {
+        wrapper.ext_settings.cache_dir.as_ref()
+        .map(|x| x == p)
+        .unwrap_or(false)
+    };
+    let storage_dir = wrapper.ext_settings.storage_dir.as_ref().unwrap();
+    let mut proj_num = 0;
+    let mut to_remove = 0;
+    let mut to_keep = 0;
+    ScanDir::dirs().read(&storage_dir, |iter| {
+        for (entry, name) in iter {
+            let path = entry.path();
+            if is_cache_dir(&path) {
+                continue;
+            }
+            proj_num += 1;
+            info!("Scanning project {}", name);
+
+            let mut useful: HashSet<String> = HashSet::new();
+            let roots = path.join(".roots");
+            ScanDir::dirs().skip_hidden(false).read(&roots, |iter| {
+                for (entry, name) in iter {
+                    let luse_path = entry.path().join("last_use");
+                    match metadata(&luse_path) {
+                        Ok(ref meta) if meta.mtime() > cut_off => {
+                            useful.insert(name);
+                            to_keep += 1;
+                        }
+                        Ok(_) => {
+                            to_remove += 1;
+                        }
+                        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {}
+                        Err(e) => {
+                            error!("Error trying to stat {:?}: {}",
+                                luse_path, e);
+                        }
+                    }
+                }
+            }).map_err(|e| {
+                error!("Error reading {:?}: {}", roots, e);
+            }).ok();
+
+            info!("Useful images {:?}", useful);
+            clean_dirs_except(&roots, &useful, dry_run)
+            .map_err(|e| error!("Error cleaning {:?}: {}", roots, e))
+            .ok(); // TODO(tailhook) propagate the errorneous exit code?
+        }
+    }).map_err(|e| {
+        format!("Error reading storage dir {:?}: {}", storage_dir, e)
+    })?;
+    info!("Scanned {} projects, keeping {} images, removed {}",
+        proj_num, to_keep, to_remove);
+    Ok(())
+}
+
+fn clean_unused(wrapper: &Wrapper, duration: Option<Duration>,
+    dry_run: bool)
+    -> Result<(), String>
+{
 
     setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)?;
