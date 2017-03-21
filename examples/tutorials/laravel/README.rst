@@ -2,19 +2,20 @@
 Building a Laravel project
 ==========================
 
-This tutorial will show how to create a simple Laravel_ project using vagga.
+This tutorial will show how to create a simple Laravel_ project on Alpine using
+PHP7, MySQL and Redis.
 
-* `Creating the project`_
+* `Create the project`_
 * `Setup the database`_
+* `Inspecting the database`_
 * `Adding some code`_
 * `Setup Redis`_
-* `Deploying to a shared server`_
 
 .. _Laravel: https://laravel.com/
 
 
-Creating the project
-====================
+Create the project
+==================
 
 In order to create the initial project structure, we will need a container with
 the Laravel installer. First, let's create a directory for our project::
@@ -140,8 +141,8 @@ php7 and the modules needed for both Laravel and Composer.
 We also link the php7 executable into ``/usr/bin/php`` to make it available as
 just ``php``.
 
-This container will be used as the base for another container in order to speed
-up builds.
+This container will be used as the base for the ``app`` container in order to
+speed up builds.
 
 .. code-block:: yaml
 
@@ -185,10 +186,11 @@ instead of the default version from Alpine.
     - !ComposerDependencies
     - !Sh umount /work/vendor
 
-Applications using Composer usually expect the ``vendor`` directory to be
-available at the project root, but vagga install composer dependencies under
-``/usr/local/lib/composer``. To make it available to our application, we mount
-that directory into ``/work/vendor`` and ``umount`` after build.
+The ``composer.json`` created by Laravel has some post install hooks that expect
+the ``vendor`` directory to be available at the project root, but vagga installs
+composer dependencies under ``/usr/local/lib/composer``. To make it available to
+our application during the build, we mount that directory into ``/work/vendor``
+and ``umount`` afterwards.
 
 To test if everything is ok, let's add a command to run our project:
 
@@ -536,8 +538,9 @@ Now change the controller to actually do something:
             return redirect('/');
         }
 
-        public function show(Article $article)
+        public function show($id)
         {
+            $article = Article::find($id);
             return view('article.show', [
                 'article' => $article
             ]);
@@ -985,96 +988,3 @@ Keep an eye on the console to see Laravel talking to redis, you will see
 something like::
 
     3:M 15 Mar 15:20:06.418 - DB 0: 5 keys (0 volatile) in 8 slots HT.
-
-Deploying to a shared server
-============================
-
-It's still common to deploy a php application to a shared server running a LAMP
-stack (Linux, Apache, MySQL and PHP), but our container in its current state
-isn't compatible with that approach. To solve this, we will create a command to
-export our project almost ready to be deployed.
-
-Before going to the command part, we will need a new container for this task:
-
-.. code-block:: yaml
-
-    containers:
-      # ...
-      exporter:
-        setup:
-        - !Ubuntu xenial
-        - !UbuntuUniverse
-        - !Install [php-mbstring, php-dom]
-        - !Depends composer.json ❶
-        - !Depends composer.lock ❶
-        - !EnsureDir /usr/local/src/
-        - !Copy ❷
-          source: /work
-          path: /usr/local/src/work
-        - !ComposerInstall ❸
-        - !Env
-          COMPOSER_VENDOR_DIR: /usr/local/src/work/vendor ❹
-        - !Sh |
-          cd /usr/local/src/work
-          rm -f export.tar.gz
-          composer install --no-dev --prefer-dist \ ❺
-            --optimize-autoloader
-        volumes:
-          /usr/local/src/work: !Snapshot ❻
-
-* ❶ -- rebuild the container if dependencies change.
-* ❷ -- copy our project into a directory inside the container.
-* ❸ -- require Composer to be available.
-* ❹ -- install composer dependencies into the directory we just copied.
-* ❺ -- call ``composer`` binary directly, because using ``!ComposerDependencies``
-  would make vagga try to find ``composer.json`` before starting the build.
-* ❻ -- create a volume so we can manipulate the files in the copied directory.
-
-Now let's create the command to export our container:
-
-.. code-block:: yaml
-
-    commands:
-      # ...
-      export: !Command
-        container: exporter
-        description: export project into tarball
-        run: |
-            cd /usr/local/src/work
-            rm -f .env
-            rm -f database/database.sqlite
-            php artisan cache:clear
-            php artisan config:clear
-            php artisan route:clear
-            php artisan view:clear
-            rm storage/framework/sessions/*
-            rm -rf tests
-            echo APP_ENV=production >> .env
-            echo APP_KEY=random >> .env
-            php artisan key:generate
-            php artisan optimize
-            php artisan route:cache
-            php artisan config:cache
-            php artisan vendor:publish
-            tar -czf export.tar.gz .env *
-            cp -f export.tar.gz /work/
-
-.. note:: Take this command as a mere example, hence you are encouraged to
-  change it in order to better suit your needs.
-
-The shell in the ``export`` command will make some cleanup, remove tests (we
-don't need them in production) and create a minimal .env file with an APP_KEY
-generated. Then it will compress everything into a file called ``export.tar.gz``
-and copy it to our project directory.
-
-Since the ``export`` command is quite long, it is a good candidate to be moved
-to a separate file, for example:
-
-.. code-block:: yaml
-
-    commands:
-      # ...
-      export: !Command
-        container: exporter
-        description: export project into tarball
-        run: [/bin/sh, export.sh]
