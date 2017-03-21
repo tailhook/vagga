@@ -2,6 +2,8 @@
 
 use Illuminate\Database\Seeder;
 
+// use ArticleSeeder;
+
 class DatabaseSeeder extends Seeder
 {
     /**

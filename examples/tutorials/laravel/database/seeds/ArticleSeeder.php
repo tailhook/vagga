@@ -14,6 +14,7 @@ class ArticleSeeder extends Seeder
         ['title' => 'Article 5', 'body' => 'Lorem ipsum dolor sit amet']
     ];
 
+
     /**
      * Run the database seeds.
      *

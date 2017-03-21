@@ -2,8 +2,6 @@
 
 use Illuminate\Http\Request;
 
-use App\Article;
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -15,6 +13,6 @@ use App\Article;
 |
 */
 
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:api');
+Route::middleware('auth:api')->get('/user', function (Request $request) {
+    return $request->user();
+});
