@@ -141,7 +141,7 @@ setup() {
     run vagga _build ubuntu-repo-full
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ubuntu-repo-full)
-    [[ $link = ".roots/ubuntu-repo-full.7d6ce125/root" ]]
+    [[ $link = ".roots/ubuntu-repo-full.adf34f24/root" ]]
 
     repo_line=$(cat ".vagga/ubuntu-repo-full/etc/apt/sources.list.d/2efc24ff-vagga.list")
     [[ $repo_line = "deb [trusted=yes] http://ubuntu.zerogw.com vagga main" ]]
