@@ -149,7 +149,7 @@ setup() {
     run vagga _run ubuntu-repo-full vagga --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ $output = "v0.7.0" ]]
+    [[ $output = "v0.7.1" ]]
 }
 
 @test "ubuntu: UbuntuRepo https" {
