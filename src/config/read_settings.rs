@@ -12,6 +12,7 @@ use path_util::Expand;
 #[derive(PartialEq, RustcDecodable, Debug)]
 struct SecureSettings {
     storage_dir: Option<PathBuf>,
+    storage_subdir_from_env_var: Option<String>,
     cache_dir: Option<PathBuf>,
     version_check: Option<bool>,
     proxy_env_vars: Option<bool>,
@@ -32,6 +33,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
 {
     let mut s = V::Structure::new()
         .member("storage_dir", V::Scalar::new().optional())
+        .member("storage_subdir_from_env_var", V::Scalar::new().optional())
         .member("cache_dir", V::Scalar::new().optional())
         .member("version_check", V::Scalar::new().optional())
         .member("proxy_env_vars", V::Scalar::new().optional())
@@ -82,6 +84,7 @@ pub struct MergedSettings {
     pub external_volumes: HashMap<String, PathBuf>,
     pub push_image_script: Option<String>,
     pub storage_dir: Option<PathBuf>,
+    pub storage_subdir_from_env_var: Option<String>,
     pub cache_dir: Option<PathBuf>,
     pub shared_cache: bool,
 }
@@ -94,6 +97,10 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         ext_settings.storage_dir = Some(dir.expand_home()
             .map_err(|()| format!("Can't expand tilde `~` in storage dir \
                 no HOME found"))?);
+    }
+    if let Some(name) = cfg.storage_subdir_from_env_var {
+        ext_settings.storage_subdir_from_env_var = Some(name.clone());
+        int_settings.storage_subdir_from_env_var = Some(name.clone());
     }
     if let Some(dir) = cfg.cache_dir {
         ext_settings.cache_dir = Some(dir.expand_home()
@@ -137,6 +144,10 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(cfg) = cfg.site_settings.get(project_root) {
         if let Some(ref dir) = cfg.storage_dir {
             ext_settings.storage_dir = Some(dir.clone());
+        }
+        if let Some(ref name) = cfg.storage_subdir_from_env_var {
+            ext_settings.storage_subdir_from_env_var = Some(name.clone());
+            int_settings.storage_subdir_from_env_var = Some(name.clone());
         }
         if let Some(ref dir) = cfg.cache_dir {
             ext_settings.cache_dir = Some(dir.clone());
@@ -183,6 +194,7 @@ pub fn read_settings(project_root: &Path)
         external_volumes: HashMap::new(),
         push_image_script: None,
         storage_dir: None,
+        storage_subdir_from_env_var: None,
         cache_dir: None,
         shared_cache: false,
     };
@@ -198,6 +210,7 @@ pub fn read_settings(project_root: &Path)
         index_all_images: false,
         run_symlinks_as_commands: true,
         environ: BTreeMap::new(),
+        storage_subdir_from_env_var: None,
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {

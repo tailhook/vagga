@@ -28,6 +28,33 @@ Supported settings:
     ``storage-dir`` points to a directory on a separate partition. Path may
     start with ``~/`` which means path is inside the user's home directory.
 
+.. opt:: storage-subdir-from-env-var
+
+    This options is designed specifically for Continuous Integration (CI)
+    systems. When this option is set it identifies an environment variable
+    that is used to specify the name of a subdirectory of the storage dir used
+    for current project. It's only useful if :opt:`storage-dir` is set.
+
+    For example, for gitlab you may want to set::
+
+        storage-subdir-from-env-var: CI_PROJECT_NAME
+
+    Or or alternatively::
+
+        storage-subdir-from-env-var: CI_PROJECT_NAMESPACE
+
+    Note: only dash, underscore, and alphanumerc chars are allowed in the name,
+    all other characters will be replaced by dash (so technically clashes of
+    names are possible). If this environment variable is empty, then vagga
+    will fail.
+
+    Note 2: already set symlink in `.vagga/.lnk` overrides this setting. This
+    also means that `_init_storage_dir` overiddes the setting. Which means you
+    may not get immediate result when migrating from old system. You may
+    remove the link though, if your CI system does not do that by default.
+
+    .. versionadded:: 0.7.2
+
 .. opt:: cache-dir
 
     Directory where to put cache files during the build. This is used to speed

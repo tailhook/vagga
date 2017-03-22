@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 use libc::pid_t;
 use libmount::{BindMount, Tmpfs, Remount};
+use regex::Regex;
 
 use config::{Container, Settings};
 use config::command::{CommandInfo, CapsuleInfo};
@@ -29,6 +30,10 @@ use container::util::version_from_symlink;
 pub enum WriteMode {
     ReadOnly,
     TransientHardlinkCopy(pid_t),
+}
+
+lazy_static! {
+    static ref DIR_REPLACE_RE: Regex = Regex::new("[^a-zA-Z0-9_-]+").unwrap();
 }
 
 fn create_storage_dir(storage_dir: &Path, project_root: &Path)
@@ -133,17 +138,43 @@ pub fn get_vagga_base(project_root: &Path, settings: &MergedSettings)
     return _vagga_base(project_root, settings).map(|x| x.ok());
 }
 
+fn sanitize(original: &str) -> String {
+    DIR_REPLACE_RE.replace(original, "-")
+}
+
 fn vagga_base(project_root: &Path, settings: &MergedSettings)
     -> Result<PathBuf, String>
 {
     match _vagga_base(project_root, settings) {
         Ok(Err((lnkdir, dir))) => {
-            let target = create_storage_dir(&dir, project_root)?;
+            let ref svar = settings.storage_subdir_from_env_var;
+            let target = if let Some(ref var) = *svar {
+                if let Ok(user_dir) = env::var("_VAGGA_STORAGE_SUBDIR") {
+                    let sanitized = sanitize(&user_dir);
+                    if sanitized.len() == 0 {
+                        return Err(format!("Couldn't determine storage-dir \
+                            subdir from environment, original value {:?} \
+                            (got from {:?})",
+                            user_dir, var));
+                    } else {
+                        info!("Storage dir {:?} (got from {:?})",
+                            user_dir, var);
+                        dir.join(user_dir)
+                    }
+                } else {
+                    return Err("Internal error: _VAGGA_STORAGE_SUBDIR".into())
+                }
+            } else {
+                create_storage_dir(&dir, project_root)?
+            };
             safe_ensure_dir(&target)?;
             symlink(&target, &lnkdir)
                 .map_err(|e| format!("Error symlinking storage: {}", e))?;
-            symlink(project_root, &target.join(".lnk"))
-                .map_err(|e| format!("Error symlinking storage: {}", e))?;
+            if svar.is_none() {
+                // Backlink is useful only when not using from-env-var
+                symlink(project_root, &target.join(".lnk"))
+                    .map_err(|e| format!("Error symlinking storage: {}", e))?;
+            }
             return Ok(target)
         }
         Ok(Ok(path)) => {

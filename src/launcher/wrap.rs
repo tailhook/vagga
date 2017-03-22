@@ -60,6 +60,13 @@ impl Wrapper for Command {
         if let Some(x) = env::var_os("HOME") {
             cmd.env("_VAGGA_HOME", x);
         }
+        if let Some(ref name) = settings.storage_subdir_from_env_var {
+            if let Some(dir) = env::var_os(name) {
+                cmd.env("_VAGGA_STORAGE_SUBDIR", dir);
+            } else {
+                cmd.env("_VAGGA_STORAGE_SUBDIR", "");
+            }
+        }
 
         cmd.unshare(
             [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());

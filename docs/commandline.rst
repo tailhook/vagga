@@ -113,6 +113,8 @@ vagga _version_hash CONTAINER
   Might be used in some automation scripts.
 
 vagga _init_storage_dir
+  **Deprecated**. Use :opt:`storage-subdir-from-env-var` instead.
+
   If you have configured a :opt:`storage-dir` in settings, say
   ``/vagga-storage``, when you run ``vagga _init_storage_dir abc`` will create
   a ``/vagga-storage/abc`` and ``.vagga`` with ``.vagga/.lnk`` pointing to
