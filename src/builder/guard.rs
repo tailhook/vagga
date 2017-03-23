@@ -201,6 +201,7 @@ fn warn_duplicate_data_dir(rel_path: &Path, is_final: bool) {
 pub fn index_image() -> Result<(), String> {
     let index = File::create("/vagga/container/index.ds1")
         .map_err(|e| format!("Can't write index: {}", e))?;
+    warn!("Indexing container...");
     v1::scan(Sig::new()
             .hash(Blake)
             .add_dir("/vagga/root", "/"),
