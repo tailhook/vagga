@@ -232,3 +232,21 @@ not to do so.
     command (i.e. vagga doesn't try to parse command-line itself).
 
     .. versionadded:: 0.7.1
+
+.. opt:: index-all-images
+
+    (default ``false``) When the setting is ``true`` then vagga will hash all
+    the files inside the containers and will create a special signature file.
+
+    .. versionadded:: 0.7.1
+
+.. opt:: hard-link-identical-files
+
+    (default ``false``) This setting is paired with ``index-all-images``.
+    When both settings are ``true`` vagga will search identical files inside
+    other containers and will replace the same files with hard links.
+    This can significantly reduce a disk space occupied by the containers.
+    But be careful when editing a file inside a container, that can affect other
+    containers integrity.
+
+    .. versionadded:: 0.7.2
