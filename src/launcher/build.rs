@@ -35,7 +35,7 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
     cmd.arg("--short");
     cmd.arg("--fd3");
     cmd.arg(name);
-    cmd.env_clear();
+    cmd.env_clear(); // TODO(tailhook) why we drop everything in Wrapper::new?
     copy_env_vars(&mut cmd, &context.settings);
     // TODO(tailhook) move these to copy_env_vars, or at least reuse in build?
     if let Ok(x) = env::var("RUST_LOG") {
@@ -52,6 +52,13 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
     }
     if let Some(x) = env::var_os("VAGGA_SETTINGS") {
         cmd.env("VAGGA_SETTINGS", x);
+    }
+    if let Some(ref name) = context.settings.storage_subdir_from_env_var {
+        if let Some(dir) = env::var_os(name) {
+            cmd.env("_VAGGA_STORAGE_SUBDIR", dir);
+        } else {
+            cmd.env("_VAGGA_STORAGE_SUBDIR", "");
+        }
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
@@ -71,7 +78,7 @@ fn build_internal(context: &Context, name: &str, args: &[String],
     cmd.arg("_build");
     cmd.arg(name);
     cmd.args(&args);
-    cmd.env_clear();
+    cmd.env_clear(); // TODO(tailhook) why we drop everything in Wrapper::new?
     copy_env_vars(&mut cmd, &context.settings);
     // TODO(tailhook) move these to copy_env_vars, or at least
     // reuse in ver and capsule?
@@ -89,6 +96,13 @@ fn build_internal(context: &Context, name: &str, args: &[String],
     }
     if let Some(x) = env::var_os("VAGGA_SETTINGS") {
         cmd.env("VAGGA_SETTINGS", x);
+    }
+    if let Some(ref name) = context.settings.storage_subdir_from_env_var {
+        if let Some(dir) = env::var_os(name) {
+            cmd.env("_VAGGA_STORAGE_SUBDIR", dir);
+        } else {
+            cmd.env("_VAGGA_STORAGE_SUBDIR", "");
+        }
     }
     cmd.unshare(
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
