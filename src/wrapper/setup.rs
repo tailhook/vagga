@@ -117,28 +117,7 @@ fn _vagga_base(project_root: &Path, settings: &MergedSettings)
                 }
             }
             Err(ref e) if e.kind() == ErrorKind::NotFound => {
-                let ref svar = settings.storage_subdir_from_env_var;
-                let target = if let Some(ref var) = *svar {
-                    if let Ok(user_dir) = env::var("_VAGGA_STORAGE_SUBDIR") {
-                        let sanitized = sanitize(&user_dir);
-                        if sanitized.len() == 0 {
-                            return Err(format!("Couldn't determine \
-                                storage-dir subdir from environment, \
-                                original value {:?} (got from {:?})",
-                                user_dir, var));
-                        } else {
-                            info!("Storage dir {:?} (got from {:?})",
-                                user_dir, var);
-                            dir.join(user_dir)
-                        }
-                    } else {
-                        return Err("Internal error: _VAGGA_STORAGE_SUBDIR"
-                            .into())
-                    }
-                } else {
-                    return Ok(Err((lnkdir, dir.clone())));
-                };
-                return Ok(Ok(target));
+                return Ok(Err((lnkdir, dir.clone())));
             }
             Err(ref e) => {
                 return Err(format!("Can't read link .vagga/.lnk: {}", e));
