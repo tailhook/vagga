@@ -7,6 +7,7 @@ use process_util::{run_success};
 use launcher::Context;
 use launcher::build::build_container;
 use launcher::wrap::Wrapper;
+use launcher::storage_dir;
 use options::push::Options;
 
 
@@ -42,11 +43,8 @@ pub fn push_command(ctx: &Context, args: Vec<String>) -> Result<i32, String>
         .arg("-J");
     run_success(pack_cmd)?;
 
-    let roots = if ctx.ext_settings.storage_dir.is_some() {
-        Path::new(".lnk/.roots")
-    } else {
-        Path::new(".roots")
-    };
+    let roots = storage_dir::get_base(ctx).map(|x| x.join(".roots"))
+        .expect("storage dir created by preceding container build");
     let tmp_image_path = PathBuf::from(".vagga")
         .join(&roots)
         .join(&ver)

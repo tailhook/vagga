@@ -4,6 +4,7 @@ use config::volumes::Volume;
 use config::volumes::PersistentInfo;
 use config::command::MainCommand;
 use launcher::Context;
+use launcher::storage_dir;
 
 
 fn _check_volumes<'x, I>(ctx: &Context, iter: I, result: &mut Vec<&'x String>)
@@ -14,12 +15,9 @@ fn _check_volumes<'x, I>(ctx: &Context, iter: I, result: &mut Vec<&'x String>)
             &Volume::Persistent(PersistentInfo {
                 init_command: Some(ref cmd), ref name, .. })
             => {
-                let path = if ctx.ext_settings.storage_dir.is_some() {
-                    ctx.config_dir.join(".vagga/.lnk/.volumes").join(name)
-                } else {
-                    ctx.config_dir.join(".vagga/.volumes").join(name)
-                };
-                if !path.exists() {
+                let path = storage_dir::get_base(ctx)
+                    .map(|x| x.join(".volumes").join(name));
+                if !path.map(|x| x.exists()).unwrap_or(false) {
                     result.push(&cmd);
                 }
             }

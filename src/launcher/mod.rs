@@ -20,6 +20,7 @@ mod storage;
 mod underscore;
 mod completion;
 mod commands;
+mod storage_dir;
 
 mod supervisor;
 mod simple;

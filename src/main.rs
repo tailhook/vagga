@@ -48,6 +48,7 @@ mod tty_util;
 mod options;
 mod digest;
 mod build_step;
+mod storage_dir;
 
 #[cfg(not(feature="containers"))]
 mod unshare;

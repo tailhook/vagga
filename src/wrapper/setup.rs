@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 
 use libc::pid_t;
 use libmount::{BindMount, Tmpfs, Remount};
-use regex::Regex;
 
 use config::{Container, Settings};
 use config::command::{CommandInfo, CapsuleInfo};
@@ -24,16 +23,13 @@ use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{Dir, copy, safe_ensure_dir};
 use wrapper::snapshot::make_snapshot;
 use container::util::version_from_symlink;
+use storage_dir::sanitize;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WriteMode {
     ReadOnly,
     TransientHardlinkCopy(pid_t),
-}
-
-lazy_static! {
-    static ref DIR_REPLACE_RE: Regex = Regex::new("[^a-zA-Z0-9_-]+").unwrap();
 }
 
 fn create_storage_dir(storage_dir: &Path, project_root: &Path)
@@ -157,10 +153,6 @@ pub fn get_vagga_base(project_root: &Path, settings: &MergedSettings)
     -> Result<Option<PathBuf>, String>
 {
     return _vagga_base(project_root, settings).map(|x| x.ok());
-}
-
-fn sanitize(original: &str) -> String {
-    DIR_REPLACE_RE.replace(original, "-")
 }
 
 fn vagga_base(project_root: &Path, settings: &MergedSettings)

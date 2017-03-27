@@ -148,6 +148,8 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
             .map_err(|e| format!("Error removing temporary link: {}", e))?;
     }
     let roots = if wrapper.ext_settings.storage_dir.is_some() {
+        // at this point `.lnk` should already be created even if we use
+        // storage-subdir-from-env-var
         Path::new(".lnk/.roots")
     } else {
         Path::new(".roots")
