@@ -219,6 +219,30 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
     Ok(())
 }
 
+pub fn unpack_subdir(ctx: &mut Context, filename: &Path, dest: &Path,
+    subdir: &Path)
+    -> Result<(), String>
+{
+    let tmppath = PathBuf::from("/vagga/root/tmp")
+        .join(filename.file_name().unwrap());
+    let tmpsub = tmppath.join(subdir);
+    try_msg!(Dir::new(&tmpsub).recursive(true).create(),
+        "Error making dir: {err}");
+    if !dest.exists() {
+        try_msg!(Dir::new(&dest).recursive(true).create(),
+            "Error making dir: {err}");
+    }
+    try_msg!(BindMount::new(&dest, &tmpsub).mount(),
+        "temporary tar mount: {err}");
+    let res = if subdir == Path::new("") {
+        unpack_file(ctx, &filename, &tmppath, &[], &[], false)
+    } else {
+        unpack_file(ctx, &filename, &tmppath, &[subdir], &[], false)
+    };
+    unmount(&tmpsub)?;
+    res
+}
+
 pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root")
@@ -229,25 +253,7 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
     if &Path::new(&tar.subdir) == &Path::new(".") {
         unpack_file(ctx, &filename, &fpath, &[], &[], false)?;
     } else {
-        let tmppath = PathBuf::from("/vagga/root/tmp")
-            .join(filename.file_name().unwrap());
-        let tmpsub = tmppath.join(&tar.subdir);
-        try_msg!(Dir::new(&tmpsub).recursive(true).create(),
-            "Error making dir: {err}");
-        if !fpath.exists() {
-            try_msg!(Dir::new(&fpath).recursive(true).create(),
-                "Error making dir: {err}");
-        }
-        try_msg!(BindMount::new(&fpath, &tmpsub).mount(),
-            "temporary tar mount: {err}");
-        let res = if tar.subdir.as_path() == Path::new("") {
-            unpack_file(ctx, &filename, &tmppath, &[], &[], false)
-        } else {
-            unpack_file(ctx, &filename, &tmppath,
-                &[&tar.subdir.clone()], &[], false)
-        };
-        unmount(&tmpsub)?;
-        res?;
+        unpack_subdir(ctx, &filename, &fpath, &tar.subdir)?;
     }
     if tar.path == Path::new("/") {
         revert_name_files()?;

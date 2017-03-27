@@ -463,6 +463,7 @@ impl Distro {
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
             packages::Npm => Some(vec!()),
+            packages::Yarn => None,
             // PHP
             packages::Php if self.has_php7() => {
                 // In ubuntu xenial, php package does not bundles the json and zip modules required
@@ -503,6 +504,7 @@ impl Distro {
             packages::NodeJs => Some(vec!()),
             packages::NodeJsDev => Some(vec!("nodejs-dev")),
             packages::Npm => Some(vec!("npm")),
+            packages::Yarn => None,
             // PHP
             packages::Php => Some(vec!()),
             packages::PhpDev if self.has_php7() => Some(vec!("php-dev")),

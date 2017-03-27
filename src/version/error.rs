@@ -1,5 +1,5 @@
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use regex;
 use rustc_serialize::json;
@@ -35,6 +35,8 @@ quick_error! {
             cause(err)
             description("io error")
             display("Error reading {:?}: {}", path, err)
+            context(p: &'a Path, err: io::Error) -> (err, p.to_path_buf())
+            context(p: &'a PathBuf, err: io::Error) -> (err, p.to_path_buf())
         }
         /// Container needed for build is not found
         ContainerNotFound(name: String) {

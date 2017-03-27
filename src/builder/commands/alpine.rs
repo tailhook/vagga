@@ -255,6 +255,7 @@ impl Distro {
             packages::NodeJs => Some(vec!()),
             packages::NodeJsDev => Some(vec!("nodejs-dev")),
             packages::Npm => Some(vec!()),
+            packages::Yarn => None,
             // PHP
             packages::Php => Some(vec!()),
             packages::PhpDev => Some(self.php_build_deps()),
@@ -284,6 +285,7 @@ impl Distro {
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
             packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
+            packages::Yarn => None,
             // PHP
             packages::Php => Some(self.php_system_deps()),
             packages::PhpDev => Some(vec!()),

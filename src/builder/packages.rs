@@ -1,12 +1,13 @@
 use std::path::Path;
 
-use super::context::Context;
-use super::commands::generic::run_command_at_env;
-use super::commands::gem;
-use capsule::download;
-use builder::error::StepError;
-use builder::distrib::Distribution;
 use builder::commands::composer;
+use builder::commands::gem;
+use builder::commands::generic::run_command_at_env;
+use builder::commands::npm;
+use builder::context::Context;
+use builder::distrib::Distribution;
+use builder::error::StepError;
+use capsule::download;
 use file_util::copy;
 
 pub use self::Package::*;
@@ -31,6 +32,7 @@ pub enum Package {
     NodeJs,     // not build dep
     NodeJsDev,
     Npm,
+    Yarn,
 
     Php,        // not build dep
     PhpDev,
@@ -64,6 +66,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
             }
             Composer => composer::bootstrap(ctx)?,
             Bundler => gem::setup_bundler(ctx)?,
+            Yarn => npm::setup_yarn(ctx)?,
             _ => {
                 left.push(i);
                 continue;

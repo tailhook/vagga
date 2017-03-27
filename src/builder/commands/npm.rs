@@ -1,14 +1,18 @@
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::os::unix::fs::{symlink};
 
 use quire::validate as V;
+use quick_error::ResultExt;
 use unshare::{Stdio};
 use rustc_serialize::json::Json;
 
+use capsule::download::download_file;
 use super::super::context::{Context};
 use super::super::packages;
 use builder::distrib::{Distribution, DistroBox};
 use builder::commands::generic::{command, run};
+use builder::commands::tarcmd::unpack_subdir;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -67,6 +71,20 @@ impl Default for NpmConfig {
     }
 }
 
+#[derive(RustcDecodable, Debug)]
+pub struct YarnDependencies {
+    pub dir: PathBuf,
+    pub production: bool,
+}
+
+impl YarnDependencies {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+        .member("dir", V::Directory::new().absolute(false).default("."))
+        .member("production", V::Scalar::new().default(false))
+    }
+}
+
 fn scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     -> Vec<packages::Package>
 {
@@ -91,13 +109,6 @@ pub fn parse_feature(info: &str, features: &mut Vec<packages::Package>) {
     } // TODO(tailhook) implement whole a lot of other npm version kinds
 }
 
-pub fn ensure_npm(distro: &mut Box<Distribution>, ctx: &mut Context,
-    features: &[packages::Package])
-    -> Result<(), StepError>
-{
-    packages::ensure_packages(distro, ctx, features)
-}
-
 pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), StepError>
@@ -105,7 +116,7 @@ pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
                            "npm-cache".to_string())?;
     let features = scan_features(&ctx.npm_settings, pkgs);
-    ensure_npm(distro, ctx, &features)?;
+    packages::ensure_packages(distro, ctx, &features)?;
 
     if pkgs.len() == 0 {
         return Ok(());
@@ -183,7 +194,7 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
             &mut packages, &mut features)?;
     }
 
-    ensure_npm(distro, ctx, &features)?;
+    packages::ensure_packages(distro, ctx, &features)?;
 
     if packages.len() == 0 {
         return Ok(());
@@ -295,6 +306,84 @@ impl BuildStep for NpmDependencies {
         guard.distro.npm_configure(&mut guard.ctx)?;
         if build {
             npm_deps(&mut guard.distro, &mut guard.ctx, &self)?;
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> {
+        None
+    }
+}
+
+fn yarn_scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
+    -> Vec<packages::Package>
+{
+    let mut res = vec!();
+    res.push(packages::BuildEssential);
+    if settings.install_node {
+        res.push(packages::NodeJs);
+        res.push(packages::NodeJsDev);
+        res.push(packages::Yarn);
+    }
+    for name in pkgs.iter() {
+        parse_feature(&name, &mut res);
+    }
+    return res;
+}
+
+pub fn setup_yarn(ctx: &mut Context)
+    -> Result<(), String>
+{
+    let filename = download_file(&mut ctx.capsule,
+        &["https://yarnpkg.com/latest.tar.gz"], None)?;
+    unpack_subdir(ctx, &filename,
+        &Path::new("/vagga/root/usr/lib/yarn"), Path::new("dist"))?;
+    symlink("/usr/lib/yarn/bin/yarn", "/vagga/root/usr/bin/yarn")
+        .map_err(|e| format!("Can't create yarn symlink: {}", e))?;
+    Ok(())
+}
+
+impl BuildStep for YarnDependencies {
+    fn name(&self) -> &'static str { "YarnDependencies" }
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("production", self.production);
+        let lock_file = Path::new("/work").join(&self.dir).join("yarn.lock");
+        if lock_file.exists() {
+            let mut file = File::open(&lock_file).context(&lock_file)?;
+            hash.file(&lock_file, &mut file).context(&lock_file)?;
+            Ok(())
+        } else {
+            Err(VersionError::New)
+        }
+    }
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        if build {
+            let base_dir = Path::new("/work").join(&self.dir);
+            let lock_file = base_dir.join("yarn.lock");
+
+            guard.ctx.add_cache_dir(Path::new("/tmp/yarn-cache"),
+                                    "yarn-cache".to_string())?;
+            let features = yarn_scan_features(
+                &guard.ctx.npm_settings, &Vec::new());
+            packages::ensure_packages(
+                &mut guard.distro, &mut guard.ctx, &features)?;
+            let mut cmd = command(&guard.ctx, "/usr/bin/yarn")?;
+            cmd.current_dir(&base_dir);
+            cmd.arg("install");
+            cmd.arg("--modules-folder=/usr/lib/node_modules");
+            cmd.arg("--cache-folder=/tmp/yarn-cache");
+            if lock_file.exists() {
+                cmd.arg("--frozen-lockfile");
+            }
+            if self.production {
+                cmd.arg("--production");
+            }
+            run(cmd)?;
+            // TODO(tailhook) find some heuristics to determine that lockfile
+            // needs to be updated to print some message
         }
         Ok(())
     }
