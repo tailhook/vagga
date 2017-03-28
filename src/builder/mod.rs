@@ -12,6 +12,7 @@ use file_util::copy;
 use self::context::{Context};
 use self::commands::tarcmd::unpack_file;
 use capsule::download::maybe_download_and_check_hashsum;
+use container::util::clean_dir;
 pub use self::guard::Guard;
 pub use self::error::StepError;
 
@@ -100,10 +101,20 @@ pub fn run(input_args: Vec<String>) -> i32 {
             let res = _build_from_image(&container_name, &container,
                                         &config, &settings, &image_cache_url);
             // just ignore errors if we cannot build from image
-            if let Ok(()) = res {
-                return 0;
+            match res {
+                Ok(()) => return 0,
+                Err(e) => {
+                    error!("Error when unpacking image: {}. \
+                            Will clean and build it locally...", e);
+                }
             }
-            // TODO(tailhook) Clean the container back again
+            match clean_dir("/vagga/root", false) {
+                Ok(()) => {}
+                Err(e) => {
+                    error!("Can't clean invalid cache image: {}", e);
+                    return 1;
+                }
+            }
         }
     }
 
