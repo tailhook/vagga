@@ -359,6 +359,7 @@ pub fn _build_container(container: &str,
     return Ok(name);
 }
 
+#[cfg(feature="containers")]
 fn find_and_link_identical_files(container_name: &str,
     tmp_dir: &Path, final_dir: &Path)
     -> Result<(u32, u64), String>
@@ -458,6 +459,14 @@ fn find_and_link_identical_files(container_name: &str,
     }
 
     Ok((count, size))
+}
+
+#[cfg(not(feature="containers"))]
+fn find_and_link_identical_files(container_name: &str,
+    tmp_dir: &Path, final_dir: &Path)
+    -> Result<(u32, u64), String>
+{
+    unimplemented!();
 }
 
 fn get_container_paths_names_times(exclude_path: &Path)
