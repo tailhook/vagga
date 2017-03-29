@@ -35,8 +35,7 @@ quick-error = "1.1.0"
 docopt = "0.6.83"
 quire = "0.2.1"
 lazy_static = "0.2.2"
-# dir-signature = { version="0.1.1", optional=true }
-dir-signature = { git = "https://github.com/anti-social/dir-signature.git", rev = "2079335", optional=true }
+dir-signature = { git = "https://github.com/tailhook/dir-signature.git", rev = "9fd30db", optional=true }
 itertools = "0.5.8"
 
 [features]
