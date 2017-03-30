@@ -316,7 +316,7 @@ pub fn _build_container(container: &str,
         else {
             match get_version_hash(container, wrapper) {
                 Ok(Some(ver)) => {
-                    if ver.len() == 64 && ver[..].is_ascii() {
+                    if ver.len() == 128 && ver[..].is_ascii() {
                         ver
                     } else {
                         return Err(format!("Internal Error: \
