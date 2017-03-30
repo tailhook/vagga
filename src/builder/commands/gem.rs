@@ -217,7 +217,7 @@ pub fn bundle(distro: &mut Box<Distribution>,
 
     if let Some(ref trust_policy) = info.trust_policy {
         if !VALID_TRUST_POLICIES.contains(&trust_policy.as_ref()) {
-            return return Err(From::from(format!(
+            return Err(From::from(format!(
                 "Value of 'GemBundle.trust_policy' must be \
                     '{}', '{}' or '{}', '{}' given",
                 VALID_TRUST_POLICIES[0],

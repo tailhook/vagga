@@ -18,7 +18,6 @@ Common options:
 ";
 
 
-pub type Version = String;
 pub type Data = ();
 
 pub struct Args {

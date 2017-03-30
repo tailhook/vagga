@@ -12,8 +12,6 @@ use config::Range;
 use super::volumes::{Volume, volume_validator};
 use launcher::system::SystemInfo;
 
-type PortNumValidator = V::Numeric;
-
 #[derive(RustcDecodable, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Pid1Mode {
