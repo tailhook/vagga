@@ -341,7 +341,10 @@ pub fn _build_container(container: &str,
             Ok((count, size)) if count > 0 => warn!(
                 "Found and linked {} ({}) identical files \
                  from other containers", count, human_size(size)),
-            Ok(_) => {},
+            Ok(_) => {
+                debug!("No hardlinks done: either no source directories found \
+                        or no identical files");
+            },
             Err(msg) => warn!("Error when linking container files: {}", msg),
         }
     }
@@ -367,6 +370,7 @@ fn find_and_link_identical_files(container_name: &str,
     let container_root = tmp_dir.join("root");
     let main_ds_path = tmp_dir.join("index.ds1");
     if !main_ds_path.exists() {
+        warn!("No index file exists. Can't hardlink");
         return Ok((0, 0));
     }
     let main_ds_reader = BufReader::new(try_msg!(File::open(&main_ds_path),
