@@ -138,12 +138,12 @@ fn _build_from_image(container_name: &String, container: &Container,
     -> Result<(), String>
 {
     // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
-    let settings = settings.clone();
     let mut ctx = Context::new(config, container_name.clone(),
-                               container, settings);
+                               container, settings.clone());
 
     let (filename, downloaded) = maybe_download_and_check_hashsum(
         &mut ctx.capsule, image_cache_url, None)?;
+    warn!("Unpacking image...");
     match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
         Ok(_) => {
             info!("Succesfully unpack image {}", image_cache_url);
@@ -159,6 +159,9 @@ fn _build_from_image(container_name: &String, container: &Container,
                     .map_err(|e| error!(
                         "Error unlinking cache file: {}", e)).ok();
 
+            }
+            if settings.index_all_images {
+                guard::index_image()?;
             }
         },
         Err(e) => {

@@ -1,21 +1,23 @@
 use std::env;
-use std::fs::{File, read_link};
+use std::fs::File;
+use std::fs::{hard_link, read_link, read_dir, rename, remove_dir, remove_file};
 use std::ffi::OsString;
-use std::io::ErrorKind::NotFound;
 use std::ascii::AsciiExt;
-use std::fs::{rename};
-use std::fs::{remove_file, remove_dir};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Write, BufReader};
 use std::io::{stdout, stderr};
-use std::os::unix::fs::symlink;
+use std::io::ErrorKind::NotFound;
 use std::path::{Path, PathBuf};
-use std::time::{Instant};
+use std::time::{Instant, SystemTime};
+use std::os::unix::fs::symlink;
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use rustc_serialize::json;
 use unshare::{Command, Namespace, ExitStatus};
 use libmount::BindMount;
+use dir_signature::v1::{Entry, EntryKind, Parser};
+use dir_signature::v1::merge::FileMergeBuilder;
+use itertools::Itertools;
 
 use container::util::clean_dir;
 use container::mount::{unmount};
@@ -331,6 +333,19 @@ pub fn _build_container(container: &str,
     let name = format!("{}.{}", container,
         &ver[..8]);
     let finalpath = Path::new("/vagga/base/.roots").join(&name);
+
+    if wrapper.settings.index_all_images &&
+        wrapper.settings.hard_link_identical_files
+    {
+        match find_and_link_identical_files(&container, &tmppath, &finalpath) {
+            Ok((count, size)) if count > 0 => warn!(
+                "Found and linked {} ({}) identical files \
+                 from other containers", count, human_size(size)),
+            Ok(_) => {},
+            Err(msg) => warn!("Error when linking container files: {}", msg),
+        }
+    }
+
     debug!("Committing {:?} -> {:?}", tmppath, finalpath);
     match commit_root(&tmppath, &finalpath) {
         Ok(()) => {}
@@ -342,6 +357,168 @@ pub fn _build_container(container: &str,
     warn!("Container {} ({}) built in {} seconds.",
         container, &ver[..8], duration.as_secs());
     return Ok(name);
+}
+
+#[cfg(feature="containers")]
+fn find_and_link_identical_files(container_name: &str,
+    tmp_dir: &Path, final_dir: &Path)
+    -> Result<(u32, u64), String>
+{
+    let container_root = tmp_dir.join("root");
+    let main_ds_path = tmp_dir.join("index.ds1");
+    if !main_ds_path.exists() {
+        return Ok((0, 0));
+    }
+    let main_ds_reader = BufReader::new(try_msg!(File::open(&main_ds_path),
+        "Error opening file {path:?}: {err}", path=&main_ds_path));
+    let mut main_ds_parser = try_msg!(Parser::new(main_ds_reader),
+        "Error parsing signature file: {err}");
+
+    let _paths_names_times = get_container_paths_names_times(final_dir)?;
+    let mut paths_names_times = _paths_names_times.iter()
+        .map(|&(ref p, ref n, ref t)| (p, n, t))
+        .collect::<Vec<_>>();
+    // Sort by current container name equality
+    // then by container name and then by modification date
+    paths_names_times.sort_by_key(|&(_, n, t)| {
+        (n == container_name, n, t)
+    });
+    let mut merged_ds_builder = FileMergeBuilder::new();
+    for (_, cont_group) in paths_names_times
+        .into_iter()
+        .rev()
+        .group_by(|&(_, n, _)| n)
+        .into_iter()
+    {
+        for (cont_path, _, _) in cont_group.take(5) {
+            merged_ds_builder.add(&cont_path.join("root"),
+                                  &cont_path.join("index.ds1"));
+        }
+    }
+    let mut merged_ds = try_msg!(merged_ds_builder.finalize(),
+        "Error parsing signature files: {err}");
+    let mut merged_ds_iter = merged_ds.iter();
+
+    let tmp = tmp_dir.join(".link.tmp");
+    let mut count = 0;
+    let mut size = 0;
+    for entry in main_ds_parser.iter() {
+        match entry {
+            Ok(Entry::File{
+                path: ref lnk_path,
+                exe: lnk_exe,
+                size: lnk_size,
+                hashes: ref lnk_hashes,
+            }) => {
+                let lnk = container_root.join(
+                    match lnk_path.strip_prefix("/") {
+                        Ok(lnk_path) => lnk_path,
+                        Err(_) => continue,
+                    });
+                for tgt_entry in merged_ds_iter
+                    .advance(&EntryKind::File(lnk_path))
+                {
+                    match tgt_entry {
+                        (tgt_base_path,
+                         Ok(Entry::File{
+                             path: ref tgt_path,
+                             exe: tgt_exe,
+                             size: tgt_size,
+                             hashes: ref tgt_hashes}))
+                            if lnk_exe == tgt_exe &&
+                            lnk_size == tgt_size &&
+                            lnk_hashes == tgt_hashes =>
+                        {
+                            let tgt = tgt_base_path.join(
+                                match tgt_path.strip_prefix("/") {
+                                    Ok(path) => path,
+                                    Err(_) => continue,
+                                });
+                            if let Err(_) = hard_link(&tgt, &tmp) {
+                                remove_file(&tmp).map_err(|e|
+                                    format!("Error removing file after failed \
+                                             hard linking: {}", e))?;
+                                continue;
+                            }
+                            if let Err(_) = rename(&tmp, &lnk) {
+                                remove_file(&tmp).map_err(|e|
+                                    format!("Error removing file after failed \
+                                             renaming: {}", e))?;
+                                continue;
+                            }
+                            count += 1;
+                            size += tgt_size;
+                            break;
+                        },
+                        _ => continue,
+                    }
+                }
+            },
+            _ => {},
+        }
+    }
+
+    Ok((count, size))
+}
+
+#[cfg(not(feature="containers"))]
+fn find_and_link_identical_files(container_name: &str,
+    tmp_dir: &Path, final_dir: &Path)
+    -> Result<(u32, u64), String>
+{
+    unimplemented!();
+}
+
+fn get_container_paths_names_times(exclude_path: &Path)
+    -> Result<Vec<(PathBuf, String, SystemTime)>, String>
+{
+    Ok(try_msg!(read_dir("/vagga/base/.roots"),
+                "Error reading directory: {err}")
+        .filter_map(|x| x.ok())
+        .map(|x| x.path())
+        .filter(|p| {
+            p != exclude_path &&
+                p.is_dir() &&
+                p.join("index.ds1").is_file()
+        })
+        .filter_map(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.to_string())
+                .map(|n| (p, n))
+        })
+        .filter(|&(_, ref d)| !d.starts_with("."))
+        .filter_map(|(p, d)| {
+            let mut dir_name_parts = d.rsplitn(2, '.');
+            dir_name_parts.next();
+            dir_name_parts.next()
+                .map(|n| (p, n.to_string()))
+        })
+        .filter_map(|(p, n)| {
+            p.metadata()
+                .and_then(|m| m.modified()).ok()
+                .map(|t| (p, n, t))
+        })
+        .collect::<Vec<_>>())
+}
+
+fn human_size(size: u64) -> String {
+    fn format_size(s: f64, p: &str) -> String {
+        if s < 10.0 {
+            format!("{:.1}{}B", s, p)
+        } else {
+            format!("{:.0}{}B", s, p)
+        }
+    }
+
+    let mut s = size as f64;
+    for prefix in &["", "K", "M", "G", "T"][..] {
+        if s < 1000.0 {
+            return format_size(s, prefix);
+        }
+        s /= 1000.0;
+    }
+    return format_size(s, "P");
 }
 
 pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)

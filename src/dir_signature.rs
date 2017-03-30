@@ -5,10 +5,18 @@ pub mod v1 {
     use std::io;
     use super::ScannerConfig;
 
+    pub struct Entry;
+    pub struct EntryKind;
+    pub struct Parser;
+
     pub fn scan<F>(config: &ScannerConfig, out: &mut F) -> Result<(), String>
         where F: io::Write
     {
         unimplemented!();
+    }
+
+    pub mod merge {
+        pub struct FileMergeBuilder;
     }
 }
 

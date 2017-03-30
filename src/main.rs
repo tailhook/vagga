@@ -25,6 +25,7 @@ extern crate net2;
 extern crate docopt;
 extern crate humantime;
 extern crate digest_writer;
+extern crate itertools;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;
 #[macro_use] extern crate log;

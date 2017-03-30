@@ -24,6 +24,7 @@ struct SecureSettings {
     build_lock_wait: Option<bool>,
     auto_apply_sysctl: Option<bool>,
     index_all_images: Option<bool>,
+    hard_link_identical_files: Option<bool>,
     run_symlinks_as_commands: Option<bool>,
     environ: BTreeMap<String, String>,
 }
@@ -46,6 +47,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("build_lock_wait", V::Scalar::new().optional())
         .member("auto_apply_sysctl", V::Scalar::new().optional())
         .member("index_all_images", V::Scalar::new().optional())
+        .member("hard_link_identical_files", V::Scalar::new().optional())
         .member("run_symlinks_as_commands", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
             V::Scalar::new(), V::Scalar::new()));
@@ -135,6 +137,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.index_all_images {
         int_settings.index_all_images = val;
     }
+    if let Some(val) = cfg.hard_link_identical_files {
+        int_settings.hard_link_identical_files = val;
+    }
     if let Some(val) = cfg.run_symlinks_as_commands {
         int_settings.run_symlinks_as_commands = val;
     }
@@ -177,6 +182,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.index_all_images {
             int_settings.index_all_images = val;
         }
+        if let Some(val) = cfg.hard_link_identical_files {
+            int_settings.hard_link_identical_files = val;
+        }
         if let Some(val) = cfg.run_symlinks_as_commands {
             int_settings.run_symlinks_as_commands = val;
         }
@@ -208,6 +216,7 @@ pub fn read_settings(project_root: &Path)
         build_lock_wait: false,
         auto_apply_sysctl: false,
         index_all_images: false,
+        hard_link_identical_files: false,
         run_symlinks_as_commands: true,
         environ: BTreeMap::new(),
         storage_subdir_from_env_var: None,
