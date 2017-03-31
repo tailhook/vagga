@@ -155,7 +155,7 @@ impl Distribution for Distro {
         }
         ctx.binary_ident = format!("{}-ubuntu-{}",
             ctx.binary_ident, codename);
-        init_ubuntu_core(ctx)?;
+        init_ubuntu_core(ctx, self)?;
         if !self.config.keep_chfn_command {
             clobber_chfn()?;
         }
@@ -661,13 +661,6 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
     Ok(())
 }
 
-pub fn init_ubuntu_core(ctx: &mut Context) -> Result<(), String> {
-    init_debian_build(ctx)?;
-    set_mirror(ctx)?;
-
-    Ok(())
-}
-
 fn set_mirror(ctx: &mut Context) -> Result<(), String> {
     let mirror = get_ubuntu_mirror(ctx);
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
@@ -691,7 +684,9 @@ fn set_mirror(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
-fn init_debian_build(ctx: &mut Context) -> Result<(), String> {
+fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
+    -> Result<(), String>
+{
     // Do not attempt to start init scripts
     let policy_file = Path::new("/vagga/root/usr/sbin/policy-rc.d");
     File::create(&policy_file)
@@ -717,9 +712,13 @@ fn init_debian_build(ctx: &mut Context) -> Result<(), String> {
 
     revert_name_files()?;
 
-    let mut cmd = command(ctx, "locale-gen")?;
-    cmd.arg("en_US.UTF-8");
-    run(cmd)?;
+    set_mirror(ctx)?;
+
+    apt_get_update(ctx, &[
+        "--no-list-cleanup",
+        "-o", "Dir::Etc::sourcelist=sources.list",
+        "-o", "Dir::Etc::sourceparts=-"])?;
+    apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
 
     // TODO(tailhook) reconsider this. It was fun to remove unneeded files
     //                until we have !Container which fails ot reuse ubuntu
