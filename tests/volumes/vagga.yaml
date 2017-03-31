@@ -26,8 +26,6 @@ containers:
     setup:
     - !Alpine v3.5
     - !EnsureDir /mnt/cache
-    - !CacheDirs
-      /mnt/cache: cachedir-volume-test-add-files
     volumes:
       /mnt/cache: !CacheDir cachedir-volume-test-add-files
 

@@ -48,7 +48,7 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = "test2" ]]
 
     link=$(readlink .vagga/cachedir-add-files)
-    [[ $link = ".roots/cachedir-add-files.c12b46ac/root" ]]
+    [[ $link = ".roots/cachedir-add-files.ba2005e6/root" ]]
 }
 
 @test "volumes: !CacheDir mount empty path should fail" {
