@@ -714,11 +714,12 @@ fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
 
     set_mirror(ctx)?;
 
-    apt_get_update(ctx, &[
-        "--no-list-cleanup",
-        "-o", "Dir::Etc::sourcelist=sources.list",
-        "-o", "Dir::Etc::sourceparts=-"])?;
+    apt_get_update::<&str>(ctx, &[])?;
     apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
+
+    let mut cmd = command(ctx, "locale-gen")?;
+    cmd.arg("en_US.UTF-8");
+    run(cmd)?;
 
     // TODO(tailhook) reconsider this. It was fun to remove unneeded files
     //                until we have !Container which fails ot reuse ubuntu
