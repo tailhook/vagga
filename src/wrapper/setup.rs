@@ -502,6 +502,10 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
                 }
 
                 let source = Path::new("/vagga/cache").join(bindpath);
+                if !source.exists() {
+                    try_msg!(Dir::new(&source).recursive(true).create(),
+                        "error creating dir for volume {p:?}: {err}", p=path);
+                }
                 try_msg!(BindMount::new(&source, &dest).mount(),
                     "mount !CacheDir: {err}");
             }
