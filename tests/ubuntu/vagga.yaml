@@ -21,6 +21,12 @@ containers:
     - !Ubuntu xenial
     - !Install [bc]
 
+  yakkety-universe:
+    setup:
+    - !UbuntuRelease { codename: yakkety }
+    - !UbuntuUniverse
+    - !Install [cowsay]
+
   ppa:
     setup:
     - !Ubuntu trusty
