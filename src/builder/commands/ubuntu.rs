@@ -167,8 +167,7 @@ impl Distribution for Distro {
         let repo_parts = repo.split('/').collect::<Vec<_>>();
         let (suite, component) = match repo_parts.len() {
             1 => {
-                self.ensure_codename(ctx)?;
-                (self.codename.as_ref().unwrap().to_string(), repo_parts[0].to_string())
+                (self.get_codename(ctx)?.to_string(), repo_parts[0].to_string())
             },
             2 => (repo_parts[0].to_string(), repo_parts[1].to_string()),
             _ => {
@@ -347,8 +346,7 @@ impl Distro {
         let suite = match repo.suite {
             Some(ref suite) => suite,
             None => {
-                self.ensure_codename(ctx)?;
-                self.codename.as_ref().unwrap()
+                self.get_codename(ctx)?
             },
         };
 
@@ -373,8 +371,7 @@ impl Distro {
     pub fn add_ubuntu_ppa(&mut self, ctx: &mut Context, name: &str)
         -> Result<(), StepError>
     {
-        self.ensure_codename(ctx)?;
-        let suite = self.codename.as_ref().unwrap().to_string();
+        let suite = self.get_codename(ctx)?.to_string();
         self.add_debian_repo(ctx, &UbuntuRepo {
             url: Some(format!("http://ppa.launchpad.net/{}/ubuntu", name)),
             suite: Some(suite),
@@ -411,12 +408,17 @@ impl Distro {
         }
         Ok(())
     }
+    pub fn get_codename(&mut self, ctx: &mut Context)
+        -> Result<&str, StepError>
+    {
+        self.ensure_codename(ctx)?;
+        Ok(self.codename.as_ref().unwrap())
+    }
 
     pub fn add_universe(&mut self, ctx: &mut Context)
         -> Result<(), String>
     {
-        self.ensure_codename(ctx)?;
-        let codename = self.codename.as_ref().unwrap();
+        let codename = self.get_codename(ctx)?;
         let target = "/vagga/root/etc/apt/sources.list.d/universe.list";
         let mirror = get_ubuntu_mirror(ctx);
         File::create(&Path::new(target))
@@ -665,8 +667,7 @@ fn set_sources_list(ctx: &mut Context, distro: &mut Distro)
     -> Result<(), String>
 {
     let mirror = get_ubuntu_mirror(ctx);
-    distro.ensure_codename(ctx)?;
-    let suite = distro.codename.as_ref().unwrap();
+    let suite = distro.get_codename(ctx)?;
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
     let sources_list_tmp = Path::new("/vagga/root/etc/apt/sources.list.tmp");
     File::create(sources_list_tmp)
