@@ -79,6 +79,19 @@ setup() {
     [[ $link = ".roots/xenial-calc.321f6a11/root" ]]
 }
 
+@test "Test yakkety universe" {
+    run vagga _build yakkety-universe
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    link=$(readlink .vagga/yakkety-universe)
+    [[ $link = ".roots/yakkety-universe.b144039e/root" ]]
+
+    run vagga _run yakkety-universe /usr/games/cowsay "Have you mooed today?"
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *"Have you mooed today?"* ]]
+}
+
 @test "Test VAGGAENV_* vars" {
     VAGGAENV_TESTVAR=testvalue run vagga _run trusty printenv TESTVAR
     [[ $status -eq 0 ]]

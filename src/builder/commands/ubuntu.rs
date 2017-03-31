@@ -661,27 +661,27 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
     Ok(())
 }
 
-fn set_mirror(ctx: &mut Context) -> Result<(), String> {
+fn set_sources_list(ctx: &mut Context, distro: &mut Distro)
+    -> Result<(), String>
+{
     let mirror = get_ubuntu_mirror(ctx);
+    distro.ensure_codename(ctx)?;
+    let suite = distro.codename.as_ref().unwrap();
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
-    let source = BufReader::new(File::open(&sources_list)
-        .map_err(|e| format!("Error reading sources.list file: {}", e))?);
-    let tmp = sources_list.with_extension("tmp");
-    File::create(&tmp)
+    let sources_list_tmp = Path::new("/vagga/root/etc/apt/sources.list.tmp");
+    File::create(sources_list_tmp)
         .and_then(|mut f| {
-            for line in source.lines() {
-                let line = line?;
-                f.write_all(
-                    line.replace("http://archive.ubuntu.com/ubuntu/", &mirror)
-                    .as_bytes())?;
-                f.write_all(b"\n")?;
-            }
-            Ok(())
+            write!(
+                &mut f,
+                "deb {mirror} {suite} main restricted\n\
+                 deb {mirror} {suite}-updates main restricted\n\
+                 deb {mirror} {suite}-security main restricted\n",
+                mirror=mirror, suite=suite
+            )
         })
         .map_err(|e| format!("Error writing sources.list file: {}", e))?;
-    rename(&tmp, &sources_list)
-        .map_err(|e| format!("Error renaming sources.list file: {}", e))?;
-    Ok(())
+    rename(sources_list_tmp, sources_list)
+        .map_err(|e| format!("Error renaming sources.list file: {}", e))
 }
 
 fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
@@ -712,7 +712,7 @@ fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
 
     revert_name_files()?;
 
-    set_mirror(ctx)?;
+    set_sources_list(ctx, distro)?;
 
     apt_get_update::<&str>(ctx, &[])?;
     apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
