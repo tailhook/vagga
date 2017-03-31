@@ -1,18 +1,13 @@
 use std::io::{stdout, stderr};
 use std::default::Default;
 use std::path::Path;
-use std::fs::remove_file;
 use rand;
 
 use config::read_config;
 use config::{Config, Container, Settings};
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use file_util::copy;
 use self::context::{Context};
-use self::commands::tarcmd::unpack_file;
-use capsule::download::maybe_download_and_check_hashsum;
-use container::util::clean_dir;
 pub use self::guard::Guard;
 pub use self::error::StepError;
 
@@ -35,10 +30,10 @@ pub mod commands {
     pub mod tarcmd;
     pub mod unzip;
 }
+pub mod guard;
 mod packages;
 mod timer;
 mod distrib;
-mod guard;
 mod error;
 mod dns;
 
@@ -51,7 +46,6 @@ pub fn run(input_args: Vec<String>) -> i32 {
     let mut settings: Settings = Default::default();
     let mut sources_only: bool = false;
     let mut ver: String = "".to_string();
-    let mut no_image: bool = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
@@ -70,9 +64,6 @@ pub fn run(input_args: Vec<String>) -> i32 {
         ap.refer(&mut ver)
           .add_option(&["--container-version"], Store,
                 "Version for the container build");
-        ap.refer(&mut no_image)
-          .add_option(&["--no-image-download"], StoreTrue,
-                "Do not download container image");
         match ap.parse(input_args, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return 0,
@@ -85,38 +76,6 @@ pub fn run(input_args: Vec<String>) -> i32 {
         .expect("Error parsing configuration file");  // TODO
     let container = config.containers.get(&container_name)
         .expect("Container not found");  // TODO
-
-    if !no_image {
-        if let Some(ref image_cache_url_tmpl) = container.image_cache_url {
-            let short_hash = match ver.rsplitn(2, ".").next() {
-                Some(v) => v,
-                None => {
-                    error!("Incorrect container version");
-                    return 122;
-                }
-            };
-            let image_cache_url = image_cache_url_tmpl
-                .replace("${container_name}", &container_name)
-                .replace("${short_hash}", &short_hash);
-            let res = _build_from_image(&container_name, &container,
-                                        &config, &settings, &image_cache_url);
-            // just ignore errors if we cannot build from image
-            match res {
-                Ok(()) => return 0,
-                Err(e) => {
-                    error!("Error when unpacking image: {}. \
-                            Will clean and build it locally...", e);
-                }
-            }
-            match clean_dir("/vagga/root", false) {
-                Ok(()) => {}
-                Err(e) => {
-                    error!("Can't clean invalid cache image: {}", e);
-                    return 1;
-                }
-            }
-        }
-    }
 
     if sources_only {
         _fetch_sources(&container, &settings)
@@ -131,46 +90,6 @@ pub fn run(input_args: Vec<String>) -> i32 {
                                 container_name, e))
             .unwrap_or(1)
     }
-}
-
-fn _build_from_image(container_name: &String, container: &Container,
-    config: &Config, settings: &Settings, image_cache_url: &String)
-    -> Result<(), String>
-{
-    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
-    let mut ctx = Context::new(config, container_name.clone(),
-                               container, settings.clone());
-
-    let (filename, downloaded) = maybe_download_and_check_hashsum(
-        &mut ctx.capsule, image_cache_url, None)?;
-    warn!("Unpacking image...");
-    match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
-        Ok(_) => {
-            info!("Succesfully unpack image {}", image_cache_url);
-            // If container is okay, we need to store uid_map used for
-            // unpacking
-            copy("/proc/self/uid_map", "/vagga/container/uid_map")
-                .map_err(|e| format!("Error copying uid_map: {}", e))?;
-            copy("/proc/self/gid_map", "/vagga/container/gid_map")
-                .map_err(|e| format!("Error copying gid_map: {}", e))?;
-            // Remove image from local cache after unpacking
-            if downloaded {
-                remove_file(&filename)
-                    .map_err(|e| error!(
-                        "Error unlinking cache file: {}", e)).ok();
-
-            }
-            if settings.index_all_images {
-                guard::index_image()?;
-            }
-        },
-        Err(e) => {
-            return Err(format!("Error unpacking image {}: {}",
-                image_cache_url, e));
-        },
-    }
-
-    Ok(())
 }
 
 fn _build(container_name: &String, container: &Container,
