@@ -68,7 +68,7 @@ impl Env {
 }
 
 
-fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
+pub fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
     -> Result<PathBuf, StepError>
 {
     let cmd = cmd.as_ref();

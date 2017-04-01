@@ -13,7 +13,7 @@ use capsule::download::download_file;
 use super::super::context::{Context};
 use super::super::commands::tarcmd::unpack_file;
 use super::super::packages;
-use builder::commands::generic::{command, run};
+use builder::commands::generic::{command, run, find_cmd};
 use builder::distrib::{Distribution, Named, DistroBox};
 use builder::dns::revert_name_files;
 use file_util::{Dir, Lock, copy, copy_utime};
@@ -715,8 +715,10 @@ fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
 
     set_sources_list(ctx, distro)?;
 
-    apt_get_update::<&str>(ctx, &[])?;
-    apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
+    if find_cmd(ctx, "locale-gen").is_err() {
+        apt_get_update::<&str>(ctx, &[])?;
+        apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
+    }
 
     let mut cmd = command(ctx, "locale-gen")?;
     cmd.arg("en_US.UTF-8");
