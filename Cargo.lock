@@ -1,6 +1,6 @@
 [root]
 name = "vagga"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "anymap 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",

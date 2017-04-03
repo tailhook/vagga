@@ -20,8 +20,8 @@ Binary Installation
 Visit https://files.zerogw.com/vagga/latest.html to find out latest
 tarball version. Then run the following::
 
-    $ wget https://files.zerogw.com/vagga/vagga-0.7.1.tar.xz
-    $ tar -xJf vagga-0.7.1.tar.xz
+    $ wget https://files.zerogw.com/vagga/vagga-0.7.2.tar.xz
+    $ tar -xJf vagga-0.7.2.tar.xz
     $ cd vagga
     $ sudo ./install.sh
 
