@@ -242,11 +242,19 @@ not to do so.
 
 .. opt:: hard-link-identical-files
 
+    **This functionality is experimental**. Use at your own risk.
+
     (default ``false``) This setting is paired with ``index-all-images``.
     When both settings are ``true`` vagga will search identical files inside
     other containers and will replace the same files with hard links.
     This can significantly reduce a disk space occupied by the containers.
-    But be careful when editing a file inside a container, that can affect other
-    containers integrity.
+
+    There are two precautions about this setting:
+
+    1. Date modified, date created and most other metadata is ignored
+    2. If you edit file directly in ``.vagga/<container-name>`` you may
+       edit files in multiple containers at the same time (this is similar
+       to ``transient-hard-link-copy`` in a some way)
+
 
     .. versionadded:: 0.7.2
