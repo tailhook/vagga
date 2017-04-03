@@ -3,10 +3,28 @@ Release Notes
 =============
 
 
+Vagga 0.7.2
+===========
+
+:Release Date: 03.04.2017
+
+* Vagga now installs ``locales`` package on ubuntu where no ``locale-gen``
+  binary exists in original image
+* Disabled universe and multiverse repositories in new ubuntu xenial images
+  where they are enabled by default (this effectively reverts behavior of
+  package installation to how it was before 31.03.2017 and also consistent
+  with the all pre-xenial releases.
+* Implemented ``hard-link-identical-files`` setting (experimental)
+* Implemented ``storage-subdir-from-env-var`` setting (experimental), for use
+  in CI systems
+* Implemented ``vagga _clean --unused --global at-least=..`` (the ``--global``
+  suboption)
+
+
 Vagga 0.7.1
 ===========
 
-:Release Date: future
+:Release Date: 22.03.2017
 
 * Added ``symlink-name`` parameter and ``vagga _update_symlinks``
 * Added experimental ``mixins`` setting
