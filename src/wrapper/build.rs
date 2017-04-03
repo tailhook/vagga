@@ -8,7 +8,7 @@ use std::io::{stdout, stderr};
 use std::io::ErrorKind::NotFound;
 use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime};
-use std::os::unix::fs::symlink;
+use std::os::unix::fs::{MetadataExt, symlink};
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
@@ -529,6 +529,8 @@ fn find_and_link_identical_files(container_name: &str,
                         Ok(lnk_path) => lnk_path,
                         Err(_) => continue,
                     });
+                let lnk_stat = lnk.symlink_metadata().map_err(|e|
+                    format!("Error querying file stats: {}", e))?;
                 for tgt_entry in merged_ds_iter
                     .advance(&EntryKind::File(lnk_path))
                 {
@@ -548,6 +550,14 @@ fn find_and_link_identical_files(container_name: &str,
                                     Ok(path) => path,
                                     Err(_) => continue,
                                 });
+                            let tgt_stat = tgt.symlink_metadata().map_err(|e|
+                                format!("Error querying file stats: {}", e))?;
+                            if lnk_stat.mode() != tgt_stat.mode() ||
+                                lnk_stat.uid() != tgt_stat.uid() ||
+                                lnk_stat.gid() != lnk_stat.gid()
+                            {
+                                continue;
+                            }
                             if let Err(_) = hard_link(&tgt, &tmp) {
                                 remove_file(&tmp).map_err(|e|
                                     format!("Error removing file after failed \
