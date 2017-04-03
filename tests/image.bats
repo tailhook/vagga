@@ -34,6 +34,17 @@ setup() {
     [[ $output = *"image.tgz: gzip compressed data"* ]]
 }
 
+@test "image: missing" {
+    rm -rf .vagga/.roots/alpine.375a2970
+
+    run vagga _build alpine
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/alpine)
+    [[ $link = ".roots/alpine.375a2970/root" ]]
+    [[ $output = *"Will clean and build it locally"* ]]
+}
+
 @test "image: push & pull" {
     container_dir="alpine.375a2970"
     image_name="${container_dir}.tar.xz"

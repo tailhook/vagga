@@ -19,15 +19,45 @@ use dir_signature::v1::{Entry, EntryKind, Parser};
 use dir_signature::v1::merge::FileMergeBuilder;
 use itertools::Itertools;
 
+use builder::context::Context;
+use builder::commands::tarcmd::unpack_file;
+use builder::guard;
+use capsule::download::maybe_download_and_check_hashsum;
+use config::{Config, Container, Settings};
 use container::util::clean_dir;
 use container::mount::{unmount};
-use file_util::{Dir, Lock};
+use file_util::{Dir, Lock, copy};
 use process_util::{capture_fd3_status, copy_env_vars};
 use super::Wrapper;
 use super::setup;
 use build_step::Step;
 use options::version_hash::Options;
 
+
+struct ContainerInfo<'a> {
+    pub name: &'a str,
+    pub container: &'a Container,
+    pub tmp_root_dir: PathBuf,
+    pub force: bool,
+    pub no_image: bool,
+}
+
+impl<'a> ContainerInfo<'a> {
+    pub fn new(name: &'a str, container: &'a Container,
+        force: bool, no_image: bool)
+        -> ContainerInfo<'a>
+    {
+        let tmp_root_dir = PathBuf::from(
+            &format!("/vagga/base/.roots/.tmp.{}", name));
+        ContainerInfo {
+            name: name,
+            container: container,
+            tmp_root_dir: tmp_root_dir,
+            force: force,
+            no_image: no_image,
+        }
+    }
+}
 
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
@@ -65,6 +95,16 @@ pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     try_msg!(Dir::new(&tgtroot.join("work")).create(),
          "Error creating directory: {err}");
     return Ok(());
+}
+
+pub fn unmount_service_dirs() -> Result<(), String> {
+    unmount(&Path::new("/vagga/root"))?;
+    remove_dir(&Path::new("/vagga/root"))
+        .map_err(|e| format!("Can't unlink root: {}", e))?;
+    unmount(&Path::new("/vagga/container"))?;
+    remove_dir(&Path::new("/vagga/container"))
+        .map_err(|e| format!("Can't unlink root: {}", e))?;
+    Ok(())
 }
 
 pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
@@ -136,14 +176,11 @@ fn _get_version_hash(options: &Options, wrapper: &Wrapper)
     }
 }
 
-pub fn build_container(container: &str, force: bool, no_image: bool,
-    wrapper: &Wrapper)
+fn build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let cconfig = wrapper.config.containers.get(container)
-        .ok_or(format!("Container {} not found", container))?;
-    let name = _build_container(container, force, no_image, wrapper)?;
-    let destlink = Path::new("/work/.vagga").join(&container);
+    let dir_name = _build_container(&cont_info, wrapper)?;
+    let destlink = Path::new("/work/.vagga").join(cont_info.name);
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
         remove_file(&tmplink)
@@ -156,8 +193,8 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
     } else {
         Path::new(".roots")
     };
-    let linkval = roots.join(&name).join("root");
-    if cconfig.auto_clean {
+    let linkval = roots.join(&dir_name).join("root");
+    if cont_info.container.auto_clean {
         match read_link(&destlink) {
             Ok(ref oldval) if oldval != &linkval => {
                 let oldname = oldval.iter().rev().nth(1)
@@ -187,7 +224,7 @@ pub fn build_container(container: &str, force: bool, no_image: bool,
          .map_err(|e| format!("Error symlinking container: {}", e))?;
     rename(&tmplink, &destlink)
          .map_err(|e| format!("Error renaming symlink: {}", e))?;
-    return Ok(name);
+    return Ok(dir_name);
 }
 
 fn compare_files<A: AsRef<Path>, B: AsRef<Path>>(a: A, b: B)
@@ -211,22 +248,18 @@ fn uidmap_differs(container_path: &Path) -> bool {
     ).unwrap_or(true)
 }
 
-pub fn _build_container(container: &str,
-    force: bool, no_image: bool, wrapper: &Wrapper)
+fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let tmppath = PathBuf::from(
-        &format!("/vagga/base/.roots/.tmp.{}", container));
-
-    let ver = match get_version_hash(container, wrapper) {
+    let ver = match get_version_hash(cont_info.name, wrapper) {
         Ok(Some(ver)) => {
             if ver.len() == 128 && ver[..].is_ascii() {
-                let name = format!("{}.{}", container, &ver[..8]);
+                let dir_name = format!("{}.{}", cont_info.name, &ver[..8]);
                 let finalpath = Path::new("/vagga/base/.roots")
-                    .join(&name);
-                debug!("Container path: {:?} (force: {}) {}", finalpath, force,
-                    finalpath.exists());
-                if finalpath.exists() && !force {
+                    .join(&dir_name);
+                debug!("Container path: {:?} (force: {}) {}",
+                    finalpath, cont_info.force, finalpath.exists());
+                if finalpath.exists() && !cont_info.force {
                     if uidmap_differs(&finalpath) {
                         warn!("Current uidmap differs from uidmap of container \
                         when it was built.  This probably means that you \
@@ -236,7 +269,7 @@ pub fn _build_container(container: &str,
                         permissions");
                     } else {
                         debug!("Path {:?} is already built", finalpath);
-                        return Ok(name);
+                        return Ok(dir_name);
                     }
                 }
                 Some(ver)
@@ -250,7 +283,8 @@ pub fn _build_container(container: &str,
     };
     debug!("Container version: {:?}", ver);
 
-    let lock_name = tmppath.with_file_name(format!(".tmp.{}.lock", container));
+    let lock_name = cont_info.tmp_root_dir.with_file_name(
+        format!(".tmp.{}.lock", cont_info.name));
     let mut _lock_guard = if wrapper.settings.build_lock_wait {
         Lock::exclusive_wait(&lock_name,
             "Other process is doing a build. Waiting...")
@@ -263,58 +297,55 @@ pub fn _build_container(container: &str,
             Probably other process is doing build. Aborting...", e))?
     };
 
-    match prepare_tmp_root_dir(&tmppath) {
-        Ok(()) => {}
-        Err(x) => {
-            return Err(format!("Error preparing root dir: {}", x));
-        }
-    }
-
-    let mut cmd = Command::new("/vagga/bin/vagga");
-    cmd.arg("__builder__");
-    cmd.gid(0);
-    cmd.groups(Vec::new());
-    cmd.unshare(
-        [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-    cmd.arg(&container);
-    if let Some(ref ver) = ver {
-        cmd.arg("--container-version");
-        cmd.arg(format!("{}.{}", container, &ver[..8]));
-    }
-    if force || no_image {
-        cmd.arg("--no-image-download");
-    }
-    cmd.arg("--settings");
-    cmd.arg(json::encode(wrapper.settings).unwrap());
-    cmd.env_clear();
-    copy_env_vars(&mut cmd, &wrapper.settings);
-    if let Ok(x) = env::var("RUST_LOG") {
-        cmd.env("RUST_LOG", x);
-    }
-    if let Ok(x) = env::var("RUST_BACKTRACE") {
-        cmd.env("RUST_BACKTRACE", x);
-    }
-    if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
-        cmd.env("VAGGA_DEBUG_CMDENV", x);
-    }
+    prepare_tmp_root_dir(&cont_info.tmp_root_dir).map_err(|e|
+        format!("Error preparing root dir: {}", e))?;
 
     let build_start = Instant::now();
-    let result = cmd.status();
-    unmount(&Path::new("/vagga/root"))?;
-    remove_dir(&Path::new("/vagga/root"))
-        .map_err(|e| format!("Can't unlink root: {}", e))?;
-    unmount(&Path::new("/vagga/container"))?;
-    remove_dir(&Path::new("/vagga/container"))
-        .map_err(|e| format!("Can't unlink root: {}", e))?;
-    match result {
-        Ok(s) if s.success() => {}
-        Ok(s) => return Err(format!("Builder {}", s)),
-        Err(e) => return Err(format!("Error running builder: {}", e)),
-    };
+
+    match maybe_build_from_image(cont_info, &ver, wrapper) {
+        Ok(true) => {}
+        Ok(false) => {
+            let mut cmd = Command::new("/vagga/bin/vagga");
+            cmd.arg("__builder__");
+            cmd.gid(0);
+            cmd.groups(Vec::new());
+            cmd.unshare(
+                [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+            cmd.arg(cont_info.name);
+            if let Some(ref ver) = ver {
+                cmd.arg("--container-version");
+                cmd.arg(format!("{}.{}", cont_info.name, &ver[..8]));
+            }
+            cmd.arg("--settings");
+            cmd.arg(json::encode(wrapper.settings).unwrap());
+            cmd.env_clear();
+            copy_env_vars(&mut cmd, &wrapper.settings);
+            if let Ok(x) = env::var("RUST_LOG") {
+                cmd.env("RUST_LOG", x);
+            }
+            if let Ok(x) = env::var("RUST_BACKTRACE") {
+                cmd.env("RUST_BACKTRACE", x);
+            }
+            if let Ok(x) = env::var("VAGGA_DEBUG_CMDENV") {
+                cmd.env("VAGGA_DEBUG_CMDENV", x);
+            }
+
+            match cmd.status() {
+                Ok(s) if s.success() => {}
+                Ok(s) => return Err(format!("Builder {}", s)),
+                Err(e) => return Err(format!("Error running builder: {}", e)),
+            };
+        },
+        Err(e) => {
+            return Err(format!("Error when building from image: {}", e));
+        },
+    }
+
+    unmount_service_dirs()?;
 
     let ver = if let Some(ver) = ver { ver }
         else {
-            match get_version_hash(container, wrapper) {
+            match get_version_hash(cont_info.name, wrapper) {
                 Ok(Some(ver)) => {
                     if ver.len() == 128 && ver[..].is_ascii() {
                         ver
@@ -330,14 +361,15 @@ pub fn _build_container(container: &str,
                 Err(e) => return Err(e),
             }
         };
-    let name = format!("{}.{}", container,
-        &ver[..8]);
-    let finalpath = Path::new("/vagga/base/.roots").join(&name);
+    let dir_name = format!("{}.{}", cont_info.name, &ver[..8]);
+    let finalpath = Path::new("/vagga/base/.roots").join(&dir_name);
 
     if wrapper.settings.index_all_images &&
         wrapper.settings.hard_link_identical_files
     {
-        match find_and_link_identical_files(&container, &tmppath, &finalpath) {
+        match find_and_link_identical_files(
+            cont_info.name, &cont_info.tmp_root_dir, &finalpath)
+        {
             Ok((count, size)) if count > 0 => warn!(
                 "Found and linked {} ({}) identical files \
                  from other containers", count, human_size(size)),
@@ -349,8 +381,8 @@ pub fn _build_container(container: &str,
         }
     }
 
-    debug!("Committing {:?} -> {:?}", tmppath, finalpath);
-    match commit_root(&tmppath, &finalpath) {
+    debug!("Committing {:?} -> {:?}", cont_info.tmp_root_dir, &finalpath);
+    match commit_root(&cont_info.tmp_root_dir, &finalpath) {
         Ok(()) => {}
         Err(x) => {
             return Err(format!("Error committing root dir: {}", x));
@@ -358,8 +390,86 @@ pub fn _build_container(container: &str,
     }
     let duration = build_start.elapsed();
     warn!("Container {} ({}) built in {} seconds.",
-        container, &ver[..8], duration.as_secs());
-    return Ok(name);
+        cont_info.name, &ver[..8], duration.as_secs());
+    return Ok(dir_name);
+}
+
+fn maybe_build_from_image(cont_info: &ContainerInfo, version: &Option<String>,
+    wrapper: &Wrapper)
+    -> Result<bool, String>
+{
+    if cont_info.force || cont_info.no_image {
+        return Ok(false);
+    }
+    if let Some(ref image_url_tmpl) = cont_info.container.image_cache_url {
+        if let Some(ref version) = *version {
+            let image_url = image_url_tmpl
+                .replace("${container_name}", cont_info.name)
+                .replace("${short_hash}", &version[..8]);
+            match _build_from_image(cont_info.name, cont_info.container,
+                &wrapper.config, &wrapper.settings, &image_url)
+            {
+                Ok(()) => {
+                    Ok(true)
+                },
+                Err(e) => {
+                    error!("Error when unpacking image: {}. \
+                            Will clean and build it locally...", e);
+                    unmount_service_dirs().map_err(|e|
+                        format!("Error cleaning service dirs: {}", e))?;
+                    prepare_tmp_root_dir(&cont_info.tmp_root_dir).map_err(|e|
+                        format!("Error preparing root dir: {}", e))?;
+                    Ok(false)
+                }
+            }
+        } else {
+            debug!("Cannot build container from image. \
+                    Container's version will be available only after build.");
+            Ok(false)
+        }
+    } else {
+        Ok(false)
+    }
+}
+
+fn _build_from_image(name: &str, container: &Container,
+    config: &Config, settings: &Settings, image_cache_url: &String)
+    -> Result<(), String>
+{
+    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
+    let mut ctx = Context::new(config, name.to_string(),
+                               container, settings.clone());
+
+    let (filename, downloaded) = maybe_download_and_check_hashsum(
+        &mut ctx.capsule, image_cache_url, None)?;
+    warn!("Unpacking image...");
+    match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
+        Ok(_) => {
+            info!("Succesfully unpack image {}", image_cache_url);
+            // If container is okay, we need to store uid_map used for
+            // unpacking
+            copy("/proc/self/uid_map", "/vagga/container/uid_map")
+                .map_err(|e| format!("Error copying uid_map: {}", e))?;
+            copy("/proc/self/gid_map", "/vagga/container/gid_map")
+                .map_err(|e| format!("Error copying gid_map: {}", e))?;
+            // Remove image from local cache after unpacking
+            if downloaded {
+                remove_file(&filename)
+                    .map_err(|e| error!(
+                        "Error unlinking cache file: {}", e)).ok();
+
+            }
+            if settings.index_all_images {
+                guard::index_image()?;
+            }
+        },
+        Err(e) => {
+            return Err(format!("Error unpacking image {}: {}",
+                image_cache_url, e));
+        },
+    }
+
+    Ok(())
 }
 
 #[cfg(feature="containers")]
@@ -574,7 +684,8 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
         }
     }
 
-    return build_container(name, force, no_image, wrapper)
+    let cont_info = ContainerInfo::new(name, container, force, no_image);
+    return build_container(&cont_info, wrapper)
 }
 
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
