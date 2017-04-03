@@ -34,6 +34,31 @@ use build_step::Step;
 use options::version_hash::Options;
 
 
+struct ContainerInfo<'a> {
+    pub name: &'a str,
+    pub container: &'a Container,
+    pub tmp_root_dir: PathBuf,
+    pub force: bool,
+    pub no_image: bool,
+}
+
+impl<'a> ContainerInfo<'a> {
+    pub fn new(name: &'a str, container: &'a Container,
+        force: bool, no_image: bool)
+        -> ContainerInfo<'a>
+    {
+        let tmp_root_dir = PathBuf::from(
+            &format!("/vagga/base/.roots/.tmp.{}", name));
+        ContainerInfo {
+            name: name,
+            container: container,
+            tmp_root_dir: tmp_root_dir,
+            force: force,
+            no_image: no_image,
+        }
+    }
+}
+
 pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
         clean_dir(path, true)
@@ -151,15 +176,11 @@ fn _get_version_hash(options: &Options, wrapper: &Wrapper)
     }
 }
 
-fn build_container(container: &str, force: bool, no_image: bool,
-    wrapper: &Wrapper)
+fn build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let cconfig = wrapper.config.containers.get(container)
-        .ok_or(format!("Container {} not found", container))?;
-    let dir_name = _build_container(
-        container, cconfig, force, no_image, wrapper)?;
-    let destlink = Path::new("/work/.vagga").join(&container);
+    let dir_name = _build_container(&cont_info, wrapper)?;
+    let destlink = Path::new("/work/.vagga").join(cont_info.name);
     let tmplink = destlink.with_extension("tmp");
     if tmplink.exists() {
         remove_file(&tmplink)
@@ -173,7 +194,7 @@ fn build_container(container: &str, force: bool, no_image: bool,
         Path::new(".roots")
     };
     let linkval = roots.join(&dir_name).join("root");
-    if cconfig.auto_clean {
+    if cont_info.container.auto_clean {
         match read_link(&destlink) {
             Ok(ref oldval) if oldval != &linkval => {
                 let oldname = oldval.iter().rev().nth(1)
@@ -227,22 +248,18 @@ fn uidmap_differs(container_path: &Path) -> bool {
     ).unwrap_or(true)
 }
 
-pub fn _build_container(name: &str, container: &Container,
-    force: bool, no_image: bool, wrapper: &Wrapper)
+fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let tmppath = PathBuf::from(
-        &format!("/vagga/base/.roots/.tmp.{}", name));
-
-    let ver = match get_version_hash(name, wrapper) {
+    let ver = match get_version_hash(cont_info.name, wrapper) {
         Ok(Some(ver)) => {
             if ver.len() == 128 && ver[..].is_ascii() {
-                let dir_name = format!("{}.{}", name, &ver[..8]);
+                let dir_name = format!("{}.{}", cont_info.name, &ver[..8]);
                 let finalpath = Path::new("/vagga/base/.roots")
                     .join(&dir_name);
-                debug!("Container path: {:?} (force: {}) {}", finalpath, force,
-                    finalpath.exists());
-                if finalpath.exists() && !force {
+                debug!("Container path: {:?} (force: {}) {}",
+                    finalpath, cont_info.force, finalpath.exists());
+                if finalpath.exists() && !cont_info.force {
                     if uidmap_differs(&finalpath) {
                         warn!("Current uidmap differs from uidmap of container \
                         when it was built.  This probably means that you \
@@ -266,7 +283,8 @@ pub fn _build_container(name: &str, container: &Container,
     };
     debug!("Container version: {:?}", ver);
 
-    let lock_name = tmppath.with_file_name(format!(".tmp.{}.lock", name));
+    let lock_name = cont_info.tmp_root_dir.with_file_name(
+        format!(".tmp.{}.lock", cont_info.name));
     let mut _lock_guard = if wrapper.settings.build_lock_wait {
         Lock::exclusive_wait(&lock_name,
             "Other process is doing a build. Waiting...")
@@ -279,13 +297,12 @@ pub fn _build_container(name: &str, container: &Container,
             Probably other process is doing build. Aborting...", e))?
     };
 
-    prepare_tmp_root_dir(&tmppath).map_err(|e|
+    prepare_tmp_root_dir(&cont_info.tmp_root_dir).map_err(|e|
         format!("Error preparing root dir: {}", e))?;
 
     let build_start = Instant::now();
 
-    match maybe_build_from_image(name, &ver, &tmppath, container,
-                                 force, no_image, wrapper) {
+    match maybe_build_from_image(cont_info, &ver, wrapper) {
         Ok(true) => {}
         Ok(false) => {
             let mut cmd = Command::new("/vagga/bin/vagga");
@@ -294,10 +311,10 @@ pub fn _build_container(name: &str, container: &Container,
             cmd.groups(Vec::new());
             cmd.unshare(
                 [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
-            cmd.arg(name);
+            cmd.arg(cont_info.name);
             if let Some(ref ver) = ver {
                 cmd.arg("--container-version");
-                cmd.arg(format!("{}.{}", name, &ver[..8]));
+                cmd.arg(format!("{}.{}", cont_info.name, &ver[..8]));
             }
             cmd.arg("--settings");
             cmd.arg(json::encode(wrapper.settings).unwrap());
@@ -328,7 +345,7 @@ pub fn _build_container(name: &str, container: &Container,
 
     let ver = if let Some(ver) = ver { ver }
         else {
-            match get_version_hash(name, wrapper) {
+            match get_version_hash(cont_info.name, wrapper) {
                 Ok(Some(ver)) => {
                     if ver.len() == 128 && ver[..].is_ascii() {
                         ver
@@ -344,13 +361,15 @@ pub fn _build_container(name: &str, container: &Container,
                 Err(e) => return Err(e),
             }
         };
-    let dir_name = format!("{}.{}", name, &ver[..8]);
+    let dir_name = format!("{}.{}", cont_info.name, &ver[..8]);
     let finalpath = Path::new("/vagga/base/.roots").join(&dir_name);
 
     if wrapper.settings.index_all_images &&
         wrapper.settings.hard_link_identical_files
     {
-        match find_and_link_identical_files(&name, &tmppath, &finalpath) {
+        match find_and_link_identical_files(
+            cont_info.name, &cont_info.tmp_root_dir, &finalpath)
+        {
             Ok((count, size)) if count > 0 => warn!(
                 "Found and linked {} ({}) identical files \
                  from other containers", count, human_size(size)),
@@ -362,8 +381,8 @@ pub fn _build_container(name: &str, container: &Container,
         }
     }
 
-    debug!("Committing {:?} -> {:?}", tmppath, finalpath);
-    match commit_root(&tmppath, &finalpath) {
+    debug!("Committing {:?} -> {:?}", cont_info.tmp_root_dir, &finalpath);
+    match commit_root(&cont_info.tmp_root_dir, &finalpath) {
         Ok(()) => {}
         Err(x) => {
             return Err(format!("Error committing root dir: {}", x));
@@ -371,23 +390,23 @@ pub fn _build_container(name: &str, container: &Container,
     }
     let duration = build_start.elapsed();
     warn!("Container {} ({}) built in {} seconds.",
-        name, &ver[..8], duration.as_secs());
+        cont_info.name, &ver[..8], duration.as_secs());
     return Ok(dir_name);
 }
 
-fn maybe_build_from_image(name: &str, version: &Option<String>, tmppath: &PathBuf,
-    container: &Container, force: bool, no_image: bool, wrapper: &Wrapper)
+fn maybe_build_from_image(cont_info: &ContainerInfo, version: &Option<String>,
+    wrapper: &Wrapper)
     -> Result<bool, String>
 {
-    if force || no_image {
+    if cont_info.force || cont_info.no_image {
         return Ok(false);
     }
-    if let Some(ref image_url_tmpl) = container.image_cache_url {
+    if let Some(ref image_url_tmpl) = cont_info.container.image_cache_url {
         if let Some(ref version) = *version {
             let image_url = image_url_tmpl
-                .replace("${container_name}", name)
+                .replace("${container_name}", cont_info.name)
                 .replace("${short_hash}", &version[..8]);
-            match _build_from_image(name, container,
+            match _build_from_image(cont_info.name, cont_info.container,
                 &wrapper.config, &wrapper.settings, &image_url)
             {
                 Ok(()) => {
@@ -398,7 +417,7 @@ fn maybe_build_from_image(name: &str, version: &Option<String>, tmppath: &PathBu
                             Will clean and build it locally...", e);
                     unmount_service_dirs().map_err(|e|
                         format!("Error cleaning service dirs: {}", e))?;
-                    prepare_tmp_root_dir(&tmppath).map_err(|e|
+                    prepare_tmp_root_dir(&cont_info.tmp_root_dir).map_err(|e|
                         format!("Error preparing root dir: {}", e))?;
                     Ok(false)
                 }
@@ -665,7 +684,8 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
         }
     }
 
-    return build_container(name, force, no_image, wrapper)
+    let cont_info = ContainerInfo::new(name, container, force, no_image);
+    return build_container(&cont_info, wrapper)
 }
 
 pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
