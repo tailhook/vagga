@@ -682,6 +682,40 @@ Files and Directories
      unmapped users (the ones that don't belong to user's subuid/subgid range),
      will be set to ``nobody`` (65535).
 
+   rules
+     Leverages glob patterns instead of regular expressions to match paths.
+     This option conflicts with ``ignore-regex`` and ``include-regex`` options.
+
+     The rules are similar to those which is used in
+     `.gitignore <https://git-scm.com/docs/gitignore>`_ file. There are several
+     differences:
+
+     * Include patterns **must** be absolute so they have to start with
+       a leading slash. This is done for performance reasons to exclude
+       unknown directories from traversing. If you really want to match relative
+       paths you can prepend pattern with a slash followed by two consecutive
+       asterisks. Thus ``/**/*.py`` pattern will match ``test.py``,
+       ``dir/main.py``, ``dir/subdir/test.py`` paths and so on.
+     * ``!`` prefix negates the pattern. Negative patterns can be relative.
+       Unlike `.gitignore` patterns it is possible to include a file when its
+       parent directory was excluded. For instance rules
+       ``["!dir", "/dir/*.py"]`` will match all python files inside the ``dir``
+       directory.
+     * If there is no matched files inside a directory the directory itself
+       won't be copied.
+     * If the pattern ends with a slash, it will match only with a direcotory
+       and paths underneath it. Also ``/dir/`` pattern will copy ``dir``
+       directory even if it is empty.
+
+     By default there are some ignore rules that correspond ``ignore-regex``
+     expression:
+       ``["!.git/", "!.hg/", "!.svn/", "!.vagga/", "!*.bak", "!*.orig", "!*~",
+       "!#*#", "!.#*"]``
+
+   no-default-rules
+     Disables default rules. The option only works in pair with ``rules``
+     option.
+
    .. warning:: If the source directory starts with `/work` all the files are
       read and checksummed on each run of the application in the container. So
       copying large directories for this case may influence container startup

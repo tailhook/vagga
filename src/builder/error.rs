@@ -3,9 +3,9 @@ use std::rc::Rc;
 use std::path::{Path, PathBuf};
 
 use unshare;
-use regex;
 use scan_dir;
 use libmount;
+use path_filter;
 
 use build_step::BuildStep;
 use builder::packages::Package;
@@ -68,11 +68,11 @@ quick_error! {
             description("can't read directory")
             display("error reading directory: {:?}", errors)
         }
-        /// Can't compile regex
-        Regex(e: regex::Error) {
+        /// Can't read directory for copying
+        PathFilter(errors: Vec<path_filter::FilterError>) {
             from()
-            description("can't compile regex")
-            display("error compiling regex: {}", e)
+            description("can't read directory")
+            display("error reading directory: {:?}", errors)
         }
         /// Distribution does not support the features
         UnsupportedFeatures(features: Vec<Package>) {

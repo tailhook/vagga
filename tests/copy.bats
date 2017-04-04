@@ -112,6 +112,30 @@ setup() {
     [[ $(vagga _version_hash copy-with-include) = $(vagga _version_hash copy-with-include-subdir) ]]
 }
 
+@test "copy: glob rules" {
+    run vagga _build copy-glob-rules
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/copy-glob-rules"
+    link=$(readlink $root)
+    [[ $link = ".roots/copy-glob-rules.c7333188/root" ]]
+    [[ -f "$root/dir/hello" ]]
+    [[ -d "$root/dir/subdir" ]]
+    [[ -f "$root/dir/subdir/file" ]]
+    [[ ! -f "$root/dir/subdir/hello" ]]
+    [[ ! -f "$root/dir/second" ]]
+}
+
+@test "copy: glob rules with inverse" {
+    run vagga _build copy-glob-rules-inverse
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/copy-glob-rules-inverse"
+    link=$(readlink $root)
+    [[ $link = ".roots/copy-glob-rules-inverse.981e78a1/root" ]]
+    [[ -f "$root/dir/hello" ]]
+    [[ ! -d "$root/dir/subdir" ]]
+    [[ ! -f "$root/dir/second" ]]
+}
+
 @test "depends: include regex" {
     run vagga _version_hash --short depends-with-include
     printf "%s\n" "${lines[@]}"
@@ -119,6 +143,17 @@ setup() {
 
     chmod 0755 dir/subdir
     run vagga _version_hash --short depends-with-include
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "375d1004" ]]
+}
+
+@test "depends: glob rules" {
+    run vagga _version_hash --short depends-glob-rules
+    printf "%s\n" "${lines[@]}"
+    [[ $output = "375d1004" ]]
+
+    chmod 0755 dir/subdir
+    run vagga _version_hash --short depends-glob-rules
     printf "%s\n" "${lines[@]}"
     [[ $output = "375d1004" ]]
 }

@@ -37,6 +37,7 @@ quire = "0.2.1"
 lazy_static = "0.2.2"
 dir-signature = { git = "https://github.com/tailhook/dir-signature.git", rev = "9fd30db", optional=true }
 itertools = "0.5.8"
+path-filter = { version = "0.1.0", path = "path_filter"}
 
 [features]
 default = ["containers"]

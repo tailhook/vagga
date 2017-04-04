@@ -41,6 +41,7 @@ script:
     for test in ${tests[@]}; do
       if [[ $test = cargo ]]; then
         vagga -E VAGGA_VERSION=v0.0.0-test _run rust-musl cargo test
+        (cd path_filter; vagga _run rust-musl cargo test)
       else
         vagga \
           -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
