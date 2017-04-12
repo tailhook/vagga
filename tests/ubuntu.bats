@@ -154,7 +154,7 @@ setup() {
     run vagga _build ubuntu-repo-full
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ubuntu-repo-full)
-    [[ $link = ".roots/ubuntu-repo-full.adf34f24/root" ]]
+    [[ $link = ".roots/ubuntu-repo-full.fbe8ac9a/root" ]]
 
     repo_line=$(cat ".vagga/ubuntu-repo-full/etc/apt/sources.list.d/2efc24ff-vagga.list")
     [[ $repo_line = "deb [trusted=yes] http://ubuntu.zerogw.com vagga main" ]]
@@ -162,7 +162,7 @@ setup() {
     run vagga _run ubuntu-repo-full vagga --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ $output = "v0.7.1" ]]
+    [[ $output = "v0.7.2" ]]
 }
 
 @test "ubuntu: UbuntuRepo https" {
