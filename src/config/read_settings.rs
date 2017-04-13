@@ -26,6 +26,7 @@ struct SecureSettings {
     index_all_images: Option<bool>,
     hard_link_identical_files: Option<bool>,
     run_symlinks_as_commands: Option<bool>,
+    disable_auto_clean: Option<bool>,
     environ: BTreeMap<String, String>,
 }
 
@@ -67,6 +68,7 @@ struct InsecureSettings {
     alpine_mirror: Option<String>,
     build_lock_wait: Option<bool>,
     run_symlinks_as_commands: Option<bool>,
+    disable_auto_clean: Option<bool>,
     environ: BTreeMap<String, String>,
 }
 
@@ -89,6 +91,7 @@ pub struct MergedSettings {
     pub storage_subdir_from_env_var: Option<String>,
     pub cache_dir: Option<PathBuf>,
     pub shared_cache: bool,
+    pub disable_auto_clean: bool,
 }
 
 fn merge_settings(cfg: SecureSettings, project_root: &Path,
@@ -143,6 +146,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.run_symlinks_as_commands {
         int_settings.run_symlinks_as_commands = val;
     }
+    if let Some(val) = cfg.disable_auto_clean {
+        int_settings.disable_auto_clean = val;
+    }
     for (k, v) in &cfg.environ {
         int_settings.environ.insert(k.clone(), v.clone());
     }
@@ -188,6 +194,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.run_symlinks_as_commands {
             int_settings.run_symlinks_as_commands = val;
         }
+        if let Some(val) = cfg.disable_auto_clean {
+            int_settings.disable_auto_clean = val;
+        }
         for (k, v) in &cfg.environ {
             int_settings.environ.insert(k.clone(), v.clone());
         }
@@ -205,6 +214,7 @@ pub fn read_settings(project_root: &Path)
         storage_subdir_from_env_var: None,
         cache_dir: None,
         shared_cache: false,
+        disable_auto_clean: false,
     };
     let mut int_settings = Settings {
         proxy_env_vars: true,
@@ -218,6 +228,7 @@ pub fn read_settings(project_root: &Path)
         index_all_images: false,
         hard_link_identical_files: false,
         run_symlinks_as_commands: true,
+        disable_auto_clean: false,
         environ: BTreeMap::new(),
         storage_subdir_from_env_var: None,
     };

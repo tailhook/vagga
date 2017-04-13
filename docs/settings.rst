@@ -258,3 +258,10 @@ not to do so.
 
 
     .. versionadded:: 0.7.2
+
+.. opt:: disable-auto-clean
+
+   Disables ``auto-clean`` option in all containers. This is useful on CI
+   systems where multiple parallel builds should work.
+
+

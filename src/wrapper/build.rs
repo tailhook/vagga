@@ -196,7 +196,7 @@ fn build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
         Path::new(".roots")
     };
     let linkval = roots.join(&dir_name).join("root");
-    if cont_info.container.auto_clean {
+    if cont_info.container.auto_clean && !wrapper.settings.disable_auto_clean {
         match read_link(&destlink) {
             Ok(ref oldval) if oldval != &linkval => {
                 let oldname = oldval.iter().rev().nth(1)

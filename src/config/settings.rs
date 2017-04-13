@@ -20,6 +20,7 @@ pub struct Settings {
     pub index_all_images: bool,
     pub hard_link_identical_files: bool,
     pub run_symlinks_as_commands: bool,
+    pub disable_auto_clean: bool,
     pub storage_subdir_from_env_var: Option<String>,
 }
 
