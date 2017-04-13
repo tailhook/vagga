@@ -122,6 +122,8 @@ pub fn commit_root(tmp_path: &Path, final_path: &Path) -> Result<(), String> {
              .map_err(|x| format!("Error renaming old dir: {}", x))?;
         path_to_remove = Some(rempath);
     }
+    File::create(tmp_path.join("last_use"))
+        .map_err(|e| format!("Can't write image usage info: {}", e))?;
     rename(tmp_path, final_path)
          .map_err(|x| format!("Error renaming dir: {}", x))?;
     if let Some(ref path_to_remove) = path_to_remove {
@@ -457,7 +459,6 @@ fn _build_from_image(name: &str, container: &Container,
                 remove_file(&filename)
                     .map_err(|e| error!(
                         "Error unlinking cache file: {}", e)).ok();
-
             }
             if settings.index_all_images {
                 guard::index_image()?;

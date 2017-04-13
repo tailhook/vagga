@@ -139,9 +139,6 @@ impl<'a> Guard<'a> {
                 "Error removing dirs: {err}");
         }
 
-        File::create("/vagga/container/last_use")
-            .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
-
         if self.ctx.settings.index_all_images {
             self.ctx.timelog.mark(format_args!("Indexing"))
                 .map_err(|e| format!("Can't write timelog: {}", e))?;
