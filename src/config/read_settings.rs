@@ -50,6 +50,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("index_all_images", V::Scalar::new().optional())
         .member("hard_link_identical_files", V::Scalar::new().optional())
         .member("run_symlinks_as_commands", V::Scalar::new().optional())
+        .member("disable_auto_clean", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
             V::Scalar::new(), V::Scalar::new()));
     if has_children {
@@ -79,6 +80,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
     .member("ubuntu_mirror", V::Scalar::new().optional())
     .member("alpine_mirror", V::Scalar::new().optional())
     .member("run_symlinks_as_commands", V::Scalar::new().optional())
+    .member("disable_auto_clean", V::Scalar::new().optional())
     .member("environ", V::Mapping::new(
         V::Scalar::new(), V::Scalar::new())))
 }
