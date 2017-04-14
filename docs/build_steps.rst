@@ -1182,6 +1182,10 @@ Python Commands
        and version control packages. Note that by default ``python-dev`` style
        packages are as build dependencies installed too.
 
+   allow_pre_releases
+       (default ``false``) Allow install pre-release and development versions.
+       By default, pip only finds stable versions.
+
    python-exe
        (default is either ``python2`` or ``python3`` depending on which command
        is called, e.g. ``Py2Install`` or ``Py3Install``) This allows to change

@@ -21,6 +21,7 @@ pub struct PipConfig {
     pub cache_wheels: bool,
     pub install_python: bool,
     pub python_exe: Option<String>,
+    pub allow_pre_releases: bool,
 }
 
 impl PipConfig {
@@ -33,6 +34,7 @@ impl PipConfig {
         .member("trusted_hosts", V::Sequence::new(V::Scalar::new()))
         .member("python_exe", V::Scalar::new().optional())
         .member("install_python", V::Scalar::new().default(true))
+        .member("allow_pre_releases", V::Scalar::new().default(false))
     }
 }
 
@@ -87,6 +89,7 @@ impl Default for PipConfig {
             cache_wheels: true,
             install_python: true,
             python_exe: None,
+            allow_pre_releases: false,
         }
     }
 }
@@ -152,6 +155,9 @@ fn pip_args(ctx: &mut Context, ver: u8) -> Vec<String> {
     }
     for lnk in ctx.pip_settings.find_links.iter() {
         args.push(format!("--find-links={}", lnk));
+    }
+    if ctx.pip_settings.allow_pre_releases {
+        args.push("--pre".to_string());
     }
     return args;
 }
@@ -260,6 +266,7 @@ impl BuildStep for PipConfig {
         hash.field("dependencies", self.dependencies);
         hash.field("cache_wheels", self.cache_wheels);
         hash.field("install_python", self.install_python);
+        hash.field("allow_pre_releases", self.allow_pre_releases);
         hash.opt_field("python_exe", &self.python_exe);
         Ok(())
     }
