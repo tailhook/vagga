@@ -250,39 +250,54 @@ fn uidmap_differs(container_path: &Path) -> bool {
     ).unwrap_or(true)
 }
 
+fn _check_exists(container: &str, force: bool, wrapper: &Wrapper,
+    version: &mut Option<String>)
+    -> Result<Option<String>, String>
+{
+    if version.is_none() {
+        *version = get_version_hash(container, wrapper)?.and_then(|ver| {
+            if ver.len() != 128 || !ver[..].is_ascii() {
+                None
+            } else {
+                Some(ver)
+            }
+        });
+    }
+    let ver = if let &mut Some(ref ver) = version {
+        ver
+    } else {
+        return Ok(None);
+    };
+    let dir_name = format!("{}.{}", container, &ver[..8]);
+    let finalpath = Path::new("/vagga/base/.roots")
+        .join(&dir_name);
+    debug!("Container path: {:?} (force: {}) {}",
+        finalpath, force, finalpath.exists());
+    if finalpath.exists() && !force {
+        if uidmap_differs(&finalpath) {
+            warn!("Current uidmap differs from uidmap of container \
+            when it was built.  This probably means that you \
+            either running vagga wrong user id or changed uid or \
+            subuids of your user since container was built. We'll \
+            rebuilt container to make sure it has proper \
+            permissions");
+        } else {
+            debug!("Path {:?} is already built", finalpath);
+            return Ok(Some(dir_name));
+        }
+    }
+    return Ok(None);
+}
+
 fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let ver = match get_version_hash(cont_info.name, wrapper) {
-        Ok(Some(ver)) => {
-            if ver.len() == 128 && ver[..].is_ascii() {
-                let dir_name = format!("{}.{}", cont_info.name, &ver[..8]);
-                let finalpath = Path::new("/vagga/base/.roots")
-                    .join(&dir_name);
-                debug!("Container path: {:?} (force: {}) {}",
-                    finalpath, cont_info.force, finalpath.exists());
-                if finalpath.exists() && !cont_info.force {
-                    if uidmap_differs(&finalpath) {
-                        warn!("Current uidmap differs from uidmap of container \
-                        when it was built.  This probably means that you \
-                        either running vagga wrong user id or changed uid or \
-                        subuids of your user since container was built. We'll \
-                        rebuilt container to make sure it has proper \
-                        permissions");
-                    } else {
-                        debug!("Path {:?} is already built", finalpath);
-                        return Ok(dir_name);
-                    }
-                }
-                Some(ver)
-            } else {
-                error!("Wrong version hash: {:?}", ver);
-                None
-            }
-        }
-        Ok(None) => None,
-        Err(e) => return Err(e),
-    };
+    let mut ver = None;
+    if let Some(dir_name) = _check_exists(
+        cont_info.name, cont_info.force, wrapper, &mut ver)?
+    {
+        return Ok(dir_name);
+    }
     debug!("Container version: {:?}", ver);
 
     let lock_name = cont_info.tmp_root_dir.with_file_name(
@@ -298,6 +313,14 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
         .map_err(|e| format!("Can't lock container build ({}). \
             Probably other process is doing build. Aborting...", e))?
     };
+
+    // must recheck after getting lock to avoid race condition
+    if let Some(dir_name) = _check_exists(
+        cont_info.name, cont_info.force, wrapper, &mut ver)?
+    {
+        return Ok(dir_name);
+    }
+
 
     prepare_tmp_root_dir(&cont_info.tmp_root_dir).map_err(|e|
         format!("Error preparing root dir: {}", e))?;
