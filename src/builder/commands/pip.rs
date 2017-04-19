@@ -266,7 +266,9 @@ impl BuildStep for PipConfig {
         hash.field("dependencies", self.dependencies);
         hash.field("cache_wheels", self.cache_wheels);
         hash.field("install_python", self.install_python);
-        hash.field("allow_pre_releases", self.allow_pre_releases);
+        if self.allow_pre_releases {
+            hash.field("allow_pre_releases", self.allow_pre_releases);
+        }
         hash.opt_field("python_exe", &self.python_exe);
         Ok(())
     }
