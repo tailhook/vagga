@@ -1,10 +1,13 @@
+use std::io::{BufReader, BufRead};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::os::unix::fs::{symlink};
+use std::collections::HashSet;
 
 use quire::validate as V;
 use quick_error::ResultExt;
 use unshare::{Stdio};
+use regex::Regex;
 use rustc_serialize::json::Json;
 
 use capsule::download::download_file;
@@ -14,6 +17,10 @@ use builder::distrib::{Distribution, DistroBox};
 use builder::commands::generic::{command, run};
 use builder::commands::tarcmd::unpack_subdir;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+lazy_static! {
+    static ref YARN_PATTERN: Regex = Regex::new(r#""[^"]+"|[^,]+"#).unwrap();
+}
 
 
 #[derive(RustcDecodable, Debug, Clone)]
@@ -76,6 +83,7 @@ pub struct YarnDependencies {
     pub dir: PathBuf,
     pub production: bool,
     pub flat: bool,
+    // add "optional" flag
 }
 
 impl YarnDependencies {
@@ -85,6 +93,26 @@ impl YarnDependencies {
         .member("production", V::Scalar::new().default(false))
         .member("flat", V::Scalar::new().default(false))
     }
+}
+
+fn get_all_patterns(lock_file: &Path)
+    -> Result<HashSet<String>, VersionError>
+{
+    let f = BufReader::new(File::open(lock_file).context(lock_file)?);
+    let mut result = HashSet::new();
+    for line in f.lines() {
+        let line = line.context(lock_file)?;
+        if line.starts_with(" ") || line.starts_with("#") {
+            continue;
+        }
+        if !line.ends_with(":") {
+            continue;
+        }
+        for item in YARN_PATTERN.find_iter(&line[..line.len()-1]) {
+            result.insert(item.as_str().to_string());
+        }
+    }
+    Ok(result)
 }
 
 fn scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
@@ -344,6 +372,24 @@ pub fn setup_yarn(ctx: &mut Context)
     Ok(())
 }
 
+fn check_deps(deps: Option<&Json>, patterns: &HashSet<String>) -> bool {
+    let items = match deps.and_then(|x| x.as_object()) {
+        Some(items) => items,
+        None => return true,
+    };
+    for (key, value) in items.iter() {
+        let val = match value.as_string() {
+            Some(x) => x,
+            None => continue,
+        };
+        let item = format!("{}@{}", key, val);
+        if !patterns.contains(&item) {
+            return false;
+        }
+    }
+    return true;
+}
+
 impl BuildStep for YarnDependencies {
     fn name(&self) -> &'static str { "YarnDependencies" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
@@ -352,7 +398,24 @@ impl BuildStep for YarnDependencies {
         hash.field("production", self.production);
         hash.field("flat", self.flat);
         let lock_file = Path::new("/work").join(&self.dir).join("yarn.lock");
+        let package = Path::new("/work").join(&self.dir).join("package.json");
         if lock_file.exists() {
+            let data = Json::from_reader(
+                &mut File::open(&package).context(&package)?)
+                .context(&package)?;
+            let patterns = get_all_patterns(&lock_file)?;
+
+            // This is what yarn as of v0.23.0, i.e. checks whether all
+            // dependencies are in lockfile
+            if !check_deps(data.find("dependencies"), &patterns) {
+                return Err(VersionError::New);
+            }
+            if !self.production {
+                if !check_deps(data.find("devDependencies"), &patterns) {
+                    return Err(VersionError::New);
+                }
+            }
+
             let mut file = File::open(&lock_file).context(&lock_file)?;
             hash.file(&lock_file, &mut file).context(&lock_file)?;
             Ok(())
@@ -365,7 +428,6 @@ impl BuildStep for YarnDependencies {
     {
         if build {
             let base_dir = Path::new("/work").join(&self.dir);
-            let lock_file = base_dir.join("yarn.lock");
 
             guard.ctx.add_cache_dir(Path::new("/tmp/yarn-cache"),
                                     "yarn-cache".to_string())?;
@@ -378,9 +440,8 @@ impl BuildStep for YarnDependencies {
             cmd.arg("install");
             cmd.arg("--modules-folder=/usr/lib/node_modules");
             cmd.arg("--cache-folder=/tmp/yarn-cache");
-            if lock_file.exists() {
-                cmd.arg("--frozen-lockfile");
-            }
+            // TODO(tailhook) figure out how to pass frozen-lockfile if needed
+            // cmd.arg("--frozen-lockfile");
             if self.production {
                 cmd.arg("--production");
             }

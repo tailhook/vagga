@@ -88,6 +88,9 @@ commands:
   cargo: !Command
     description: Run arbitrary cargo command
     container: rust-musl
+    environ:
+      VAGGA_VERSION: v0.0.0-test
+      RUST_BACKTRACE: 1
     run: [cargo]
 
   test-internal: !Command

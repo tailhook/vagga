@@ -51,6 +51,8 @@ quick_error! {
         Json(err: json::BuilderError, path: PathBuf) {
             description("can't read json")
             display("error reading json {:?}: {:?}", path, err)
+            context(p: &'a PathBuf, err: json::BuilderError)
+                -> (err, p.to_path_buf())
         }
     }
 }
