@@ -100,10 +100,10 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
 
     let re = Regex::new(r#"^(\d+?\.\d+?)\."#).expect("Invalid regex");
     let version = re.captures(&gem_ver)
-        .and_then(|cap| cap.at(1))
+        .and_then(|cap| cap.get(1))
         .ok_or("Gem version was not found".to_owned())?;
 
-    version.parse::<f32>()
+    version.as_str().parse::<f32>()
         .map_err(|e| format!("Erro parsing gem version: {}", e))
 }
 

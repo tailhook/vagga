@@ -21,7 +21,7 @@ signal = "0.2.0"
 mopa = "0.2.2"
 anymap = "0.11.1"
 matches = "0.1.2"
-regex = "0.1.41"
+regex = "0.2.1"
 scan_dir = "0.3.1"
 libmount = { version="0.1.5", optional=true }
 zip = "0.1"

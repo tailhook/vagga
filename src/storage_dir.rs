@@ -6,5 +6,5 @@ lazy_static! {
 }
 
 pub fn sanitize(original: &str) -> String {
-    DIR_REPLACE_RE.replace(original, "-")
+    DIR_REPLACE_RE.replace(original, "-").to_string()
 }

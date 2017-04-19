@@ -401,8 +401,9 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
     let re = Regex::new(r#"(?m).*?(/etc/php\d/.*?conf.d)$"#).expect("Invalid regex");
 
     let conf_d = re.captures(&output)
-        .and_then(|cap| cap.at(1))
-        .ok_or("PHP configuration directory was not found".to_owned())?;
+        .and_then(|cap| cap.get(1))
+        .ok_or("PHP configuration directory was not found".to_owned())?
+        .as_str();
 
     Ok(PathBuf::from(conf_d))
 }
