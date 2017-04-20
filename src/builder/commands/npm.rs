@@ -83,7 +83,7 @@ pub struct YarnDependencies {
     pub dir: PathBuf,
     pub production: bool,
     pub flat: bool,
-    // add "optional" flag
+    pub optional: bool,
 }
 
 impl YarnDependencies {
@@ -91,6 +91,7 @@ impl YarnDependencies {
         V::Structure::new()
         .member("dir", V::Directory::new().absolute(false).default("."))
         .member("production", V::Scalar::new().default(false))
+        .member("optional", V::Scalar::new().default(false))
         .member("flat", V::Scalar::new().default(false))
     }
 }
@@ -410,10 +411,18 @@ impl BuildStep for YarnDependencies {
             if !check_deps(data.find("dependencies"), &patterns) {
                 return Err(VersionError::New);
             }
+            npm_hash_deps(&data, "dependencies", hash);
             if !self.production {
                 if !check_deps(data.find("devDependencies"), &patterns) {
                     return Err(VersionError::New);
                 }
+                npm_hash_deps(&data, "devDependencies", hash);
+            }
+            if self.optional {
+                if !check_deps(data.find("optionalDependencies"), &patterns) {
+                    return Err(VersionError::New);
+                }
+                npm_hash_deps(&data, "optionalDependencies", hash);
             }
 
             let mut file = File::open(&lock_file).context(&lock_file)?;
