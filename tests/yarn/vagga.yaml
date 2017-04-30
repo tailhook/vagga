@@ -1,0 +1,20 @@
+containers:
+
+  pkg:
+    setup:
+    - !Alpine v3.5
+    - !YarnDependencies
+
+
+commands:
+  resolve: !Command
+    container: pkg
+    run: [resolve]
+    environ:
+      PATH: "/usr/lib/node_modules/.bin:\
+        /usr/local/sbin:/usr/local/bin:\
+        /usr/sbin:/usr/bin:/sbin:/bin"
+
+  stat: !Command
+    container: pkg
+    run: [stat]

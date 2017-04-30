@@ -47,6 +47,7 @@ const COMMANDS: &'static [&'static str] = &[
     "SubConfig",
     "NpmConfig",
     "NpmDependencies",
+    "YarnDependencies",
     "NpmInstall",
     "GemInstall",
     "GemBundle",
@@ -124,6 +125,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("NpmConfig", cmd::npm::NpmConfig::config())
     .option("NpmInstall", cmd::npm::NpmInstall::config())
     .option("NpmDependencies", cmd::npm::NpmDependencies::config())
+    .option("YarnDependencies", cmd::npm::YarnDependencies::config())
 
     // Composer
     .option("ComposerConfig", cmd::composer::ComposerConfig::config())
@@ -185,6 +187,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "SubConfig" => step(cmd::subcontainer::SubConfig::decode(d)),
         "NpmConfig" => step(cmd::npm::NpmConfig::decode(d)),
         "NpmDependencies" => step(cmd::npm::NpmDependencies::decode(d)),
+        "YarnDependencies" => step(cmd::npm::YarnDependencies::decode(d)),
         "NpmInstall" => step(cmd::npm::NpmInstall::decode(d)),
         "GemInstall" => step(cmd::gem::GemInstall::decode(d)),
         "GemBundle" => step(cmd::gem::GemBundle::decode(d)),

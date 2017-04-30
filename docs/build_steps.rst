@@ -1122,6 +1122,34 @@ Node.JS Commands
         Setting the option to ``false`` is useful for setting up custom
         version of the node.js.
 
+.. step:: YarnDependencies
+
+   Works similarly to :step:`NpmDependencies` but installs packages using yarn
+   aand For example::
+
+        - !YarnDependencies
+
+   This installs dependencies and ``devDependencies`` from ``package.json``
+   into a container's ``/usr/lib/node_modules``.
+
+   The settings in :step:`NpmConfig` to affect this command.
+
+   Options:
+
+   production
+       (default ``false``) If set to ``true`` does not install
+       ``devDependencies`` (corresponds to ``--production`` flag for yarn)
+   optional
+       (default ``false``) If set to ``true`` install optional dependencies
+
+   dir
+       (default ``.``) Base directory where ``package.json`` is. Note: unlike
+       in :setup:`NpmDependencies` we don't specify the path to the file,
+       but to the directory because we track both ``package.json`` and
+       ``yarn.lock`` files in there.
+
+.. _yarn: https://yarnpkg.com/
+
 
 Python Commands
 ===============
