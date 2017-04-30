@@ -82,7 +82,6 @@ impl Default for NpmConfig {
 pub struct YarnDependencies {
     pub dir: PathBuf,
     pub production: bool,
-    pub flat: bool,
     pub optional: bool,
 }
 
@@ -92,7 +91,6 @@ impl YarnDependencies {
         .member("dir", V::Directory::new().absolute(false).default("."))
         .member("production", V::Scalar::new().default(false))
         .member("optional", V::Scalar::new().default(false))
-        .member("flat", V::Scalar::new().default(false))
     }
 }
 
@@ -397,7 +395,6 @@ impl BuildStep for YarnDependencies {
         -> Result<(), VersionError>
     {
         hash.field("production", self.production);
-        hash.field("flat", self.flat);
         let lock_file = Path::new("/work").join(&self.dir).join("yarn.lock");
         let package = Path::new("/work").join(&self.dir).join("package.json");
         if lock_file.exists() {
@@ -453,9 +450,6 @@ impl BuildStep for YarnDependencies {
             // cmd.arg("--frozen-lockfile");
             if self.production {
                 cmd.arg("--production");
-            }
-            if self.flat {
-                cmd.arg("--flat");
             }
             run(cmd)?;
             // TODO(tailhook) find some heuristics to determine that lockfile

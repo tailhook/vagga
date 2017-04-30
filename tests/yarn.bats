@@ -16,7 +16,7 @@ END
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg)
-    [[ $link = ".roots/pkg.77bfb14b/root" ]]
+    [[ $link = ".roots/pkg.06f039be/root" ]]
 
     run vagga stat /usr/lib/node_modules/classnames
     printf "%s\n" "${lines[@]}"
@@ -38,5 +38,5 @@ END
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-7]} = "  File: /usr/lib/node_modules/classnames" ]]
     link=$(readlink .vagga/pkg)
-    [[ $link = ".roots/pkg.ec1b39f0/root" ]]
+    [[ $link = ".roots/pkg.1a63a916/root" ]]
 }
