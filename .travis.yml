@@ -12,7 +12,7 @@ matrix:
     - <<: *linux
       env: TESTS="inheritance subconfig ubuntu ubuntu_release"
     - <<: *linux
-      env: TESTS="npm pip"
+      env: TESTS="npm pip yarn"
     - <<: *linux
       env: TESTS="composer gem_bundler gem_bundler_lock"
     - os: osx
