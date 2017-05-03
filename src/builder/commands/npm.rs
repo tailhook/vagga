@@ -114,7 +114,11 @@ fn get_all_patterns(lock_file: &Path)
             continue;
         }
         for item in YARN_PATTERN.find_iter(&line[..line.len()-1]) {
-            result.insert(item.as_str().to_string());
+            let mut item = item.as_str();
+            if item.starts_with('"') && item.ends_with('"') {
+                item = &item[1..item.len()-1];
+            }
+            result.insert(item.to_string());
         }
     }
     Ok(result)
@@ -395,6 +399,7 @@ fn check_deps(deps: Option<&Json>, patterns: &HashSet<String>) -> bool {
         };
         let item = format!("{}@{}", key, val);
         if !patterns.contains(&item) {
+            debug!("Yarn deps: no pattern {:?} in lockfile", item);
             return false;
         }
     }
