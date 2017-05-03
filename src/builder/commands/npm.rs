@@ -26,14 +26,18 @@ lazy_static! {
 #[derive(RustcDecodable, Debug, Clone)]
 pub struct NpmConfig {
     pub install_node: bool,
+    pub install_yarn: bool,
     pub npm_exe: String,
+    pub yarn_exe: String,
 }
 
 impl NpmConfig {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
         .member("npm_exe", V::Scalar::new().default("npm"))
+        .member("yarn_exe", V::Scalar::new().default("/usr/lib/yarn/bin/yarn"))
         .member("install_node", V::Scalar::new().default(true))
+        .member("install_yarn", V::Scalar::new().default(true))
     }
 }
 
@@ -73,7 +77,9 @@ impl Default for NpmConfig {
     fn default() -> NpmConfig {
         NpmConfig {
             install_node: true,
+            install_yarn: true,
             npm_exe: "npm".to_string(),
+            yarn_exe: "/usr/lib/yarn/bin/yarn".to_string(),
         }
     }
 }
@@ -266,6 +272,12 @@ impl BuildStep for NpmConfig {
     {
         hash.field("npm_exe", &self.npm_exe);
         hash.field("install_node", self.install_node);
+        if !self.install_yarn {
+            hash.field("install_yarn", self.install_yarn);
+        }
+        if self.yarn_exe != "yarn" {
+            hash.field("yarn_exe", &self.yarn_exe);
+        }
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -351,8 +363,8 @@ fn yarn_scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     if settings.install_node {
         res.push(packages::NodeJs);
         res.push(packages::NodeJsDev);
-        res.push(packages::Yarn);
     }
+    res.push(packages::Yarn);
     for name in pkgs.iter() {
         parse_feature(&name, &mut res);
     }
@@ -441,7 +453,8 @@ impl BuildStep for YarnDependencies {
                 &guard.ctx.npm_settings, &Vec::new());
             packages::ensure_packages(
                 &mut guard.distro, &mut guard.ctx, &features)?;
-            let mut cmd = command(&guard.ctx, "/usr/bin/yarn")?;
+            let mut cmd = command(&guard.ctx,
+                &guard.ctx.npm_settings.yarn_exe)?;
             cmd.current_dir(&base_dir);
             cmd.arg("install");
             cmd.arg("--modules-folder=/usr/lib/node_modules");

@@ -1122,6 +1122,20 @@ Node.JS Commands
         Setting the option to ``false`` is useful for setting up custom
         version of the node.js.
 
+   install-yarn
+        (default ``true``) Whether to install yarn package automatically
+        (even if ``install-node`` is false). Yarn only installed if ``!Yarn*``
+        commands are used.
+
+   yarn-exe
+        (default is ``/usr/lib/yarn/bin/yarn``) The yarn command to use for
+        installation of packages if ``!Yarn*`` commands are used.
+
+        The reason we have full path here is because vagga's own search
+        mechanims for executables doesn't resolve absolute symlinks well.
+        (I.e. bare executable name will work here as long as it's not an
+        absolute symlink).  We may fix this in the future releases.
+
 .. step:: YarnDependencies
 
    Works similarly to :step:`NpmDependencies` but installs packages using yarn
@@ -1132,7 +1146,7 @@ Node.JS Commands
    This installs dependencies and ``devDependencies`` from ``package.json``
    into a container's ``/usr/lib/node_modules``.
 
-   The settings in :step:`NpmConfig` to affect this command.
+   The settings in :step:`NpmConfig` do affect this command.
 
    Options:
 
