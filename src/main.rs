@@ -26,6 +26,7 @@ extern crate humantime;
 extern crate digest_writer;
 extern crate itertools;
 extern crate git2;
+extern crate tempfile;
 extern crate path_filter;
 extern crate serde;
 extern crate serde_json;

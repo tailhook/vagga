@@ -27,6 +27,7 @@ struct SecureSettings {
     auto_apply_sysctl: Option<bool>,
     index_all_images: Option<bool>,
     hard_link_identical_files: Option<bool>,
+    hard_link_between_projects: Option<bool>,
     run_symlinks_as_commands: Option<bool>,
     disable_auto_clean: Option<bool>,
     environ: BTreeMap<String, String>,
@@ -53,6 +54,8 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("auto_apply_sysctl", V::Scalar::new().optional())
         .member("index_all_images", V::Scalar::new().optional())
         .member("hard_link_identical_files", V::Scalar::new().optional())
+        .member("hard_link_between_projects",
+            V::Scalar::new().optional())
         .member("run_symlinks_as_commands", V::Scalar::new().optional())
         .member("disable_auto_clean", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
@@ -156,6 +159,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     if let Some(val) = cfg.hard_link_identical_files {
         int_settings.hard_link_identical_files = val;
     }
+    if let Some(val) = cfg.hard_link_between_projects {
+        int_settings.hard_link_between_projects = val;
+    }
     if let Some(val) = cfg.run_symlinks_as_commands {
         int_settings.run_symlinks_as_commands = val;
     }
@@ -210,6 +216,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         if let Some(val) = cfg.hard_link_identical_files {
             int_settings.hard_link_identical_files = val;
         }
+        if let Some(val) = cfg.hard_link_between_projects {
+            int_settings.hard_link_between_projects = val;
+        }
         if let Some(val) = cfg.run_symlinks_as_commands {
             int_settings.run_symlinks_as_commands = val;
         }
@@ -248,6 +257,7 @@ pub fn read_settings(project_root: &Path)
         auto_apply_sysctl: false,
         index_all_images: false,
         hard_link_identical_files: false,
+        hard_link_between_projects: false,
         run_symlinks_as_commands: true,
         disable_auto_clean: false,
         environ: BTreeMap::new(),

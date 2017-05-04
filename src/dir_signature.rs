@@ -1,13 +1,24 @@
+use std::fmt;
+use std::io::{self, Read, Seek};
 use std::path::Path;
 
 
 pub mod v1 {
+    use std::fmt;
     use std::io;
     use super::ScannerConfig;
 
     pub struct Entry;
     pub struct EntryKind;
     pub struct Parser;
+    #[derive(Debug)]
+    pub struct ParseError;
+
+    impl fmt::Display for ParseError {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            unimplemented!()
+        }
+    }
 
     pub fn scan<F>(config: &ScannerConfig, out: &mut F) -> Result<(), String>
         where F: io::Write
@@ -17,6 +28,15 @@ pub mod v1 {
 
     pub mod merge {
         pub struct FileMergeBuilder;
+    }
+}
+
+#[derive(Debug)]
+pub struct Error;
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unimplemented!()
     }
 }
 
@@ -41,3 +61,6 @@ impl ScannerConfig {
     }
 }
 
+pub fn get_hash<F: Read + Seek>(_: &mut F) -> Result<Vec<u8>, io::Error> {
+    unimplemented!();
+}

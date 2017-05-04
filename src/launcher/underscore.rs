@@ -163,6 +163,7 @@ pub fn version_hash(ctx: &Context, cname: &str, mut args: Vec<String>)
     .map_err(|e| format!("Error running `vagga_wrapper {}`: {}",
                          cname, e))
 }
+
 pub fn passthrough(ctx: &Context, cname: &str, args: Vec<String>)
     -> Result<i32, String>
 {

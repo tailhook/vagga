@@ -1,0 +1,10 @@
+containers:
+  hello:
+    setup:
+    - !Text
+      /etc/hello.txt: Hello world!
+
+  hi:
+    setup:
+    - !Text
+      /etc/hello.txt: Hi world!

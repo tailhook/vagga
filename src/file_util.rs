@@ -516,3 +516,22 @@ pub fn truncate_file<P: AsRef<Path>>(path: P) -> Result<(), String> {
     }
     Ok(())
 }
+
+pub fn human_size(size: u64) -> String {
+    fn format_size(s: f64, p: &str) -> String {
+        if s < 10.0 && !p.is_empty() {
+            format!("{:.1}{}B", s, p)
+        } else {
+            format!("{:.0}{}B", s, p)
+        }
+    }
+
+    let mut s = size as f64;
+    for prefix in &["", "K", "M", "G", "T"][..] {
+        if s < 1000.0 {
+            return format_size(s, prefix);
+        }
+        s /= 1000.0;
+    }
+    return format_size(s, "P");
+}

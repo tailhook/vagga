@@ -19,11 +19,11 @@ mod clean;
 mod pack;
 mod snapshot;
 mod init_persistent;
+mod hardlink;
 // Command types
 mod supervise;
 mod commandline;
 mod capsule;
-
 
 pub struct Wrapper<'a> {
     config: &'a Config,
@@ -95,6 +95,8 @@ pub fn run(input_args: Vec<String>) -> i32 {
         "_run" | "_run_in_netns" => run::run_command_cmd(&wrapper, args),
         "_clean" => clean::clean_cmd(&wrapper, args),
         "_pack_image" => pack::pack_image_cmd(&wrapper, args),
+        "_hardlink" => hardlink::hardlink_cmd(&wrapper, args),
+        "_verify" => hardlink::verify_cmd(&wrapper, args),
         _ => {
             match config.commands.get(&cmd) {
                 Some(&Command(ref cmd_info)) => {
