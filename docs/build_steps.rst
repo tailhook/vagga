@@ -687,8 +687,8 @@ Files and Directories
      This option conflicts with ``ignore-regex`` and ``include-regex`` options.
 
      The rules are similar to those which is used in
-     `.gitignore <https://git-scm.com/docs/gitignore>`_ file. There are several
-     differences:
+     `.gitignore <https://git-scm.com/docs/gitignore>`_ file but meaning of
+     include/exclude rules is opposite. Also there are several differences:
 
      * Include patterns **must** be absolute so they have to start with
        a leading slash. This is done for performance reasons to exclude
@@ -713,8 +713,8 @@ Files and Directories
        "!#*#", "!.#*"]``
 
    no-default-rules
-     Disables default rules. The option only works in pair with ``rules``
-     option.
+     Disables default ignore rules which are given above. The option only works
+     in pair with ``rules`` option.
 
    .. warning:: If the source directory starts with `/work` all the files are
       read and checksummed on each run of the application in the container. So
