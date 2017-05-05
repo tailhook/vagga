@@ -662,10 +662,14 @@ Files and Directories
    path
      (required) Destination path
 
+   .. _ignore-regex:
+
    ignore-regex
      (default ``(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$``)
      Regular expression of paths to ignore. Default regexp ignores common
      revision control folders and editor backup files.
+
+   .. _include-regex:
 
    include-regex
      (default ``None``)
@@ -681,6 +685,8 @@ Files and Directories
      ``owner-gid: 0`` but we try to preserve the owner by default. Note that
      unmapped users (the ones that don't belong to user's subuid/subgid range),
      will be set to ``nobody`` (65535).
+
+   .. _rules:
 
    rules
      Leverages glob patterns instead of regular expressions to match paths.
@@ -706,15 +712,30 @@ Files and Directories
      * If the pattern ends with a slash, it will match only with a direcotory
        and paths underneath it. Also ``/dir/`` pattern will copy ``dir``
        directory even if it is empty.
+     * Empty rules will match all underneath paths. But if you add only exclude
+       rules no path will be matched. So you should explicitly add at least one
+       include rule:
+
+       ``[]`` will match all paths
+
+       ``["!dir/"]`` will match nothing
+
+       ``["!dir/", "/"]`` will match all paths except ``dir`` directories
 
      By default there are some ignore rules that correspond ``ignore-regex``
      expression:
        ``["!.git/", "!.hg/", "!.svn/", "!.vagga/", "!*.bak", "!*.orig", "!*~",
        "!#*#", "!.#*"]``
 
+     .. versionadded:: 0.7.3
+
+   .. _no-default-rules:
+
    no-default-rules
      Disables default ignore rules which are given above. The option only works
      in pair with ``rules`` option.
+
+     .. versionadded:: 0.7.3
 
    .. warning:: If the source directory starts with `/work` all the files are
       read and checksummed on each run of the application in the container. So
@@ -815,6 +836,25 @@ Meta Data
    not an owner or permissions.  Consider adding the :opt:`auto-clean` option
    if it's temporary container that depends on some generated file (sometimes
    useful for tests).
+
+   Options:
+
+   path
+     (required) Relative path to directory or file inside ``/work`` directory.
+     Matched files and directories will be checksummed to get the version of
+     the container.
+
+   ignore-regex
+     See `ignore-regex`_
+
+   include-regex
+     See `include-regex`_
+
+   rules
+     See `rules`_
+
+   no-default-rules
+     See `no-default-rules`_
 
 
 Sub-Containers

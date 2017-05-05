@@ -71,6 +71,13 @@ containers:
       - "/hello"
       - "/**/file"
       - "!file"
+  copy-glob-no-include-rules:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      rules:
+      - "!file"
   copy-umask:
     setup:
     - !Copy

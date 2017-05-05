@@ -79,7 +79,7 @@ impl BuildStep for Depends {
     {
         let path = Path::new("/work").join(&self.path);
         let filter = create_path_filter(&self.rules, self.no_default_rules,
-            &self.ignore_regex, &self.include_regex)?;
+            &self.ignore_regex, &self.include_regex, false)?;
         hash_path(hash, &path, &filter, |h, p, st| {
             h.field("filename", p);
             // We hash only executable flag for files
@@ -98,6 +98,9 @@ impl BuildStep for Depends {
     fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
+        // Will print warning if there are no include rules
+        let _filter = create_path_filter(&self.rules, self.no_default_rules,
+            &self.ignore_regex, &self.include_regex, true)?;
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
@@ -165,7 +168,7 @@ impl BuildStep for Copy {
         let ref src = self.source;
         if src.starts_with("/work") {
             let filter = create_path_filter(&self.rules, self.no_default_rules,
-                &self.ignore_regex, &self.include_regex)?;
+                &self.ignore_regex, &self.include_regex, false)?;
             hash_path(hash, src, &filter, |h, p, st| {
                 h.field("filename", p);
                 h.opt_field("mode", &self.calc_mode(st));
@@ -211,7 +214,7 @@ impl BuildStep for Copy {
                     .context((src, dest))?;
                 let filter = create_path_filter(
                     &self.rules, self.no_default_rules,
-                    &self.ignore_regex, &self.include_regex)?;
+                    &self.ignore_regex, &self.include_regex, true)?;
                 let mut processed_paths = HashSet::new();
                 filter.walk(src, |iter| {
                     for entry in iter {
@@ -311,7 +314,8 @@ fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
 }
 
 fn create_path_filter(rules: &Vec<String>, no_default_rules: Option<bool>,
-    ignore_regex: &Option<String>, include_regex: &Option<String>)
+    ignore_regex: &Option<String>, include_regex: &Option<String>,
+    warn_on_missing_include_rules: bool)
     -> Result<PathFilter, String>
 {
     if (!rules.is_empty() || no_default_rules.is_some()) &&
@@ -326,12 +330,22 @@ fn create_path_filter(rules: &Vec<String>, no_default_rules: Option<bool>,
         if !no_default_rules.unwrap_or(false)  {
             all_rules.extend(DEFAULT_IGNORE_RULES);
         }
+        let mut has_include_rules = false;
         for rule in rules {
             if !rule.starts_with('!') && !rule.starts_with('/') {
                 return Err(format!(
                     "Relative paths are allowed only for excluding rules"));
             }
+            if !rule.starts_with('!') {
+                has_include_rules = true;
+            }
             all_rules.push(&rule);
+        }
+        if warn_on_missing_include_rules && !has_include_rules {
+            warn!("You didn't add any include rules. \
+                   So no files will be matched. \
+                   If you want to match all files in the source directory \
+                   you should add \"/\" rule.");
         }
         PathFilter::glob(&all_rules[..])
     } else {

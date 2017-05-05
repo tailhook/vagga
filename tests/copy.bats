@@ -136,6 +136,20 @@ setup() {
     [[ ! -f "$root/dir/second" ]]
 }
 
+@test "copy: glob no include rules" {
+    run vagga _build copy-glob-no-include-rules
+    printf "%s\n" "${lines[@]}"
+    root=".vagga/copy-glob-no-include-rules"
+    link=$(readlink $root)
+    [[ $link = ".roots/copy-glob-no-include-rules.ee039a4f/root" ]]
+    [[ -d "$root/dir" ]]
+    [[ ! -f "$root/dir/exe.sh" ]]
+    [[ ! -f "$root/dir/hello" ]]
+    [[ ! -f "$root/dir/second" ]]
+    [[ ! -d "$root/dir/subdir" ]]
+    [[ $output = *"You didn't add any include rules"* ]]
+}
+
 @test "depends: include regex" {
     run vagga _version_hash --short depends-with-include
     printf "%s\n" "${lines[@]}"
