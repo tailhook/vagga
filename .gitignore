@@ -17,7 +17,7 @@ todo.txt
 /alpine-keys.apk
 /alpine
 
-/target
+target
 
 /tests/image/images
 /tests/image/nginx

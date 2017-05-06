@@ -5,6 +5,9 @@ use regex;
 use rustc_serialize::json;
 use scan_dir;
 
+use path_filter;
+
+
 quick_error! {
     /// Versioning error
     #[derive(Debug)]
@@ -24,6 +27,11 @@ quick_error! {
             from()
             description("can't compile regex")
             display("regex compilation error: {}", e)
+        }
+        PathFilter(errors: Vec<path_filter::FilterError>) {
+            from()
+            description("can't read directory")
+            display("error reading directory: {:?}", errors)
         }
         ScanDir(errors: Vec<scan_dir::Error>) {
             from()

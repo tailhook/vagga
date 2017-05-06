@@ -54,6 +54,30 @@ containers:
       source: /work/dir
       path: /dir
       include-regex: "(^hello|subdir|(^|.*/)file)$"
+  copy-glob-rules:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      rules:
+      - "/hello"
+      - "/**/file"
+  copy-glob-rules-inverse:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      rules:
+      - "/hello"
+      - "/**/file"
+      - "!file"
+  copy-glob-no-include-rules:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      rules:
+      - "!file"
   copy-umask:
     setup:
     - !Copy
@@ -71,6 +95,13 @@ containers:
     - !Depends
       path: dir
       include-regex: "(^hello|(^|.*/)file)$"
+  depends-glob-rules:
+    setup:
+    - !Depends
+      path: dir
+      rules:
+      - "/hello"
+      - "/**/file"
 
 commands:
 

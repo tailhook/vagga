@@ -7,8 +7,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use libc::{uid_t, gid_t};
 use quire::ast::{Ast, Tag};
 use quire::validate as V;
-use regex::{Regex, Error as RegexError};
-use scan_dir::{ScanDir, Error as ScanDirError};
+use path_filter::{PathFilter, FilterError};
 
 use container::root::temporary_change_root;
 use file_util::shallow_copy;
@@ -24,12 +23,29 @@ const FILE_MODE: u32 = 0o666;
 const EXE_FILE_MODE: u32 = 0o777;
 const EXE_CHECK_MASK: u32 = 0o100;
 
+const DEFAULT_IGNORE_REGEX: &'static str =
+    r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#;
+
+const DEFAULT_IGNORE_RULES: &'static [&'static str] = &[
+    "!.git/",
+    "!.hg/",
+    "!.svn/",
+    "!.vagga/",
+    "!*.bak",
+    "!*.orig",
+    "!*~",
+    "!#*#",
+    "!.#*",
+];
+
 
 #[derive(RustcDecodable, Debug)]
 pub struct Depends {
     pub path: PathBuf,
-    pub ignore_regex: String,
+    pub ignore_regex: Option<String>,
     pub include_regex: Option<String>,
+    pub rules: Vec<String>,
+    pub no_default_rules: Option<bool>,
 }
 
 fn depends_parser(ast: Ast) -> BTreeMap<String, Ast> {
@@ -48,9 +64,10 @@ impl Depends {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
             .member("path", V::Scalar::new())
-            .member("ignore_regex", V::Scalar::new().default(
-                r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
+            .member("ignore_regex", V::Scalar::new().optional())
             .member("include_regex", V::Scalar::new().optional())
+            .member("rules", V::Sequence::new(V::Scalar::new()))
+            .member("no_default_rules", V::Scalar::new().optional())
             .parser(depends_parser)
     }
 }
@@ -61,8 +78,8 @@ impl BuildStep for Depends {
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.path);
-        let filter = Filter::new(
-            &self.ignore_regex, &self.include_regex)?;
+        let filter = create_path_filter(&self.rules, self.no_default_rules,
+            &self.ignore_regex, &self.include_regex, false)?;
         hash_path(hash, &path, &filter, |h, p, st| {
             h.field("filename", p);
             // We hash only executable flag for files
@@ -81,6 +98,9 @@ impl BuildStep for Depends {
     fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
+        // Will print warning if there are no include rules
+        let _filter = create_path_filter(&self.rules, self.no_default_rules,
+            &self.ignore_regex, &self.include_regex, true)?;
         Ok(())
     }
     fn is_dependent_on(&self) -> Option<&str> {
@@ -96,8 +116,10 @@ pub struct Copy {
     pub owner_gid: Option<gid_t>,
     pub umask: u32,
     pub preserve_permissions: bool,
-    pub ignore_regex: String,
+    pub ignore_regex: Option<String>,
     pub include_regex: Option<String>,
+    pub rules: Vec<String>,
+    pub no_default_rules: Option<bool>,
 }
 
 impl Copy {
@@ -105,9 +127,10 @@ impl Copy {
         V::Structure::new()
         .member("source", V::Scalar::new())
         .member("path", V::Directory::new().absolute(true))
-        .member("ignore_regex", V::Scalar::new().default(
-            r#"(^|/)\.(git|hg|svn|vagga)($|/)|~$|\.bak$|\.orig$|^#.*#$"#))
+        .member("ignore_regex", V::Scalar::new().optional())
         .member("include_regex", V::Scalar::new().optional())
+        .member("rules", V::Sequence::new(V::Scalar::new()))
+        .member("no_default_rules", V::Scalar::new().optional())
         .member("owner_uid", V::Numeric::new().min(0).optional())
         .member("owner_gid", V::Numeric::new().min(0).optional())
         .member("umask", V::Numeric::new().min(0).max(0o777).default(
@@ -144,8 +167,8 @@ impl BuildStep for Copy {
     {
         let ref src = self.source;
         if src.starts_with("/work") {
-            let filter = Filter::new(
-                &self.ignore_regex, &self.include_regex)?;
+            let filter = create_path_filter(&self.rules, self.no_default_rules,
+                &self.ignore_regex, &self.include_regex, false)?;
             hash_path(hash, src, &filter, |h, p, st| {
                 h.field("filename", p);
                 h.opt_field("mode", &self.calc_mode(st));
@@ -189,36 +212,34 @@ impl BuildStep for Copy {
                         self.owner_uid, self.owner_gid,
                         self.calc_mode(typ))
                     .context((src, dest))?;
-                let filter = Filter::new(&self.ignore_regex, &self.include_regex)?;
+                let filter = create_path_filter(
+                    &self.rules, self.no_default_rules,
+                    &self.ignore_regex, &self.include_regex, true)?;
                 let mut processed_paths = HashSet::new();
-                ScanDir::all().walk(src, |iter| {
-                    for (entry, _) in iter {
+                filter.walk(src, |iter| {
+                    for entry in iter {
                         let fpath = entry.path();
                         // We know that directory is inside
                         // the source
                         let path = fpath.strip_prefix(src).unwrap();
-                        // We know that it's decodable
-                        let strpath = path.to_str().unwrap();
-                        if filter.is_match(strpath) {
-                            let parents: Vec<_> = path
-                                .iter_self_and_parents()
-                                .take_while(|p| !processed_paths.contains(*p))
-                                .collect();
-                            for parent in parents.iter().rev() {
-                                let ref fdest = dest.join(parent);
-                                let ref fsrc = src.join(parent);
-                                let ref fsrc_stat = fsrc.symlink_metadata()
-                                    .map_err(|e| StepError::Read(src.into(), e))?;
-                                shallow_copy(fsrc, fsrc_stat, fdest,
-                                        self.owner_uid, self.owner_gid,
-                                        self.calc_mode(fsrc_stat))
-                                     .context((fsrc, fdest))?;
-                                processed_paths.insert(PathBuf::from(parent));
-                            }
+                        let parents: Vec<_> = path
+                            .iter_self_and_parents()
+                            .take_while(|p| !processed_paths.contains(*p))
+                            .collect();
+                        for parent in parents.iter().rev() {
+                            let ref fdest = dest.join(parent);
+                            let ref fsrc = src.join(parent);
+                            let ref fsrc_stat = fsrc.symlink_metadata()
+                                .map_err(|e| StepError::Read(src.into(), e))?;
+                            shallow_copy(fsrc, fsrc_stat, fdest,
+                                    self.owner_uid, self.owner_gid,
+                                    self.calc_mode(fsrc_stat))
+                                 .context((fsrc, fdest))?;
+                            processed_paths.insert(PathBuf::from(parent));
                         }
                     }
                     Ok(())
-                }).map_err(StepError::ScanDir).and_then(|x| x)?;
+                }).map_err(StepError::PathFilter).and_then(|x| x)?;
             } else {
                 shallow_copy(src, typ, dest,
                         self.owner_uid, self.owner_gid,
@@ -233,14 +254,14 @@ impl BuildStep for Copy {
     }
 }
 
-fn hash_path<F>(hash: &mut Digest, path: &Path, filter: &Filter, hash_file: F)
+fn hash_path<F>(hash: &mut Digest, path: &Path, filter: &PathFilter, hash_file: F)
     -> Result<(), VersionError>
     where F: Fn(&mut Digest, &Path, &Metadata) -> Result<(), VersionError>
 {
     match path.symlink_metadata() {
         Ok(ref meta) if meta.file_type().is_dir() => {
             hash_file(hash, path, meta)?;
-            let all_rel_paths = get_sorted_rel_paths(path, &filter)?;
+            let all_rel_paths = get_sorted_rel_paths(path, filter)?;
             for rel_path in &all_rel_paths {
                 let ref abs_path = path.join(rel_path);
                 let stat = abs_path.symlink_metadata()
@@ -261,23 +282,17 @@ fn hash_path<F>(hash: &mut Digest, path: &Path, filter: &Filter, hash_file: F)
     Ok(())
 }
 
-fn get_sorted_rel_paths(path: &Path, filter: &Filter)
-    -> Result<BTreeSet<PathBuf>, Vec<ScanDirError>>
+fn get_sorted_rel_paths(path: &Path, filter: &PathFilter)
+    -> Result<BTreeSet<PathBuf>, Vec<FilterError>>
 {
-    ScanDir::all().walk(path, |iter| {
+    filter.walk(path, |iter| {
         let mut all_rel_paths = BTreeSet::new();
-        for (entry, _) in iter {
+        for entry in iter {
             let fpath = entry.path();
-            // We know that directory is inside
-            // the path
             let rel_path = fpath.strip_prefix(path).unwrap();
-            // We know that rel_path is decodable
-            let strpath = rel_path.to_str().unwrap();
-            if filter.is_match(strpath) {
-                for parent in rel_path.iter_self_and_parents() {
-                    if !all_rel_paths.contains(parent) {
-                        all_rel_paths.insert(PathBuf::from(parent));
-                    }
+            for parent in rel_path.iter_self_and_parents() {
+                if !all_rel_paths.contains(parent) {
+                    all_rel_paths.insert(PathBuf::from(parent));
                 }
             }
         }
@@ -298,29 +313,45 @@ fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     Ok(())
 }
 
-struct Filter {
-    ignore_re: Option<Regex>,
-    include_re: Option<Regex>,
-}
-
-impl Filter {
-    fn new(ignore_regex: &String, include_regex: &Option<String>)
-        -> Result<Filter, RegexError>
+fn create_path_filter(rules: &Vec<String>, no_default_rules: Option<bool>,
+    ignore_regex: &Option<String>, include_regex: &Option<String>,
+    warn_on_missing_include_rules: bool)
+    -> Result<PathFilter, String>
+{
+    if (!rules.is_empty() || no_default_rules.is_some()) &&
+        (ignore_regex.is_some() || include_regex.is_some())
     {
-        Ok(Filter {
-            ignore_re: Some(Regex::new(ignore_regex)?),
-            include_re: match *include_regex {
-                Some(ref include_regex) => {
-                    Some(Regex::new(include_regex)?)
-                },
-                None => None,
-            },
-        })
+        return Err(format!(
+            "You must specify either rules or regular expressions \
+             but not both"));
     }
-
-    fn is_match(&self, s: &str) -> bool
-    {
-        self.ignore_re.as_ref().map_or(true, |r| !r.is_match(s))
-            && self.include_re.as_ref().map_or(true, |r| r.is_match(s))
-    }
+    Ok(if !rules.is_empty() {
+        let mut all_rules: Vec<&str> = vec!();
+        if !no_default_rules.unwrap_or(false)  {
+            all_rules.extend(DEFAULT_IGNORE_RULES);
+        }
+        let mut has_include_rules = false;
+        for rule in rules {
+            if !rule.starts_with('!') && !rule.starts_with('/') {
+                return Err(format!(
+                    "Relative paths are allowed only for excluding rules"));
+            }
+            if !rule.starts_with('!') {
+                has_include_rules = true;
+            }
+            all_rules.push(&rule);
+        }
+        if warn_on_missing_include_rules && !has_include_rules {
+            warn!("You didn't add any include rules. \
+                   So no files will be matched. \
+                   If you want to match all files in the source directory \
+                   you should add \"/\" rule.");
+        }
+        PathFilter::glob(&all_rules[..])
+    } else {
+        PathFilter::regex(
+            ignore_regex.as_ref().map(String::as_ref)
+                .or(Some(DEFAULT_IGNORE_REGEX)),
+            include_regex.as_ref())
+    }.map_err(|e| format!("Can't compile copy filter: {}", e))?)
 }
