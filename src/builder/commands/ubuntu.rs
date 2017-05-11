@@ -212,7 +212,7 @@ impl Distribution for Distro {
             }
             self.ensure_eat_my_data(ctx)?;
             // may be already updated by eatmydata
-            if !self.apt_update {
+            if self.apt_update {
                 self.apt_update = false;
                 apt_get_update::<&str>(ctx, &[])?;
             }
