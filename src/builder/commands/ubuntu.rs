@@ -210,26 +210,11 @@ impl Distribution for Distro {
                     Ignored.", e)).ok();
                 self.has_indices = true;
             }
-            let mut eatmy = None;
-            if self.eatmydata == EatMyData::Need {
-                eatmy = EMDParams::find(
-                    self.codename.as_ref().unwrap(), &self.config.arch);
-                if let Some(ref params) = eatmy {
-                    if params.needs_universe {
-                        debug!("Add Universe for eat my data");
-                        self.enable_universe()?;
-                        self.add_universe(ctx)?;
-                    }
-                } else {
-                    info!("Unsupported distribution for eatmydata. Ignoring");
-                    self.eatmydata = EatMyData::No;
-                }
-            }
-            self.apt_update = false;
-            apt_get_update::<&str>(ctx, &[])?;
-            if let Some(ref params) = eatmy {
-                apt_get_install(ctx, &[params.package], &EatMyData::No)?;
-                self.eatmydata = EatMyData::Preload(params.preload);
+            self.ensure_eat_my_data(ctx)?;
+            // may be already updated by eatmydata
+            if !self.apt_update {
+                self.apt_update = false;
+                apt_get_update::<&str>(ctx, &[])?;
             }
         }
         apt_get_install(ctx, &pkgs[..], &self.eatmydata)?;
@@ -561,6 +546,29 @@ impl Distro {
             }
             Ok(())
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
+    }
+    fn ensure_eat_my_data(&mut self, ctx: &mut Context)
+        -> Result<(), StepError>
+    {
+        if self.eatmydata == EatMyData::Need {
+            let eatmy = EMDParams::find(
+                self.codename.as_ref().unwrap(), &self.config.arch);
+            if let Some(ref params) = eatmy {
+                if params.needs_universe {
+                    debug!("Add Universe for eat my data");
+                    self.enable_universe()?;
+                    self.add_universe(ctx)?;
+                }
+                self.apt_update = false;
+                apt_get_update::<&str>(ctx, &[])?;
+                apt_get_install(ctx, &[params.package], &EatMyData::No)?;
+                self.eatmydata = EatMyData::Preload(params.preload);
+            } else {
+                info!("Unsupported distribution for eatmydata. Ignoring");
+                self.eatmydata = EatMyData::No;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -957,8 +965,15 @@ impl BuildStep for UbuntuRepo {
         -> Result<(), StepError>
     {
         if self.url.as_ref().map_or(false, |url| url.starts_with("https:")) {
-            guard.distro.specific(|u: &mut Distro| {
+            let ref mut distro = guard.distro;
+            let ref mut ctx = guard.ctx;
+            distro.specific(|u: &mut Distro| {
                 if u.apt_https == AptHttps::No {
+                    // Need to install eatmydata before installing https
+                    // transport because latter takes ~ 100 seconds without
+                    // libeatmydata
+                    u.ensure_eat_my_data(ctx)?;
+
                     u.apt_https = AptHttps::Need;
                 }
                 Ok(())

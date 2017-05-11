@@ -465,7 +465,9 @@ impl BuildStep for YarnDependencies {
             // We need to hide `node_modules/.yarn-integrity` so that yarn
             // skip this directory
             // At least this is how it works in yarn v0.23.0
-            let bad_modules = base_dir.join("node_modules");
+            let bad_modules = Path::new("/vagga/root/work")
+                .join(&self.dir)
+                .join("node_modules");
             let modules_mount = if bad_modules.is_dir() {
                 safe_ensure_dir(Path::new("/vagga/empty"))?;
                 BindMount::new("/vagga/empty", &bad_modules).mount()?;
