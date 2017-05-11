@@ -4,19 +4,22 @@ use std::path::{Path, PathBuf};
 use std::os::unix::fs::{symlink};
 use std::collections::HashSet;
 
-use quire::validate as V;
+use libmount::BindMount;
 use quick_error::ResultExt;
-use unshare::{Stdio};
+use quire::validate as V;
 use regex::Regex;
 use rustc_serialize::json::Json;
+use unshare::{Stdio};
 
-use capsule::download::download_file;
-use super::super::context::{Context};
-use super::super::packages;
-use builder::distrib::{Distribution, DistroBox};
 use builder::commands::generic::{command, run};
 use builder::commands::tarcmd::unpack_subdir;
+use builder::distrib::{Distribution, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use capsule::download::download_file;
+use container::mount::unmount;
+use file_util::safe_ensure_dir;
+use super::super::context::{Context};
+use super::super::packages;
 
 lazy_static! {
     static ref YARN_PATTERN: Regex = Regex::new(r#""[^"]+"|[^,]+"#).unwrap();
@@ -458,6 +461,19 @@ impl BuildStep for YarnDependencies {
                 &guard.ctx.npm_settings, &Vec::new());
             packages::ensure_packages(
                 &mut guard.distro, &mut guard.ctx, &features)?;
+
+            // We need to hide `node_modules/.yarn-integrity` so that yarn
+            // skip this directory
+            // At least this is how it works in yarn v0.23.0
+            let bad_modules = base_dir.join("node_modules");
+            let modules_mount = if bad_modules.is_dir() {
+                safe_ensure_dir(Path::new("/vagga/empty"))?;
+                BindMount::new("/vagga/empty", &bad_modules).mount()?;
+                Some(bad_modules)
+            } else {
+                None
+            };
+
             let mut cmd = command(&guard.ctx,
                 &guard.ctx.npm_settings.yarn_exe)?;
             cmd.current_dir(&base_dir);
@@ -469,9 +485,13 @@ impl BuildStep for YarnDependencies {
             if self.production {
                 cmd.arg("--production");
             }
-            run(cmd)?;
-            // TODO(tailhook) find some heuristics to determine that lockfile
-            // needs to be updated to print some message
+            let result = run(cmd);
+
+            if let Some(bad_modules) = modules_mount {
+                unmount(&bad_modules)?;
+            }
+
+            result?;
         }
         Ok(())
     }
