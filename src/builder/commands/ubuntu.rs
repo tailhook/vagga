@@ -551,6 +551,7 @@ impl Distro {
         -> Result<(), StepError>
     {
         if self.eatmydata == EatMyData::Need {
+            self.ensure_codename(ctx)?;
             let eatmy = EMDParams::find(
                 self.codename.as_ref().unwrap(), &self.config.arch);
             if let Some(ref params) = eatmy {
@@ -965,15 +966,8 @@ impl BuildStep for UbuntuRepo {
         -> Result<(), StepError>
     {
         if self.url.as_ref().map_or(false, |url| url.starts_with("https:")) {
-            let ref mut distro = guard.distro;
-            let ref mut ctx = guard.ctx;
-            distro.specific(|u: &mut Distro| {
+            guard.distro.specific(|u: &mut Distro| {
                 if u.apt_https == AptHttps::No {
-                    // Need to install eatmydata before installing https
-                    // transport because latter takes ~ 100 seconds without
-                    // libeatmydata
-                    u.ensure_eat_my_data(ctx)?;
-
                     u.apt_https = AptHttps::Need;
                 }
                 Ok(())
@@ -982,6 +976,10 @@ impl BuildStep for UbuntuRepo {
         if build {
             let ref mut ctx = guard.ctx;
             guard.distro.specific(|u: &mut Distro| {
+                // Need to install eatmydata before installing https
+                // transport because latter takes ~ 100 seconds without
+                // libeatmydata
+                u.ensure_eat_my_data(ctx)?;
                 u.add_debian_repo(ctx, &self)?;
                 Ok(())
             })?;
