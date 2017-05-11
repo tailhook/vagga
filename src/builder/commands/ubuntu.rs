@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use quire::validate as V;
-use unshare::Stdio;
+use unshare::{Command, Stdio};
 use scan_dir::ScanDir;
 
 use capsule::download::download_file;
@@ -287,6 +287,7 @@ impl Distribution for Distro {
             run(cmd)?;
         }
         let mut cmd = command(ctx, "apt-get")?;
+        eat_my_data(&mut cmd, ctx, &self.eatmydata);
         cmd.arg("autoremove").arg("-y");
 
         {
@@ -807,11 +808,7 @@ fn apt_get_lock() -> Result<Lock, StepError> {
         "Cannot aquire lock before running `apt-get install`", e))
 }
 
-fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
-    packages: &[T], emd: &EatMyData)
-    -> Result<(), StepError>
-{
-    let mut cmd = command(ctx, "apt-get")?;
+fn eat_my_data(cmd: &mut Command, ctx: &Context, emd: &EatMyData) {
     if let EatMyData::Preload(preload) = *emd {
         match ctx.environ.get("LD_PRELOAD") {
             None => {
@@ -826,6 +823,14 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
             },
         }
     }
+}
+
+fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
+    packages: &[T], emd: &EatMyData)
+    -> Result<(), StepError>
+{
+    let mut cmd = command(ctx, "apt-get")?;
+    eat_my_data(&mut cmd, ctx, emd);
     cmd.arg("install");
     cmd.arg("-y");
     cmd.args(packages);
