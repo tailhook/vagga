@@ -217,8 +217,7 @@ fn build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
             Ok(_) => {}
             Err(ref e) if e.kind() == NotFound => {}
             Err(e) => {
-                return Err(format!("Error reading symlin {:?}: {}",
-                    destlink, e));
+                return Err(format!("Error reading symlink {:?}: {}", destlink, e));
             }
         };
     }
