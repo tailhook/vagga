@@ -480,6 +480,10 @@ impl BuildStep for YarnDependencies {
                 &guard.ctx.npm_settings.yarn_exe)?;
             cmd.current_dir(&base_dir);
             cmd.arg("install");
+            // We use --no-progress because build process is run without
+            // controlling terminal, and yarn can't determine its width to
+            // display progressbar corectly
+            cmd.arg("--no-progress");
             cmd.arg("--modules-folder=/usr/lib/node_modules");
             cmd.arg("--cache-folder=/tmp/yarn-cache");
             // TODO(tailhook) figure out how to pass frozen-lockfile if needed
