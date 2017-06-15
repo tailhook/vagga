@@ -107,6 +107,12 @@ fn get_all_patterns(lock_file: &Path)
     -> Result<HashSet<String>, VersionError>
 {
     let f = BufReader::new(File::open(lock_file).context(lock_file)?);
+    return _get_all_patterns(f, lock_file)
+}
+
+fn _get_all_patterns<B: BufRead>(f: B, lock_file: &Path)
+    -> Result<HashSet<String>, VersionError>
+{
     let mut result = HashSet::new();
     for line in f.lines() {
         let line = line.context(lock_file)?;
@@ -117,7 +123,7 @@ fn get_all_patterns(lock_file: &Path)
             continue;
         }
         for item in YARN_PATTERN.find_iter(&line[..line.len()-1]) {
-            let mut item = item.as_str();
+            let mut item = item.as_str().trim();
             if item.starts_with('"') && item.ends_with('"') {
                 item = &item[1..item.len()-1];
             }
@@ -446,6 +452,7 @@ impl BuildStep for YarnDependencies {
             hash.file(&lock_file, &mut file).context(&lock_file)?;
             Ok(())
         } else {
+            debug!("No lockfile exits at {:?}", lock_file);
             Err(VersionError::New)
         }
     }
@@ -503,5 +510,43 @@ impl BuildStep for YarnDependencies {
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::_get_all_patterns;
+    use std::io::Cursor;
+    use std::path::Path;
+    use std::collections::HashSet;
+
+    fn parse(text: &str) -> HashSet<String> {
+        _get_all_patterns(Cursor::new(text), &Path::new("<string>")).unwrap()
+    }
+
+    #[test]
+    fn yarn_simple() {
+        assert_eq!(
+            parse("babel-eslint@^6.1.2:\n"),
+            vec![
+                "babel-eslint@^6.1.2"
+            ].iter().map(ToString::to_string).collect());
+    }
+    #[test]
+    fn yarn_pair() {
+        assert_eq!(
+            parse("babel-core@^6.24.1, babel-core@^6.25.0:\n"),
+            vec![
+                "babel-core@^6.24.1",
+                "babel-core@^6.25.0",
+            ].iter().map(ToString::to_string).collect());
+    }
+    #[test]
+    fn yarn_quoted() {
+        assert_eq!(
+            parse("\"@types/node@^6.0.46\":\n"),
+            vec![
+                "@types/node@^6.0.46",
+            ].iter().map(ToString::to_string).collect());
     }
 }
