@@ -371,3 +371,17 @@ pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
     }
     Ok(())
 }
+
+pub fn safe_remove<P: AsRef<Path>>(path: P) -> io::Result<()> {
+    let path = path.as_ref();
+    path.symlink_metadata()
+        .and_then(|_| fs::remove_file(path))
+        .or_else(|e| {
+            if e.kind() == io::ErrorKind::NotFound {
+                Ok(())
+            }
+            else {
+                Err(e)
+            }
+        })
+}
