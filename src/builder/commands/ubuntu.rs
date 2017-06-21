@@ -16,7 +16,7 @@ use super::super::packages;
 use builder::commands::generic::{command, run, find_cmd};
 use builder::distrib::{Distribution, Named, DistroBox};
 use builder::dns::revert_name_files;
-use file_util::{Dir, Lock, copy, copy_utime};
+use file_util::{Dir, Lock, copy, copy_utime, safe_remove};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use container::util::clean_dir;
 
@@ -311,6 +311,16 @@ impl Distribution for Distro {
         // remove the directory everywhere). But the directory is just useless
         // in 99.9% cases because nobody wants to run rsyslog in container.
         clean_dir("/vagga/root/var/spool/rsyslog", true)?;
+
+        // Remove log files
+        for log_path in &["/vagga/root/var/log/alternatives.log",
+                          "/vagga/root/var/log/bootstrap.log",
+                          "/vagga/root/var/log/dpkg.log",
+                          "/vagga/root/var/log/apt/history.log",
+                          "/vagga/root/var/log/apt/term.log"] {
+            try_msg!(safe_remove(log_path),
+                "Error when removing log file {path}: {err}", path=log_path);
+        }
 
         Ok(())
     }
