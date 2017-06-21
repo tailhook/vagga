@@ -686,6 +686,18 @@ Files and Directories
      unmapped users (the ones that don't belong to user's subuid/subgid range),
      will be set to ``nobody`` (65535).
 
+   preserve-permissions
+     (default ``true``)
+     Whether to preserve permissions of the copied files. If ``false`` ``umask``
+     option is taken into account.
+
+   umask
+     (default ``0o002``)
+     When ``preserve-permissions`` is disabled (set to ``false``) ``umask``
+     determines how permissions are calculated. For directories and executable
+     files it is ``0o777 & !umask``, for other files - ``0o666 & !umask``.
+     Do not forget to use ``0o`` prefix for octal notation.
+
    .. _rules:
 
    rules
