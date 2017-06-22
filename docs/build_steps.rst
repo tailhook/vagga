@@ -1225,7 +1225,7 @@ Node.JS Commands
 .. step:: YarnDependencies
 
    Works similarly to :step:`NpmDependencies` but installs packages using yarn
-   aand For example::
+   and For example::
 
         - !YarnDependencies
 
