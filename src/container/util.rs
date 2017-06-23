@@ -9,7 +9,7 @@ use std::time::SystemTime;
 
 use dir_signature::{self, v1, ScannerConfig as Sig};
 use dir_signature::HashType;
-use dir_signature::v1::{Entry, EntryKind, Parser, ParseError};
+use dir_signature::v1::{Entry, EntryKind, Hashes, Parser, ParseError};
 use dir_signature::v1::merge::FileMergeBuilder;
 use libc::{uid_t, gid_t};
 use tempfile::tempfile;
@@ -383,7 +383,7 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
                             lnk_size == tgt_size &&
                             lnk_hashes == tgt_hashes =>
                         {
-                            let tgt = tgt_root_path.join(
+                            let ref tgt = tgt_root_path.join(
                                 tgt_path.strip_prefix("/").map_err(|_| format!(
                                     "Invalid signature entry {:?}: {:?}",
                                     tgt_root_path, tgt_path))?);
@@ -408,7 +408,23 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
                             {
                                 continue;
                             }
-                            match safe_hardlink(&tgt, &lnk, &tmp) {
+                            let mut tgt_file = match File::open(tgt) {
+                                Ok(f) => f,
+                                Err(ref e)
+                                    if e.kind() == io::ErrorKind::NotFound =>
+                                {
+                                    continue;
+                                },
+                                Err(ref e) => return Err(format!(
+                                    "Error opeining file {:?}: {}", tgt, e)),
+                            };
+                            if !try_msg!(tgt_hashes.check_file(&mut tgt_file),
+                                "Error hashing file {path:?}: {err}", path=tgt)
+                            {
+                                warn!("Mismatch file hash: {:?}", tgt);
+                                continue;
+                            }
+                            match safe_hardlink(tgt, &lnk, &tmp) {
                                 Ok(_) => {},
                                 Err(HardlinkError::Create(ref e))
                                     if e.kind() == io::ErrorKind::NotFound =>
@@ -420,7 +436,7 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
                                 Err(e) => {
                                     return Err(format!(
                                         "Error hard linking {:?} -> {:?}: {}",
-                                        &tgt, &lnk, e));
+                                        tgt, &lnk, e));
                                 },
                             }
                             trace!("Hardlinking {:?} -> {:?}", lnk, tgt);
@@ -469,15 +485,17 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
     let mut grouped_entries = HashMap::with_capacity(ds_count);
     'outer:
     for cont_dirs_and_entries in merged_ds_iter {
+        grouped_entries.clear();
+
         for (cont_dir, entry) in cont_dirs_and_entries.into_iter() {
             let entry = try_msg!(entry, "Error reading signature file: {err}");
             match entry {
-                Entry::File{..} => {
-                    let path = cont_dir.join("root").join(
-                        entry.path().strip_prefix("/").map_err(|_| format!(
+                Entry::File{path, exe, size, hashes} => {
+                    let full_path = cont_dir.join("root").join(
+                        path.strip_prefix("/").map_err(|_| format!(
                             "Invalid signature entry {:?}: {:?}",
-                            cont_dir, entry.path()))?);
-                    let meta = match path.symlink_metadata() {
+                            cont_dir, &path))?);
+                    let meta = match full_path.symlink_metadata() {
                         Ok(meta) => meta,
                         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
                             continue;
@@ -485,21 +503,43 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                         Err(e) => {
                             return Err(format!(
                                 "Error querying file stats {:?}: {}",
-                                &path, e));
+                                &full_path, e));
                         },
                     };
                     grouped_entries.entry(
-                            (entry, meta.mode(), meta.uid(), meta.gid()))
-                        .or_insert(vec!()).push((cont_dir, path, meta));
+                            EntryKey {
+                                exe: exe,
+                                size: size,
+                                hashes: hashes,
+                                mode: meta.mode(),
+                                uid: meta.uid(),
+                                gid: meta.gid(),
+                            })
+                        .or_insert(vec!())
+                        .push((cont_dir, full_path, meta));
                 },
                 Entry::Dir(..) | Entry::Link(..) => continue 'outer,
             }
         }
 
-        for paths_and_metas in grouped_entries.values() {
+        for (&EntryKey{ref hashes, ..}, paths_and_metas) in &grouped_entries {
             if let Some((&(_, ref tgt_path, ref tgt_meta), links)) =
                 paths_and_metas.split_first()
             {
+                let mut tgt_file = match File::open(tgt_path) {
+                    Ok(f) => f,
+                    Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                        continue;
+                    },
+                    Err(ref e) => return Err(format!(
+                        "Error opeining file {:?}: {}", tgt_path, e)),
+                };
+                if !try_msg!(hashes.check_file(&mut tgt_file),
+                    "Error hashing file {path:?}: {err}", path=tgt_path)
+                {
+                    warn!("Mismatch file hash: {:?}", tgt_path);
+                    break;
+                }
                 let tgt_ino = tgt_meta.ino();
                 for &(ref cont_dir, ref lnk_path, ref lnk_meta) in links {
                     let tmp_path = cont_dir.join(".lnk.tmp");
@@ -527,8 +567,6 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                 }
             }
         }
-
-        grouped_entries.clear();
     }
 
     Ok((count, size))
@@ -540,6 +578,16 @@ pub fn hardlink_identical_files<I, P>(cont_dirs: I)
     where I: IntoIterator<Item = P>, P: AsRef<Path>
 {
     unimplemented!();
+}
+
+#[derive(PartialEq, Eq, Hash)]
+struct EntryKey {
+    pub exe: bool,
+    pub size: u64,
+    pub hashes: Hashes,
+    pub mode: u32,
+    pub uid: u32,
+    pub gid: u32,
 }
 
 pub fn collect_containers_from_storage(storage_dir: &Path)

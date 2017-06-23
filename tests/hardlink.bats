@@ -65,7 +65,7 @@ setup() {
 
 @test "hardlink cmd" {
     rm -rf .vagga
-    run vagga _build --force hello
+    run vagga _build hello
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello)
@@ -76,7 +76,7 @@ setup() {
     [[ $status = 0 ]]
     [[ $output = *"Found and linked 0"* ]]
 
-    run vagga _build --force hello-and-bye
+    run vagga _build hello-and-bye
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
@@ -105,7 +105,7 @@ setup() {
     [[ $(cat .vagga/hello-and-bye/etc/hello.txt) = "Hello world!" ]]
 }
 
-@test "hardlink global" {
+@test "hardlink cmd global" {
     rm -rf .storage
     mkdir .storage
     export VAGGA_SETTINGS="
