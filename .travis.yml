@@ -8,7 +8,7 @@ language: rust
 matrix:
   include:
     - <<: *linux
-      env: TESTS="cargo alpine badcmd copy cyclic completion generic image network prerequisites readonly uidmap vcs version volumes mixins capsule"
+      env: TESTS="cargo alpine badcmd copy cyclic completion generic image network prerequisites readonly uidmap vcs version volumes mixins capsule hardlinking"
     - <<: *linux
       env: TESTS="inheritance subconfig ubuntu ubuntu_release"
     - <<: *linux

@@ -1,5 +1,5 @@
 setup() {
-    cd /work/tests/hardlink
+    cd /work/tests/hardlinking
 }
 
 @test "hardlinking" {
@@ -39,13 +39,13 @@ setup() {
     rm -rf .storage
     mkdir .storage
     export VAGGA_SETTINGS="
-        storage-dir: /work/tests/hardlink/.storage
+        storage-dir: /work/tests/hardlinking/.storage
         index-all-images: true
         hard-link-identical-files: true
         hard-link-between-projects: true
     "
 
-    cd /work/tests/hardlink/project-1
+    cd /work/tests/hardlinking/project-1
     rm -rf .vagga
     run vagga _build hello
     printf "%s\n" "${lines[@]}"
@@ -53,7 +53,7 @@ setup() {
     link=$(readlink .vagga/hello)
     [[ $link = ".lnk/.roots/hello.0ae0aab6/root" ]]
 
-    cd /work/tests/hardlink/project-2
+    cd /work/tests/hardlinking/project-2
     rm -rf .vagga
     run vagga _build hello-and-bye
     printf "%s\n" "${lines[@]}"
@@ -63,7 +63,7 @@ setup() {
     [[ $output = *"Found and linked 3 (12B) identical files"* ]]
 }
 
-@test "hardlink cmd" {
+@test "_hardlink cmd" {
     rm -rf .vagga
     run vagga _build hello
     printf "%s\n" "${lines[@]}"
@@ -105,14 +105,14 @@ setup() {
     [[ $(cat .vagga/hello-and-bye/etc/hello.txt) = "Hello world!" ]]
 }
 
-@test "hardlink cmd global" {
+@test "_hardlink cmd global" {
     rm -rf .storage
     mkdir .storage
     export VAGGA_SETTINGS="
-        storage-dir: /work/tests/hardlink/.storage
+        storage-dir: /work/tests/hardlinking/.storage
     "
 
-    cd /work/tests/hardlink/project-1
+    cd /work/tests/hardlinking/project-1
     rm -rf .vagga
     run vagga _build --force hello
     printf "%s\n" "${lines[@]}"
@@ -131,7 +131,7 @@ setup() {
     [[ $status = 0 ]]
     [[ $output = *"Found and linked 2 (0B) identical files"* ]]
 
-    cd /work/tests/hardlink/project-2
+    cd /work/tests/hardlinking/project-2
     rm -rf .vagga
     run vagga _build --force hello-and-bye
     printf "%s\n" "${lines[@]}"
@@ -145,7 +145,7 @@ setup() {
     [[ $output = *"Found and linked 3 (12B) identical files"* ]]
 }
 
-@test "verify cmd" {
+@test "_verify cmd" {
     vagga _build --force hello
     vagga _build --force hello-and-bye
     vagga _hardlink
