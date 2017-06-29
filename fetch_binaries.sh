@@ -1,8 +1,8 @@
 #!/bin/sh -ex
-ALPINE_VERSION=v3.6
-APK_TOOLS=apk-tools-static-2.7.2-r0.apk
-BUSYBOX=busybox-static-1.26.2-r5.apk
-ALPINE_KEYS=alpine-keys-2.1-r1.apk
+ALPINE_VERSION=v3.5
+APK_TOOLS=apk-tools-static-2.6.9-r0.apk
+BUSYBOX=busybox-static-1.25.1-r0.apk
+ALPINE_KEYS=alpine-keys-1.3-r0.apk
 
 
 mkdir alpine 2>/dev/null || true
@@ -16,10 +16,13 @@ wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$APK_TOOLS -
 wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$BUSYBOX -O $BUSYBOX
 wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$ALPINE_KEYS -O $ALPINE_KEYS
 
+sha1sum $APK_TOOLS
+sha1sum $BUSYBOX
+sha1sum $ALPINE_KEYS
 sha1sum -c - <<SHA1SUMS
-1d6caa8b3de821cdd1b52d9aca3b5de1b1f7693a  $APK_TOOLS
-c6a1adc786ded36e659fa2c67c120ab482411872  $BUSYBOX
-ec493688096c83625da9f7d81eed3d71d8102ba8  $ALPINE_KEYS
+31b29926d6be7efb389b49d9d53b557e9b25eb7c  $APK_TOOLS
+b609218d7b0a1c9ec2e457c7665db8b703c4ef10  $BUSYBOX
+f1c6e5f7209885fec5c8dd8c99446036852988a0  $ALPINE_KEYS
 SHA1SUMS
 cd ..
 
