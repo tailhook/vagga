@@ -5,6 +5,10 @@ use libc::{uid_t, gid_t};
 use rustc_serialize::json;
 
 
+const DEFAULT_UBUNTU_MIRROR: &str = "mirror://mirrors.ubuntu.com/mirrors.txt";
+
+const DEFAULT_ALPINE_MIRROR: &str = "http://dl-cdn.alpinelinux.org/alpine/";
+
 #[derive(RustcDecodable, RustcEncodable, Default, Clone, Debug)]
 pub struct Settings {
     pub version_check: bool,
@@ -22,6 +26,18 @@ pub struct Settings {
     pub run_symlinks_as_commands: bool,
     pub disable_auto_clean: bool,
     pub storage_subdir_from_env_var: Option<String>,
+}
+
+impl Settings {
+    pub fn ubuntu_mirror(&self) -> &str {
+        self.ubuntu_mirror.as_ref().map(|m| m.as_str())
+            .unwrap_or(DEFAULT_UBUNTU_MIRROR)
+    }
+
+    pub fn alpine_mirror(&self) -> &str {
+        self.alpine_mirror.as_ref().map(|m| m.as_str())
+            .unwrap_or(DEFAULT_ALPINE_MIRROR)
+    }
 }
 
 impl FromStr for Settings {
