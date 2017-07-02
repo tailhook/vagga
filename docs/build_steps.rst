@@ -427,13 +427,21 @@ Generic Commands
 
    url
      (required) URL to download file from
+
    path
      (required) Path where to put file. Should include the file name (vagga
      doesn't try to guess it for now). Path may be in ``/tmp`` to be used only
      during container build process.
+
    mode
      (default '0o644') Mode (permissions) of the file. May be used to make
      executable bit enabled for downloaded script
+
+   sha256
+     (optional) Sha256 hashsum of the file. If real hashsum is different this
+     step will fail.
+
+     .. versionadded:: 0.7.3
 
    .. warning:: The download is cached similarly to other commands. Currently
       there is no way to control the caching. But it's common practice to

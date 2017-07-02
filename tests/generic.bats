@@ -276,7 +276,14 @@ setup() {
     printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
-    [[ $link = ".roots/vagga.557b6240/root" ]]
+    [[ $link = ".roots/vagga.03319fd2/root" ]]
+}
+
+@test "generic: download broken file" {
+    run vagga _build download-broken-file
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 121 ]]
+    [[ $output = *"Hashsum mismatch"* ]]
 }
 
 @test "generic: tar without intermediate dirs" {
