@@ -5,7 +5,6 @@ use std::path::Path;
 
 use quire::validate as V;
 use unshare::{Command, Stdio};
-use rand::{thread_rng, Rng};
 use regex::Regex;
 
 use super::super::context::{Context};
@@ -21,8 +20,6 @@ use builder::dns::revert_name_files;
 
 pub static LATEST_VERSION: &'static str = "v3.5";
 static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
-static MIRRORS: &'static str = include_str!("../../../alpine/MIRRORS.txt");
-
 
 const VERSION_WITH_PHP5: &'static str = "v3.4";
 
@@ -301,18 +298,6 @@ impl Distro {
     }
 }
 
-pub fn choose_mirror() -> String {
-    let repos = MIRRORS
-        .split('\n')
-        .map(|x| x.trim())
-        .filter(|x| x.len() > 0 && !x.starts_with("#"))
-        .collect::<Vec<&str>>();
-    let mirror = thread_rng().choose(&repos)
-        .expect("At least one mirror should work");
-    debug!("Chosen mirror {}", mirror);
-    return mirror.to_string();
-}
-
 fn check_version(version: &String) -> Result<(), String> {
     let version_regex = Regex::new(ALPINE_VERSION_REGEX)
                              .map_err(|e| format!("{}", e))?;
@@ -360,11 +345,9 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: &str)
     -> Result<(), StepError>
 {
-    let mirror = ctx.settings.alpine_mirror.clone()
-        .unwrap_or(choose_mirror());
     distro.set(Distro {
         version: ver.to_string(),
-        mirror: mirror,
+        mirror: ctx.settings.alpine_mirror().to_string(),
         base_setup: false,
         apk_update: true,
     })?;

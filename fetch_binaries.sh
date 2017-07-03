@@ -1,5 +1,6 @@
 #!/bin/sh -ex
 ALPINE_VERSION=v3.5
+ALPINE_MIRROR=http://dl-cdn.alpinelinux.org/alpine/
 APK_TOOLS=apk-tools-static-2.6.9-r0.apk
 BUSYBOX=busybox-static-1.25.1-r0.apk
 ALPINE_KEYS=alpine-keys-1.3-r0.apk
@@ -7,14 +8,10 @@ ALPINE_KEYS=alpine-keys-1.3-r0.apk
 
 mkdir alpine 2>/dev/null || true
 cd alpine
-rm MIRRORS.txt 2>/dev/null || true
-wget --no-use-server-timestamp http://dl-cdn.alpinelinux.org/alpine/MIRRORS.txt -O MIRRORS.txt
 
-# OS X doesn't have --random-sort
-mirror=$(head -n 1 MIRRORS.txt)
-wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$APK_TOOLS -O $APK_TOOLS
-wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$BUSYBOX -O $BUSYBOX
-wget --no-use-server-timestamp ${mirror}$ALPINE_VERSION/main/x86_64/$ALPINE_KEYS -O $ALPINE_KEYS
+for pkg in $APK_TOOLS $BUSYBOX $ALPINE_KEYS; do
+    wget --no-use-server-timestamp ${ALPINE_MIRROR}${ALPINE_VERSION}/main/x86_64/$pkg -O $pkg
+done
 
 sha1sum $APK_TOOLS
 sha1sum $BUSYBOX

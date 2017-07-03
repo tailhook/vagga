@@ -20,7 +20,6 @@ use file_util::{Dir, Lock, copy, copy_utime, safe_remove};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use container::util::clean_dir;
 
-const DEFAULT_MIRROR: &'static str = "mirror://mirrors.ubuntu.com/mirrors.txt";
 
 // Build Steps
 #[derive(Debug)]
@@ -337,14 +336,14 @@ impl Distro {
     {
         self.apt_update = true;
 
-        let mirror = get_ubuntu_mirror(ctx);
-        let ref url = repo.url.as_ref().unwrap_or(&mirror);
         let suite = match repo.suite {
             Some(ref suite) => suite,
             None => {
                 self.get_codename(ctx)?
             },
         };
+        let mirror = ctx.settings.ubuntu_mirror();
+        let url = repo.url.as_ref().map(|u| u.as_str()).unwrap_or(mirror);
 
         let mut hash = Digest::new(false, false);
         hash.opt_field("url", &repo.url);
@@ -416,7 +415,7 @@ impl Distro {
     {
         let codename = self.get_codename(ctx)?;
         let target = "/vagga/root/etc/apt/sources.list.d/universe.list";
-        let mirror = get_ubuntu_mirror(ctx);
+        let mirror = ctx.settings.ubuntu_mirror();
         File::create(&Path::new(target))
             .and_then(|mut f| {
                 writeln!(&mut f, "deb {} {} universe",
@@ -583,13 +582,6 @@ impl Distro {
     }
 }
 
-fn get_ubuntu_mirror(ctx: &Context) -> String {
-    ctx.settings.ubuntu_mirror.as_ref()
-        .map(|x| &x[..])
-        .unwrap_or(DEFAULT_MIRROR)
-        .to_string()
-}
-
 pub fn read_ubuntu_codename() -> Result<String, String>
 {
     let lsb_release_path = "/vagga/root/etc/lsb-release";
@@ -688,7 +680,7 @@ pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
 fn set_sources_list(ctx: &mut Context, distro: &mut Distro)
     -> Result<(), String>
 {
-    let mirror = get_ubuntu_mirror(ctx);
+    let mirror = ctx.settings.ubuntu_mirror().to_string();
     let suite = distro.get_codename(ctx)?;
     let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
     let sources_list_tmp = Path::new("/vagga/root/etc/apt/sources.list.tmp");

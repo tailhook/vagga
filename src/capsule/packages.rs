@@ -16,7 +16,7 @@ use libmount::BindMount;
 
 use config::settings::Settings;
 use process_util::{squash_stdio, run_success};
-use builder::commands::alpine::{LATEST_VERSION, choose_mirror};
+use builder::commands::alpine::LATEST_VERSION;
 use file_util::Dir;
 
 pub use self::Feature::*;
@@ -84,8 +84,7 @@ pub fn ensure(capsule: &mut State, features: &[Feature])
             "--force",
             "/vagga/bin/alpine-keys.apk",
             ], &[])?;
-        let mirror = capsule.settings.alpine_mirror.clone()
-            .unwrap_or(choose_mirror());
+        let mirror = capsule.settings.alpine_mirror();
         File::create(&Path::new("/etc/apk/repositories"))
             .and_then(|mut f| write!(&mut f, "{}{}/main\n",
                 mirror, LATEST_VERSION))
