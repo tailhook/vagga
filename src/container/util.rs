@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{File, Metadata};
 use std::fs::{read_dir, remove_file, remove_dir, rename};
 use std::fs::{symlink_metadata, read_link, hard_link};
 use std::io::{self, BufReader, BufWriter, Seek, SeekFrom};
@@ -13,8 +13,7 @@ use dir_signature::v1::{Entry, EntryKind, Hashes, Parser, ParseError};
 use dir_signature::v1::merge::FileMergeBuilder;
 use libc::{uid_t, gid_t};
 use tempfile::tempfile;
-
-
+use quick_error::ResultExt;
 
 use super::root::temporary_change_root;
 use file_util::{Dir, ShallowCopy};
@@ -217,14 +216,25 @@ pub struct Diff {
 quick_error!{
     #[derive(Debug)]
     pub enum CheckSignatureError {
-        Io(err: io::Error) {
-            description("io error")
-            display("Io error: {}", err)
-            from()
+        NoSignatureFile(path: PathBuf, err: io::Error) {
+            description("missing signature file")
+            display("Missing signature file {:?}: {}", path, err)
         }
-        DirSignature(err: dir_signature::Error) {
+        ReadSignatureFile(path: PathBuf, err: io::Error) {
             description("error reading signature file")
-            display("Error reading signature file: {}", err)
+            display("Error reading signature file {:?}: {}", path, err)
+        }
+        ReadTempSignatureFile(err: io::Error) {
+            description("error reading temporary signature file")
+            display("Error reading temporary signature file: {}", err)
+        }
+        CreateTempSignatureFile(err: io::Error) {
+            description("error creating temporary signature file")
+            display("Error creating temporary signature file: {}", err)
+        }
+        Scan(err: dir_signature::Error) {
+            description("error indexing container")
+            display("Error indexing container: {}", err)
             from()
         }
         ParseSignature(err: ParseError) {
@@ -239,25 +249,35 @@ quick_error!{
 pub fn check_signature(cont_dir: &Path)
     -> Result<Option<Diff>, CheckSignatureError>
 {
+    use self::CheckSignatureError::*;
+
     let ds_path = cont_dir.join("index.ds1");
-    let mut ds_file = File::open(&ds_path)?;
-    let ds_hash = dir_signature::get_hash(&mut ds_file)?;
+    let mut ds_file = File::open(&ds_path)
+        .map_err(|e| NoSignatureFile(ds_path.clone(), e))?;
+    let ds_hash = dir_signature::get_hash(&mut ds_file)
+        .map_err(|e| ReadSignatureFile(ds_path.clone(), e))?;
 
     let mut scanner_config = Sig::new();
     scanner_config
         .auto_threads()
         .hash(HashType::blake2b_256())
         .add_dir(cont_dir.join("root"), "/");
-    let mut real_ds_file = tempfile()?;
-    v1::scan(&scanner_config, &mut real_ds_file)?;
-    real_ds_file.seek(SeekFrom::Start(0))?;
-    let real_ds_hash = dir_signature::get_hash(&mut real_ds_file)?;
+    let mut real_ds_file = tempfile()
+        .map_err(|e| CreateTempSignatureFile(e))?;
+    v1::scan(&scanner_config, &mut real_ds_file)
+        .map_err(|e| Scan(e))?;
+    real_ds_file.seek(SeekFrom::Start(0))
+        .map_err(|e| ReadTempSignatureFile(e))?;
+    let real_ds_hash = dir_signature::get_hash(&mut real_ds_file)
+        .map_err(|e| ReadTempSignatureFile(e))?;
 
     if ds_hash != real_ds_hash {
         let mut ds_reader = BufReader::new(ds_file);
         let mut real_ds_reader = BufReader::new(real_ds_file);
-        ds_reader.seek(SeekFrom::Start(0))?;
-        real_ds_reader.seek(SeekFrom::Start(0))?;
+        ds_reader.seek(SeekFrom::Start(0))
+            .map_err(|e| ReadSignatureFile(ds_path.clone(), e))?;
+        real_ds_reader.seek(SeekFrom::Start(0))
+            .map_err(|e| ReadTempSignatureFile(e))?;
         let mut ds_parser = Parser::new(ds_reader)?;
         let mut real_ds_parser = Parser::new(real_ds_reader)?;
 
@@ -289,8 +309,10 @@ pub fn check_signature(cont_dir: &Path)
 
         let mut ds_reader = ds_parser.into_reader();
         let mut real_ds_reader = real_ds_parser.into_reader();
-        ds_reader.seek(SeekFrom::Start(0))?;
-        real_ds_reader.seek(SeekFrom::Start(0))?;
+        ds_reader.seek(SeekFrom::Start(0))
+            .map_err(|e| ReadSignatureFile(ds_path.clone(), e))?;
+        real_ds_reader.seek(SeekFrom::Start(0))
+            .map_err(|e| ReadTempSignatureFile(e))?;
         let mut ds_parser = Parser::new(ds_reader)?;
         let mut real_ds_parser = Parser::new(real_ds_reader)?;
 
@@ -321,21 +343,71 @@ pub fn check_signature(cont_dir: &Path)
     unimplemented!();
 }
 
+quick_error!{
+    #[derive(Debug)]
+    pub enum HardlinkError {
+        OpenSignatureFile(path: PathBuf, err: io::Error) {
+            description("error opening file")
+            display("Error opening signature file {:?}: {}", path, err)
+        }
+        ParseSignature(path: PathBuf, err: ParseError) {
+            description("error parsing signature file")
+            display("Error parsing signature file {:?}: {}", path, err)
+            context(path: &'a Path, err: ParseError)
+                -> (path.to_path_buf(), err)
+        }
+        MergedSignatures(err: v1::merge::MergeError) {
+            description("error merging signature files")
+            display("Error merging signature files")
+            from()
+        }
+        InvalidEntry(sig_path: PathBuf, entry_path: PathBuf) {
+            description("invalid signature entry")
+            display("Invalid signature entry in file {:?}: {:?}",
+                sig_path, entry_path)
+        }
+        RemoveTempFile(path: PathBuf, err: io::Error) {
+            description("error removing temporary file")
+            display("Error removing temporary file {:?}: {}", path, err)
+        }
+        StatFile(path: PathBuf, err: io::Error) {
+            description("error querying file stats")
+            display("Error querying file stats {:?}: {}", path, err)
+        }
+        OpenFile(path: PathBuf, err: io::Error) {
+            description("error opeining file")
+            display("Error opeining file {:?}: {}", path, err)
+        }
+        HashFile(path: PathBuf, err: io::Error) {
+            description("error hashing file")
+            display("Error hashing file {:?}: {}", path, err)
+            context(path: &'a Path, err: io::Error)
+                -> (path.to_path_buf(), err)
+        }
+        LinkFile(tgt: PathBuf, lnk: PathBuf, err: LinkError) {
+            description("error hard linking file")
+            display("Error hard linking {:?} -> {:?}: {}", tgt, lnk, err)
+        }
+    }
+}
+
 #[cfg(feature="containers")]
 pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
-    -> Result<(u32, u64), String>
+    -> Result<(u32, u64), HardlinkError>
     where I: IntoIterator<Item = P>, P: AsRef<Path>
 {
+    use self::HardlinkError::*;
+
     let container_root = tmp_dir.join("root");
     let main_ds_path = tmp_dir.join("index.ds1");
     if !main_ds_path.exists() {
         warn!("No index file exists, can't hardlink container");
         return Ok((0, 0));
     }
-    let main_ds_reader = BufReader::new(try_msg!(File::open(&main_ds_path),
-        "Error opening file {path:?}: {err}", path=&main_ds_path));
-    let mut main_ds_parser = try_msg!(Parser::new(main_ds_reader),
-        "Error parsing signature file: {err}");
+    let main_ds_reader = BufReader::new(File::open(&main_ds_path)
+        .map_err(|e| OpenSignatureFile(main_ds_path.clone(), e))?);
+    let mut main_ds_parser = Parser::new(main_ds_reader)
+        .context(main_ds_path.as_path())?;
 
     let mut merged_ds_builder = FileMergeBuilder::new();
     for cont_path in cont_dirs {
@@ -344,14 +416,12 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
         merged_ds_builder.add(&cont_path.join("root"),
                               &cont_path.join("index.ds1"));
     }
-    let mut merged_ds = try_msg!(merged_ds_builder.finalize(),
-        "Error parsing signature files: {err}");
+    let mut merged_ds = merged_ds_builder.finalize()?;
     let mut merged_ds_iter = merged_ds.iter();
 
     let tmp = tmp_dir.join(".link.tmp");
     if tmp.exists() {
-        remove_file(&tmp).map_err(|e|
-            format!("Error removing temp file: {}", e))?;
+        remove_file(&tmp).map_err(|e| RemoveTempFile(tmp.clone(), e))?;
     }
     let mut count = 0;
     let mut size = 0;
@@ -364,16 +434,15 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
                 hashes: ref lnk_hashes,
             }) => {
                 let lnk = container_root.join(
-                    lnk_path.strip_prefix("/").map_err(|_| format!(
-                        "Invalid signature entry {:?}: {:?}",
-                        main_ds_path, lnk_path))?);
-                let lnk_stat = try_msg!(lnk.symlink_metadata(),
-                    "Error querying file stats {path:?}: {err}", path=&lnk);
+                    lnk_path.strip_prefix("/").map_err(|_|
+                        InvalidEntry(main_ds_path.clone(), lnk_path.clone()))?);
+                let lnk_stat = lnk.symlink_metadata()
+                    .map_err(|e| StatFile(lnk.clone(), e))?;
                 for tgt_entry in merged_ds_iter
                     .advance(&EntryKind::File(lnk_path))
                 {
                     match tgt_entry {
-                        (tgt_root_path,
+                        (tgt_root,
                          Ok(Entry::File{
                              path: ref tgt_path,
                              exe: tgt_exe,
@@ -383,72 +452,30 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
                             lnk_size == tgt_size &&
                             lnk_hashes == tgt_hashes =>
                         {
-                            let ref tgt = tgt_root_path.join(
-                                tgt_path.strip_prefix("/").map_err(|_| format!(
-                                    "Invalid signature entry {:?}: {:?}",
-                                    tgt_root_path, tgt_path))?);
-                            let tgt_stat = match tgt.symlink_metadata() {
-                                Ok(s) => s,
-                                Err(ref e)
-                                    if e.kind() == io::ErrorKind::NotFound =>
-                                {
-                                    // Ignore not found error cause container
-                                    // could be deleted
-                                    continue;
-                                },
-                                Err(e) => {
-                                    return Err(format!(
-                                        "Error querying file stats {:?}: {}",
-                                        &tgt, e));
-                                },
-                            };
-                            if lnk_stat.mode() != tgt_stat.mode() ||
-                                lnk_stat.uid() != tgt_stat.uid() ||
-                                lnk_stat.gid() != lnk_stat.gid()
+                            let ref tgt = tgt_root.join(
+                                tgt_path.strip_prefix("/").map_err(|_|
+                                    InvalidEntry(
+                                        tgt_root.with_file_name("index.ds1"),
+                                        tgt_path.clone()))?);
+                            if maybe_link_file(
+                                tgt, &lnk, &lnk_stat, &lnk_hashes, &tmp)?
                             {
-                                continue;
+                                trace!("Hardlinking {:?} -> {:?}", lnk, tgt);
+                                count += 1;
+                                size += tgt_size;
+                                break;
                             }
-                            let mut tgt_file = match File::open(tgt) {
-                                Ok(f) => f,
-                                Err(ref e)
-                                    if e.kind() == io::ErrorKind::NotFound =>
-                                {
-                                    continue;
-                                },
-                                Err(ref e) => return Err(format!(
-                                    "Error opeining file {:?}: {}", tgt, e)),
-                            };
-                            if !try_msg!(tgt_hashes.check_file(&mut tgt_file),
-                                "Error hashing file {path:?}: {err}", path=tgt)
-                            {
-                                warn!("Mismatch file hash: {:?}", tgt);
-                                continue;
-                            }
-                            match safe_hardlink(tgt, &lnk, &tmp) {
-                                Ok(_) => {},
-                                Err(HardlinkError::Create(ref e))
-                                    if e.kind() == io::ErrorKind::NotFound =>
-                                {
-                                    // Ignore not found error cause container
-                                    // could be deleted
-                                    continue;
-                                },
-                                Err(e) => {
-                                    return Err(format!(
-                                        "Error hard linking {:?} -> {:?}: {}",
-                                        tgt, &lnk, e));
-                                },
-                            }
-                            trace!("Hardlinking {:?} -> {:?}", lnk, tgt);
-                            count += 1;
-                            size += tgt_size;
-                            break;
                         },
-                        _ => continue,
+                        (_, Ok(_)) => continue,
+                        (tgt_root, Err(e)) => {
+                            return Err(ParseSignature(
+                                tgt_root.with_file_name("index.ds1"), e));
+                        }
                     }
                 }
             },
-            _ => {},
+            Ok(_) => {},
+            Err(e) => return Err(ParseSignature(main_ds_path.clone(), e)),
         }
     }
 
@@ -464,10 +491,77 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
 }
 
 #[cfg(feature="containers")]
+fn maybe_link_file(tgt: &Path,
+    lnk: &Path, lnk_stat: &Metadata, lnk_hashes: &Hashes, tmp: &Path)
+    -> Result<bool, HardlinkError>
+{
+    use self::HardlinkError::*;
+
+    let tgt_stat = match tgt.symlink_metadata() {
+        Ok(s) => s,
+        Err(ref e)
+            if e.kind() == io::ErrorKind::NotFound =>
+        {
+            // Ignore not found error cause container
+            // could be deleted
+            return Ok(false);
+        },
+        Err(e) => {
+            return Err(StatFile(tgt.to_path_buf(), e));
+        },
+    };
+    if lnk_stat.mode() != tgt_stat.mode() ||
+        lnk_stat.uid() != tgt_stat.uid() ||
+        lnk_stat.gid() != lnk_stat.gid()
+    {
+        return Ok(false);
+    }
+    let mut tgt_file = match File::open(tgt) {
+        Ok(f) => f,
+        Err(ref e)
+            if e.kind() == io::ErrorKind::NotFound =>
+        {
+            return Ok(false);
+        },
+        Err(e) => return Err(OpenFile(tgt.to_path_buf(), e)),
+    };
+    if !lnk_hashes.check_file(&mut tgt_file)
+        .map_err(|e| HashFile(tgt.to_path_buf(), e))?
+    {
+        warn!("Mismatch file hash: {:?}", tgt);
+        return Ok(false);
+    }
+    match safe_hardlink(tgt, &lnk, &tmp) {
+        Ok(_) => {
+            Ok(true)
+        },
+        Err(LinkError::Create(ref e))
+            if e.kind() == io::ErrorKind::NotFound =>
+        {
+            // Ignore not found error cause container could be deleted
+            Ok(false)
+        },
+        Err(e) => {
+            Err(LinkFile(tgt.to_path_buf(), lnk.to_path_buf(), e))
+        },
+    }
+}
+
+#[cfg(not(feature="containers"))]
+fn maybe_link_file(tgt: &Path,
+    lnk: &Path, lnk_stat: &Metadata, lnk_hashes: &Hashes, tmp: &Path)
+    -> Result<bool, HardlinkError>
+{
+    unimplemented!()
+}
+
+#[cfg(feature="containers")]
 pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
-    -> Result<(u64, u64), String>
+    -> Result<(u64, u64), HardlinkError>
     where I: IntoIterator<Item = P>, P: AsRef<Path>
 {
+    use self::HardlinkError::*;
+
     let mut merged_ds_builder = FileMergeBuilder::new();
     let mut ds_count = 0;
     for cont_dir in cont_dirs {
@@ -476,8 +570,7 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
         merged_ds_builder.add(cont_dir, &cont_dir.join("index.ds1"));
         ds_count += 1;
     }
-    let mut merged_ds = try_msg!(merged_ds_builder.finalize(),
-        "Error parsing signature files: {err}");
+    let mut merged_ds = merged_ds_builder.finalize()?;
     let merged_ds_iter = merged_ds.iter();
 
     let mut count = 0;
@@ -488,22 +581,18 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
         grouped_entries.clear();
 
         for (cont_dir, entry) in cont_dirs_and_entries.into_iter() {
-            let entry = try_msg!(entry, "Error reading signature file: {err}");
             match entry {
-                Entry::File{path, exe, size, hashes} => {
+                Ok(Entry::File{path, exe, size, hashes}) => {
                     let full_path = cont_dir.join("root").join(
-                        path.strip_prefix("/").map_err(|_| format!(
-                            "Invalid signature entry {:?}: {:?}",
-                            cont_dir, &path))?);
+                        path.strip_prefix("/").map_err(|_| InvalidEntry(
+                            cont_dir.join("index.ds1"), path.clone()))?);
                     let meta = match full_path.symlink_metadata() {
                         Ok(meta) => meta,
                         Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
                             continue;
                         },
                         Err(e) => {
-                            return Err(format!(
-                                "Error querying file stats {:?}: {}",
-                                &full_path, e));
+                            return Err(StatFile(full_path.clone(), e));
                         },
                     };
                     grouped_entries.entry(
@@ -518,7 +607,10 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                         .or_insert(vec!())
                         .push((cont_dir, full_path, meta));
                 },
-                Entry::Dir(..) | Entry::Link(..) => continue 'outer,
+                Ok(_) => continue 'outer,
+                Err(e) => {
+                    return Err(ParseSignature(cont_dir.join("index.ds1"), e));
+                },
             }
         }
 
@@ -531,11 +623,10 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                     Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
                         continue;
                     },
-                    Err(ref e) => return Err(format!(
-                        "Error opeining file {:?}: {}", tgt_path, e)),
+                    Err(e) => return Err(OpenFile(tgt_path.clone(), e)),
                 };
-                if !try_msg!(hashes.check_file(&mut tgt_file),
-                    "Error hashing file {path:?}: {err}", path=tgt_path)
+                if !hashes.check_file(&mut tgt_file)
+                    .map_err(|e| HashFile(tgt_path.clone(), e))?
                 {
                     warn!("Mismatch file hash: {:?}", tgt_path);
                     break;
@@ -548,8 +639,8 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                     }
                     match safe_hardlink(tgt_path, lnk_path, &tmp_path) {
                         Ok(_) => {},
-                        Err(HardlinkError::Create(ref e)) |
-                        Err(HardlinkError::Rename(ref e))
+                        Err(LinkError::Create(ref e)) |
+                        Err(LinkError::Rename(ref e))
                             if e.kind() == io::ErrorKind::NotFound =>
                         {
                             // Ignore not found error cause container
@@ -557,9 +648,8 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                             continue;
                         },
                         Err(e) => {
-                            return Err(format!(
-                                "Error hard linking {:?} -> {:?}: {}",
-                                tgt_path, lnk_path, e));
+                            return Err(LinkFile(
+                                tgt_path.clone(), lnk_path.clone(), e));
                         },
                     }
                     count += 1;
@@ -573,7 +663,7 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
 }
 
 #[cfg(not(feature="containers"))]
-pub fn hardlink_identical_files<I, P>(cont_dirs: I)
+pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
     -> Result<(u64, u64), String>
     where I: IntoIterator<Item = P>, P: AsRef<Path>
 {
@@ -696,7 +786,7 @@ pub struct ContainerDir {
 
 quick_error!{
     #[derive(Debug)]
-    pub enum HardlinkError {
+    pub enum LinkError {
         Create(err: io::Error) {
             description("error creating hard link")
             display("Error creating hard link: {}", err)
@@ -713,14 +803,14 @@ quick_error!{
 }
 
 fn safe_hardlink(tgt: &Path, lnk: &Path, tmp: &Path)
-    -> Result<(), HardlinkError>
+    -> Result<(), LinkError>
 {
     if let Err(e) = hard_link(&tgt, &tmp) {
-        return Err(HardlinkError::Create(e));
+        return Err(LinkError::Create(e));
     }
     if let Err(e) = rename(&tmp, &lnk) {
-        remove_file(&tmp).map_err(|e| HardlinkError::Remove(e))?;
-        return Err(HardlinkError::Rename(e));
+        remove_file(&tmp).map_err(|e| LinkError::Remove(e))?;
+        return Err(LinkError::Rename(e));
     }
     Ok(())
 }

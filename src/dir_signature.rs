@@ -10,6 +10,8 @@ pub mod v1 {
 
     pub struct Entry;
     pub struct EntryKind;
+    #[derive(PartialEq, Eq, Hash)]
+    pub struct Hashes;
     pub struct Parser;
     #[derive(Debug)]
     pub struct ParseError;
@@ -28,6 +30,8 @@ pub mod v1 {
 
     pub mod merge {
         pub struct FileMergeBuilder;
+        #[derive(Debug)]
+        pub struct MergeError;
     }
 }
 
