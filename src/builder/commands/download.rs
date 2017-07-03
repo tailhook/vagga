@@ -4,7 +4,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use quire::validate as V;
 use file_util::copy;
-use capsule::download::download_file;
+use capsule::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -13,6 +13,7 @@ pub struct Download {
     pub url: String,
     pub path: PathBuf,
     pub mode: u32,
+    pub sha256: Option<String>,
 }
 
 impl Download {
@@ -21,6 +22,7 @@ impl Download {
         .member("url", V::Scalar::new())
         .member("path", V::Directory::new().absolute(true))
         .member("mode", V::Numeric::new().default(0o644).min(0).max(0o1777))
+        .member("sha256", V::Scalar::new().optional())
     }
 }
 
@@ -30,7 +32,11 @@ impl BuildStep for Download {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        hash.field("url", &self.url);
+        if let Some(ref sha) = self.sha256 {
+            hash.field("hash", sha);
+        } else {
+            hash.field("url", &self.url);
+        }
         hash.field("path", &self.path);
         hash.field("mode", self.mode);
         Ok(())
@@ -41,11 +47,8 @@ impl BuildStep for Download {
         if build {
             let fpath = PathBuf::from("/vagga/root")
                 .join(self.path.strip_prefix("/").unwrap());
-            let filename = if self.url.starts_with(".") {
-                PathBuf::from("/work").join(&self.url)
-            } else {
-                download_file(&mut guard.ctx.capsule, &[&self.url], None)?
-            };
+            let (filename, _) = maybe_download_and_check_hashsum(
+                &mut guard.ctx.capsule, &self.url, self.sha256.clone())?;
             copy(&filename, &fpath)
                 .map_err(|e| format!("Error copying {:?} to {:?}: {}",
                     &filename, self.path, e))?;

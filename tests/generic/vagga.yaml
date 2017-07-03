@@ -147,8 +147,6 @@ containers:
 
   vagga:
     setup:
-    - !Alpine v3.4
-    - !Install [wget]
     # Download file to workdir specifically
     - !Download
       url: http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz
@@ -158,6 +156,13 @@ containers:
       url: ./vagga-0.4.0.tar.xz
       subdir: vagga
       path: /usr/lib/vagga
+
+  download-broken-file:
+    setup:
+    - !Download
+      url: http://files.zerogw.com/vagga/vagga-0.4.0.tar.xz
+      path: /work/vagga-0.4.0.tar.xz
+      sha256: 0000000000000000000000000000000000000000000000000000000000000000
 
   tar-no-intermediate-dir:
     setup:
