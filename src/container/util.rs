@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, Metadata};
 use std::fs::{read_dir, remove_file, remove_dir, rename};
 use std::fs::{symlink_metadata, read_link, hard_link};
@@ -563,19 +563,18 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
     use self::HardlinkError::*;
 
     let mut merged_ds_builder = FileMergeBuilder::new();
-    let mut ds_count = 0;
     for cont_dir in cont_dirs {
         let cont_dir = cont_dir.as_ref();
         info!("Found container for hardlinking: {:?}", cont_dir);
         merged_ds_builder.add(cont_dir, &cont_dir.join("index.ds1"));
-        ds_count += 1;
     }
     let mut merged_ds = merged_ds_builder.finalize()?;
     let merged_ds_iter = merged_ds.iter();
 
     let mut count = 0;
     let mut size = 0;
-    let mut grouped_entries = HashMap::with_capacity(ds_count);
+    let mut grouped_entries = HashMap::new();
+    let mut linked_inodes = HashSet::new();
     'outer:
     for cont_dirs_and_entries in merged_ds_iter {
         grouped_entries.clear();
@@ -632,13 +631,21 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                     break;
                 }
                 let tgt_ino = tgt_meta.ino();
+                linked_inodes.clear();
                 for &(ref cont_dir, ref lnk_path, ref lnk_meta) in links {
                     let tmp_path = cont_dir.join(".lnk.tmp");
-                    if lnk_meta.ino() == tgt_ino {
+                    let lnk_ino = lnk_meta.ino();
+                    if lnk_ino == tgt_ino {
                         continue;
                     }
                     match safe_hardlink(tgt_path, lnk_path, &tmp_path) {
-                        Ok(_) => {},
+                        Ok(_) => {
+                            if !linked_inodes.contains(&lnk_ino) {
+                                count += 1;
+                                size += lnk_meta.size();
+                            }
+                            linked_inodes.insert(lnk_ino);
+                        },
                         Err(LinkError::Create(ref e)) |
                         Err(LinkError::Rename(ref e))
                             if e.kind() == io::ErrorKind::NotFound =>
@@ -652,8 +659,6 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                                 tgt_path.clone(), lnk_path.clone(), e));
                         },
                     }
-                    count += 1;
-                    size += lnk_meta.size();
                 }
             }
         }
