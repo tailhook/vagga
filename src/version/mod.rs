@@ -6,7 +6,7 @@ use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use config::find_config;
+use config::find_config_or_exit;
 use config::Settings;
 
 
@@ -49,14 +49,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
     }
 
-    let cfg = match find_config(&Path::new("/work"), false) {
-        Ok((cfg, _)) => cfg,
-        Err(e) => {
-            writeln!(&mut stderr(), "Error parsing configuration file: {}", e)
-                .ok();
-            return 126;
-        }
-    };
+    let (cfg, _) = find_config_or_exit(&Path::new("/work"), false);
     let cont = cfg.containers.get(&container)
         .expect(&format!("Container {:?} not found", &container));
 

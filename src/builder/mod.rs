@@ -1,9 +1,9 @@
-use std::io::{stdout, stderr, Write};
+use std::io::{stdout, stderr};
 use std::default::Default;
 use std::path::Path;
 use rand;
 
-use config::find_config;
+use config::find_config_or_exit;
 use config::{Config, Container, Settings};
 use argparse::{ArgumentParser, Store, StoreTrue};
 
@@ -71,14 +71,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
     }
 
-    let config = match find_config(&Path::new("/work"), false) {
-        Ok((cfg, _)) => cfg,
-        Err(e) => {
-            writeln!(&mut stderr(), "Error parsing configuration file: {}", e)
-                .ok();
-            return 126;
-        }
-    };
+    let (config, _) = find_config_or_exit(&Path::new("/work"), false);
     let container = config.containers.get(&container_name)
         .expect(&format!("Container {:?} not found", &container_name));
 

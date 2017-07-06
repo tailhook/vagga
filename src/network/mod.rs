@@ -1,10 +1,10 @@
-use std::io::{stdout, stderr, Write};
+use std::io::{stdout, stderr};
 use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
 
 use config::Config;
-use super::config::find_config;
+use super::config::find_config_or_exit;
 use self::iptables::apply_graph;
 
 mod graphs;
@@ -50,15 +50,7 @@ pub fn run(cmdline: Vec<String>) -> i32 {
         }
     }
 
-
-    let cfg = match find_config(&Path::new("/work"), false) {
-        Ok((cfg, _)) => cfg,
-        Err(e) => {
-            writeln!(&mut stderr(), "Error parsing configuration file: {}", e)
-                .ok();
-            return 126;
-        }
-    };
+    let (cfg, _) = find_config_or_exit(&Path::new("/work"), false);
 
     args.insert(0, format!("vagga_network {}", kind));
     match run_command(&cfg, kind, args) {
