@@ -3,7 +3,7 @@ use std::default::Default;
 use std::path::Path;
 use rand;
 
-use config::read_config;
+use config::find_config_or_exit;
 use config::{Config, Container, Settings};
 use argparse::{ArgumentParser, Store, StoreTrue};
 
@@ -71,11 +71,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
     }
 
-    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
-    let config = read_config(&Path::new("/work/vagga.yaml")).ok()
-        .expect("Error parsing configuration file");  // TODO
+    let (config, _) = find_config_or_exit(&Path::new("/work"), false);
     let container = config.containers.get(&container_name)
-        .expect("Container not found");  // TODO
+        .expect(&format!("Container {:?} not found", &container_name));
 
     if sources_only {
         _fetch_sources(&container, &settings)

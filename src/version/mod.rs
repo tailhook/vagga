@@ -6,7 +6,7 @@ use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use config::read_config;
+use config::find_config_or_exit;
 use config::Settings;
 
 
@@ -49,11 +49,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
     }
 
-    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
-    let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
-        .expect("Error parsing configuration file");  // TODO
+    let (cfg, _) = find_config_or_exit(&Path::new("/work"), false);
     let cont = cfg.containers.get(&container)
-        .expect("Container not found");  // TODO
+        .expect(&format!("Container {:?} not found", &container));
 
     let hash = match version::long_version(&cont, &cfg, debug_info, dump) {
         Ok(hash) => hash,

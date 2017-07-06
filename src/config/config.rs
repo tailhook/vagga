@@ -1,8 +1,9 @@
 use std::fs::File;
-use std::io::{Read};
+use std::io::{stderr, Read, Write};
 use std::mem;
 use std::path::{PathBuf, Path, Component};
 use std::rc::Rc;
+use std::process::exit;
 
 use std::collections::BTreeMap;
 
@@ -47,12 +48,12 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
         command_validator()))
 }
 
-fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
+fn find_config_path(work_dir: &Path, verbose: bool)
     -> Option<(PathBuf, PathBuf)>
 {
-    let mut dir = work_dir.clone();
+    let mut dir = work_dir.to_path_buf();
     loop {
-        if show_warnings {
+        if verbose {
             maybe_print_typo_warning(&dir.join(".vagga"));
             maybe_print_typo_warning(&dir);
         }
@@ -72,20 +73,37 @@ fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
     }
 }
 
-pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
+pub fn find_config(work_dir: &Path, verbose: bool)
     -> Result<(Config, PathBuf), String>
 {
-    let (cfg_dir, filename) = match find_config_path(
-        work_dir, show_warnings)
-    {
+    let (cfg_dir, filename) = match find_config_path(work_dir, verbose) {
         Some(pair) => pair,
         None => return Err(format!(
             "Config not found in path {:?}", work_dir)),
     };
     assert!(cfg_dir.is_absolute());
+    if verbose {
+        info!("Found configuration file: {:?}", &filename);
+    }
     let cfg = read_config(&filename)?;
     validate_config(&cfg)?;
     return Ok((cfg, cfg_dir));
+}
+
+pub fn find_config_or_exit(work_dir: &Path, verbose: bool)
+    -> (Config, PathBuf)
+{
+    match find_config(work_dir, verbose) {
+        Ok(pair) => pair,
+        Err(e) => {
+            writeln!(&mut stderr(),
+                "Error parsing configuration file: {}. \
+                 It usually happens either if configuration file was changed \
+                 after vagga have been started or if permissions of the config \
+                 file or some of the included files are wrong.", e).ok();
+            exit(126);
+        }
+    }
 }
 
 fn join_path<A, B>(base: A, relative: B) -> Result<PathBuf, String>

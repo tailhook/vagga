@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
-use super::config::{find_config, Config, Settings};
+use super::config::{find_config_or_exit, Config, Settings};
 use super::config::command::MainCommand::{Command, Supervise, CapsuleCommand};
 use config::read_settings::{read_settings, MergedSettings};
 
@@ -67,13 +67,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
 
     let workdir = current_dir().unwrap();
 
-    let (config, project_root) = match find_config(&workdir, false) {
-        Ok(tup) => tup,
-        Err(e) => {
-            writeln!(&mut err, "{}", e).ok();
-            return 126;
-        }
-    };
+    let (config, project_root) = find_config_or_exit(&workdir, false);
     let (ext_settings, int_settings) = match read_settings(&project_root)
     {
         Ok(tup) => tup,

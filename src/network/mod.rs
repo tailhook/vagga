@@ -4,7 +4,7 @@ use std::path::Path;
 use argparse::{ArgumentParser, Store, List};
 
 use config::Config;
-use super::config::read_config;
+use super::config::find_config_or_exit;
 use self::iptables::apply_graph;
 
 mod graphs;
@@ -50,10 +50,7 @@ pub fn run(cmdline: Vec<String>) -> i32 {
         }
     }
 
-
-    // TODO(tailhook) read also config from /work/.vagga/vagga.yaml
-    let cfg = read_config(&Path::new("/work/vagga.yaml")).ok()
-        .expect("Error parsing configuration file");  // TODO
+    let (cfg, _) = find_config_or_exit(&Path::new("/work"), false);
 
     args.insert(0, format!("vagga_network {}", kind));
     match run_command(&cfg, kind, args) {
