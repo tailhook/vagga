@@ -83,6 +83,9 @@ pub fn find_config(work_dir: &Path, show_warnings: bool)
             "Config not found in path {:?}", work_dir)),
     };
     assert!(cfg_dir.is_absolute());
+    if show_warnings {
+        info!("Found configuration file: {:?}", &filename);
+    }
     let cfg = read_config(&filename)?;
     validate_config(&cfg)?;
     return Ok((cfg, cfg_dir));
