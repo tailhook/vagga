@@ -47,10 +47,10 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
         command_validator()))
 }
 
-fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
+fn find_config_path(work_dir: &Path, show_warnings: bool)
     -> Option<(PathBuf, PathBuf)>
 {
-    let mut dir = work_dir.clone();
+    let mut dir = work_dir.to_path_buf();
     loop {
         if show_warnings {
             maybe_print_typo_warning(&dir.join(".vagga"));
@@ -72,7 +72,7 @@ fn find_config_path(work_dir: &PathBuf, show_warnings: bool)
     }
 }
 
-pub fn find_config(work_dir: &PathBuf, show_warnings: bool)
+pub fn find_config(work_dir: &Path, show_warnings: bool)
     -> Result<(Config, PathBuf), String>
 {
     let (cfg_dir, filename) = match find_config_path(
