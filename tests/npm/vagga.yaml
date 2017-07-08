@@ -43,3 +43,8 @@ containers:
     - !Alpine v3.4
     - !NpmDependencies
 
+  pkg-alpine-36:
+    setup:
+    - !Alpine v3.6
+    - !NpmInstall [resolve-cli]
+

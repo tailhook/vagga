@@ -281,7 +281,9 @@ impl Distro {
             // Node.js
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
-            packages::Npm => Some(vec!("nodejs")),  // Need duplicate?
+            packages::Npm if Version(&self.version) < Version("v3.6")
+            => Some(vec!("nodejs")),
+            packages::Npm => Some(vec!("nodejs", "nodejs-npm")),
             packages::Yarn => None,
             // PHP
             packages::Php => Some(self.php_system_deps()),

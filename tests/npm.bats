@@ -81,3 +81,12 @@ setup() {
     link=$(readlink .vagga/npm-dev-deps)
     [[ $link = ".roots/npm-dev-deps.55eea905/root" ]]
 }
+
+@test "npm: for alpine 3.6" {
+    run vagga _run pkg-alpine-36 resolve .
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = /work ]]
+    link=$(readlink .vagga/pkg-alpine-36)
+    [[ $link = ".roots/pkg-alpine-36.f51dedd3/root" ]]
+}
