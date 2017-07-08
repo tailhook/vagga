@@ -3,7 +3,7 @@ setup() {
     rm yarn.lock || true
 }
 
-@test "yarn: " {
+@test "yarn: minimal" {
     cat <<END > package.json
 {
   "devDependencies": {
@@ -39,4 +39,13 @@ END
     [[ ${lines[${#lines[@]}-7]} = "  File: /usr/lib/node_modules/classnames" ]]
     link=$(readlink .vagga/pkg)
     [[ $link = ".roots/pkg.1a63a916/root" ]]
+}
+
+@test "yarn: specific yarn version" {
+    run vagga version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "0.27.4" ]]
+    link=$(readlink .vagga/version)
+    [[ $link = ".roots/version.5bf1e107/root" ]]
 }

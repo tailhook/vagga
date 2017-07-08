@@ -5,6 +5,13 @@ containers:
     - !Alpine v3.5
     - !YarnDependencies
 
+  version:
+    setup:
+    - !Alpine v3.6
+    - !NpmConfig
+      yarn-version: v0.27.4
+    - !YarnDependencies
+
 
 commands:
   resolve: !Command
@@ -18,3 +25,7 @@ commands:
   stat: !Command
     container: pkg
     run: [stat]
+
+  version: !Command
+    container: version
+    run: [yarn, --version]

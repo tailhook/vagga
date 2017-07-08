@@ -1221,6 +1221,8 @@ Node.JS Commands
         (even if ``install-node`` is false). Yarn only installed if ``!Yarn*``
         commands are used.
 
+        .. versionadded:: v0.7.3
+
    yarn-exe
         (default is ``/usr/lib/yarn/bin/yarn``) The yarn command to use for
         installation of packages if ``!Yarn*`` commands are used.
@@ -1229,6 +1231,21 @@ Node.JS Commands
         mechanims for executables doesn't resolve absolute symlinks well.
         (I.e. bare executable name will work here as long as it's not an
         absolute symlink).  We may fix this in the future releases.
+
+        .. versionadded:: v0.7.3
+
+   yarn-version
+        (default is latest) The yarn verison to install for the ``!Yarn*``
+        commands. Only useful if ``install-yarn`` is enabled.
+
+        Example::
+
+        .. code-block:: yaml
+
+            - !NpmInstall
+              yarn-version: v0.27.5
+
+        .. versionadded:: v0.7.3
 
 .. step:: YarnDependencies
 
@@ -1255,6 +1272,8 @@ Node.JS Commands
        in :setup:`NpmDependencies` we don't specify the path to the file,
        but to the directory because we track both ``package.json`` and
        ``yarn.lock`` files in there.
+
+  .. versionadded:: v0.7.3
 
 .. _yarn: https://yarnpkg.com/
 

@@ -32,6 +32,7 @@ pub struct NpmConfig {
     pub install_yarn: bool,
     pub npm_exe: String,
     pub yarn_exe: String,
+    pub yarn_version: Option<String>,
 }
 
 impl NpmConfig {
@@ -39,6 +40,7 @@ impl NpmConfig {
         V::Structure::new()
         .member("npm_exe", V::Scalar::new().default("npm"))
         .member("yarn_exe", V::Scalar::new().default("/usr/lib/yarn/bin/yarn"))
+        .member("yarn_version", V::Scalar::new().default("latest"))
         .member("install_node", V::Scalar::new().default(true))
         .member("install_yarn", V::Scalar::new().default(true))
     }
@@ -83,6 +85,7 @@ impl Default for NpmConfig {
             install_yarn: true,
             npm_exe: "npm".to_string(),
             yarn_exe: "/usr/lib/yarn/bin/yarn".to_string(),
+            yarn_version: None,
         }
     }
 }
@@ -291,6 +294,7 @@ impl BuildStep for NpmConfig {
         if self.yarn_exe != "yarn" {
             hash.field("yarn_exe", &self.yarn_exe);
         }
+        hash.opt_field("yarn_version", &self.yarn_version);
         Ok(())
     }
     fn build(&self, guard: &mut Guard, _build: bool)
@@ -387,8 +391,14 @@ fn yarn_scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
 pub fn setup_yarn(ctx: &mut Context)
     -> Result<(), String>
 {
-    let filename = download_file(&mut ctx.capsule,
-        &["https://yarnpkg.com/latest.tar.gz"], None)?;
+    let link = match ctx.npm_settings.yarn_version {
+        Some(ref ver) => {
+            format!("https://github.com/yarnpkg/yarn/\
+                     releases/download/{0}/yarn-{0}.tar.gz", ver)
+        }
+        None => String::from("https://yarnpkg.com/latest.tar.gz"),
+    };
+    let filename = download_file(&mut ctx.capsule, &[&link], None)?;
     unpack_subdir(ctx, &filename,
         &Path::new("/vagga/root/usr/lib/yarn"), Path::new("dist"))?;
     symlink("/usr/lib/yarn/bin/yarn", "/vagga/root/usr/bin/yarn")
