@@ -40,7 +40,7 @@ impl NpmConfig {
         V::Structure::new()
         .member("npm_exe", V::Scalar::new().default("npm"))
         .member("yarn_exe", V::Scalar::new().default("/usr/lib/yarn/bin/yarn"))
-        .member("yarn_version", V::Scalar::new().default("latest"))
+        .member("yarn_version", V::Scalar::new().optional())
         .member("install_node", V::Scalar::new().default(true))
         .member("install_yarn", V::Scalar::new().default(true))
     }
