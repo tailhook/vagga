@@ -394,7 +394,7 @@ pub fn setup_yarn(ctx: &mut Context)
     let link = match ctx.npm_settings.yarn_version {
         Some(ref ver) => {
             format!("https://github.com/yarnpkg/yarn/\
-                     releases/download/{0}/yarn-{0}.tar.gz", ver)
+                     releases/download/v{0}/yarn-v{0}.tar.gz", ver)
         }
         None => String::from("https://yarnpkg.com/latest.tar.gz"),
     };
