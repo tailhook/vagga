@@ -15,7 +15,7 @@ use build_step::BuildStep;
 use container::util::clean_dir;
 use container::mount::{unmount, mount_system_dirs, mount_proc, mount_run};
 use container::mount::unmount_system_dirs;
-use file_util::{Dir, copy};
+use file_util::{Dir, copy, truncate_file};
 use path_util::IterSelfAndParents;
 
 
@@ -60,6 +60,8 @@ impl<'a> Guard<'a> {
              "Error creating /etc dir: {err}");
         copy("/etc/resolv.conf", "/vagga/root/etc/resolv.conf")
             .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
+        copy("/etc/hosts", "/vagga/root/etc/hosts")
+            .map_err(|e| format!("Error copying /etc/hosts: {}", e))?;
         self.ctx.timelog.mark(format_args!("Prepare"))
             .map_err(|e| format!("Can't write timelog: {}", e))?;
         Ok(())
@@ -94,6 +96,26 @@ impl<'a> Guard<'a> {
         }
         unmount(&Path::new("/vagga/root/run"))?;
         unmount_system_dirs()?;
+
+        // Truncate resolv.conf and hosts files
+        truncate_file("/vagga/root/etc/resolv.conf")?;
+        if let Some(ref resolv_path) =
+            self.ctx.container_config.resolv_conf_path
+        {
+            if resolv_path != Path::new("/etc/resolv.conf") {
+                truncate_file(
+                    &base.join(resolv_path.strip_prefix("/").unwrap()))?;
+            }
+        }
+        truncate_file("/vagga/root/etc/hosts")?;
+        if let Some(ref hosts_path) =
+            self.ctx.container_config.hosts_file_path
+        {
+            if hosts_path != Path::new("/etc/hosts") {
+                truncate_file(
+                    &base.join(hosts_path.strip_prefix("/").unwrap()))?;
+            }
+        }
 
         for path in self.ctx.remove_paths.iter() {
             try_msg!(dirs::remove(&Path::new("/").join(path)),

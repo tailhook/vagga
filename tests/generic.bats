@@ -583,3 +583,22 @@ site_settings:
     [[ $output != *"Failed to remount"* ]]
     [[ $output = *"Read-only file system"* ]]
 }
+
+@test "generic: resolv-file-path & hosts-file-path" {
+    run vagga _build resolv-conf-and-hosts
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/resolv-conf-and-hosts)
+    [[ $link = ".roots/resolv-conf-and-hosts.57222830/root" ]]
+    [[ $(cat .vagga/resolv-conf-and-hosts/state/resolv.conf) = "" ]]
+    [[ $(cat .vagga/resolv-conf-and-hosts/state/hosts) = "" ]]
+    resolv_link=$(readlink .vagga/resolv-conf-and-hosts/etc/resolv.conf)
+    hosts_link=$(readlink .vagga/resolv-conf-and-hosts/etc/hosts)
+    [[ $resolv_link = "/state/resolv.conf" ]]
+    [[ $hosts_link = "/state/hosts" ]]
+
+    run vagga _run resolv-conf-and-hosts cat /state/resolv.conf
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(cat /etc/resolv.conf) = $output ]]
+}

@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::env::{current_exe};
-use std::io::{BufRead, BufReader, ErrorKind, Write};
-use std::fs::{read_link};
+use std::io::{self, BufRead, BufReader, ErrorKind, Write};
+use std::fs::{read_link, OpenOptions};
 use std::fs::File;
 use std::os::unix::fs::{symlink};
 use std::path::{Path, PathBuf};
@@ -20,7 +20,7 @@ use container::mount::{mount_proc, mount_dev, mount_run};
 use container::util::{hardlink_dir, clean_dir};
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
-use file_util::{Dir, copy, safe_ensure_dir};
+use file_util::{Dir, safe_ensure_dir};
 use wrapper::snapshot::make_snapshot;
 use container::util::version_from_symlink;
 use storage_dir::sanitize;
@@ -231,9 +231,17 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let etc_dir = mnt_dir.join("etc");
     try_msg!(Dir::new(&etc_dir).create(),
              "Error creating /etc: {err}");
-    copy(&Path::new("/etc/hosts"), &etc_dir.join("hosts"))
-        .map_err(|e| format!("Error copying /etc/hosts: {}", e))?;
-    copy(&Path::new("/etc/resolv.conf"), &etc_dir.join("resolv.conf"))
+    let ref hosts_path = etc_dir.join("hosts");
+    File::create(hosts_path).map_err(|e|
+        format!("Cannot create {:?} file: {}", hosts_path, e))?;
+    BindMount::new(Path::new("/etc/hosts"), hosts_path)
+        .mount()
+        .map_err(|e| format!("Error mounting /etc/hosts: {}", e))?;
+    let ref resolv_path = etc_dir.join("resolv.conf");
+    File::create(resolv_path).map_err(|e|
+        format!("Cannot create {:?} file: {}", resolv_path, e))?;
+    BindMount::new(&Path::new("/etc/resolv.conf"), resolv_path)
+        .mount()
         .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
 
     let local_base = vagga_dir.join("base");
@@ -415,7 +423,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     match setup_info.write_mode {
         WriteMode::ReadOnly => {
             let nroot = image_base.join("root");
-            try_msg!(BindMount::new(&nroot, &tgtroot).mount(),
+            try_msg!(BindMount::new(&nroot, &tgtroot).readonly(true).mount(),
                  "mount root: {err}");
         }
         WriteMode::TransientHardlinkCopy(pid) => {
@@ -578,25 +586,15 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     }
 
     if let Some(path) = setup_info.resolv_conf_path {
-        let path = tgtroot.join(path.strip_prefix("/").unwrap());
-        copy(&Path::new("/etc/resolv.conf"), &path)
-            .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
+        if !setup_info.volumes.contains_key(&path) {
+            let ref path = tgtroot.join(path.strip_prefix("/").unwrap());
+            create_and_mount(Path::new("/etc/resolv.conf"), path)?;
+        }
     }
     if let Some(path) = setup_info.hosts_file_path {
-        let path = tgtroot.join(path.strip_prefix("/").unwrap());
-        copy(&Path::new("/etc/hosts"), &path)
-            .map_err(|e| format!("Error copying /etc/hosts: {}", e))?;
-    }
-
-    //  Currently we need the root to be writeable for putting resolv.conf and
-    //  hosts.  It's a bit ugly but bearable for development environments.
-    //  Eventually we'll find a better way
-    if setup_info.write_mode == WriteMode::ReadOnly {
-        if let Err(e) = Remount::new(&tgtroot).bind(true).readonly(true).remount() {
-            warn!("Failed to remount readonly root of the file system: {}. \
-                Some programs may overwrite files in initial system image. \
-                This is usually happen when root filesystem is on tmpfs. \
-                You may ignore the error.", e);
+        if !setup_info.volumes.contains_key(&path) {
+            let ref path = tgtroot.join(path.strip_prefix("/").unwrap());
+            create_and_mount(Path::new("/etc/hosts"), path)?;
         }
     }
 
@@ -604,5 +602,21 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
          .map_err(|e| format!("Error changing root: {}", e))?;
     unmount(&Path::new("/tmp"))
          .map_err(|e| format!("Error unmounting `/tmp`: {}", e))?;
+    Ok(())
+}
+
+fn create_and_mount(src: &Path, dst: &Path) -> Result<(), String> {
+    OpenOptions::new().write(true).create_new(true).open(dst)
+        .map(|_| ())
+        .or_else(|e| {
+            if e.kind() == io::ErrorKind::AlreadyExists {
+                Ok(())
+            } else {
+                Err(format!("Cannot create file {:?}: {}", dst, e))
+            }
+        })?;
+    BindMount::new(src, dst)
+        .mount()
+        .map_err(|e| format!("Error mounting {:?}: {}", src, e))?;
     Ok(())
 }
