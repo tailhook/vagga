@@ -50,5 +50,5 @@ END
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "0.27.4" ]]
     link=$(readlink .vagga/version)
-    [[ $link = ".roots/version.a2d99a0c/root" ]]
+    [[ $link = ".roots/version.5bf1e107/root" ]]
 }
