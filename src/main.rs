@@ -26,6 +26,7 @@ extern crate docopt;
 extern crate humantime;
 extern crate digest_writer;
 extern crate itertools;
+extern crate git2;
 extern crate path_filter;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate mopa;

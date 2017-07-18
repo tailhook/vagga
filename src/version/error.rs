@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use regex;
 use rustc_serialize::json;
 use scan_dir;
+use git2;
 
 use path_filter;
 
@@ -61,6 +62,10 @@ quick_error! {
             display("error reading json {:?}: {:?}", path, err)
             context(p: &'a PathBuf, err: json::BuilderError)
                 -> (err, p.to_path_buf())
+        }
+        GitError(err: git2::Error) {
+            from()
+            display("{}", err)
         }
     }
 }

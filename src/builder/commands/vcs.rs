@@ -1,9 +1,13 @@
-use std::fs::rename;
-use std::fs::create_dir_all;
+use std::io::Write;
+use std::fs::{File, create_dir_all, rename};
 use std::path::{Path, PathBuf};
+use std::ffi::OsStr;
+use std::collections::BTreeMap;
 
+use git2::{self, DescribeOptions, Repository, RepositoryOpenFlags};
 use unshare::{Command, Stdio};
 
+use quire::ast::{Ast, Tag};
 use quire::validate as V;
 use builder::commands::subcontainer::GitSource;
 use capsule::packages as capsule;
@@ -55,6 +59,47 @@ impl GitInstall {
     }
 }
 
+#[derive(RustcDecodable, Debug)]
+pub struct GitDescribe {
+    repo: PathBuf,
+    output_file: Option<PathBuf>,
+}
+
+fn git_describe_parser(ast: Ast) -> BTreeMap<String, Ast> {
+    match ast {
+        Ast::Scalar(pos, _, style, value) => {
+            let mut map = BTreeMap::new();
+            map.insert("output_file".to_string(),
+                Ast::Scalar(pos.clone(), Tag::NonSpecific, style, value));
+            map
+        },
+        _ => unreachable!(),
+    }
+}
+
+impl GitDescribe {
+    pub fn config() -> V::Structure<'static> {
+        V::Structure::new()
+            .member("repo", V::Directory::new().default("/work"))
+            .member("output_file",
+                V::Directory::new().optional().absolute(true))
+            .parser(git_describe_parser)
+    }
+
+    fn describe(&self) -> Result<String, git2::Error> {
+        let _repo_path;
+        let repo_path = if self.repo.is_relative() {
+            _repo_path = Path::new("/work").join(&self.repo);
+            &_repo_path
+        } else {
+            &self.repo
+        };
+        let git_repo = Repository::open_ext(repo_path,
+            RepositoryOpenFlags::empty(), &[] as &[&OsStr])?;
+        let describe = git_repo.describe(&DescribeOptions::default())?;
+        Ok(format!("{}", describe.format(None)?))
+    }
+}
 
 fn git_cache(url: &String) -> Result<PathBuf, String> {
     let dirname = url.replace("%", "%25").replace("/", "%2F");
@@ -192,4 +237,31 @@ impl BuildStep for GitInstall {
     fn is_dependent_on(&self) -> Option<&str> {
         None
     }
+}
+
+impl BuildStep for GitDescribe {
+    fn name(&self) -> &'static str { "GitDescribe" }
+    fn hash(&self, _cfg: &Config, hash: &mut Digest)
+        -> Result<(), VersionError>
+    {
+        hash.field("repo", &self.repo);
+        hash.opt_field("output_file", &self.output_file);
+        hash.field("describe", &self.describe()?);
+        Ok(())
+    }
+    fn build(&self, _guard: &mut Guard, build: bool) -> Result<(), StepError> {
+        if build {
+            if let Some(ref output_file) = self.output_file {
+                let describe = self.describe()?;
+                let output_path = Path::new("/vagga/root")
+                    .join(output_file.strip_prefix("/").unwrap());
+                File::create(&output_path)
+                    .and_then(|mut f| f.write_all(describe.as_bytes()))
+                    .map_err(|e| format!("Can't create file: {}", e))?;
+            }
+
+        }
+        Ok(())
+    }
+    fn is_dependent_on(&self) -> Option<&str> { None }
 }

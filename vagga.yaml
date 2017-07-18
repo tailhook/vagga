@@ -17,7 +17,7 @@ containers:
     setup:
     - !Ubuntu xenial
     - !UbuntuUniverse
-    - !Install [build-essential, ca-certificates]
+    - !Install [build-essential, ca-certificates, cmake, zlib1g-dev]
     - !Install [file]  # dependency of checkinstall (bug #46)
 
     - !TarInstall
@@ -41,8 +41,8 @@ containers:
     setup:
     - !Ubuntu xenial
     - !UbuntuUniverse
-    - !BuildDeps [wget, git]
-    - !Install [make, curl, zip, file]
+    - !BuildDeps [wget]
+    - !Install [make, curl, zip, file, git]
     - !Sh |
         set -ex
         cd /tmp

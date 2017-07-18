@@ -6,6 +6,7 @@ use unshare;
 use scan_dir;
 use libmount;
 use path_filter;
+use git2;
 
 use build_step::BuildStep;
 use builder::packages::Package;
@@ -91,6 +92,10 @@ quick_error! {
             display("{}", message)
         }
         MountError(err: libmount::Error) {
+            from()
+            display("{}", err)
+        }
+        GitError(err: git2::Error) {
             from()
             display("{}", err)
         }

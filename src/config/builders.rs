@@ -22,6 +22,7 @@ const COMMANDS: &'static [&'static str] = &[
     "BuildDeps",
     "Git",
     "GitInstall",
+    "GitDescribe",
     "PipConfig",
     "Py2Install",
     "Py2Requirements",
@@ -109,6 +110,7 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("Depends", cmd::copy::Depends::config())
     .option("Git", cmd::vcs::Git::config())
     .option("GitInstall", cmd::vcs::GitInstall::config())
+    .option("GitDescribe", cmd::vcs::GitDescribe::config())
     .option("Tar", cmd::tarcmd::Tar::config())
     .option("TarInstall", cmd::tarcmd::TarInstall::config())
     .option("Unzip", cmd::unzip::Unzip::config())
@@ -162,6 +164,7 @@ fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
         "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
         "Git" => step(cmd::vcs::Git::decode(d)),
         "GitInstall" => step(cmd::vcs::GitInstall::decode(d)),
+        "GitDescribe" => step(cmd::vcs::GitDescribe::decode(d)),
         "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
         "Py2Install" => step(cmd::pip::Py2Install::decode(d)),
         "Py2Requirements" => step(cmd::pip::Py2Requirements::decode(d)),

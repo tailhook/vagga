@@ -614,6 +614,32 @@ Generic Commands
       is run using `/bin/sh -exc`
 
 
+.. step:: GitDescribe
+
+   Finds the most recent tag for the given git repository, takes it into account
+   when calculating container's hash and writes it into a file if the last is
+   specified.
+
+   Examples::
+
+      setup:
+      # Only put tag information into the container's hash
+      - !GitDescribe
+      # Also write the most recent tag into the file
+      - !GitDescribe /version.txt
+      # Specify another path to the git repository
+      - !GitDescribe
+        repo: /work/subrepo
+        output_file: /version.txt
+
+   Options:
+
+   repo
+      (default ``/work``) Path to the git repository.
+
+   output_file
+      (optional) Writes the most recent tag into the file.
+
 Files and Directories
 =====================
 
