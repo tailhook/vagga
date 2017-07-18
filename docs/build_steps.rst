@@ -630,14 +630,14 @@ Generic Commands
       # Specify another path to the git repository
       - !GitDescribe
         repo: /work/subrepo
-        output_file: /version.txt
+        output-file: /version.txt
 
    Options:
 
    repo
       (default ``/work``) Path to the git repository.
 
-   output_file
+   output-file
       (optional) Writes the most recent tag into the file.
 
 Files and Directories
