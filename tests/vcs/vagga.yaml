@@ -15,6 +15,14 @@ containers:
       url: git://github.com/jdp/urp
       script: python setup.py install
 
+  git-describe:
+    setup:
+    - !GitDescribe /version.txt
+
+  git-describe-no-file:
+    setup:
+    - !GitDescribe
+
 
 commands:
   urp-git: !Command

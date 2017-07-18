@@ -19,3 +19,37 @@ setup() {
     link=$(readlink .vagga/git-install)
     [[ $link = ".roots/git-install.4e1d802a/root" ]]
 }
+
+@test "vcs: git describe" {
+    rm -rf .git
+    git init
+    git config user.email test@example.com
+    git config user.name Test
+    git add vagga.yaml
+    git commit -m "Initial commit"
+    git tag -a v0.0.1 -m "Test tag"
+    git describe
+
+    run vagga _build git-describe-no-file
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+
+    run vagga _build git-describe
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/git-describe)
+    [[ $link = ".roots/git-describe.022317fb/root" ]]
+    [[ $(cat .vagga/git-describe/version.txt) = "v0.0.1" ]]
+
+    touch test.txt
+    git add -f test.txt
+    git commit -m "Test commit"
+    git describe
+
+    run vagga _build git-describe
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    new_link=$(readlink .vagga/git-describe)
+    [[ $link != $new_link ]]
+    [[ $(cat .vagga/git-describe/version.txt) = "v0.0.1-1-"* ]]
+}
