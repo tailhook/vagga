@@ -385,3 +385,28 @@ pub fn safe_remove<P: AsRef<Path>>(path: P) -> io::Result<()> {
             }
         })
 }
+
+pub fn truncate_file<P: AsRef<Path>>(path: P) -> Result<(), String> {
+    let path = path.as_ref();
+    if path.symlink_metadata()
+        .map(|m| m.file_type().is_file())
+        .or_else(|e| {
+            if e.kind() == io::ErrorKind::NotFound {
+                Ok(true)
+            } else {
+                Err(format!("Cannot stat {:?} file: {}", path, e))
+            }
+        })?
+    {
+        fs::File::create(path).map_err(|e| {
+            if e.kind() == io::ErrorKind::NotFound {
+                format!(
+                    "Cannot create file {:?}: no such directory {:?}",
+                    path, path.parent())
+            } else {
+                format!("Cannot truncate file {:?}: {}", path, e)
+            }
+        })?;
+    }
+    Ok(())
+}

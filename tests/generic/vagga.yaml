@@ -259,6 +259,18 @@ containers:
     setup:
     - !Alpine v3.4
 
+  resolv-conf-and-hosts:
+    resolv-conf-path: /state/resolv.conf
+    hosts-file-path: /state/hosts
+    volumes:
+      /state: !Tmpfs
+    setup:
+    - !Alpine v3.6
+    - !EnsureDir /state
+    - !Sh |
+        ln -sfn /state/resolv.conf /etc/resolv.conf
+        ln -sfn /state/hosts /etc/hosts
+
 commands:
   two-lines: !Supervise
     children:
