@@ -25,6 +25,7 @@ mod storage_dir;
 mod supervisor;
 mod simple;
 mod capsule;
+mod sphinx;
 
 pub mod wrap;
 pub mod system;

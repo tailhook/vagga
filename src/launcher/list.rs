@@ -1,9 +1,17 @@
 use std::io::{stdout, stderr, Write};
 use std::rc::Rc;
 
-use argparse::{ArgumentParser, StoreTrue};
+use argparse::{ArgumentParser, StoreTrue, StoreConst};
 
 use config::Config;
+use launcher::sphinx;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Format {
+    Text,
+    Zsh,
+    Sphinx,
+}
 
 
 pub fn print_list(config: &Config, mut args: Vec<String>)
@@ -13,7 +21,7 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
     let mut builtin = false;
     let mut hidden = false;
     let mut containers = false;
-    let mut zsh = false;
+    let mut format = Format::Text;
     let mut verbose = false;
     {
         args.insert(0, String::from("vagga _list"));
@@ -30,9 +38,11 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
         ap.refer(&mut hidden)
             .add_option(&["--hidden"], StoreTrue,
                 "Show hidden commands");
-        ap.refer(&mut zsh)
-            .add_option(&["--zsh"], StoreTrue,
-                "Use zsh completion compatible format");
+        ap.refer(&mut format)
+            .add_option(&["--zsh"], StoreConst(Format::Zsh),
+                "Use zsh completion compatible format")
+            .add_option(&["--sphinx"], StoreConst(Format::Sphinx),
+                "Print sphinx-friendly restructured text (experimental)");
         ap.refer(&mut verbose)
             .add_option(&["-v", "--verbose"], StoreTrue,
                 "Verbose output (show source files
@@ -51,6 +61,9 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
                 }
             }
         }
+    } else if format == Format::Sphinx {
+        sphinx::write_commands(&mut stdout(), config,
+            hidden || all, "Vagga Commands").ok();
     } else {
         let ref builtins = Some(Rc::new("<builtins>".into()));
         let mut commands: Vec<_> = config.commands.iter()
@@ -97,37 +110,41 @@ pub fn print_list(config: &Config, mut args: Vec<String>)
             if name.starts_with("_") && !(hidden || all) {
                 continue;
             }
-            if zsh {
-                let descr_line = description
-                    .lines().next().unwrap_or(&"");
-                out.write_all(name.as_bytes()).ok();
-                out.write_all(":".as_bytes()).ok();
-                out.write_all(descr_line.as_bytes()).ok();
-                out.write_all(b"\n").ok();
-            } else {
-                out.write_all(name.as_bytes()).ok();
-                if name.len() > 19 {
-                    out.write_all(b"\n                    ").ok();
-                } else {
-                    for _ in name.len()..19 {
+            match format {
+                Format::Zsh => {
+                    let descr_line = description
+                        .lines().next().unwrap_or(&"");
+                    out.write_all(name.as_bytes()).ok();
+                    out.write_all(":".as_bytes()).ok();
+                    out.write_all(descr_line.as_bytes()).ok();
+                    out.write_all(b"\n").ok();
+                }
+                Format::Text => {
+                    out.write_all(name.as_bytes()).ok();
+                    if name.len() > 19 {
+                        out.write_all(b"\n                    ").ok();
+                    } else {
+                        for _ in name.len()..19 {
+                            out.write_all(b" ").ok();
+                        }
                         out.write_all(b" ").ok();
                     }
-                    out.write_all(b" ").ok();
-                }
-                if description.contains("\n") {
-                    for line in description.lines() {
-                        out.write_all(line.as_bytes()).ok();
-                        out.write_all(b"\n                    ").ok();
-                    };
-                } else {
-                    out.write_all(description.as_bytes()).ok();
-                }
-                out.write_all(b"\n").ok();
-                if let Some(ref src) = *source {
-                    if verbose {
-                        println!("{:19} (from {:?})", " ", &src);
+                    if description.contains("\n") {
+                        for line in description.lines() {
+                            out.write_all(line.as_bytes()).ok();
+                            out.write_all(b"\n                    ").ok();
+                        };
+                    } else {
+                        out.write_all(description.as_bytes()).ok();
+                    }
+                    out.write_all(b"\n").ok();
+                    if let Some(ref src) = *source {
+                        if verbose {
+                            println!("{:19} (from {:?})", " ", &src);
+                        }
                     }
                 }
+                Format::Sphinx => unreachable!(),
             }
         }
     }
