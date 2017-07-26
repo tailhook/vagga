@@ -38,7 +38,7 @@ quick-error = "1.1.0"
 docopt = "0.6.83"
 quire = "0.2.1"
 lazy_static = "0.2.2"
-dir-signature = { git = "https://github.com/tailhook/dir-signature.git", rev = "9fd30db", optional=true }
+dir-signature = { version="0.2.0", optional=true }
 itertools = "0.5.8"
 git2 = { version="0.6.6", default-features=false }
 path-filter = { version = "0.1.0", path = "path_filter"}

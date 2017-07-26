@@ -4,7 +4,7 @@ use std::fs::{File, remove_file};
 use std::collections::HashMap;
 
 use dir_signature::{v1, ScannerConfig as Sig};
-use dir_signature::HashType::Blake2b_256 as Blake;
+use dir_signature::HashType;
 
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
@@ -222,7 +222,7 @@ pub fn index_image() -> Result<(), String> {
         .map_err(|e| format!("Can't write index: {}", e))?;
     warn!("Indexing container...");
     v1::scan(Sig::new()
-            .hash(Blake)
+            .hash(HashType::blake2b_256())
             .add_dir("/vagga/root", "/"),
         &mut BufWriter::new(index)
     ).map_err(|e| format!("Error indexing: {}", e))
