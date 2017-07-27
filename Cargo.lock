@@ -190,7 +190,7 @@ dependencies = [
  "itertools 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "openat 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "openat 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -534,7 +534,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "openat"
-version = "0.1.10"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.28 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -921,7 +921,7 @@ dependencies = [
 "checksum num-traits 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)" = "99843c856d68d8b4313b03a17e33c4bb42ae8f6610ea81b28abe076ac721b9b0"
 "checksum num_cpus 1.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "aec53c34f2d0247c5ca5d32cca1478762f301740468ee9ee6dcb7a0dd7a0c584"
 "checksum odds 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "c3df9b730298cea3a1c3faa90b7e2f9df3a9c400d0936d6015e6165734eefcba"
-"checksum openat 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "f7c8610922fc53ba9704e3019c67730d41212ed66dd258b2908673fb69711884"
+"checksum openat 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)" = "cca26c1fecf909e6f93f5628aa5490a985565348883a05117112809ac5b11524"
 "checksum percent-encoding 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "de154f638187706bde41d9b4738748933d64e6b37bdbffc0b47a97d16a6ae356"
 "checksum pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "3a8b4c6b8165cd1a1cd4b9b120978131389f64bdaf456435caa41e630edba903"
 "checksum podio 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e5422a1ee1bc57cc47ae717b0137314258138f38fd5f3cea083f43a9725383a0"

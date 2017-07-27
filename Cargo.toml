@@ -7,7 +7,7 @@ authors = ["Paul Colomiets"]
 members = ["path_filter"]
 
 [dependencies]
-libc = "0.2.10"
+libc = "0.2.28"
 nix = "0.7.0"
 sha2 = "0.3.0"
 blake2 = "0.3.0"
