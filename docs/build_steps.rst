@@ -640,6 +640,8 @@ Generic Commands
    output-file
       (optional) Writes the most recent tag into the file.
 
+   .. versionadded:: 0.7.3
+
 Files and Directories
 =====================
 
@@ -724,6 +726,15 @@ Files and Directories
      (default ``false``)
      Whether to preserve permissions of the copied files. If ``false``
      ``umask`` option is taken into account.
+
+   preserve-times
+     (default ``false``)
+     If ``true`` preserves modification times of the copied files. By default
+     modification times set to the first second from the unix epoch. This
+     behaviour is useful for reproducible builds.
+     Before ``0.7.3`` modification times were set to the current time.
+
+     .. versionadded:: 0.7.3
 
    umask
      (default ``0o002``)

@@ -10,13 +10,15 @@ use quire::validate as V;
 use path_filter::{PathFilter, FilterError};
 
 use container::root::temporary_change_root;
-use file_util::shallow_copy;
+use file_util::ShallowCopy;
 use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
 
 
 const DEFAULT_UMASK: u32 = 0o002;
+const DEFAULT_ATIME: i64 = 1;
+const DEFAULT_MTIME: i64 = 1;
 
 const DIR_MODE: u32 = 0o777;
 const FILE_MODE: u32 = 0o666;
@@ -116,6 +118,7 @@ pub struct Copy {
     pub owner_gid: Option<gid_t>,
     pub umask: u32,
     pub preserve_permissions: bool,
+    pub preserve_times: bool,
     pub ignore_regex: Option<String>,
     pub include_regex: Option<String>,
     pub rules: Vec<String>,
@@ -136,6 +139,7 @@ impl Copy {
         .member("umask", V::Numeric::new().min(0).max(0o777).default(
             DEFAULT_UMASK as i64))
         .member("preserve_permissions", V::Scalar::new().default(false))
+        .member("preserve_times", V::Scalar::new().default(false))
     }
 
     fn calc_mode(&self, stat: &Metadata) -> Option<u32> {
@@ -194,6 +198,9 @@ impl BuildStep for Copy {
                 hash.field("umask", self.umask);
             }
         }
+        if self.preserve_times {
+            hash.field("preserve_times", self.preserve_times);
+        }
         Ok(())
     }
     fn build(&self, _guard: &mut Guard, build: bool)
@@ -208,9 +215,12 @@ impl BuildStep for Copy {
             let ref typ = src.symlink_metadata()
                 .map_err(|e| StepError::Read(src.into(), e))?;
             if typ.is_dir() {
-                shallow_copy(src, typ, dest,
-                        self.owner_uid, self.owner_gid,
-                        self.calc_mode(typ))
+                ShallowCopy::new(src, dest)
+                    .src_stat(typ)
+                    .owner_uid(self.owner_uid)
+                    .owner_gid(self.owner_gid)
+                    .mode(self.calc_mode(typ))
+                    .copy()
                     .context((src, dest))?;
                 let filter = create_path_filter(
                     &self.rules, self.no_default_rules,
@@ -231,20 +241,34 @@ impl BuildStep for Copy {
                             let ref fsrc = src.join(parent);
                             let ref fsrc_stat = fsrc.symlink_metadata()
                                 .map_err(|e| StepError::Read(src.into(), e))?;
-                            shallow_copy(fsrc, fsrc_stat, fdest,
-                                    self.owner_uid, self.owner_gid,
-                                    self.calc_mode(fsrc_stat))
-                                 .context((fsrc, fdest))?;
+                            let mut cp = ShallowCopy::new(fsrc, fdest);
+                            cp.src_stat(fsrc_stat)
+                                .owner_uid(self.owner_uid)
+                                .owner_gid(self.owner_gid)
+                                .mode(self.calc_mode(fsrc_stat));
+                            if self.preserve_times {
+                                cp.preserve_times();
+                            } else {
+                                cp.times(DEFAULT_ATIME, DEFAULT_MTIME);
+                            }
+                            cp.copy().context((fsrc, fdest))?;
                             processed_paths.insert(PathBuf::from(parent));
                         }
                     }
                     Ok(())
                 }).map_err(StepError::PathFilter).and_then(|x| x)?;
             } else {
-                shallow_copy(src, typ, dest,
-                        self.owner_uid, self.owner_gid,
-                        self.calc_mode(typ))
-                    .context((src, dest))?;
+                let mut cp = ShallowCopy::new(src, dest);
+                cp.src_stat(typ)
+                    .owner_uid(self.owner_uid)
+                    .owner_gid(self.owner_gid)
+                    .mode(self.calc_mode(typ));
+                if self.preserve_times {
+                    cp.preserve_times();
+                } else {
+                    cp.times(DEFAULT_ATIME, DEFAULT_MTIME);
+                }
+                cp.copy().context((src, dest))?;
             }
             Ok(())
         })
