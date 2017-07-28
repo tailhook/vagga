@@ -721,9 +721,9 @@ Files and Directories
      will be set to ``nobody`` (65535).
 
    preserve-permissions
-     (default ``true``)
-     Whether to preserve permissions of the copied files. If ``false`` ``umask``
-     option is taken into account.
+     (default ``false``)
+     Whether to preserve permissions of the copied files. If ``false``
+     ``umask`` option is taken into account.
 
    umask
      (default ``0o002``)
