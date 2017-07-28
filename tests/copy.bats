@@ -24,6 +24,9 @@ setup() {
     [[ $(stat -c "%a" ".vagga/dir-copy/var/dir/exe.sh") = "775" ]]
     [[ $(stat -c "%a" ".vagga/dir-copy/var/dir/subdir") = "775" ]]
     [[ $(stat -c "%a" ".vagga/dir-copy/var/dir/subdir/file") = "664" ]]
+    # By default we set atime and mtime to 1970-01-01 00:00:01
+    [[ $(stat -c "%X" ".vagga/dir-copy/var/dir/hello") = 1 ]]
+    [[ $(stat -c "%Y" ".vagga/dir-copy/var/dir/hello") = 1 ]]
 }
 
 @test "copy: file" {
@@ -170,4 +173,14 @@ setup() {
     run vagga _version_hash --short depends-glob-rules
     printf "%s\n" "${lines[@]}"
     [[ $output = "375d1004" ]]
+}
+
+@test "copy: preserve times" {
+    run vagga _build copy-preserve-times
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/copy-preserve-times)
+    [[ $link = ".roots/copy-preserve-times.6ca4b065/root" ]]
+    [[ $(stat -c '%X %Y' .vagga/copy-preserve-times/dir/hello) = \
+       $(stat -c '%X %Y' dir/hello) ]]
 }

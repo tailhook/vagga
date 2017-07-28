@@ -307,16 +307,101 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
     }
 }
 
+enum CopyTimePolicy {
+    None,
+    Preserve,
+    Set(i64, i64),
+}
+
 /// Shallow copy of file/dir/symlink
 ///
 /// The owner_uid/owner_gid parameters optionally override the owner
 ///
 /// Returns false if path is a directory
-pub fn shallow_copy(src: &Path, src_stat: &Metadata, dest: &Path,
+pub struct ShallowCopy<'s, 'm, 'd> {
+    src: &'s Path,
+    src_stat: Option<&'m Metadata>,
+    dst: &'d Path,
+    owner_uid: Option<u32>,
+    owner_gid: Option<u32>,
+    mode: Option<u32>,
+    time_policy: CopyTimePolicy,
+}
+
+impl<'s, 'm, 'd> ShallowCopy<'s, 'm, 'd> {
+    pub fn new(src: &'s Path, dst: &'d Path)
+        -> ShallowCopy<'s, 'm, 'd>
+    {
+        ShallowCopy {
+            src: src,
+            src_stat: None,
+            dst: dst,
+            owner_uid: None,
+            owner_gid: None,
+            mode: None,
+            time_policy: CopyTimePolicy::None,
+        }
+    }
+
+    pub fn src_stat(&mut self, stat: &'m Metadata)
+        -> &mut ShallowCopy<'s, 'm, 'd>
+    {
+        self.src_stat = Some(stat);
+        self
+    }
+
+    pub fn owner_uid<T: Into<Option<u32>>>(&mut self, uid: T)
+        -> &mut ShallowCopy<'s, 'm, 'd>
+    {
+        self.owner_uid = uid.into();
+        self
+    }
+
+    pub fn owner_gid<T: Into<Option<u32>>>(&mut self, gid: T)
+        -> &mut ShallowCopy<'s, 'm, 'd>
+    {
+        self.owner_gid = gid.into();
+        self
+    }
+
+    pub fn mode<T: Into<Option<u32>>>(&mut self, mode: T)
+        -> &mut ShallowCopy<'s, 'm, 'd>
+    {
+        self.mode = mode.into();
+        self
+    }
+
+    pub fn times(&mut self, atime: i64, mtime: i64)
+        -> &mut ShallowCopy<'s, 'm, 'd>
+    {
+        self.time_policy = CopyTimePolicy::Set(atime, mtime);
+        self
+    }
+
+    pub fn preserve_times(&mut self) -> &mut ShallowCopy<'s, 'm, 'd>
+    {
+        self.time_policy = CopyTimePolicy::Preserve;
+        self
+    }
+
+    pub fn copy(&self) -> io::Result<bool> {
+        shallow_copy(self.src, self.src_stat, self.dst,
+            self.owner_uid, self.owner_gid, self.mode, &self.time_policy)
+    }
+}
+
+fn shallow_copy(src: &Path, src_stat: Option<&Metadata>, dest: &Path,
     owner_uid: Option<uid_t>, owner_gid: Option<gid_t>,
-    mode: Option<u32>)
+    mode: Option<u32>, time_policy: &CopyTimePolicy)
     -> Result<bool, io::Error>
 {
+    let _src_stat;
+    let src_stat = if let Some(stat) = src_stat {
+        stat
+    } else {
+        _src_stat = src.symlink_metadata()?;
+        &_src_stat
+    };
     let src_type = src_stat.file_type();
     let mut is_dir = false;
     if src_type.is_dir() {
@@ -352,6 +437,15 @@ pub fn shallow_copy(src: &Path, src_stat: &Metadata, dest: &Path,
         set_owner_group(dest,
             owner_uid.unwrap_or(src_stat.uid()),
             owner_gid.unwrap_or(src_stat.gid()))?;
+        match *time_policy {
+            CopyTimePolicy::None => {},
+            CopyTimePolicy::Preserve => {
+                set_times(dest, src_stat.atime(), src_stat.mtime())?;
+            },
+            CopyTimePolicy::Set(atime, mtime) => {
+                set_times(dest, atime, mtime)?;
+            },
+        }
     }
     Ok(!is_dir)
 }
@@ -360,10 +454,18 @@ pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
     -> io::Result<()>
 {
     let metadata = fs::metadata(from.as_ref())?;
-    let filename = CString::new(to.as_ref().as_os_str().as_bytes()).unwrap();
+    set_times(to, metadata.atime(), metadata.mtime())?;
+    Ok(())
+}
+
+
+pub fn set_times<P: AsRef<Path>>(path: P, atime: i64, mtime: i64)
+    -> io::Result<()>
+{
+    let filename = CString::new(path.as_ref().as_os_str().as_bytes()).unwrap();
     let utimes = utimbuf {
-        actime: metadata.atime(),
-        modtime: metadata.mtime(),
+        actime: atime,
+        modtime: mtime,
     };
     let rc = unsafe { utime(filename.as_ptr(), &utimes) };
     if rc != 0 {

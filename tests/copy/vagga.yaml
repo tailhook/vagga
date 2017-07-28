@@ -90,6 +90,12 @@ containers:
       source: /work/dir
       path: /dir
       preserve-permissions: true
+  copy-preserve-times:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      preserve-times: true
   depends-with-include:
     setup:
     - !Depends

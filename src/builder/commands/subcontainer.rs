@@ -8,7 +8,7 @@ use config::read_config;
 use config::containers::Container as Cont;
 use version::short_version;
 use container::util::{copy_dir};
-use file_util::{Dir, shallow_copy};
+use file_util::{Dir, ShallowCopy};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 use builder::error::StepError as E;
@@ -114,10 +114,7 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
                 try_msg!(copy_dir(&path, &dest, None, None),
                     "Error copying dir {p:?}: {err}", p=path);
             } else {
-                let path_stat = path.symlink_metadata()
-                    .map_err(|e| StepError::Read(path.clone(), e))?;
-                try_msg!(shallow_copy(&path, &path_stat, &dest,
-                        None, None, None),
+                try_msg!(ShallowCopy::new(&path, &dest).copy(),
                     "Error copying file {p:?}: {err}", p=path);
             }
         } else if let Some(ref dest_rel) = binfo.temporary_mount {

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use libc::{uid_t, gid_t};
 
 use super::root::temporary_change_root;
-use file_util::{Dir, shallow_copy};
+use file_util::{Dir, ShallowCopy};
 
 quick_error!{
     #[derive(Debug)]
@@ -101,10 +101,10 @@ pub fn copy_dir(old: &Path, new: &Path,
             oldp.push(&filename);
             newp.push(&filename);
 
-            let oldp_stat = oldp.symlink_metadata()
-                .map_err(|e| Stat(oldp.clone(), e))?;
-            let copy_rc = shallow_copy(&oldp, &oldp_stat, &newp,
-                    owner_uid, owner_gid, None)
+            let copy_rc = ShallowCopy::new(&oldp, &newp)
+                .owner_uid(owner_uid)
+                .owner_gid(owner_gid)
+                .copy()
                 .map_err(|e| CopyFile(oldp.clone(), newp.clone(), e))?;
             if !copy_rc {
                 stack.push(dir);  // Return dir to stack
