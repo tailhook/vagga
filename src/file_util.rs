@@ -219,7 +219,9 @@ impl Lock {
         flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock)
             .map_err(|e| match e {
                 nix::Error::Sys(code) => Error::from_raw_os_error(code as i32),
+                nix::Error::InvalidUtf8 => unreachable!(),
                 nix::Error::InvalidPath => unreachable!(),
+                nix::Error::UnsupportedOperation => panic!("Can't flock"),
             })?;
         Ok(Lock {
             file: f,
@@ -239,7 +241,10 @@ impl Lock {
                         nix::Error::Sys(code) => {
                             Error::from_raw_os_error(code as i32)
                         },
+                        nix::Error::InvalidUtf8 => unreachable!(),
                         nix::Error::InvalidPath => unreachable!(),
+                        nix::Error::UnsupportedOperation
+                        => panic!("Can't flock"),
                     })?;
                 let elapsed = lock_start.elapsed();
                 if elapsed > Duration::new(5, 0) {
@@ -251,6 +256,8 @@ impl Lock {
                 return Err(Error::from_raw_os_error(code as i32))
             }
             Err(nix::Error::InvalidPath) => unreachable!(),
+            Err(nix::Error::InvalidUtf8) => unreachable!(),
+            Err(nix::Error::UnsupportedOperation) => panic!("Can't flock"),
         }
         Ok(Lock {
             file: f,

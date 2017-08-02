@@ -3,17 +3,17 @@ use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::fs::File;
 
 use libc::{c_int, pid_t};
-use libc::{getpgrp, kill};
+use libc::{getpgrp, kill, ioctl};
+use nix;
 use nix::errno::Errno;
-use nix::sys::ioctl::ioctl;
 use nix::unistd::{isatty, dup};
 
 
 mod ffi {
-    use libc::{c_ulong};
+    use libc::{c_int};
 
-    pub static TIOCSPGRP: c_ulong = 0x5410;
-    pub static TIOCGPGRP: c_ulong = 0x540F;
+    pub static TIOCSPGRP: c_int = 0x5410;
+    pub static TIOCGPGRP: c_int = 0x540F;
 }
 
 
@@ -52,7 +52,7 @@ impl TtyGuard {
             Ok(())
         })
     }
-    pub fn new() -> Result<TtyGuard, io::Error> {
+    pub fn new() -> Result<TtyGuard, nix::Error> {
         let my_pgrp = unsafe { getpgrp() };
         if my_pgrp != 0 {
             // my_pgrp can be zero if group owner is outside of the PID ns

@@ -1,14 +1,14 @@
 use std::env;
 use std::fmt;
 use std::io::{self, Read};
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::os::unix::io::FromRawFd;
 
 use libc::{getuid, kill, c_int, pid_t};
-use libc::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
-use libc::{SIGQUIT, SIGTSTP, SIGSTOP};
+use unshare::Signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGCONT};
+use unshare::Signal::{self, SIGQUIT, SIGTSTP, SIGSTOP};
 use nix;
-use nix::sys::signal::Signal;
 use nix::unistd::getpid;
 use unshare;
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
@@ -42,7 +42,7 @@ lazy_static! {
 pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
     let fd = nix::unistd::dup(2)
         .map_err(|e| format!("Can't duplicate fd 2: {}", e))?;
-    cmd.stdout(unsafe { Stdio::from_raw_fd(fd) });
+    cmd.stdout(Stdio::from_file(unsafe { File::from_raw_fd(fd) }));
     cmd.stdin(Stdio::null());
     Ok(())
 }
@@ -127,7 +127,7 @@ pub fn run_and_wait(cmd: &mut Command)
     info!("Running {}", cmd_show(&cmd));
     let child = cmd.spawn().map_err(|e| cmd_err(&cmd, e))?;
     let cmd_name = &format!("{:?}", cmd);
-    let pid = getpid();
+    let pid: i32 = getpid().into();
 
     for signal in trap.by_ref() {
         match signal {
@@ -135,13 +135,12 @@ pub fn run_and_wait(cmd: &mut Command)
                 // SIGINT is usually a Ctrl+C, if we trap it here
                 // child process hasn't controlling terminal,
                 // so we send the signal to the child process
-                debug!("Received {:?} signal. Propagating ..",
-                    get_sig_name(signal));
+                debug!("Received {:?} signal. Propagating ..", signal);
                 send_pg_signal(signal, child.pid(), &cmd_name);
             }
             SIGTSTP|SIGTTOU|SIGTTIN => {
                 debug!("Received {:?} signal. Stopping child and self ..",
-                    get_sig_name(signal));
+                    signal);
                 send_pg_signal(SIGTSTP, child.pid(), &cmd_name);
                 send_signal(SIGSTOP, pid, &pid.to_string());
             }
@@ -165,7 +164,7 @@ pub fn run_and_wait(cmd: &mut Command)
                                 // error message.
                                 // TODO(tailhook) may be kill the proccess?
                                 error!("Can't give tty IO: {}", e);
-                            } else if unsafe { killpg(pid, SIGCONT) } == 1 {
+                            } else if unsafe { killpg(pid, SIGCONT as i32) } == 1 {
                                 error!("Can't unpause pid {}: {}", pid,
                                     io::Error::last_os_error());
                             }
@@ -180,29 +179,24 @@ pub fn run_and_wait(cmd: &mut Command)
     unreachable!();
 }
 
-pub fn send_signal(sig: c_int, pid: pid_t, cmd_name: &String) {
-    if unsafe { kill(pid, sig) } < 0 {
-        error!("Error sending {:?} to {:?}: {}",
-            get_sig_name(sig), cmd_name, io::Error::last_os_error());
+pub fn send_signal(sig: Signal, pid: pid_t, cmd_name: &String) {
+    if unsafe { kill(pid, sig as c_int) } < 0 {
+        let e = io::Error::last_os_error();
+        error!("Error sending {:?} to {:?}: {}", sig, cmd_name, e);
     }
 }
 
-pub fn send_pg_signal(sig: c_int, pid: pid_t, cmd_name: &String) {
-    if unsafe { killpg(pid, sig) } < 0 {
-        error!("Error sending {:?} to {:?}: {}",
-            get_sig_name(sig), cmd_name, io::Error::last_os_error());
+pub fn send_pg_signal(sig: Signal, pid: pid_t, cmd_name: &String) {
+    if unsafe { killpg(pid, sig as i32) } < 0 {
+        let e = io::Error::last_os_error();
+        error!("Error sending {:?} to {:?}: {}", sig, cmd_name, e);
     }
-}
-
-pub fn get_sig_name(sig: c_int) -> String {
-    Signal::from_c_int(sig).ok()
-        .map_or(sig.to_string(), |s| format!("{:?}", s))
 }
 
 pub fn convert_status(st: ExitStatus) -> i32 {
     match st {
         ExitStatus::Exited(c) => c as i32,
-        ExitStatus::Signaled(s, _) => 128 + s,
+        ExitStatus::Signaled(s, _) => 128 + s as i32,
     }
 }
 

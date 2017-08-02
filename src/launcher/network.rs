@@ -723,16 +723,14 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
 
 #[cfg(feature="containers")]
 pub fn isolate_network() -> Result<(), String> {
-    use nix::sched::{setns, CloneFlags};
+    use nix::sched::{setns, CLONE_NEWUSER, CLONE_NEWNET};
 
     let isolated_net = try_msg!(
         create_isolated_network(),
         "Cannot create network namespace: {err}");
-    try_msg!(setns(isolated_net.userns.as_raw_fd(),
-            CloneFlags::from_bits_truncate(Namespace::User.to_clone_flag() as i32)),
+    try_msg!(setns(isolated_net.userns.as_raw_fd(), CLONE_NEWUSER),
         "Cannot set user namespace: {err}");
-    try_msg!(setns(isolated_net.netns.as_raw_fd(),
-            CloneFlags::from_bits_truncate(Namespace::Net.to_clone_flag() as i32)),
+    try_msg!(setns(isolated_net.netns.as_raw_fd(), CLONE_NEWNET),
         "Cannot set network namespace: {err}");
     Ok(())
 }

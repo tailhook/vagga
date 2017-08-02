@@ -6,10 +6,11 @@ use std::time::{Instant, Duration};
 use libmount::Tmpfs;
 use argparse::{ArgumentParser, List};
 use signal::trap::Trap;
-use libc::{c_int, pid_t};
-use libc::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGTSTP};
-use libc::{SIGQUIT, SIGKILL, SIGSTOP, SIGCONT};
+use libc::{pid_t};
+use unshare::Signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGTSTP};
+use unshare::Signal::{SIGQUIT, SIGKILL, SIGSTOP, SIGCONT};
 use nix::unistd::getpid;
+use nix::sys::signal::Signal;
 use unshare::{Command, Child, Namespace, reap_zombies, Fd};
 
 use options::build_mode::{build_mode, BuildMode};
@@ -21,7 +22,7 @@ use tty_util::{TtyGuard};
 use super::network;
 use super::build::{build_container};
 use file_util::Dir;
-use process_util::{convert_status, send_signal, send_pg_signal, get_sig_name};
+use process_util::{convert_status, send_signal, send_pg_signal};
 use super::wrap::Wrapper;
 use launcher::volumes::prepare_volumes;
 use launcher::user::ArgError;
@@ -356,7 +357,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
             match signal {
                 SIGINT|SIGQUIT => {
                     process_kbd_signal(signal, &children);
-                    errcode = 128+signal;
+                    errcode = 128+signal as i32;
                     break;
                 }
                 SIGTSTP|SIGTTIN|SIGTTOU => {
@@ -367,7 +368,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                 }
                 SIGTERM => {
                     process_sigterm(&children);
-                    errcode = 128+SIGTERM;
+                    errcode = 128+SIGTERM as i32;
                     break;
                 }
                 SIGCHLD => {
@@ -463,27 +464,28 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
 /// SIGINT is usually a Ctrl+C and SIGQUIT is a Ctrl+\,
 /// if we trap it here child process hasn't controlling terminal,
 /// so we send the signal to the child process
-fn process_kbd_signal(sig: c_int, children: &HashMap<pid_t, (&String, Child)>) {
-    writeln!(&mut stderr(), "Received {:?} signal. \
-        Waiting the processes to stop...", get_sig_name(sig)).ok();
+fn process_kbd_signal(sig: Signal,
+    children: &HashMap<pid_t, (&String, Child)>)
+{
+    eprintln!("Received {:?} signal. Waiting the processes to stop...", sig);
     for &(cmd, ref child) in children.values() {
         send_pg_signal(sig, child.pid(), cmd);
     }
 }
 
-fn process_tty_signal(sig: c_int, children: &HashMap<pid_t, (&String, Child)>) {
-    writeln!(&mut stderr(), "Received {:?} signal. \
-        Stopping children and self ..", get_sig_name(sig)).ok();
+fn process_tty_signal(sig: Signal,
+    children: &HashMap<pid_t, (&String, Child)>)
+{
+    eprintln!("Received {:?} signal. Stopping children and self ..", sig);
     for &(cmd, ref child) in children.values() {
         send_pg_signal(SIGTSTP, child.pid(), cmd);
     }
     let pid = getpid();
-    send_signal(SIGSTOP, pid, &pid.to_string());
+    send_signal(SIGSTOP, pid.into(), &pid.to_string());
 }
 
 fn process_sigcont(children: &HashMap<pid_t, (&String, Child)>) {
-    writeln!(&mut stderr(), "Received {:?} signal. Propagating ..",
-        get_sig_name(SIGCONT)).ok();
+    eprintln!("Received {:?} signal. Propagating ..", SIGCONT);
     for &(cmd, ref child) in children.values() {
         send_pg_signal(SIGCONT, child.pid(), cmd);
     }
@@ -492,8 +494,7 @@ fn process_sigcont(children: &HashMap<pid_t, (&String, Child)>) {
 /// SIGTERM is usually sent to a specific process so we
 /// forward it to children
 fn process_sigterm(children: &HashMap<pid_t, (&String, Child)>) {
-    writeln!(&mut stderr(), "Received {:?} signal. \
-        Waiting the processes to stop...", get_sig_name(SIGTERM)).ok();
+    eprintln!("Received SIGTERM signal.  Waiting the processes to stop...");
     for &(cmd, ref child) in children.values() {
         send_signal(SIGTERM, child.pid(), cmd);
     }

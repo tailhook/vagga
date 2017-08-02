@@ -8,6 +8,20 @@ use libc::{open, close};
 use libc::{O_RDONLY, O_CLOEXEC};
 use unshare::Namespace;
 
+#[cfg(feature="containers")]
+pub fn to_clone_flag(ns: Namespace) -> ::nix::sched::CloneFlags {
+    use nix::sched::*;
+    match ns {
+        Namespace::Mount => CLONE_NEWNS,
+        Namespace::Uts => CLONE_NEWUTS,
+        Namespace::Ipc => CLONE_NEWIPC,
+        Namespace::User => CLONE_NEWUSER,
+        Namespace::Pid => CLONE_NEWPID,
+        Namespace::Net => CLONE_NEWNET,
+        Namespace::Cgroup => CLONE_NEWCGROUP,
+    }
+}
+
 
 #[cfg(feature="containers")]
 extern {
@@ -31,7 +45,7 @@ pub fn set_namespace<P:AsRef<Path>>(path: P, ns: Namespace)
     if fd < 0 {
         return Err(IoError::last_os_error());
     }
-    let rc = unsafe { setns(fd, ns.to_clone_flag() as i32) };
+    let rc = unsafe { setns(fd, to_clone_flag(ns).bits()) };
     unsafe { close(fd) };
     if rc < 0 {
         return Err(IoError::last_os_error());
@@ -46,7 +60,7 @@ pub fn unshare_namespace(ns: Namespace) -> Result<(), IoError> {
 
 #[cfg(feature="containers")]
 pub fn unshare_namespace(ns: Namespace) -> Result<(), IoError> {
-    let rc = unsafe { unshare(ns.to_clone_flag() as i32) };
+    let rc = unsafe { unshare(to_clone_flag(ns).bits()) };
     if rc < 0 {
         return Err(IoError::last_os_error());
     }
