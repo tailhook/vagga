@@ -709,6 +709,22 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
 {
     let container = wrapper.config.containers.get(name)
         .ok_or(format!("Container {:?} not found", name))?;
+
+    let mut skip_image_download = no_image;
+    if !no_image && !force && container.image_cache_url.is_some() {
+        debug!("Try to build only container {}", name);
+        let cont_info = ContainerInfo::new(name, container, force, no_image);
+        let build_res = build_container(&cont_info, wrapper);
+        if build_res.is_ok() {
+            return build_res;
+        }
+        unmount_service_dirs()?;
+        // we failed to download image, do not try again
+        skip_image_download = true;
+        debug!("Failed to build only container {}. Building dependencies.",
+               name);
+    }
+
     for &Step(ref step) in container.setup.iter() {
         if let Some(name) = step.is_dependent_on() {
             build_wrapper(name, force, no_image, wrapper)
@@ -717,7 +733,8 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
         }
     }
 
-    let cont_info = ContainerInfo::new(name, container, force, no_image);
+    let cont_info = ContainerInfo::new(name, container, force,
+                                       skip_image_download);
     return build_container(&cont_info, wrapper)
 }
 
