@@ -1,0 +1,37 @@
+#
+# Sample Vagga configuration for running CockroachDB server
+#
+
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !Tar
+      url: https://binaries.cockroachdb.com/cockroach-v1.0.4.linux-amd64.tgz
+      subdir: cockroach-v1.0.4.linux-amd64
+      path: /usr/bin
+    - !EnsureDir /data
+    volumes:
+      /data: !Persistent
+        name: cockroach
+
+commands:
+
+  server: &server !Command
+    description: Run cockroach database
+    container: ubuntu
+    run: [cockroach, start, --insecure, --store=path=/data]
+
+
+  client: &client !Command
+    description: Run cockroach shell
+    container: ubuntu
+    run: |
+      sleep 1
+      exec cockroach sql --insecure
+
+  run: !Supervise
+    description: Run both cockroach server and shell
+    children:
+      server: *server
+      client: *client

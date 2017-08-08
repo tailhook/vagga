@@ -33,6 +33,7 @@ Databases
    examples/db/elastic
    examples/db/influx
    examples/db/rethinkdb
+   examples/db/cockroachdb
 
 
 Miscellaneous
