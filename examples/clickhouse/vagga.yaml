@@ -1,0 +1,32 @@
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !AptTrust keys: [E0C56BD4]
+    - !UbuntuRepo
+      url: https://repo.yandex.ru/clickhouse/xenial
+      suite: stable
+      components: [main]
+    - !Install [tzdata, clickhouse-server-common, clickhouse-client]
+    - !EnsureDir /var/lib/clickhouse
+    volumes:
+      /var/lib/clickhouse: !Persistent
+        name: clickhouse-data
+
+commands:
+  server: &server !Command
+    description: Run clickhouse server
+    container: ubuntu
+    work-dir: /etc/clickhouse-server
+    run: clickhouse server
+
+  client: &client !Command
+    description: Run clickhouse client
+    container: ubuntu
+    run: sleep 3 && clickhouse-client
+
+  run: !Supervise
+    description: Run clickhouse server and client
+    children:
+      server: *server
+      client: *client
