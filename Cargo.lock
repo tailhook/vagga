@@ -24,7 +24,7 @@ dependencies = [
  "nix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "path-filter 0.1.0",
  "quick-error 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.2.3 (git+https://github.com/tailhook/rust-quire?rev=d1d88b6)",
+ "quire 0.2.3 (git+https://github.com/tailhook/rust-quire?rev=5dd2f3f)",
  "rand 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scan_dir 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -581,7 +581,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quire"
 version = "0.2.3"
-source = "git+https://github.com/tailhook/rust-quire?rev=d1d88b6#d1d88b62a630f095aeb928333b7975a0c69a0a40"
+source = "git+https://github.com/tailhook/rust-quire?rev=5dd2f3f#5dd2f3f13eb86628d3fc98bdc58d4df50ebe0837"
 dependencies = [
  "humannum 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -987,7 +987,7 @@ dependencies = [
 "checksum pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "3a8b4c6b8165cd1a1cd4b9b120978131389f64bdaf456435caa41e630edba903"
 "checksum podio 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e5422a1ee1bc57cc47ae717b0137314258138f38fd5f3cea083f43a9725383a0"
 "checksum quick-error 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3c36987d4978eb1be2e422b1e0423a557923a5c3e7e6f31d5699e9aafaefa469"
-"checksum quire 0.2.3 (git+https://github.com/tailhook/rust-quire?rev=d1d88b6)" = "<none>"
+"checksum quire 0.2.3 (git+https://github.com/tailhook/rust-quire?rev=5dd2f3f)" = "<none>"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
 "checksum rand 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)" = "eb250fd207a4729c976794d03db689c9be1d634ab5a1c9da9492a13d8fecbcdf"
 "checksum redox_syscall 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)" = "ddab7acd8e7bf3e49dfdf78ac1209b992329eb2f66e0bf672ab49c70a76d1d68"
