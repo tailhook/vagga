@@ -9,7 +9,7 @@ use config::Settings;
 use path_util::Expand;
 
 
-#[derive(PartialEq, RustcDecodable, Debug)]
+#[derive(PartialEq, Deserialize, Debug)]
 struct SecureSettings {
     storage_dir: Option<PathBuf>,
     storage_subdir_from_env_var: Option<String>,
@@ -18,6 +18,7 @@ struct SecureSettings {
     proxy_env_vars: Option<bool>,
     ubuntu_mirror: Option<String>,
     alpine_mirror: Option<String>,
+    #[serde(default)]
     site_settings: BTreeMap<PathBuf, SecureSettings>,
     external_volumes: HashMap<String, PathBuf>,
     push_image_script: Option<String>,
@@ -61,7 +62,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
     return s;
 }
 
-#[derive(PartialEq, RustcDecodable)]
+#[derive(PartialEq, Deserialize)]
 struct InsecureSettings {
     version_check: Option<bool>,
     shared_cache: Option<bool>,

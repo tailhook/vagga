@@ -14,7 +14,7 @@ use rand::distributions::{Range, IndependentSample};
 use libc::{geteuid};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
-use rustc_serialize::json;
+use serde_json;
 use libmount::BindMount;
 
 use container::uidmap::get_max_uidmap;
@@ -547,7 +547,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         "--interface", &iif[..],
         "--ip", &iip[..],
         "--gateway-ip", &eip[..],
-        "--port-forwards", &json::encode(port_forwards).unwrap()[..],
+        "--port-forwards", &serde_json::to_string(port_forwards).unwrap()[..],
         ]);
     cmd.unshare([Namespace::Net].iter().cloned());
     cmd.env_clear();

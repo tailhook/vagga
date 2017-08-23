@@ -19,7 +19,7 @@ use super::range::Range;
 use super::validate::validate_config;
 use super::version::MinimumVagga;
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 pub struct Config {
     pub minimum_vagga: Option<String>,
     pub mixins: Vec<String>,
@@ -142,7 +142,7 @@ fn include_file(pos: &Pos, include: &Include,
             let mut body = String::new();
             File::open(&path)
             .and_then(|mut f| f.read_to_string(&mut body))
-            .map_err(|e| err.add_error(Error::OpenError(path.clone(), e))).ok()
+            .map_err(|e| err.add_error(Error::open_error(&path, e))).ok()
             .and_then(|_| {
                 parse_yaml(Rc::new(path.display().to_string()), &body,
                     |doc| { process_ast(&options, doc, err) },

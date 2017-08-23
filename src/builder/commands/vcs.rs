@@ -17,7 +17,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use process_util::run_success;
 
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Git {
     pub url: String,
     pub revision: Option<String>,
@@ -35,7 +35,7 @@ impl Git {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct GitInstall {
     pub url: String,
     pub revision: Option<String>,
@@ -59,7 +59,7 @@ impl GitInstall {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct GitDescribe {
     repo: PathBuf,
     output_file: Option<PathBuf>,

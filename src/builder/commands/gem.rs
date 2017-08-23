@@ -19,9 +19,8 @@ const GEM_VERSION_WITH_NO_DOCUMENT_OPT: f32 = 2.0;
 const VALID_TRUST_POLICIES: [&'static str; 3] = ["LowSecurity", "MediumSecurity", "HighSecurity"];
 
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct GemInstall(Vec<String>);
-tuple_struct_decode!(GemInstall);
 
 impl GemInstall {
     pub fn config() -> V::Sequence<'static> {
@@ -29,7 +28,7 @@ impl GemInstall {
     }
 }
 
-#[derive(RustcDecodable, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct GemConfig {
     pub install_ruby: bool,
     pub gem_exe: Option<String>,
@@ -45,7 +44,7 @@ impl GemConfig {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct GemBundle {
     pub gemfile: PathBuf,
     pub without: Vec<String>,

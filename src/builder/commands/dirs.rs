@@ -10,9 +10,8 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use file_util::Dir;
 
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct EnsureDir(PathBuf);
-tuple_struct_decode!(EnsureDir);
 
 impl EnsureDir {
     pub fn config() -> V::Directory {
@@ -20,9 +19,8 @@ impl EnsureDir {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Remove(PathBuf);
-tuple_struct_decode!(Remove);
 
 impl Remove {
     pub fn config() -> V::Directory {
@@ -30,9 +28,8 @@ impl Remove {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct EmptyDir(PathBuf);
-tuple_struct_decode!(EmptyDir);
 
 impl EmptyDir {
     pub fn config() -> V::Directory {
@@ -40,9 +37,8 @@ impl EmptyDir {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct CacheDirs(BTreeMap<PathBuf, String>);
-tuple_struct_decode!(CacheDirs);
 
 impl CacheDirs {
     pub fn config() -> V::Mapping<'static> {

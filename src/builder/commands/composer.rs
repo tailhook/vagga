@@ -6,7 +6,7 @@ use std::os::unix;
 use unshare::{Command};
 use scan_dir::{self, ScanDir};
 use regex::Regex;
-use rustc_serialize::json::Json;
+use serde_json::{Value as Json, from_reader};
 use quire::validate as V;
 
 use super::super::context::{Context};
@@ -41,7 +41,7 @@ const LOCKFILE_RELEVANT_KEYS: &'static [&'static str] = &[
 
 const CONF_D: &'static str = "conf.d";
 
-#[derive(RustcDecodable, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ComposerConfig {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
     pub install_runtime: bool,
@@ -64,9 +64,8 @@ impl ComposerConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct ComposerInstall(Vec<String>);
-tuple_struct_decode!(ComposerInstall);
 
 impl ComposerInstall {
     pub fn config() -> V::Sequence<'static> {
@@ -74,7 +73,7 @@ impl ComposerInstall {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct ComposerDependencies {
     pub working_dir: Option<String>,
     pub dev: bool,
@@ -486,15 +485,15 @@ impl BuildStep for ComposerInstall {
 fn get<'x>(dic: &'x Json, key: &str) -> &'x Json {
     // TODO(tailhook) is there a better way for the following?
     let x: &'static Json = unsafe { ::std::mem::transmute(&Json::Null) };
-    dic.find(key).unwrap_or(x)
+    dic.get(key).unwrap_or(x)
 }
 
 fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
     File::open(&path).map_err(|e| VersionError::Io(e, path.to_path_buf()))
-    .and_then(|mut f| Json::from_reader(&mut f)
+    .and_then(|mut f| from_reader(&mut f)
         .map_err(|e| VersionError::Json(e, path.to_path_buf())))
-    .and_then(|data| {
-        let packages = data.find("packages")
+    .and_then(|data: Json| {
+        let packages = data.get("packages")
             .ok_or("Missing 'packages' property from composer.lock".to_owned())?;
         let packages = packages.as_array()
             .ok_or("'packages' property is not an array".to_owned())?;
@@ -530,7 +529,7 @@ impl BuildStep for ComposerDependencies {
 
         let path = base_path.join("composer.json");
         File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))
-        .and_then(|mut f| Json::from_reader(&mut f)
+        .and_then(|mut f| from_reader(&mut f)
             .map_err(|e| VersionError::Json(e, path.to_path_buf())))
         .map(|data| {
             // Jsons are sorted so should be hash as string predictably

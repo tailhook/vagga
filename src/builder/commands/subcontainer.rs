@@ -15,9 +15,8 @@ use builder::error::StepError as E;
 use builder::dns::revert_name_files;
 
 // Build Steps
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Container(String);
-tuple_struct_decode!(Container);
 
 impl Container {
     pub fn config() -> V::Scalar {
@@ -25,7 +24,7 @@ impl Container {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Build {
     pub container: String,
     pub source: PathBuf,
@@ -47,21 +46,21 @@ impl Build {
 }
 
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct GitSource {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub enum Source {
     Git(GitSource),
     Container(String),
     Directory,
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct SubConfig {
     pub source: Source,
     pub path: PathBuf,

@@ -2,7 +2,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use regex;
-use rustc_serialize::json;
+use serde_json;
 use scan_dir;
 use git2;
 
@@ -57,10 +57,10 @@ quick_error! {
             from(tuple: (String, Error)) -> (tuple.0, Box::new(tuple.1))
         }
         /// Error reading package.json
-        Json(err: json::BuilderError, path: PathBuf) {
+        Json(err: serde_json::Error, path: PathBuf) {
             description("can't read json")
             display("error reading json {:?}: {:?}", path, err)
-            context(p: &'a PathBuf, err: json::BuilderError)
+            context(p: &'a PathBuf, err: serde_json::Error)
                 -> (err, p.to_path_buf())
         }
         GitError(err: git2::Error) {

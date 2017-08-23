@@ -8,7 +8,7 @@ use capsule::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Download {
     pub url: String,
     pub path: PathBuf,

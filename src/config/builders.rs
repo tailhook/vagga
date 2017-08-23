@@ -1,10 +1,10 @@
+use std::fmt;
 use std::rc::Rc;
-use std::path::PathBuf;
 
-use quire::validate as V;
-use libc::{uid_t, gid_t};
-use rustc_serialize::{Decodable, Decoder};
 use builder::commands as cmd;
+use quire::validate as V;
+use serde::de::{self, Deserializer, Deserialize};
+use serde::de::{VariantAccess, Visitor, EnumAccess};
 
 use build_step::{Step, BuildStep};
 
@@ -58,27 +58,58 @@ const COMMANDS: &'static [&'static str] = &[
     "ComposerConfig",
 ];
 
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct PacmanRepo {
-    pub name: String,
-    pub url: String,
+pub enum CommandName {
+    Alpine,
+    AlpineRepo,
+    Ubuntu,
+    UbuntuRepo,
+    UbuntuRelease,
+    UbuntuPPA,
+    UbuntuUniverse,
+    AptTrust,
+    Repo,
+    Install,
+    BuildDeps,
+    Git,
+    GitInstall,
+    GitDescribe,
+    PipConfig,
+    Py2Install,
+    Py2Requirements,
+    Py3Install,
+    Py3Requirements,
+    Tar,
+    TarInstall,
+    Unzip,
+    Sh,
+    Cmd,
+    RunAs,
+    Env,
+    Text,
+    Copy,
+    Download,
+    EnsureDir,
+    CacheDirs,
+    EmptyDir,
+    Remove,
+    Depends,
+    Container,
+    Build,
+    SubConfig,
+    NpmConfig,
+    NpmDependencies,
+    YarnDependencies,
+    NpmInstall,
+    GemInstall,
+    GemBundle,
+    GemConfig,
+    ComposerInstall,
+    ComposerDependencies,
+    ComposerConfig,
 }
 
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
-pub struct FileInfo {
-    pub name: PathBuf,
-    pub contents: String,
-}
-
-#[derive(Clone, RustcDecodable, RustcEncodable, Debug)]
-pub struct Copy {
-    pub source: PathBuf,
-    pub path: PathBuf,
-    pub owner_uid: Option<uid_t>,
-    pub owner_gid: Option<gid_t>,
-    pub ignore_regex: String,
-}
-
+pub struct NameVisitor;
+pub struct StepVisitor;
 
 pub fn builder_validator<'x>() -> V::Enum<'x> {
     V::Enum::new()
@@ -141,74 +172,148 @@ pub fn builder_validator<'x>() -> V::Enum<'x> {
     .option("GemBundle", cmd::gem::GemBundle::config())
 }
 
-fn step<T: BuildStep + 'static, E>(val: Result<T, E>)
-    -> Result<Step, E>
-{
-    val.map(|x| Step(Rc::new(x) as Rc<BuildStep>))
-}
-
-fn decode_step<D: Decoder>(options: &[&str], index: usize, d: &mut D)
-    -> Result<Step, D::Error>
-{
-    match options[index] {
-        "Alpine" => step(cmd::alpine::Alpine::decode(d)),
-        "AlpineRepo" => step(cmd::alpine::AlpineRepo::decode(d)),
-        "Ubuntu" => step(cmd::ubuntu::Ubuntu::decode(d)),
-        "UbuntuRepo" => step(cmd::ubuntu::UbuntuRepo::decode(d)),
-        "UbuntuRelease" => step(cmd::ubuntu::UbuntuRelease::decode(d)),
-        "UbuntuPPA" => step(cmd::ubuntu::UbuntuPPA::decode(d)),
-        "UbuntuUniverse" => step(cmd::ubuntu::UbuntuUniverse::decode(d)),
-        "AptTrust" => step(cmd::ubuntu::AptTrust::decode(d)),
-        "Repo" => step(cmd::packaging::Repo::decode(d)),
-        "Install" => step(cmd::packaging::Install::decode(d)),
-        "BuildDeps" => step(cmd::packaging::BuildDeps::decode(d)),
-        "Git" => step(cmd::vcs::Git::decode(d)),
-        "GitInstall" => step(cmd::vcs::GitInstall::decode(d)),
-        "GitDescribe" => step(cmd::vcs::GitDescribe::decode(d)),
-        "PipConfig" => step(cmd::pip::PipConfig::decode(d)),
-        "Py2Install" => step(cmd::pip::Py2Install::decode(d)),
-        "Py2Requirements" => step(cmd::pip::Py2Requirements::decode(d)),
-        "Py3Install" => step(cmd::pip::Py3Install::decode(d)),
-        "Py3Requirements" => step(cmd::pip::Py3Requirements::decode(d)),
-        "Tar" => step(cmd::tarcmd::Tar::decode(d)),
-        "TarInstall" => step(cmd::tarcmd::TarInstall::decode(d)),
-        "Unzip" => step(cmd::unzip::Unzip::decode(d)),
-        "Sh" => step(cmd::generic::Sh::decode(d)),
-        "Cmd" => step(cmd::generic::Cmd::decode(d)),
-        "RunAs" => step(cmd::generic::RunAs::decode(d)),
-        "Env" => step(cmd::generic::Env::decode(d)),
-        "Text" => step(cmd::text::Text::decode(d)),
-        "Copy" => step(cmd::copy::Copy::decode(d)),
-        "Download" => step(cmd::download::Download::decode(d)),
-        "EnsureDir" => step(cmd::dirs::EnsureDir::decode(d)),
-        "CacheDirs" => step(cmd::dirs::CacheDirs::decode(d)),
-        "EmptyDir" => step(cmd::dirs::EmptyDir::decode(d)),
-        "Remove" => step(cmd::dirs::Remove::decode(d)),
-        "Depends" => step(cmd::copy::Depends::decode(d)),
-        "Container" => step(cmd::subcontainer::Container::decode(d)),
-        "Build" => step(cmd::subcontainer::Build::decode(d)),
-        "SubConfig" => step(cmd::subcontainer::SubConfig::decode(d)),
-        "NpmConfig" => step(cmd::npm::NpmConfig::decode(d)),
-        "NpmDependencies" => step(cmd::npm::NpmDependencies::decode(d)),
-        "YarnDependencies" => step(cmd::npm::YarnDependencies::decode(d)),
-        "NpmInstall" => step(cmd::npm::NpmInstall::decode(d)),
-        "GemInstall" => step(cmd::gem::GemInstall::decode(d)),
-        "GemBundle" => step(cmd::gem::GemBundle::decode(d)),
-        "GemConfig" => step(cmd::gem::GemConfig::decode(d)),
-        "ComposerInstall" => step(cmd::composer::ComposerInstall::decode(d)),
-        "ComposerDependencies"
-        => step(cmd::composer::ComposerDependencies::decode(d)),
-        "ComposerConfig" => step(cmd::composer::ComposerConfig::decode(d)),
-        step_name => panic!("Step {} is not yet implemented", step_name),
+impl<'a> Visitor<'a> for NameVisitor {
+    type Value = CommandName;
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "build step is one of {}", COMMANDS.join(", "))
+    }
+    fn visit_str<E: de::Error>(self, val: &str) -> Result<CommandName, E> {
+        use self::CommandName::*;
+        let res = match val {
+            "Alpine" => Alpine,
+            "AlpineRepo" => AlpineRepo,
+            "Ubuntu" => Ubuntu,
+            "UbuntuRepo" => UbuntuRepo,
+            "UbuntuRelease" => UbuntuRelease,
+            "UbuntuPPA" => UbuntuPPA,
+            "UbuntuUniverse" => UbuntuUniverse,
+            "AptTrust" => AptTrust,
+            "Repo" => Repo,
+            "Install" => Install,
+            "BuildDeps" => BuildDeps,
+            "Git" => Git,
+            "GitInstall" => GitInstall,
+            "GitDescribe" => GitDescribe,
+            "PipConfig" => PipConfig,
+            "Py2Install" => Py2Install,
+            "Py2Requirements" => Py2Requirements,
+            "Py3Install" => Py3Install,
+            "Py3Requirements" => Py3Requirements,
+            "Tar" => Tar,
+            "TarInstall" => TarInstall,
+            "Unzip" => Unzip,
+            "Sh" => Sh,
+            "Cmd" => Cmd,
+            "RunAs" => RunAs,
+            "Env" => Env,
+            "Text" => Text,
+            "Copy" => Copy,
+            "Download" => Download,
+            "EnsureDir" => EnsureDir,
+            "CacheDirs" => CacheDirs,
+            "EmptyDir" => EmptyDir,
+            "Remove" => Remove,
+            "Depends" => Depends,
+            "Container" => Container,
+            "Build" => Build,
+            "SubConfig" => SubConfig,
+            "NpmConfig" => NpmConfig,
+            "NpmDependencies" => NpmDependencies,
+            "YarnDependencies" => YarnDependencies,
+            "NpmInstall" => NpmInstall,
+            "GemInstall" => GemInstall,
+            "GemBundle" => GemBundle,
+            "GemConfig" => GemConfig,
+            "ComposerInstall" => ComposerInstall,
+            "ComposerDependencies" => ComposerDependencies,
+            "ComposerConfig" => ComposerConfig,
+            _ => return Err(E::custom("invalid build step")),
+        };
+        Ok(res)
     }
 }
 
-impl Decodable for Step {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Step, D::Error> {
-        Ok(d.read_enum("BuildStep", |d| {
-            d.read_enum_variant(&COMMANDS, |d, index| {
-                decode_step(&COMMANDS, index, d)
-            })
-        })?)
+fn decode<'x, T, V>(v: V)
+    -> Result<Step, V::Error>
+    where
+        T: BuildStep + Deserialize<'x> + 'static,
+        V: VariantAccess<'x>,
+{
+    v.newtype_variant::<T>().map(|x| Step(Rc::new(x) as Rc<BuildStep>))
+}
+
+impl<'a> Visitor<'a> for StepVisitor {
+    type Value = Step;
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "build step is one of {}", COMMANDS.join(", "))
+    }
+    fn visit_enum<A>(self, data: A) -> Result<Step, A::Error>
+        where A: EnumAccess<'a>,
+    {
+        use self::CommandName::*;
+        let (tag, v) = data.variant()?;
+        match tag {
+            Alpine => decode::<cmd::alpine::Alpine, _>(v),
+            AlpineRepo => decode::<cmd::alpine::AlpineRepo, _>(v),
+            Ubuntu => decode::<cmd::ubuntu::Ubuntu, _>(v),
+            UbuntuRepo => decode::<cmd::ubuntu::UbuntuRepo, _>(v),
+            UbuntuRelease => decode::<cmd::ubuntu::UbuntuRelease, _>(v),
+            UbuntuPPA => decode::<cmd::ubuntu::UbuntuPPA, _>(v),
+            UbuntuUniverse => decode::<cmd::ubuntu::UbuntuUniverse, _>(v),
+            AptTrust => decode::<cmd::ubuntu::AptTrust, _>(v),
+            Repo => decode::<cmd::packaging::Repo, _>(v),
+            Install => decode::<cmd::packaging::Install, _>(v),
+            BuildDeps => decode::<cmd::packaging::BuildDeps, _>(v),
+            Git => decode::<cmd::vcs::Git, _>(v),
+            GitInstall => decode::<cmd::vcs::GitInstall, _>(v),
+            GitDescribe => decode::<cmd::vcs::GitDescribe, _>(v),
+            PipConfig => decode::<cmd::pip::PipConfig, _>(v),
+            Py2Install => decode::<cmd::pip::Py2Install, _>(v),
+            Py2Requirements => decode::<cmd::pip::Py2Requirements, _>(v),
+            Py3Install => decode::<cmd::pip::Py3Install, _>(v),
+            Py3Requirements => decode::<cmd::pip::Py3Requirements, _>(v),
+            Tar => decode::<cmd::tarcmd::Tar, _>(v),
+            TarInstall => decode::<cmd::tarcmd::TarInstall, _>(v),
+            Unzip => decode::<cmd::unzip::Unzip, _>(v),
+            Sh => decode::<cmd::generic::Sh, _>(v),
+            Cmd => decode::<cmd::generic::Cmd, _>(v),
+            RunAs => decode::<cmd::generic::RunAs, _>(v),
+            Env => decode::<cmd::generic::Env, _>(v),
+            Text => decode::<cmd::text::Text, _>(v),
+            Copy => decode::<cmd::copy::Copy, _>(v),
+            Download => decode::<cmd::download::Download, _>(v),
+            EnsureDir => decode::<cmd::dirs::EnsureDir, _>(v),
+            CacheDirs => decode::<cmd::dirs::CacheDirs, _>(v),
+            EmptyDir => decode::<cmd::dirs::EmptyDir, _>(v),
+            Remove => decode::<cmd::dirs::Remove, _>(v),
+            Depends => decode::<cmd::copy::Depends, _>(v),
+            Container => decode::<cmd::subcontainer::Container, _>(v),
+            Build => decode::<cmd::subcontainer::Build, _>(v),
+            SubConfig => decode::<cmd::subcontainer::SubConfig, _>(v),
+            NpmConfig => decode::<cmd::npm::NpmConfig, _>(v),
+            NpmDependencies => decode::<cmd::npm::NpmDependencies, _>(v),
+            YarnDependencies => decode::<cmd::npm::YarnDependencies, _>(v),
+            NpmInstall => decode::<cmd::npm::NpmInstall, _>(v),
+            GemInstall => decode::<cmd::gem::GemInstall, _>(v),
+            GemBundle => decode::<cmd::gem::GemBundle, _>(v),
+            GemConfig => decode::<cmd::gem::GemConfig, _>(v),
+            ComposerInstall => decode::<cmd::composer::ComposerInstall, _>(v),
+            ComposerDependencies
+            => decode::<cmd::composer::ComposerDependencies, _>(v),
+            ComposerConfig => decode::<cmd::composer::ComposerConfig, _>(v),
+        }
+    }
+}
+
+impl<'a> Deserialize<'a> for CommandName {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<CommandName, D::Error>
+    {
+        d.deserialize_identifier(NameVisitor)
+    }
+}
+
+impl<'a> Deserialize<'a> for Step {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Step, D::Error> {
+        d.deserialize_enum("BuildStep", COMMANDS, StepVisitor)
     }
 }

@@ -12,7 +12,7 @@ use file_util::Dir;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(RustcDecodable, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct PipConfig {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
@@ -38,9 +38,8 @@ impl PipConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Py2Install(Vec<String>);
-tuple_struct_decode!(Py2Install);
 
 impl Py2Install {
     pub fn config() -> V::Sequence<'static> {
@@ -48,9 +47,8 @@ impl Py2Install {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Py2Requirements(PathBuf);
-tuple_struct_decode!(Py2Requirements);
 
 impl Py2Requirements {
     pub fn config() -> V::Scalar {
@@ -58,9 +56,8 @@ impl Py2Requirements {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Py3Install(Vec<String>);
-tuple_struct_decode!(Py3Install);
 
 impl Py3Install {
     pub fn config() -> V::Sequence<'static> {
@@ -68,9 +65,8 @@ impl Py3Install {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Py3Requirements(PathBuf);
-tuple_struct_decode!(Py3Requirements);
 
 impl Py3Requirements {
     pub fn config() -> V::Scalar {

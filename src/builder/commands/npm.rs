@@ -8,7 +8,7 @@ use libmount::BindMount;
 use quick_error::ResultExt;
 use quire::validate as V;
 use regex::Regex;
-use rustc_serialize::json::Json;
+use serde_json::{Value as Json, from_reader};
 use unshare::{Stdio};
 
 use builder::commands::generic::{command, run};
@@ -26,7 +26,7 @@ lazy_static! {
 }
 
 
-#[derive(RustcDecodable, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct NpmConfig {
     pub install_node: bool,
     pub install_yarn: bool,
@@ -46,9 +46,8 @@ impl NpmConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct NpmInstall(Vec<String>);
-tuple_struct_decode!(NpmInstall);
 
 impl NpmInstall {
     pub fn config() -> V::Sequence<'static> {
@@ -56,7 +55,7 @@ impl NpmInstall {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct NpmDependencies {
     pub file: PathBuf,
     pub package: bool,
@@ -90,7 +89,7 @@ impl Default for NpmConfig {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct YarnDependencies {
     pub dir: PathBuf,
     pub production: bool,
@@ -186,14 +185,14 @@ fn scan_dic(json: &Json, key: &str,
     packages: &mut Vec<String>, features: &mut Vec<packages::Package>)
     -> Result<(), StepError>
 {
-    match json.find(key) {
+    match json.get(key) {
         Some(&Json::Object(ref ob)) => {
             for (k, v) in ob {
                 if !v.is_string() {
                     return Err(StepError::Compat(format!(
                         "Package {:?} has wrong version {:?}", k, v)));
                 }
-                let s = v.as_string().unwrap();
+                let s = v.as_str().unwrap();
                 parse_feature(&s, features);
                 packages.push(format!("{}@{}", k, s));
                 // TODO(tailhook) check the feature
@@ -220,7 +219,7 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
 
     let json = File::open(&Path::new("/work").join(&info.file))
         .map_err(|e| format!("Error opening file {:?}: {}", info.file, e))
-        .and_then(|mut f| Json::from_reader(&mut f)
+        .and_then(|mut f| from_reader(&mut f)
         .map_err(|e| format!("Error parsing json {:?}: {}", info.file, e)))?;
     let mut packages = vec![];
 
@@ -272,11 +271,11 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
 }
 
 fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
-    let deps = data.find(key);
+    let deps = data.get(key);
     if let Some(&Json::Object(ref ob)) = deps {
         // Note the BTree is sorted on its own
         for (key, val) in ob {
-            hash.field(key, val.as_string().unwrap_or("*"));
+            hash.field(key, val.as_str().unwrap_or("*"));
         }
     }
 }
@@ -337,7 +336,7 @@ impl BuildStep for NpmDependencies {
     {
         let path = Path::new("/work").join(&self.file);
         File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))
-        .and_then(|mut f| Json::from_reader(&mut f)
+        .and_then(|mut f| from_reader(&mut f)
             .map_err(|e| VersionError::Json(e, path.to_path_buf())))
         .map(|data| {
             if self.package {
@@ -412,7 +411,7 @@ fn check_deps(deps: Option<&Json>, patterns: &HashSet<String>) -> bool {
         None => return true,
     };
     for (key, value) in items.iter() {
-        let val = match value.as_string() {
+        let val = match value.as_str() {
             Some(x) => x,
             None => continue,
         };
@@ -434,25 +433,25 @@ impl BuildStep for YarnDependencies {
         let lock_file = Path::new("/work").join(&self.dir).join("yarn.lock");
         let package = Path::new("/work").join(&self.dir).join("package.json");
         if lock_file.exists() {
-            let data = Json::from_reader(
+            let data: Json = from_reader(
                 &mut File::open(&package).context(&package)?)
                 .context(&package)?;
             let patterns = get_all_patterns(&lock_file)?;
 
             // This is what yarn as of v0.23.0, i.e. checks whether all
             // dependencies are in lockfile
-            if !check_deps(data.find("dependencies"), &patterns) {
+            if !check_deps(data.get("dependencies"), &patterns) {
                 return Err(VersionError::New);
             }
             npm_hash_deps(&data, "dependencies", hash);
             if !self.production {
-                if !check_deps(data.find("devDependencies"), &patterns) {
+                if !check_deps(data.get("devDependencies"), &patterns) {
                     return Err(VersionError::New);
                 }
                 npm_hash_deps(&data, "devDependencies", hash);
             }
             if self.optional {
-                if !check_deps(data.find("optionalDependencies"), &patterns) {
+                if !check_deps(data.get("optionalDependencies"), &patterns) {
                     return Err(VersionError::New);
                 }
                 npm_hash_deps(&data, "optionalDependencies", hash);

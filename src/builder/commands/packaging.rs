@@ -4,9 +4,8 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 // Build Steps
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Install(Vec<String>);
-tuple_struct_decode!(Install);
 
 impl Install {
     pub fn config() -> V::Sequence<'static> {
@@ -14,9 +13,8 @@ impl Install {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct BuildDeps(Vec<String>);
-tuple_struct_decode!(BuildDeps);
 
 impl BuildDeps {
     pub fn config() -> V::Sequence<'static> {
@@ -24,9 +22,8 @@ impl BuildDeps {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Repo(String);
-tuple_struct_decode!(Repo);
 
 impl Repo {
     pub fn config() -> V::Scalar {

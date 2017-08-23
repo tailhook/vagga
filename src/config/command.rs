@@ -12,7 +12,7 @@ use config::Range;
 use super::volumes::{Volume, volume_validator};
 use launcher::system::SystemInfo;
 
-#[derive(RustcDecodable, Clone, PartialEq, Eq, Copy)]
+#[derive(Deserialize, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Pid1Mode {
     exec = 0,
@@ -20,14 +20,14 @@ pub enum Pid1Mode {
     wait_all_children = 2,
 }
 
-#[derive(RustcDecodable, Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum SuperviseMode {
     wait_all_successful,
     stop_on_failure,
 }
 
-#[derive(RustcDecodable, Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum WriteMode {
     read_only,
@@ -35,14 +35,14 @@ pub enum WriteMode {
     transient_hard_link_copy,
 }
 
-#[derive(RustcDecodable, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Clone, PartialEq, Eq)]
 pub struct Network {
     pub ip: String,
     pub hostname: Option<String>,
     pub ports: BTreeMap<u16, u16>,
 }
 
-#[derive(RustcDecodable, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common for toplevel commands
     pub source: Option<Rc<PathBuf>>,
@@ -73,7 +73,7 @@ pub struct CommandInfo {
     pub supplementary_gids: Vec<u32>,
 }
 
-#[derive(RustcDecodable, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Clone, PartialEq, Eq)]
 pub struct CapsuleInfo {
     // Common for toplevel commands
     // TODO(tailhook) remove unuseful fields here
@@ -97,7 +97,7 @@ pub struct CapsuleInfo {
     pub run: Vec<String>,
 }
 
-#[derive(RustcDecodable, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Clone, PartialEq, Eq)]
 pub struct SuperviseInfo {
     // Common
     pub source: Option<Rc<PathBuf>>,
@@ -117,7 +117,7 @@ pub struct SuperviseInfo {
     pub children: BTreeMap<String, ChildCommand>,
 }
 
-#[derive(RustcDecodable, PartialEq, Eq, Clone)]
+#[derive(Deserialize, PartialEq, Eq, Clone)]
 pub enum MainCommand {
     Command(CommandInfo),
     CapsuleCommand(CapsuleInfo),
@@ -198,7 +198,7 @@ impl MainCommand {
     }
 }
 
-#[derive(RustcDecodable, PartialEq, Eq, Clone)]
+#[derive(Deserialize, PartialEq, Eq, Clone)]
 pub enum ChildCommand {
     Command(CommandInfo),
     BridgeCommand(CommandInfo),

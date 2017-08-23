@@ -12,7 +12,7 @@ use std::os::unix::fs::{MetadataExt, symlink};
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
-use rustc_serialize::json;
+use serde_json;
 use unshare::{Command, Namespace, ExitStatus};
 use libmount::BindMount;
 use dir_signature::v1::{Entry, EntryKind, Parser};
@@ -148,7 +148,7 @@ fn _get_version_hash(options: &Options, wrapper: &Wrapper)
     cmd.groups(Vec::new());
     cmd.arg(&options.container);
     cmd.arg("--settings");
-    cmd.arg(json::encode(wrapper.settings).unwrap());
+    cmd.arg(serde_json::to_string(&**wrapper.settings).unwrap());
     if options.debug_versioning {
         cmd.arg("--debug-versioning");
     }
@@ -341,7 +341,7 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
                 cmd.arg(format!("{}.{}", cont_info.name, &ver[..8]));
             }
             cmd.arg("--settings");
-            cmd.arg(json::encode(wrapper.settings).unwrap());
+            cmd.arg(serde_json::to_string(&**wrapper.settings).unwrap());
             cmd.env_clear();
             copy_env_vars(&mut cmd, &wrapper.settings);
             if let Ok(x) = env::var("RUST_LOG") {

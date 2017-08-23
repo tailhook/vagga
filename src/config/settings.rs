@@ -2,14 +2,14 @@ use std::str::FromStr;
 use std::collections::BTreeMap;
 
 use libc::{uid_t, gid_t};
-use rustc_serialize::json;
+use serde_json;
 
 
 const DEFAULT_UBUNTU_MIRROR: &str = "mirror://mirrors.ubuntu.com/mirrors.txt";
 
 const DEFAULT_ALPINE_MIRROR: &str = "http://dl-cdn.alpinelinux.org/alpine/";
 
-#[derive(RustcDecodable, RustcEncodable, Default, Clone, Debug)]
+#[derive(Deserialize, Serialize, Default, Clone, Debug)]
 pub struct Settings {
     pub version_check: bool,
     pub proxy_env_vars: bool,
@@ -43,6 +43,6 @@ impl Settings {
 impl FromStr for Settings {
     type Err = ();
     fn from_str(val: &str) -> Result<Settings, ()> {
-        json::decode(val).map_err(|_| ())
+        serde_json::from_str(val).map_err(|_| ())
     }
 }

@@ -12,7 +12,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use file_util::{Dir, copy_stream};
 
 
-#[derive(RustcEncodable, RustcDecodable, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Unzip {
     pub url: String,
     pub sha256: Option<String>,

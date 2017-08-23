@@ -8,9 +8,8 @@ use quire::validate as V;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Text(BTreeMap<PathBuf, String>);
-tuple_struct_decode!(Text);
 
 impl Text {
     pub fn config() -> V::Mapping<'static> {

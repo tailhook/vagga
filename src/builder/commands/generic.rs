@@ -11,9 +11,8 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use launcher::network::create_isolated_network;
 
 // Build Steps
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Sh(String);
-tuple_struct_decode!(Sh);
 
 impl Sh {
     pub fn config() -> V::Scalar {
@@ -21,9 +20,8 @@ impl Sh {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Cmd(Vec<String>);
-tuple_struct_decode!(Cmd);
 
 impl Cmd {
     pub fn config() -> V::Sequence<'static> {
@@ -31,7 +29,7 @@ impl Cmd {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct RunAs {
     pub user_id: u32,
     pub group_id: u32,
@@ -55,9 +53,8 @@ impl RunAs {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Env(BTreeMap<String, String>);
-tuple_struct_decode!(Env);
 
 impl Env {
     pub fn config() -> V::Mapping<'static> {

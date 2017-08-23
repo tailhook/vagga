@@ -8,7 +8,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::os::unix::io::FromRawFd;
 
-use rustc_serialize::json;
+use serde_json;
 use unshare::{Command, Stdio};
 use argparse::{ArgumentParser, Store, List};
 
@@ -177,7 +177,7 @@ fn setup_bridge_namespace(args: Vec<String>) {
             }
         }
     }
-    let ports: Vec<(u16, String, u16)> = json::decode(&ports_str)
+    let ports: Vec<(u16, String, u16)> = serde_json::from_str(&ports_str)
         .ok().expect("Port-forwards JSON is invalid");
     wait_interface_or_exit(&interface);
 

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use libc::uid_t;
-use rustc_serialize::{Decoder, Decodable};
+use serde::de::{Deserializer, Deserialize, Error};
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq)]
@@ -14,21 +14,19 @@ trait StringError<T> {
     fn create_error(&self, value: String) -> T;
 }
 
-impl Decodable for Range {
-    fn decode<D:Decoder>(d: &mut D) -> Result<Range, D::Error>
-    {
-        d.read_str().and_then(|val| {
-            FromStr::from_str(&val[..])
-            .map(|num| Range::new(num, num))
-            .or_else(|_| {
-                let mut pair = val.splitn(2, '-');
-                Ok(Range::new(
-                    pair.next().and_then(|x| FromStr::from_str(x).ok())
-                        .ok_or(d.error("Error parsing range"))?,
-                    pair.next().and_then(|x| FromStr::from_str(x).ok())
-                        .ok_or(d.error("Error parsing range"))?,
-                ))
-            })
+impl<'a> Deserialize<'a> for Range {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Range, D::Error> {
+        let val = String::deserialize(d)?;
+        FromStr::from_str(&val[..])
+        .map(|num| Range::new(num, num))
+        .or_else(|_| {
+            let mut pair = val.splitn(2, '-');
+            Ok(Range::new(
+                pair.next().and_then(|x| FromStr::from_str(x).ok())
+                    .ok_or(D::Error::custom("Error parsing range"))?,
+                pair.next().and_then(|x| FromStr::from_str(x).ok())
+                    .ok_or(D::Error::custom("Error parsing range"))?,
+            ))
         })
     }
 }

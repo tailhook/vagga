@@ -10,7 +10,7 @@ use super::Range;
 use build_step::{Step};
 
 
-#[derive(RustcDecodable, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Container {
     pub setup: Vec<Step>,
     pub data_dirs: Vec<PathBuf>,

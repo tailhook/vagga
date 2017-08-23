@@ -41,7 +41,7 @@ const DEFAULT_IGNORE_RULES: &'static [&'static str] = &[
 ];
 
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Depends {
     pub path: PathBuf,
     pub ignore_regex: Option<String>,
@@ -110,7 +110,7 @@ impl BuildStep for Depends {
     }
 }
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Copy {
     pub source: PathBuf,
     pub path: PathBuf,

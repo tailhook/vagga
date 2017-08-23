@@ -15,7 +15,6 @@ typenum = "1.5.1"
 digest-writer = "0.1.1"
 rand = "0.3.14"
 argparse = "0.2.1"
-rustc-serialize = "0.3.19"
 log = "0.3.6"
 env_logger = "0.3.3"
 url = "1.0.0"
@@ -36,12 +35,15 @@ net2 = "0.2.23"
 humantime = "1.0.0"
 quick-error = "1.1.0"
 docopt = "0.6.83"
-quire = "0.2.1"
+quire = { rev="d1d88b6", git="https://github.com/tailhook/rust-quire" }
 lazy_static = "0.2.2"
 dir-signature = { version="0.2.0", optional=true }
 itertools = "0.5.8"
 git2 = { version="0.6.6", default-features=false }
 path-filter = { version = "0.1.0", path = "path_filter"}
+serde = { version = "1.0.11", features = ["rc"] }
+serde_json = "1.0.2"
+serde_derive = "1.0.11"
 
 [features]
 default = ["containers"]

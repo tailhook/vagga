@@ -7,7 +7,7 @@ use std::os::unix::ffi::OsStrExt;
 use sha2::{Sha256, Digest as DigestTrait};
 use blake2::Blake2b512;
 use digest_writer::Writer;
-use rustc_serialize::json::Json;
+use serde_json;
 use config::Range;
 
 /// This is a wrapper that has convenience methods for hashing in vagga
@@ -201,7 +201,7 @@ fn path_field<T: AsRef<Path>>(value: T, title: &str, dig: &mut Digest) {
         "field:path {:?} {:?}\n", title, value.as_ref()).unwrap();
 }
 
-impl Digestable for Json {
+impl Digestable for serde_json::Value {
     fn digest(&self, title: &str, dig: &mut Digest) {
         write!(&mut dig.sha, "{}\0{}\0", title, self).unwrap();
         write!(&mut dig.debug, "field:json {:?} {}\n", title, self).unwrap();
