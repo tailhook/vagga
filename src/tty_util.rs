@@ -9,11 +9,18 @@ use nix::errno::Errno;
 use nix::unistd::{isatty, dup};
 
 
+#[cfg(target_env="musl")]
 mod ffi {
     use libc::{c_int};
 
     pub static TIOCSPGRP: c_int = 0x5410;
     pub static TIOCGPGRP: c_int = 0x540F;
+}
+
+#[cfg(target_env="gnu")]
+mod ffi {
+    pub static TIOCSPGRP: u64 = 0x5410;
+    pub static TIOCGPGRP: u64 = 0x540F;
 }
 
 
