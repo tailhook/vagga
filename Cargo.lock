@@ -32,7 +32,7 @@ dependencies = [
  "serde_derive 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "signal 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "signal 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unshare 0.1.15 (git+git://github.com/tailhook/unshare?rev=40d2914)",
@@ -715,7 +715,7 @@ dependencies = [
 
 [[package]]
 name = "signal"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1003,7 +1003,7 @@ dependencies = [
 "checksum serde_derive_internals 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)" = "37aee4e0da52d801acfbc0cc219eb1eda7142112339726e427926a6f6ee65d3a"
 "checksum serde_json 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "48b04779552e92037212c3615370f6bd57a40ebba7f20e554ff9f55e41a69a7b"
 "checksum sha2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b0372dfb9a4f9c882468288bdab48a4d6dcf9e63abf41d6785464c592845e0fa"
-"checksum signal 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "40535ff60a6bd0d1114df05608dafda8180bd0a6da7b44849ac2e34120c4da85"
+"checksum signal 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "02c898841abd05cbb780652c6cdad8840f50357ea806c147403419f140c6088a"
 "checksum strsim 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "67f84c44fbb2f91db7fef94554e6b2ac05909c9c0b0bc23bb98d3a1aebfe7f7c"
 "checksum syn 0.11.11 (registry+https://github.com/rust-lang/crates.io-index)" = "d3b891b9015c88c576343b9b3e41c2c11a51c219ef067b264bd9c8aa9b441dad"
 "checksum synom 0.11.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a393066ed9010ebaed60b9eafa373d4b1baac186dd7e008555b0f702b51945b6"

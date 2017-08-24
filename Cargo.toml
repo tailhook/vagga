@@ -19,7 +19,7 @@ log = "0.3.6"
 env_logger = "0.3.3"
 url = "1.0.0"
 unshare = { git="git://github.com/tailhook/unshare", rev="40d2914", optional=true }
-signal = "0.4.0"
+signal = "0.4.1"
 mopa = "0.2.2"
 anymap = "0.11.1"
 matches = "0.1.2"
