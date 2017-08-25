@@ -35,7 +35,7 @@ dependencies = [
  "signal 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "unshare 0.1.15 (git+git://github.com/tailhook/unshare?rev=40d2914)",
+ "unshare 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "xz2 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "zip 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -825,8 +825,8 @@ dependencies = [
 
 [[package]]
 name = "unshare"
-version = "0.1.15"
-source = "git+git://github.com/tailhook/unshare?rev=40d2914#40d291444674d37acf8684f6f7e8e6d79cbb1ce2"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1017,7 +1017,7 @@ dependencies = [
 "checksum unicode-normalization 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "51ccda9ef9efa3f7ef5d91e8f9b83bbe6955f9bf86aec89d5cce2c874625920f"
 "checksum unicode-xid 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8c1f860d7d29cf02cb2f3f359fd35991af3d30bac52c57d265a3c461074cb4dc"
 "checksum unreachable 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "382810877fe448991dfc7f0dd6e3ae5d58088fd0ea5e35189655f84e6814fa56"
-"checksum unshare 0.1.15 (git+git://github.com/tailhook/unshare?rev=40d2914)" = "<none>"
+"checksum unshare 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1fe84cfa2f9f2fc25e603b02abb1ceb5aee8f99f4845e7f697d97988654b5c41"
 "checksum url 1.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "eeb819346883532a271eb626deb43c4a1bb4c4dd47c519bd78137c3e72a4fe27"
 "checksum utf8-ranges 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1ca13c08c41c9c3e04224ed9ff80461d97e121589ff27c753a16cb10830ae0f"
 "checksum utf8-ranges 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "662fab6525a98beff2921d7f61a39e7d59e0b425ebc7d0d9e66d316e55124122"
