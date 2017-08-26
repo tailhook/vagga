@@ -16,13 +16,13 @@ digest-writer = "0.1.1"
 rand = "0.3.14"
 argparse = "0.2.1"
 log = "0.3.6"
-env_logger = "0.3.3"
+env_logger = "0.4.3"
 url = "1.0.0"
 unshare = { version="0.2.0", optional=true }
 signal = "0.4.1"
 mopa = "0.2.2"
 anymap = "0.11.1"
-matches = "0.1.2"
+matches = "0.1.6"
 regex = "0.2.1"
 scan_dir = "0.3.1"
 libmount = { version="0.1.7", optional=true }
@@ -33,12 +33,12 @@ flate2 = "0.2.13"
 bzip2 = "0.3.0"
 net2 = "0.2.23"
 humantime = "1.0.0"
-quick-error = "1.1.0"
-docopt = "0.6.83"
+quick-error = "1.2.0"
+docopt = "0.8.1"
 quire = { rev="5dd2f3f", git="https://github.com/tailhook/rust-quire" }
 lazy_static = "0.2.2"
-dir-signature = { version="0.2.0", optional=true }
-itertools = "0.5.8"
+dir-signature = { version="0.2.1", optional=true }
+itertools = "0.6.1"
 git2 = { version="0.6.6", default-features=false }
 path-filter = { version = "0.1.0", path = "path_filter"}
 serde = { version = "1.0.11", features = ["rc"] }
