@@ -26,9 +26,10 @@ commands:
   client: &client !Command
     description: Run cockroach shell
     container: ubuntu
+    accepts-arguments: true
     run: |
       sleep 1
-      exec cockroach sql --insecure
+      exec cockroach sql --insecure "$@"
 
   run: !Supervise
     description: Run both cockroach server and shell
