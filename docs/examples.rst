@@ -34,6 +34,7 @@ Databases
    examples/db/influx
    examples/db/rethinkdb
    examples/db/cockroachdb
+   examples/db/clickhouse
 
 
 Miscellaneous
