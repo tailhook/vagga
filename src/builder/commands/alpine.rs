@@ -171,7 +171,8 @@ impl Distribution for Distro {
                 File::create("/vagga/container/alpine-packages.txt")
                 .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
-            })?;
+            })
+            .map_err(|e| warn!("Can't list alpine packages: {}", e)).ok();
         Ok(())
     }
 }

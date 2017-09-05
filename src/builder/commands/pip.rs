@@ -232,7 +232,8 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 File::create("/vagga/container/pip2-freeze.txt")
                 .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
-            })?;
+            })
+            .map_err(|e| warn!("Can't list pip packages: {}", e)).ok();
     }
     if ctx.featured_packages.contains(&packages::PipPy3) {
         let python_exe = ctx.pip_settings.python_exe.clone()
@@ -246,7 +247,8 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 File::create("/vagga/container/pip3-freeze.txt")
                 .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
-            })?;
+            })
+            .map_err(|e| warn!("Can't list pip packages: {}", e)).ok();
     }
     Ok(())
 }

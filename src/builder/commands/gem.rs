@@ -290,7 +290,8 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
             File::create("/vagga/container/gems-list.txt")
             .and_then(|mut f| f.write_all(&out))
             .map_err(|e| format!("Error dumping gems package list: {}", e))
-        })?;
+        })
+        .map_err(|e| warn!("Can't list gems: {}", e)).ok();
     Ok(())
 }
 

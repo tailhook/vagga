@@ -413,7 +413,8 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
 }
 
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
-    list_packages(ctx)?;
+    list_packages(ctx)
+        .map_err(|e| warn!("Can't list composer packages: {}", e)).ok();
     if !ctx.composer_settings.keep_composer {
         fs::remove_file(Path::new("/vagga/root/usr/local/bin/composer"))
             .map_err(|e| format!("Error removing '/usr/local/bin/composer': {}", e))?;

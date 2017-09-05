@@ -283,7 +283,8 @@ impl Distribution for Distro {
         let mut cmd = command(ctx, "dpkg")?;
         cmd.arg("-l");
         cmd.stdout(Stdio::from_file(output));
-        run(cmd)?;
+        run(cmd)
+            .map_err(|e| warn!("Can't list debian packages: {}", e)).ok();
         if ctx.settings.ubuntu_mirror.is_none() {
             warn!("To make future builds faster you should set a preferred \
                ubuntu mirror.\n\

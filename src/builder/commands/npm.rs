@@ -268,6 +268,8 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     cmd.arg("--global");
     cmd.stdout(Stdio::from_file(file));
     run(cmd)
+        .map_err(|e| warn!("Can't list npm packages: {}", e)).ok();
+    Ok(())
 }
 
 fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
