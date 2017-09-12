@@ -1,7 +1,7 @@
-use std::io::{BufReader, BufRead};
-use std::fs::File;
+use std::io::{BufReader, BufRead, Read};
+use std::os::unix::fs::PermissionsExt;
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
-use std::os::unix::fs::{symlink};
 use std::collections::HashSet;
 
 use libmount::BindMount;
@@ -12,12 +12,11 @@ use serde_json::{Value as Json, from_reader};
 use unshare::{Stdio};
 
 use builder::commands::generic::{command, run};
-use builder::commands::tarcmd::unpack_subdir;
 use builder::distrib::{Distribution, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use capsule::download::download_file;
 use container::mount::unmount;
-use file_util::safe_ensure_dir;
+use file_util::{safe_ensure_dir, copy};
 use super::super::context::{Context};
 use super::super::packages;
 
@@ -39,7 +38,7 @@ impl NpmConfig {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
         .member("npm_exe", V::Scalar::new().default("npm"))
-        .member("yarn_exe", V::Scalar::new().default("/usr/lib/yarn/bin/yarn"))
+        .member("yarn_exe", V::Scalar::new().default("/usr/bin/yarn"))
         .member("yarn_version", V::Scalar::new().optional())
         .member("install_node", V::Scalar::new().default(true))
         .member("install_yarn", V::Scalar::new().default(true))
@@ -83,7 +82,7 @@ impl Default for NpmConfig {
             install_node: true,
             install_yarn: true,
             npm_exe: "npm".to_string(),
-            yarn_exe: "/usr/lib/yarn/bin/yarn".to_string(),
+            yarn_exe: "/usr/bin/yarn".to_string(),
             yarn_version: None,
         }
     }
@@ -392,18 +391,33 @@ fn yarn_scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
 pub fn setup_yarn(ctx: &mut Context)
     -> Result<(), String>
 {
-    let link = match ctx.npm_settings.yarn_version {
-        Some(ref ver) => {
-            format!("https://github.com/yarnpkg/yarn/\
-                     releases/download/{0}/yarn-{0}.tar.gz", ver)
+    let ver = match ctx.npm_settings.yarn_version {
+        Some(ref ver) => ver.trim_left_matches('v').to_string(),
+        None => {
+            let path = download_file(&mut ctx.capsule,
+                &["https://yarnpkg.com/latest-version"],
+                None)?;
+            let mut ver = String::with_capacity(10);
+            // TODO(tailhook) remove cached latest-version
+            //                but have to do it race-less
+            File::open(&path)
+                .and_then(|mut f| f.read_to_string(&mut ver))
+                .map_err(|e| format!(
+                    "error reading yarn's latest version: {}", e))?;
+            ver
         }
-        None => String::from("https://yarnpkg.com/latest.tar.gz"),
     };
+    let ver = ver.trim();
+    let link = format!("https://github.com/yarnpkg/yarn/\
+                       releases/download/v{0}/yarn-{0}.js", ver);
     let filename = download_file(&mut ctx.capsule, &[&link], None)?;
-    unpack_subdir(ctx, &filename,
-        &Path::new("/vagga/root/usr/lib/yarn"), Path::new("dist"))?;
-    symlink("/usr/lib/yarn/bin/yarn", "/vagga/root/usr/bin/yarn")
-        .map_err(|e| format!("Can't create yarn symlink: {}", e))?;
+    copy(&filename, "/vagga/root/usr/bin/yarn")
+        .map_err(|e| format!("Error copying {:?} to {:?}: {}",
+            &filename, "/vagga/root/usr/bin/yarn", e))?;
+    fs::set_permissions("/vagga/root/usr/bin/yarn",
+        fs::Permissions::from_mode(0o755))
+        .map_err(|e| format!("Error setting permissions of {:?}: {}",
+            "/vagga/root/usr/bin/yarn", e))?;
     Ok(())
 }
 

@@ -9,7 +9,7 @@ containers:
     setup:
     - !Alpine v3.6
     - !NpmConfig
-      yarn-version: v0.27.4
+      yarn-version: v1.0.1
     - !YarnDependencies
 
 

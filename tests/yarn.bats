@@ -48,7 +48,7 @@ END
     run vagga version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "0.27.4" ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.0.1" ]]
     link=$(readlink .vagga/version)
-    [[ $link = ".roots/version.5bf1e107/root" ]]
+    [[ $link = ".roots/version.58b6add6/root" ]]
 }

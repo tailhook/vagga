@@ -1261,7 +1261,7 @@ Node.JS Commands
         .. versionadded:: v0.7.3
 
    yarn-exe
-        (default is ``/usr/lib/yarn/bin/yarn``) The yarn command to use for
+        (default is ``/usr/bin/yarn``) The yarn command to use for
         installation of packages if ``!Yarn*`` commands are used.
 
         The reason we have full path here is because vagga's own search
