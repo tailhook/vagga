@@ -1,6 +1,6 @@
 use std::io::{BufReader, BufRead, Read};
-use std::os::unix::fs::PermissionsExt;
-use std::fs::{self, File};
+use std::os::unix::fs::{PermissionsExt, symlink};
+use std::fs::{self, File, remove_dir};
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
@@ -9,6 +9,7 @@ use quick_error::ResultExt;
 use quire::validate as V;
 use regex::Regex;
 use serde_json::{Value as Json, from_reader};
+use scan_dir;
 use unshare::{Stdio};
 
 use builder::commands::generic::{command, run};
@@ -16,6 +17,7 @@ use builder::distrib::{Distribution, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use capsule::download::download_file;
 use container::mount::unmount;
+use container::root::temporary_change_root;
 use file_util::{safe_ensure_dir, copy};
 use super::super::context::{Context};
 use super::super::packages;
@@ -494,19 +496,15 @@ impl BuildStep for YarnDependencies {
             packages::ensure_packages(
                 &mut guard.distro, &mut guard.ctx, &features)?;
 
-            // We need to hide `node_modules/.yarn-integrity` so that yarn
-            // skip this directory
-            // At least this is how it works in yarn v0.23.0
             let bad_modules = Path::new("/vagga/root/work")
                 .join(&self.dir)
                 .join("node_modules");
-            let modules_mount = if bad_modules.is_dir() {
-                safe_ensure_dir(Path::new("/vagga/empty"))?;
-                BindMount::new("/vagga/empty", &bad_modules).mount()?;
-                Some(bad_modules)
-            } else {
-                None
-            };
+            let modules_exist = bad_modules.is_dir();
+            if !modules_exist {
+                safe_ensure_dir(&bad_modules)?;
+            }
+            safe_ensure_dir(Path::new("/tmp/yarn-modules"))?;
+            BindMount::new("/tmp/yarn-modules", &bad_modules).mount()?;
 
             let mut cmd = command(&guard.ctx,
                 &guard.ctx.npm_settings.yarn_exe)?;
@@ -523,13 +521,41 @@ impl BuildStep for YarnDependencies {
             if self.production {
                 cmd.arg("--production");
             }
-            let result = run(cmd);
+            let r1 = run(cmd);
 
-            if let Some(bad_modules) = modules_mount {
-                unmount(&bad_modules)?;
+            let r2 = temporary_change_root::<_, _, _, String>("/vagga/root",
+                || {
+                    let dir = Path::new("/work").join(&self.dir)
+                        .join("node_modules/.bin");
+                    println!("CHECKING DiR {:?}", dir);
+                    if dir.exists() {
+                        scan_dir::ScanDir::files().read(dir, |iter| {
+                            for (entry, name) in iter {
+                                println!("FILE {:?}", name);
+                                let res = fs::read_link(entry.path())
+                                    .map_err(|e| format!(
+                                        "Readlink error: {}", e))?;
+                                println!("READLINK {:?}", res);
+                                symlink(res, Path::new("/usr/bin").join(&name))
+                                    .map_err(|e| format!(
+                                        "Error symlinking: {}", e))?;
+                            }
+                            Ok(())
+                        })
+                        .map_err(|e| format!("Can't scan bin dir: {}", e))
+                        .and_then(|v| v)?;
+                    }
+                    Ok(())
+                });
+
+            unmount(&bad_modules)?;
+            if !modules_exist {
+                remove_dir(&bad_modules)
+                    .map_err(|e| format!("Can't remove node_modules: {}", e))?;
             }
 
-            result?;
+            r1?;
+            r2?;
         }
         Ok(())
     }

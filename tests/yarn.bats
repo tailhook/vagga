@@ -42,6 +42,9 @@ END
     [[ ${lines[${#lines[@]}-7]} = "  File: /usr/lib/node_modules/classnames" ]]
     link=$(readlink .vagga/pkg)
     [[ $link = ".roots/pkg.1a63a916/root" ]]
+    run vagga _run pkg resolve .
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "/work" ]]
 }
 
 @test "yarn: specific yarn version" {

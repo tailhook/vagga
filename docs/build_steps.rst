@@ -1280,9 +1280,9 @@ Node.JS Commands
         .. code-block:: yaml
 
             - !NpmInstall
-              yarn-version: v0.27.5
+              yarn-version: 1.0.1
 
-        .. versionadded:: v0.7.3
+        .. versionadded:: v0.8.0
 
 .. step:: YarnDependencies
 
@@ -1292,7 +1292,9 @@ Node.JS Commands
         - !YarnDependencies
 
    This installs dependencies and ``devDependencies`` from ``package.json``
-   into a container's ``/usr/lib/node_modules``.
+   into a container's ``/usr/lib/node_modules``. It also links all the
+   binaries from ``node_modules/.bin`` directory installed by yarn into
+   ``/usr/bin`` directory for easier access.
 
    The settings in :step:`NpmConfig` do affect this command.
 
