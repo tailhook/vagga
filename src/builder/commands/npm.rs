@@ -1,5 +1,5 @@
 use std::io::{BufReader, BufRead, Read};
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::os::unix::fs::{PermissionsExt};
 use std::fs::{self, File, remove_dir};
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
@@ -18,7 +18,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use capsule::download::download_file;
 use container::mount::unmount;
 use container::root::temporary_change_root;
-use file_util::{safe_ensure_dir, copy};
+use file_util::{safe_ensure_dir, copy, force_symlink};
 use super::super::context::{Context};
 use super::super::packages;
 
@@ -527,16 +527,15 @@ impl BuildStep for YarnDependencies {
                 || {
                     let dir = Path::new("/work").join(&self.dir)
                         .join("node_modules/.bin");
-                    println!("CHECKING DiR {:?}", dir);
                     if dir.exists() {
                         scan_dir::ScanDir::files().read(dir, |iter| {
                             for (entry, name) in iter {
-                                println!("FILE {:?}", name);
                                 let res = fs::read_link(entry.path())
                                     .map_err(|e| format!(
                                         "Readlink error: {}", e))?;
-                                println!("READLINK {:?}", res);
-                                symlink(res, Path::new("/usr/bin").join(&name))
+                                force_symlink(
+                                        &res,
+                                        &Path::new("/usr/bin").join(&name))
                                     .map_err(|e| format!(
                                         "Error symlinking: {}", e))?;
                             }
