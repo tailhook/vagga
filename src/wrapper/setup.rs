@@ -211,9 +211,9 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     let selinux = sys_dir.join("fs/selinux");
     if selinux.is_dir() {
         // Need this go get some selinux-aware commands to work (see #65)
-        try_msg!(Remount::new(&sys_dir.join("fs/selinux"))
-                .bind(true).readonly(true).remount(),
-            "remount /sys/fs/selinux: {err}");
+        Remount::new(&sys_dir.join("fs/selinux"))
+            .bind(true).readonly(true).remount()
+            .map_err(|e| warn!("remount /sys/fs/selinux: {}", e)).ok();
     }
 
     let vagga_dir = mnt_dir.join("vagga");
