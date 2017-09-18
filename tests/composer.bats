@@ -220,6 +220,7 @@ teardown() {
 # hhvm
 
 @test "composer: hhvm ubuntu xenial" {
+    skip "Something wrong with default hhvm package on ubuntu"
     run vagga _run hhvm-ubuntu-xenial laravel --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
