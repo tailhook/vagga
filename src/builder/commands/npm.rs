@@ -18,6 +18,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use capsule::download::download_file;
 use container::mount::unmount;
 use container::root::temporary_change_root;
+use container::util::clean_dir;
 use file_util::{safe_ensure_dir, copy, force_symlink};
 use super::super::context::{Context};
 use super::super::packages;
@@ -503,8 +504,8 @@ impl BuildStep for YarnDependencies {
             if !modules_exist {
                 safe_ensure_dir(&bad_modules)?;
             }
+            safe_ensure_dir(Path::new("/tmp"))?;
             safe_ensure_dir(Path::new("/tmp/yarn-modules"))?;
-            BindMount::new("/tmp/yarn-modules", &bad_modules).mount()?;
 
             let mut cmd = command(&guard.ctx,
                 &guard.ctx.npm_settings.yarn_exe)?;
@@ -521,6 +522,9 @@ impl BuildStep for YarnDependencies {
             if self.production {
                 cmd.arg("--production");
             }
+
+            BindMount::new("/tmp/yarn-modules", &bad_modules).mount()?;
+
             let r1 = run(cmd);
 
             let r2 = temporary_change_root::<_, _, _, String>("/vagga/root",
@@ -552,6 +556,7 @@ impl BuildStep for YarnDependencies {
                 remove_dir(&bad_modules)
                     .map_err(|e| format!("Can't remove node_modules: {}", e))?;
             }
+            clean_dir("/tmp/yarn-modules", true)?;
 
             r1?;
             r2?;
