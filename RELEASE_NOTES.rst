@@ -2,6 +2,23 @@
 Release Notes
 =============
 
+Vagga 0.8.0
+===========
+
+:Release Date: future
+
+* **[breaking]** ``!Copy`` now resets file modification time to unixtime ``1``,
+  this improves reproducibility of containers
+* Added ``!YarnDependencies`` command (still a bit experimental)
+* Added ``!GitDescribe`` command
+* Added ``rules`` to ``!Copy`` command
+* Added ``sha256`` option to ``!Download`` buildd step
+* Added ``allow-pre-releases`` option to ``PipConfig``
+* Added ``disable-auto-clean`` setting (mostly useful for CI)
+* The ``/etc/resolv.conf`` and ``/etc/hosts`` are mounted into container
+  instead of copying/owerwriting (this is potentially a **breaking** issue)
+* Default alpine mirror is now ``dl-cdn.alpinelinux.org`` instead of random
+
 
 Vagga 0.7.2
 ===========
