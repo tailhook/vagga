@@ -217,11 +217,6 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     ctx.environ.insert("COMPOSER_ALLOW_SUPERUSER".to_owned(),
                        "1".to_owned());
 
-    // Fix date_default_timezone_get function which can return
-    // empty string instead of "UTC". Reproduced on travis-ci
-    // with Ubuntu Xenial and hhvm-3.11.1
-    ctx.environ.entry("TZ".to_string()).or_insert("UTC".to_string());
-
     Ok(())
 }
 
