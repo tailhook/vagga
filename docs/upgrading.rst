@@ -2,6 +2,23 @@
 Upgrading
 =========
 
+
+Upgrading 0.7.x -> 0.8.0
+========================
+
+* ``!Copy`` now resets timestamps when copying, if you need timestamps
+  add ``preserve-times``. By default it sets timestamp to first second
+  after epoch. This means timestamp is non-zero, but stable whenever you
+  build container, meaning it improves reproducibility.
+* The ``/etc/resolv.conf`` and ``/etc/hosts`` files are now cleaned after
+  container build and mounted over by system files. This may slightly tweak
+  behavior when running concurrent containers. Also, if you sync containers
+  to remote hosts they will not contain ``resolv.conf`` from build machine
+  (which is a good thing), but will be empty if not populated afterwards.
+
+For most users upgrade should be seamless.
+
+
 Upgrading 0.6.x -> 0.7.0
 ========================
 
