@@ -1,0 +1,6 @@
+mixins:
+- mixins.yaml
+
+containers:
+  test:
+    setup: []

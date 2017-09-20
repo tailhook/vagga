@@ -188,7 +188,7 @@ fn find_config(cfg: &SubConfig, guard: &mut Guard)
             Path::new("/work").join(&cfg.path)
         }
     };
-    Ok(read_config(&path)?)
+    Ok(read_config(&path, true)?)
 }
 
 pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
@@ -276,7 +276,7 @@ impl BuildStep for SubConfig {
         if !path.exists() {
             return Err(VersionError::New);
         }
-        let subcfg = read_config(&path)?;
+        let subcfg = read_config(&path, true)?;
         let cont = subcfg.containers.get(&self.container)
             .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
         for b in cont.setup.iter() {
