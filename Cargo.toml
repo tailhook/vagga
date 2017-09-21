@@ -35,7 +35,7 @@ net2 = "0.2.23"
 humantime = "1.0.0"
 quick-error = "1.2.0"
 docopt = "0.8.1"
-quire = "0.3.0"
+quire = "0.3.1"
 lazy_static = "0.2.2"
 dir-signature = { version="0.2.1", optional=true }
 itertools = "0.6.1"

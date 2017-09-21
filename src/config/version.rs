@@ -1,7 +1,9 @@
+use std::fmt;
 use std::str::CharIndices;
 use std::iter::Peekable;
 use std::cmp::Ordering;
 use std::default::Default;
+use std::error::Error;
 
 use quire::validate as V;
 use quire::ast::{Ast, NullKind, Tag};
@@ -99,6 +101,20 @@ impl<'a> PartialOrd for Version<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct MinimumVaggaError(String);
+
+impl Error for MinimumVaggaError {
+    fn description(&self) -> &str { "Minimum Vagga Error" }
+    fn cause(&self) -> Option<&Error> { None }
+}
+
+impl fmt::Display for MinimumVaggaError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", self.description(), self.0)
+    }
+}
+
 #[derive(Default)]
 pub struct MinimumVagga {
     pub optional: bool,
@@ -132,9 +148,12 @@ impl V::Validator for MinimumVagga {
             Ast::Scalar(pos, _, kind, min_version) => {
                 if let Some(ref current_version) = self.current_version {
                     if Version(&min_version) > Version(current_version) {
-                        err.add_error(QuireError::validation_error(&pos,
-                            format!("Please upgrade vagga to at least {:?}",
-                                    min_version)));
+                        err.add_error(QuireError::custom_at(
+                            &pos,
+                            MinimumVaggaError(
+                                format!(
+                                    "Please upgrade vagga to at least {:?}",
+                                    min_version))));
                     }
                 }
                 (pos, kind, min_version)

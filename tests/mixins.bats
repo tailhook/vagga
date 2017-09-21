@@ -53,3 +53,13 @@ setup() {
     [[ "${lines[3]}" = "overrides           " ]]
     [[ "${lines[4]}" = "top                 " ]]
 }
+
+@test "mixins: Minimum version warning" {
+    cd ../mixins_version
+    run vagga _build test
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output != *"UnknownBuildStep"* ]]
+    [[ $output = *"Please upgrade vagga"* ]]
+    [[ $(echo $output |grep "Minimum Vagga Error" |wc -l) = 1 ]]
+}

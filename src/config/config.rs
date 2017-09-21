@@ -17,7 +17,7 @@ use super::containers::Container;
 use super::command::{MainCommand, command_validator};
 use super::range::Range;
 use super::validate::validate_config;
-use super::version::MinimumVagga;
+use super::version::{MinimumVagga, MinimumVaggaError};
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -85,7 +85,7 @@ pub fn find_config(work_dir: &Path, verbose: bool)
     if verbose {
         info!("Found configuration file: {:?}", &filename);
     }
-    let cfg = read_config(&filename)?;
+    let cfg = read_config(&filename, verbose)?;
     validate_config(&cfg)?;
     return Ok((cfg, cfg_dir));
 }
@@ -154,14 +154,14 @@ fn include_file(pos: &Pos, include: &Include,
 }
 
 fn read_mixins(filename: &Path, mixins: &Vec<String>, dest: &mut Config,
-    opt: &Options)
+    opt: &Options, verbose: bool)
     -> Result<(), String>
 {
     for mixin in mixins.iter().rev() {
         let mixin_result: Result<(PathBuf, Config), _> =
             join_path(filename, mixin)
             .and_then(|path| {
-                single_file(&path, opt)
+                single_file(&path, opt, true)
                 .map(move |c| (path, c))
             });
         match mixin_result {
@@ -179,20 +179,34 @@ fn read_mixins(filename: &Path, mixins: &Vec<String>, dest: &mut Config,
                         dest.commands.insert(cname, cmd);
                     }
                 }
-                read_mixins(&path, &subcfg.mixins, dest, opt)?;
+                read_mixins(&path, &subcfg.mixins, dest, opt, verbose)?;
             }
             Err(e) => {
-                warn!("Skipping mixin because of error. Error: {}", e);
+                if verbose {
+                    warn!("Skipping mixin because of error. Error: {}", e);
+                }
             }
         }
     }
     Ok(())
 }
 
-fn single_file(filename: &Path, opt: &Options) -> Result<Config, String> {
+fn single_file(filename: &Path, opt: &Options, is_mixin: bool)
+    -> Result<Config, String>
+{
     let filename = Rc::new(filename.to_path_buf());
     parse_config(&*filename, &config_validator(), &opt)
-    .map_err(|e| format!("{}", e))
+    .map_err(|e| {
+        if let (true, Some(e)) = (
+            is_mixin,
+            e.errors()
+                .find(|x| x.downcast_ref::<MinimumVaggaError>().is_some()))
+        {
+            format!("{}", e)
+        } else {
+            format!("{}", e)
+        }
+    })
     .map(|mut cfg: Config| {
         for (_, ref mut command) in &mut cfg.commands {
             command.set_source(filename.clone());
@@ -204,14 +218,13 @@ fn single_file(filename: &Path, opt: &Options) -> Result<Config, String> {
     })
 }
 
-pub fn read_config(filename: &Path) -> Result<Config, String> {
+pub fn read_config(filename: &Path, verbose: bool) -> Result<Config, String> {
     let mut opt = Options::default();
     opt.allow_include(include_file);
-    let mut config = single_file(filename, &opt)?;
+    let mut config = single_file(filename, &opt, false)?;
     read_mixins(filename,
         &mem::replace(&mut config.mixins, Vec::new()),
-        &mut config,
-        &opt)?;
+        &mut config, &opt, verbose)?;
 
     // Is this a good place for such defaults?
     for (_, ref mut container) in config.containers.iter_mut() {
