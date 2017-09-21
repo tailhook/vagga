@@ -54,7 +54,7 @@ Can't find newuidmap or newgidmap
 
 Full error usually looks like::
 
-    WARN:vagga::process_util: Can't find `newuidmap` or `newuidmap` (see http://bit.ly/err_idmap)
+    WARN:vagga::process_util: Can't find `newuidmap` or `newgidmap` (see http://bit.ly/err_idmap)
     error setting uid/gid mappings: No such file or directory (os error 2)
 
 There might be two reasons for this:
