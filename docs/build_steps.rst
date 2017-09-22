@@ -441,7 +441,7 @@ Generic Commands
      (optional) Sha256 hashsum of the file. If real hashsum is different this
      step will fail.
 
-     .. versionadded:: 0.7.3
+     .. versionadded:: 0.8.0
 
    .. warning:: The download is cached similarly to other commands. Currently
       there is no way to control the caching. But it's common practice to
@@ -640,7 +640,7 @@ Generic Commands
    output-file
       (optional) Writes the most recent tag into the file.
 
-   .. versionadded:: 0.7.3
+   .. versionadded:: 0.8.0
 
 Files and Directories
 =====================
@@ -732,9 +732,9 @@ Files and Directories
      If ``true`` preserves modification times of the copied files. By default
      modification times set to the first second from the unix epoch. This
      behaviour is useful for reproducible builds.
-     Before ``0.7.3`` modification times were set to the current time.
+     Before ``0.8.0`` modification times were set to the current time.
 
-     .. versionadded:: 0.7.3
+     .. versionadded:: 0.8.0
 
    umask
      (default ``0o002``)
@@ -784,7 +784,7 @@ Files and Directories
        ``["!.git/", "!.hg/", "!.svn/", "!.vagga/", "!*.bak", "!*.orig", "!*~",
        "!#*#", "!.#*"]``
 
-     .. versionadded:: 0.7.3
+     .. versionadded:: 0.8.0
 
    .. _no-default-rules:
 
@@ -792,7 +792,7 @@ Files and Directories
      Disables default ignore rules which are given above. The option only works
      in pair with ``rules`` option.
 
-     .. versionadded:: 0.7.3
+     .. versionadded:: 0.8.0
 
    .. warning:: If the source directory starts with `/work` all the files are
       read and checksummed on each run of the application in the container. So
@@ -1258,7 +1258,7 @@ Node.JS Commands
         (even if ``install-node`` is false). Yarn only installed if ``!Yarn*``
         commands are used.
 
-        .. versionadded:: v0.7.3
+        .. versionadded:: v0.8.0
 
    yarn-exe
         (default is ``/usr/bin/yarn``) The yarn command to use for
@@ -1269,7 +1269,7 @@ Node.JS Commands
         (I.e. bare executable name will work here as long as it's not an
         absolute symlink).  We may fix this in the future releases.
 
-        .. versionadded:: v0.7.3
+        .. versionadded:: v0.8.0
 
    yarn-version
         (default is latest) The yarn verison to install for the ``!Yarn*``
@@ -1312,7 +1312,7 @@ Node.JS Commands
        but to the directory because we track both ``package.json`` and
        ``yarn.lock`` files in there.
 
-  .. versionadded:: v0.7.3
+  .. versionadded:: v0.8.0
 
 .. _yarn: https://yarnpkg.com/
 
