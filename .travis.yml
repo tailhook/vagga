@@ -25,7 +25,9 @@ install:
     echo "$(id -un):100000:65536" | sudo tee /etc/subuid | sudo tee /etc/subgid
     sudo apt-get install uidmap -y
     curl http://files.zerogw.com/vagga/vagga-install-testing.sh | sh
+    git tag -a v0.0.0-test -m "Test tag"
     vagga make
+    ./vagga --version
     vagga _build test
   else
     brew install md5sha1sum
