@@ -1,6 +1,7 @@
 #![recursion_limit="100"]
 
 use std::env;
+use std::io::{self, Write};
 use std::process::exit;
 
 extern crate sha2;
@@ -43,6 +44,8 @@ extern crate libmount;
 #[cfg(feature="containers")]
 extern crate dir_signature;
 
+use argparse::{ArgumentParser, StoreTrue};
+
 #[macro_use] mod macros;
 mod config;
 mod container;
@@ -79,6 +82,18 @@ fn init_logging() {
     env_logger::init().unwrap();
 }
 
+struct DevNull;
+
+impl Write for DevNull {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 #[cfg(feature="containers")]
 fn main() {
     init_logging();
@@ -95,6 +110,28 @@ fn main() {
     } else {
         "".to_string()
     };
+
+    let mut _show_version = false;
+    {
+        let cmdline = args.clone();
+        let mut ap = ArgumentParser::new();
+        ap.set_description("Show vagga version");
+        ap.refer(&mut _show_version)
+            .add_option(&["-V", "--version"],
+                        StoreTrue,
+                        "Show vagga version and exit")
+            .required();
+        ap.stop_on_first_argument(true);
+        ap.silence_double_dash(false);
+        match ap.parse(cmdline, &mut DevNull {}, &mut DevNull {}) {
+            Ok(()) => {
+                println!("{}", env!("VAGGA_VERSION"));
+                exit(0)
+            },
+            Err(_) => {},
+        }
+    }
+
     let code = match &ep[..] {
         "launcher" => launcher::run(args),
         "network" => network::run(args),
