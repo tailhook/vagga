@@ -1,7 +1,9 @@
 #![recursion_limit="100"]
 
 use std::env;
-use std::io::{self, Write};
+use std::ffi::OsStr;
+use std::io::{self, Write, stdout};
+use std::path::PathBuf;
 use std::process::exit;
 
 extern crate sha2;
@@ -98,6 +100,9 @@ impl Write for DevNull {
 fn main() {
     init_logging();
     let mut args = env::args().collect::<Vec<_>>();
+    let arg0 = args.get(0).map(|n| n.as_str()).unwrap_or("").to_string();
+    let _arg0_path = PathBuf::from(&arg0);
+    let exe_name = _arg0_path.file_name().unwrap_or(OsStr::new(""));
     // TODO(tailhook) check if arg0 is "vagga" or "/proc/self/exe", maybe
     let cmd;
     let ep = if args.get(1).map(|x| x.starts_with("__") && x.ends_with("__"))
@@ -111,24 +116,37 @@ fn main() {
         "".to_string()
     };
 
-    let mut _show_version = false;
-    {
-        let cmdline = args.clone();
-        let mut ap = ArgumentParser::new();
-        ap.set_description("Show vagga version");
-        ap.refer(&mut _show_version)
-            .add_option(&["-V", "--version"],
-                        StoreTrue,
-                        "Show vagga version and exit")
-            .required();
-        ap.stop_on_first_argument(true);
-        ap.silence_double_dash(false);
-        match ap.parse(cmdline, &mut DevNull {}, &mut DevNull {}) {
+    if exe_name == "vagga" {
+        let mut show_help = false;
+        let mut show_version = false;
+        let parse_res = {
+            let cmdline = args.clone();
+            let mut ap = ArgumentParser::new();
+            ap.set_description("Show vagga version");
+            ap.refer(&mut show_help)
+                .add_option(&["-h", "--help"], StoreTrue,
+                            "Show vagga help and exit");
+            ap.refer(&mut show_version)
+                .add_option(&["-V", "--version"], StoreTrue,
+                            "Show vagga version and exit");
+            ap.stop_on_first_argument(true);
+            ap.silence_double_dash(false);
+            ap.parse(cmdline, &mut DevNull {}, &mut DevNull {})
+        };
+        match parse_res {
             Ok(()) => {
-                println!("{}", env!("VAGGA_VERSION"));
-                exit(0)
+                if show_help {
+                    let mut launcher_opts = launcher::LauncherOptions::default();
+                    let launcher_ap = launcher::arg_parser(&mut launcher_opts);
+                    launcher_ap.print_help(&arg0, &mut stdout()).unwrap();
+                    exit(0);
+                }
+                if show_version {
+                    println!("{}", env!("VAGGA_VERSION"));
+                    exit(0);
+                }
             },
-            Err(_) => {},
+            _ => {},
         }
     }
 

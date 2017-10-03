@@ -15,4 +15,10 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = 'v'* ]]
+
+    cd /
+    run vagga --version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = 'v'* ]]
 }
