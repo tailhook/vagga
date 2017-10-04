@@ -1,5 +1,6 @@
 use std::env;
-use std::io::{stdout, stderr, Write};
+use std::ffi::OsStr;
+use std::io::{self, stdout, stderr, Write};
 use std::path::{Path, PathBuf};
 use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
@@ -63,7 +64,7 @@ fn check_export(cmd: &String) -> Option<String> {
     }
 }
 
-pub struct LauncherOptions {
+struct LauncherOptions {
     commands: Vec<String>,
     cname: String,
     args: Vec<String>,
@@ -91,7 +92,7 @@ impl Default for LauncherOptions {
     }
 }
 
-pub fn arg_parser<'ap>(opts: &'ap mut LauncherOptions) -> ArgumentParser<'ap> {
+fn arg_parser<'ap>(opts: &'ap mut LauncherOptions) -> ArgumentParser<'ap> {
     let mut ap = ArgumentParser::new();
     ap.set_description("
             Runs a command in container, optionally builds container if that
@@ -141,7 +142,63 @@ pub fn arg_parser<'ap>(opts: &'ap mut LauncherOptions) -> ArgumentParser<'ap> {
     ap
 }
 
+struct DevNull;
+
+impl Write for DevNull {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+fn process_help_and_version(input_args: Vec<String>) -> bool {
+    let arg0 = input_args.get(0).map(|n| n.as_str()).unwrap_or("").to_string();
+    let _arg0_path = PathBuf::from(&arg0);
+    let exe_name = _arg0_path.file_name().unwrap_or(OsStr::new(""));
+
+    if exe_name == "vagga" {
+        let mut show_help = false;
+        let mut show_version = false;
+        let parse_res = {
+            let mut ap = ArgumentParser::new();
+            ap.set_description("Show vagga version");
+            ap.refer(&mut show_help)
+                .add_option(&["-h", "--help"], StoreTrue,
+                            "Show vagga help and exit");
+            ap.refer(&mut show_version)
+                .add_option(&["-V", "--version"], StoreTrue,
+                            "Show vagga version and exit");
+            ap.stop_on_first_argument(true);
+            ap.silence_double_dash(false);
+            ap.parse(input_args, &mut DevNull {}, &mut DevNull {})
+        };
+        match parse_res {
+            Ok(()) => {
+                if show_help {
+                    let mut launcher_opts = LauncherOptions::default();
+                    let launcher_ap = arg_parser(&mut launcher_opts);
+                    launcher_ap.print_help(&arg0, &mut stdout()).unwrap();
+                    return true;
+                }
+                if show_version {
+                    println!("{}", env!("VAGGA_VERSION"));
+                    return true;
+                }
+            },
+            _ => {},
+        }
+    }
+    false
+}
+
 pub fn run(input_args: Vec<String>) -> i32 {
+    if process_help_and_version(input_args.clone()) {
+        return 0;
+    }
+
     let mut err = stderr();
     let workdir = env::current_dir().unwrap();
 
