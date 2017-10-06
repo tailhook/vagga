@@ -65,29 +65,6 @@ fn check_export(cmd: &String) -> Option<String> {
 
 pub fn run(input_args: Vec<String>) -> i32 {
     let mut err = stderr();
-    let workdir = env::current_dir().unwrap();
-
-    let (config, cfg_dir) = match find_config(&workdir, true) {
-        Ok(tup) => tup,
-        Err(e) => {
-            writeln!(&mut err, "{}", e).ok();
-            return 126;
-        }
-    };
-    // Not sure this is a best place, but the variable is needed for correct
-    // reading of settings
-    if let Some(x) = env::var_os("HOME") {
-        env::set_var("_VAGGA_HOME", x);
-    }
-
-    let (ext_settings, int_settings) = match read_settings(&cfg_dir)
-    {
-        Ok(tup) => tup,
-        Err(e) => {
-            writeln!(&mut err, "{}", e).ok();
-            return 126;
-        }
-    };
 
     let mut commands = Vec::<String>::new();
     let mut cname = "".to_string();
@@ -100,7 +77,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
     let mut isolate_network = false;
 
     let export_command = input_args.get(0).and_then(check_export);
-    if !int_settings.run_symlinks_as_commands || export_command.is_none() {
+    let (cli_ok, cli_out, cli_err) = {
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Runs a command in container, optionally builds container if that
@@ -147,7 +124,45 @@ pub fn run(input_args: Vec<String>) -> i32 {
                 "Arguments for the command");
         ap.stop_on_first_argument(true);
         ap.silence_double_dash(false);
-        match ap.parse(input_args, &mut stdout(), &mut stderr()) {
+        let mut cli_out = Vec::new();
+        let mut cli_err = Vec::new();
+        match ap.parse(input_args.clone(), &mut cli_out, &mut cli_err) {
+            Err(0) if export_command.is_none() => {
+                stdout().write_all(&cli_out).ok();
+                stderr().write_all(&cli_err).ok();
+                return 0;
+            }
+            r => (r, cli_out, cli_err),
+        }
+    };
+
+    let workdir = env::current_dir().unwrap();
+
+    let (config, cfg_dir) = match find_config(&workdir, true) {
+        Ok(tup) => tup,
+        Err(e) => {
+            writeln!(&mut err, "{}", e).ok();
+            return 126;
+        }
+    };
+    // Not sure this is a best place, but the variable is needed for correct
+    // reading of settings
+    if let Some(x) = env::var_os("HOME") {
+        env::set_var("_VAGGA_HOME", x);
+    }
+
+    let (ext_settings, int_settings) = match read_settings(&cfg_dir)
+    {
+        Ok(tup) => tup,
+        Err(e) => {
+            writeln!(&mut err, "{}", e).ok();
+            return 126;
+        }
+    };
+    if !int_settings.run_symlinks_as_commands || export_command.is_none() {
+        stdout().write_all(&cli_out).ok();
+        stderr().write_all(&cli_err).ok();
+        match cli_ok {
             Ok(()) => {}
             Err(0) => return 0,
             Err(_) => return 122,
