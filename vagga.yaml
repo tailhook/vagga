@@ -113,7 +113,7 @@ commands:
       set -ex
       rm target/x86_64-unknown-linux-musl/release/vagga || true # force rebuild
       make release
-      make ubuntu-package
+      make ubuntu-package CHECKINSTALL_FLAGS=--strip=no
       make tarball
 
   build-packages-testing: !Command

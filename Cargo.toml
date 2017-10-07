@@ -50,6 +50,9 @@ default = ["containers"]
 containers = ["unshare", "libmount", "dir-signature"]
 docker_runner = []
 
+[profile.release]
+debug = true
+
 [[bin]]
 name = "vagga"
 path = "src/main.rs"
