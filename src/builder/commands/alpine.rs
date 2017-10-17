@@ -337,10 +337,14 @@ fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
 pub fn remove(_ctx: &mut Context, pkgs: &Vec<String>)
     -> Result<(), String>
 {
-    capsule::apk_run(&[
-        "--root", "/vagga/root",
-        "del",
-        ], &pkgs[..])
+    if pkgs.len() > 0 {
+        capsule::apk_run(&[
+            "--root", "/vagga/root",
+            "del",
+            ], &pkgs[..])
+    } else {
+        Ok(())
+    }
 }
 
 pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
