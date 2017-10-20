@@ -1,0 +1,112 @@
+containers:
+  kafka:
+    volumes:
+      /tmp: !Tmpfs
+        size: 1G
+        subdirs:
+          kafka-logs: {}
+          zookeeper: {}
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install
+      - openjdk-8-jre-headless
+    - !Tar
+      url: http://apache.volia.net/kafka/0.11.0.1/kafka_2.12-0.11.0.1.tgz
+      sha256: c776f2dbb7f4e1af6b61e32d482b513a1788bf5f39602746b005ab92601a46f2
+      path: /opt/kafka
+      subdir: kafka_2.12-0.11.0.1
+    - !EnsureDir /var/log/kafka
+    - !EnsureDir /var/log/zookeeper
+
+  kafka-manager:
+    # First build can take a long time
+    setup:
+    - !Ubuntu xenial
+    - !Install
+      - openjdk-8-jre-headless
+    - !AptTrust
+      keys: [2EE0EA64E40A89B84B2DF73499E82A75642AC823]
+    - !UbuntuRepo
+      url: https://dl.bintray.com/sbt/debian
+      suite: ""
+      components: [/]
+    - !BuildDeps
+      - openjdk-8-jdk
+      - sbt
+      - unzip
+    - !Env
+      VERSION: 1.3.3.14
+    - !Tar
+      url: https://github.com/yahoo/kafka-manager/archive/1.3.3.14.tar.gz
+      path: /tmp
+    - !CacheDirs
+      /root/.ivy2/cache: ivy2
+    - !Sh |
+        cd /tmp/kafka-manager-${VERSION}
+        sbt dist
+        unzip /tmp/kafka-manager-${VERSION}/target/universal/kafka-manager-${VERSION}.zip -d /opt
+        mv /opt/kafka-manager-${VERSION} /opt/kafka-manager
+    - !Remove /root/.sbt
+
+  zk-shell:
+    setup:
+    - !Alpine v3.6
+    - !PipConfig {dependencies: true}
+    - !Py2Install [zk-shell]
+    environ:
+      HOME: /work
+      LANG: en_US.UTF-8
+      PYTHONIOENCODING: UTF-8
+
+commands:
+  kafka: !Supervise
+    description: Run kafka with zookeeper
+    kill-unresponsive-after: 6
+    children:
+      zookeeper: !Command
+        container: kafka
+        volumes:
+          /tmp/zookeeper: !Persistent zookeeper
+          /var/log/zookeeper: !Tmpfs
+        run: |
+          export LOG_DIR=/var/log/zookeeper
+          cd /opt/kafka
+          bin/zookeeper-server-start.sh config/zookeeper.properties &
+          PID=$!
+          handler() {
+            # give kafka some time to gracefully shutdown
+            sleep 5
+            kill $PID
+          }
+          trap handler INT
+          wait $PID
+          echo "Zookeeper stopped"
+      kafka: !Command
+        container: kafka
+        volumes:
+          /tmp/kafka-logs: !Persistent kafka
+          /var/log/kafka: !Tmpfs
+        run: |
+          export LOG_DIR=/var/log/kafka
+          cd /opt/kafka
+          bin/kafka-server-start.sh config/server.properties
+
+  kafka-topics: !Command
+    description: Run kafka-topics script
+    container: kafka
+    run: [/opt/kafka/bin/kafka-topics.sh, --zookeeper, localhost:2181]
+
+  kafka-manager: !Command
+    description: Run kafka manager tool
+    container: kafka-manager
+    environ:
+      ZK_HOSTS: localhost:2181
+    run:
+    - /opt/kafka-manager/bin/kafka-manager
+    - -Dpidfile.path=/var/run/kafka-manager.pid
+
+  zk-shell: !Command
+    description: Run zk-shell against localhost zookeeper
+    container: zk-shell
+    run: [zk-shell, localhost:2181]
