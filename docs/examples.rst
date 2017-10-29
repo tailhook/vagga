@@ -35,6 +35,7 @@ Databases
    examples/db/rethinkdb
    examples/db/cockroachdb
    examples/db/clickhouse
+   examples/db/kafka
 
 
 Miscellaneous
