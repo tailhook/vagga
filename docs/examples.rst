@@ -49,6 +49,14 @@ Miscellaneous
    examples/misc/certificate
    examples/misc/flaky-network
 
+Build tools
+-----------
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/build/gradle
+
 
 Documentation
 -------------

@@ -1,0 +1,100 @@
+_default:
+  gradle-home: &gradle-home /work/.gradle
+  cmd-opts: &cmd-opts
+    container: jdk
+    # Some java applications don't allow to run from root e.g. Elasticsearch.
+    # Uncomment next rows to circumvent such software
+    # user-id: 1
+    # external-user-id: 0
+    prerequisites: [_mk-gradle-cache]
+    volumes:
+      /work/.gradle/caches: !CacheDir gradle-cache
+
+containers:
+  jdk:
+    environ:
+      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
+      GRADLE_USER_HOME: *gradle-home
+    setup:
+    - !Ubuntu xenial
+    - !Install
+      - openjdk-8-jdk-headless
+    - !EnsureDir /opt/gradle
+    - !Unzip
+      url: https://services.gradle.org/distributions/gradle-4.2.1-bin.zip
+      subdir: gradle-4.2.1
+      path: /opt/gradle
+    - !Sh ln -s /opt/gradle/bin/gradle /usr/local/bin/gradle
+    # Uncomment if you need kotlin compiler
+    # - !EnsureDir /opt/kotlinc
+    # - !Unzip
+    #   url: https://github.com/JetBrains/kotlin/releases/download/v1.1.51/kotlin-compiler-1.1.51.zip
+    #   subdir: kotlinc
+    #   path: /opt/kotlinc
+    # - !Sh ln -s /opt/kotlinc/bin/kotlinc /usr/local/bin/kotlinc
+
+commands:
+  _mk-gradle-cache: !Command
+    container: jdk
+    run: mkdir -p $GRADLE_USER_HOME/caches
+
+  gradle: !Command
+    <<: *cmd-opts
+    description: Runs arbitrary gradle task
+    run: [gradle]
+
+  daemon: !Command
+    <<: *cmd-opts
+    description: Runs gradle daemon
+    run: |
+      # --foreground option runs a daemon with incompatible jvm options
+      # so another gradle process rejects to connect to the daemon
+      gradle --dry-run --daemon
+      GRADLE_PID=$(pidof java)
+      echo "Gradle daemon successfully started [PID: $GRADLE_PID]."
+      while [ -e /proc/$GRADLE_PID ]; do sleep 1; done
+
+  run: !Command
+    <<: *cmd-opts
+    description: Runs this project as a JVM application
+    run: [gradle, run]
+
+  assemble: !Command
+    <<: *cmd-opts
+    description: Assembles the outputs of this project
+    run: [gradle, assemble]
+
+  build: !Command
+    <<: *cmd-opts
+    description: Assembles and tests this project
+    run: [gradle, assemble]
+
+  test: !Command
+    <<: *cmd-opts
+    description: Runs the unit tests
+    run: [gradle, test]
+
+  check: !Command
+    <<: *cmd-opts
+    description: Runs all checks
+    run: [gradle, test]
+
+  compile: !Command
+    <<: *cmd-opts
+    description: Compiles all source sets
+    run: [gradle, classes, -x, processResources]
+
+  compile-test: !Command
+    <<: *cmd-opts
+    description: Compiles all test source sets
+    run: [gradle, testClasses, -x, processTestResources]
+
+  doc: !Command
+    <<: *cmd-opts
+    description: Generates Javadoc API documentation for the main source code
+    run: [gradle, javadoc]
+
+  clean: !Command
+    <<: *cmd-opts
+    description: Deletes the build directory
+    run: [gradle, clean]
