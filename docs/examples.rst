@@ -35,6 +35,7 @@ Databases
    examples/db/rethinkdb
    examples/db/cockroachdb
    examples/db/clickhouse
+   examples/db/kafka
 
 
 Miscellaneous
@@ -48,6 +49,14 @@ Miscellaneous
    examples/misc/firefox
    examples/misc/certificate
    examples/misc/flaky-network
+
+Build tools
+-----------
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/build/gradle
 
 
 Documentation
