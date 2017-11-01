@@ -1,0 +1,95 @@
+_defaults:
+  carbon-volumes: &carbon-volumes
+    /var/lib/carbon: !Persistent
+      name: carbon
+      init-command: _init-carbon-storage
+    /var/log/carbon: !Tmpfs
+      subdirs:
+        webapp: {}
+  grafana-volumes: &grafana-volumes
+    /var/lib/grafana: !Persistent grafana
+
+containers:
+  graphite:
+    environ:
+      PYTHONPATH: "/opt/graphite/lib/:/opt/graphite/webapp/"
+      GRAPHITE_STORAGE_DIR: /var/lib/carbon
+    setup:
+    - !Ubuntu xenial
+    # Install carbon & graphite
+    - !Install
+      - libcairo2-dev
+      - libffi-dev
+      - libpython-dev
+    - !PipConfig { dependencies: true }
+    - !Py2Install
+      - setuptools
+    - !Env
+      PIP_NO_BINARY: ":all:"
+    - !Py2Install
+      - carbon
+      - whisper
+      - graphite-web
+      - uwsgi
+    - !Sh |
+        cd /opt/graphite/conf
+        cp carbon.conf.example carbon.conf
+        cp storage-schemas.conf.example storage-schemas.conf
+        cp storage-aggregation.conf.example storage-aggregation.conf
+    - !Text
+      /opt/graphite/webapp/graphite/local_settings.py: |
+        LOG_DIR = '/var/log/carbon/webapp'
+    - !EnsureDir /var/lib/carbon
+    - !EnsureDir /var/log/carbon
+    # Install grafana
+    - !AptTrust
+      keys: [418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB]
+    - !UbuntuRepo
+      url: https://packagecloud.io/grafana/stable/debian
+      suite: jessie
+      components: [main]
+    - !Install [grafana]
+
+commands:
+  _init-carbon-storage: !Command
+    container: graphite
+    volumes: *carbon-volumes
+    run: |
+      django-admin.py migrate --run-syncdb --settings=graphite.settings
+
+  grafana: !Supervise
+    description: Run carbon, graphite and grafana
+    options: |
+      Usage: vagga grafana [options] [--graphite-port=<graphite_port>] [--grafana-port=<grafana_port>]
+
+      Options:
+        --graphite-port=<graphite_port>  Graphite port to listen on
+        --grafana-port=<grafana_port>    Grafana port to listen on
+    children:
+      carbon: &carbon !Command
+        container: graphite
+        volumes: *carbon-volumes
+        run: |
+          /opt/graphite/bin/carbon-cache.py \
+            --nodaemon \
+            --logdir=/var/log/carbon \
+            --pidfile=/var/run/carbon.pid \
+            start
+      graphite: !Command
+        container: graphite
+        volumes: *carbon-volumes
+        run: |
+          uwsgi --http localhost:${VAGGAOPT_GRAPHITE_PORT:-8080} \
+            --wsgi-file /opt/graphite/webapp/graphite/wsgi.py \
+            --static-map /static=/opt/graphite/webapp/content
+      grafana: !Command
+        container: graphite
+        volumes: *grafana-volumes
+        run: |
+          grafana-server \
+            --homepath /usr/share/grafana \
+            --config /etc/grafana/grafana.ini \
+            --pidfile /var/run/grafana.pid \
+            cfg:default.paths.data=/var/lib/grafana \
+            cfg:default.paths.logs=/var/log/grafana \
+            cfg:default.server.http_port=${VAGGAOPT_GRAFANA_PORT:-3000}

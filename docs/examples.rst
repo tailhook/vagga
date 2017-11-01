@@ -49,6 +49,7 @@ Miscellaneous
    examples/misc/firefox
    examples/misc/certificate
    examples/misc/flaky-network
+   examples/misc/graphite
 
 Build tools
 -----------
