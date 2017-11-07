@@ -45,6 +45,16 @@ serde = { version = "1.0.11", features = ["rc"] }
 serde_json = "1.0.2"
 serde_derive = "1.0.11"
 
+tokio-core = "0.1.10"
+tokio-io = "0.1.3"
+futures = "0.1.17"
+tk-http = "0.3.2"
+rustls = "0.11.0"
+tokio-rustls = "0.4.0"
+webpki-roots = "0.13.0"
+indicatif = "0.8.0"
+tk-easyloop = "0.1.1"
+
 [features]
 default = ["containers"]
 containers = ["unshare", "libmount", "dir-signature"]

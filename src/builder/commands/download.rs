@@ -6,6 +6,7 @@ use quire::validate as V;
 use file_util::copy;
 use capsule::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use build_step::{FetchTask};
 
 
 #[derive(Deserialize, Debug)]
@@ -60,5 +61,8 @@ impl BuildStep for Download {
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
+    }
+    fn get_downloads(&self, buf: &mut Vec<FetchTask>) {
+        buf.push(FetchTask::cache(&self.url, &self.sha256));
     }
 }

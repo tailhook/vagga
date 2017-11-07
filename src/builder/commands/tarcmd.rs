@@ -18,6 +18,7 @@ use builder::commands::generic::run_command_at;
 use builder::dns::revert_name_files;
 use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use build_step::{FetchTask};
 
 
 #[derive(Deserialize, Debug)]
@@ -324,6 +325,9 @@ impl BuildStep for Tar {
     fn is_dependent_on(&self) -> Option<&str> {
         None
     }
+    fn get_downloads(&self, buf: &mut Vec<FetchTask>) {
+        buf.push(FetchTask::cache(&self.url, &self.sha256));
+    }
 }
 
 impl BuildStep for TarInstall {
@@ -350,5 +354,8 @@ impl BuildStep for TarInstall {
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
+    }
+    fn get_downloads(&self, buf: &mut Vec<FetchTask>) {
+        buf.push(FetchTask::cache(&self.url, &self.sha256));
     }
 }

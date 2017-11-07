@@ -17,6 +17,7 @@ use container::mount::{unmount, mount_system_dirs, mount_proc, mount_run};
 use container::mount::unmount_system_dirs;
 use file_util::{Dir, copy, truncate_file};
 use path_util::IterSelfAndParents;
+use capsule;
 
 
 pub struct Guard<'a> {
@@ -35,6 +36,18 @@ impl<'a> Guard<'a> {
 
     fn run_process(&mut self) -> Result<(), Error> {
         self.start()?;
+
+        let mut downloads = Vec::new();
+        for b in self.ctx.container_config.setup.iter() {
+            b.get_downloads(&mut downloads);
+        }
+        if downloads.len() > 0 {
+            // TODO(tailhook) check existing files
+            capsule::fetch::fetch_many(downloads);
+            self.ctx.timelog.mark(format_args!("Download finished"))
+                .map_err(|e| format!("Can't write timelog: {}", e))?;
+        }
+
 
         for b in self.ctx.container_config.setup.iter() {
             debug!("Building step: {:?}", b);

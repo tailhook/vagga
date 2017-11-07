@@ -1,6 +1,7 @@
 mod build;
 mod run;
 mod script;
+pub mod fetch;
 pub mod packages;
 pub mod download;
 
