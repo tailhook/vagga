@@ -52,6 +52,7 @@ docker_runner = []
 
 [profile.release]
 debug = true
+lto = true
 
 [[bin]]
 name = "vagga"
