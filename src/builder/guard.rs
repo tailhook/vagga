@@ -222,6 +222,7 @@ pub fn index_image() -> Result<(), String> {
         .map_err(|e| format!("Can't write index: {}", e))?;
     warn!("Indexing container...");
     v1::scan(Sig::new()
+            .auto_threads()
             .hash(HashType::blake2b_256())
             .add_dir("/vagga/root", "/"),
         &mut BufWriter::new(index)
