@@ -29,6 +29,8 @@ containers:
       /data: !Persistent
         name: mysql
         init-command: _mysql-init
+        owner-uid: 200
+        owner-gid: 200
       /run: !Tmpfs
         subdirs:
           mysqld: { mode: 0o777 }  # until we have user, group options
@@ -53,11 +55,10 @@ commands:
 
         while [ ! -S /run/mysqld/mysqld.sock ]; do sleep 0.2; done
 
-        mysqladmin create $DB_DATABASE
-        mysql -e "CREATE USER '$DB_USERNAME'@'localhost' IDENTIFIED BY '$DB_PASSWORD';"
-        mysql -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO '$DB_USERNAME'@'localhost';"
-        mysql -e "FLUSH PRIVILEGES;"
-
+        mysqladmin -u root create $DB_DATABASE
+        mysql -u root -e "CREATE USER $DB_USERNAME@localhost IDENTIFIED BY '$DB_PASSWORD';"
+        mysql -u root -e "GRANT ALL PRIVILEGES ON $DB_DATABASE.* TO $DB_USERNAME@localhost;"
+        mysql -u root -e "FLUSH PRIVILEGES;"
         mysqladmin -u root shutdown
 
   mysql-server: !Command
@@ -67,7 +68,3 @@ commands:
       exec mysqld --datadir=$DB_DATA_DIR \
         --bind-address=$DB_HOST --port=$DB_PORT \
         --log-error=log --gdb
-
-
-
-
