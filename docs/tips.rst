@@ -75,6 +75,28 @@ instructions.
 .. _report an issue: https://github.com/tailhook/vagga/issues
 
 
+Fix "insufficient permissions" for USB device
+=============================================
+
+To allow access on a USB device from inside the container, the device permissions
+need to be set properly on the host system.
+
+Either you use 'chown' to set the owner of the device under ``/dev/bus/usb/...`` to <your_host_user>
+or you define a `udev`_ rule on your host system to grant access to the USB device.
+
+A simple rule which grants access to all users for all devices of a vendor may look like this::
+
+    ATTRS{idVendor}=="04b8", ATTRS{idProduct}=="*", MODE="0777"
+
+``MODE="0777"`` in your udev rule will allow access for every user, while
+``OWNER="your_host_user"`` will only grant access to your user.
+
+To list your device attributes, use e.g.::
+
+    $ udevadm info -a -n /dev/bus/usb/001/003
+
+.. _udev: https://wiki.archlinux.org/index.php/udev
+
 How to Debug Slow Build?
 ========================
 
