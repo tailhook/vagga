@@ -37,6 +37,26 @@ containers:
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
 
+  nightly:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Install [ca-certificates, build-essential]
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr \
+               --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-std-nightly-wasm32-unknown-unknown.tar.gz"
+      script: "./install.sh --prefix=/usr \
+               --components=rust-std-wasm32-unknown-unknown"
+    #- !Sh cargo install --root=/usr https://github.com/alexcrichton/wasm-gc.git
+
+    environ:
+      CARGO_HOME: /work/target
+      VAGGA_VERSION: 0.1.0
+      USER: pc
+
   testbase:
     setup:
     - !Ubuntu xenial
@@ -79,6 +99,11 @@ commands:
     description: Build vagga
     container: rust-musl
     run: [make]
+
+  wasm: !Command
+    description: Check wasm build
+    container: nightly
+    run: [cargo, check, --no-default-features, --target=wasm32-unknown-unknown]
 
   make-release: !Command
     description: Build vagga with optimizations
