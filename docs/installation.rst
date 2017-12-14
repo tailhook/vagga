@@ -200,40 +200,18 @@ Now your vagga is ready to go.
 Arch Linux
 ==============================================
 
-Default Arch Linux kernel doesn't contain ``CONFIG_USER_NS=y`` in configuration, you can check it with::
+Since ``4.14.5-1`` Arch Linux kernel has enabled ``CONFIG_USER_NS`` option,
+you can check it with::
 
     $ zgrep CONFIG_USER_NS /proc/config.gz
 
-You may use binary package from authors of vagga, by adding the following
-to ``/etc/pacman.conf``::
+The only thing you should to do with new kernel is to turn on sysctl flag::
 
-        [linux-user-ns]
-        SigLevel = Never
-        Server = https://files.zerogw.com/arch-kernel/$arch
+    sysctl kernel.unprivileged_userns_clone=1
 
-.. note:: alternatively you may use a package from AUR::
+To preserve the flag between reboots just execute::
 
-    $ yaourt -S linux-user-ns-enabled
-
-
-Package is based on ``core/linux`` package and differ only with
-``CONFIG_USER_NS`` option.  After it's compiled, update your bootloader
-config, for GRUB it's probably::
-
-    grub-mkconfig -o /boot/grub/grub.cfg
-
-.. warning:: After installing a custom kernel you need to rebuild all the
-   custom kernel modules. This is usually achieved by installing ``*-dkms``
-   variant of the package and ``systemctl enable dkms``. More about DKMS is
-   in `Arch Linux wiki`__.
-
-   __ https://wiki.archlinux.org/index.php/Dynamic_Kernel_Module_Support
-
-Then **reboot your machine** and choose ``linux-user-ns-enabled`` kernel
-at grub prompt. After boot, check it with ``uname -a`` (you should have
-text ``linux-user-ns-enabled`` in the output).
-
-.. note:: TODO how to make it default boot option in grub?
+    echo kernel.unprivileged_userns_clone=1 | sudo tee -a /etc/sysctl.d/99-sysctl.conf
 
 Installing vagga from binary archive using AUR package_ (please note that
 vagga-bin located in new AUR4 repository so it should be activated in your
@@ -241,11 +219,14 @@ system)::
 
     $ yaourt -S vagga-bin
 
-If your ``shadow`` package is older than ``4.1.5``, or you upgraded it without recreating a user, after installation you may need to fill in ``/etc/subuid`` and ``/etc/subgid``. You can check if you need it with::
+If your ``shadow`` package is older than ``4.1.5``, or you upgraded it
+without recreating a user, after installation you may need to fill
+in ``/etc/subuid`` and ``/etc/subgid``. You can check if you need it with::
 
     $ grep $(id -un) /etc/sub[ug]id
 
-If output is empty, you have to modify these files. Command should be similar to the following::
+If output is empty, you have to modify these files. Command should be similar
+to the following::
 
     $ echo "$(id -un):100000:65536" | sudo tee -a /etc/subuid
     $ echo "$(id -un):100000:65536" | sudo tee -a /etc/subgid
