@@ -42,15 +42,15 @@ extern crate serde_json;
 
 #[macro_use] mod macros;
 mod config;
-mod container;
-mod file_util;
-mod path_util;
-mod process_util;
-mod tty_util;
 mod options;
 mod digest;
 mod build_step;
 mod storage_dir;
+#[cfg(feature="containers")] mod path_util;
+#[cfg(feature="containers")] mod file_util;
+#[cfg(feature="containers")] mod tty_util;
+#[cfg(feature="containers")] mod container;
+#[cfg(feature="containers")] mod process_util;
 
 #[cfg(not(feature="containers"))]
 mod unshare;
@@ -60,14 +60,14 @@ mod libmount;
 mod dir_signature;
 
 // Commands
-mod launcher;
-mod network;
-mod setup_netns;
-mod version;
-mod wrapper;
 mod builder;
-mod runner;
-mod capsule;
+#[cfg(feature="containers")] mod launcher;
+#[cfg(feature="containers")] mod network;
+#[cfg(feature="containers")] mod setup_netns;
+#[cfg(feature="containers")] mod version;
+#[cfg(feature="containers")] mod wrapper;
+#[cfg(feature="containers")] mod runner;
+#[cfg(feature="containers")] mod capsule;
 
 fn init_logging() {
     if let Err(_) = env::var("RUST_LOG") {

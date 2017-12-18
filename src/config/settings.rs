@@ -1,9 +1,14 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
 
+#[cfg(feature="containers")]
 use libc::{uid_t, gid_t};
 use serde_json;
 
+#[cfg(not(feature="containers"))]
+type uid_t = u32;
+#[cfg(not(feature="containers"))]
+type gid_t = u32;
 
 const DEFAULT_UBUNTU_MIRROR: &str = "mirror://mirrors.ubuntu.com/mirrors.txt";
 
