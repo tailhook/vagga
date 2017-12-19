@@ -35,3 +35,11 @@ setup() {
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "60" ]]
 }
+
+@test "capsule: Vagga capsule download" {
+    scripturl="https://gist.githubusercontent.com/tailhook/0cf8adf45707c05702e5568b8d390ba9/raw/9f13527f7f94c27504b33f83e76da9514939b4c0/gistfile1.txt"
+    run vagga vagga _capsule download "$scripturl"
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "/vagga/cache/downloads/698319cf-gistfile1.txt" ]]
+}

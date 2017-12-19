@@ -399,7 +399,7 @@ pub fn setup_yarn(ctx: &mut Context)
         None => {
             let path = download_file(&mut ctx.capsule,
                 &["https://yarnpkg.com/latest-version"],
-                None)?;
+                None, true)?;
             let mut ver = String::with_capacity(10);
             // TODO(tailhook) remove cached latest-version
             //                but have to do it race-less
@@ -413,7 +413,7 @@ pub fn setup_yarn(ctx: &mut Context)
     let ver = ver.trim();
     let link = format!("https://github.com/yarnpkg/yarn/\
                        releases/download/v{0}/yarn-{0}.js", ver);
-    let filename = download_file(&mut ctx.capsule, &[&link], None)?;
+    let filename = download_file(&mut ctx.capsule, &[&link], None, false)?;
     copy(&filename, "/vagga/root/usr/bin/yarn")
         .map_err(|e| format!("Error copying {:?} to {:?}: {}",
             &filename, "/vagga/root/usr/bin/yarn", e))?;

@@ -48,7 +48,8 @@ impl BuildStep for Download {
             let fpath = PathBuf::from("/vagga/root")
                 .join(self.path.strip_prefix("/").unwrap());
             let (filename, _) = maybe_download_and_check_hashsum(
-                &mut guard.ctx.capsule, &self.url, self.sha256.clone())?;
+                &mut guard.ctx.capsule, &self.url,
+                self.sha256.clone(), false)?;
             copy(&filename, &fpath)
                 .map_err(|e| format!("Error copying {:?} to {:?}: {}",
                     &filename, self.path, e))?;

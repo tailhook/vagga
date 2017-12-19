@@ -31,6 +31,8 @@ All the tools officially supported by vagga in capsule are prefixed with
   Container will be (re)built if required.
 * ``vagga _capsule script <url>`` -- fetches a script from the url, caches it
   and runs from cache
+* ``vagga _capsule download <url>`` -- fetches a file from the url and caches
+  printing file path to stdout
 
 There are few limitations of the capsule:
 

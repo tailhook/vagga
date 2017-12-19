@@ -1,12 +1,17 @@
-use std::io;
-use std::fs::{remove_file, rename, create_dir_all, set_permissions};
 use std::fs::{File, Permissions};
+use std::fs::{remove_file, rename, create_dir_all, set_permissions};
+use std::io::{stdout, stderr};
+use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use argparse::{ArgumentParser};
+use argparse::{Store, StoreOption, StoreTrue};
 use sha2::{Digest, Sha256};
 use unshare::{Command, Stdio};
 
+use capsule::Context;
 use capsule::packages as capsule;
 use capsule::packages::State;
 use file_util::check_stream_hashsum;
@@ -14,7 +19,8 @@ use process_util::{cmd_show};
 use digest::hex;
 
 
-pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>)
+pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>,
+    refresh: bool)
     -> Result<PathBuf, String>
     where S: AsRef<str>
 {
@@ -40,7 +46,7 @@ pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>)
             .map_err(|e| format!("Can't chmod file: {}", e))?;
     }
     let filename = dir.join(&name);
-    if filename.exists() {
+    if !refresh && filename.exists() {
         return Ok(filename);
     }
     let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
@@ -124,11 +130,51 @@ fn check_if_local(url: &str, sha256: &Option<String>)
 }
 
 pub fn maybe_download_and_check_hashsum(state: &mut State,
-    url: &str, sha256: Option<String>)
+    url: &str, sha256: Option<String>, refresh: bool)
     -> Result<(PathBuf, bool), String>
 {
     Ok(match check_if_local(url, &sha256)? {
         Some(path) => (path, false),
-        None => (download_file(state, &[url], sha256)?, true),
+        None => (download_file(state, &[url], sha256, refresh)?, true),
     })
+}
+
+pub fn run_download(context: &Context, mut args: Vec<String>)
+    -> Result<i32, String>
+{
+    let mut url = "".to_string();
+    let mut sha256 = None;
+    let mut refresh = false;
+    {
+        args.insert(0, "vagga _capsule script".to_string());
+        let mut ap = ArgumentParser::new();
+        ap.set_description("
+            Downloads file if not cached, puts it into a cache printing the
+            path to the cached item to the stdout.
+            ");
+        ap.refer(&mut sha256)
+            .add_option(&["--sha256"], StoreOption,
+                "A SHA256 hashsum of a script (if you want to check)");
+        ap.refer(&mut refresh)
+            .add_option(&["--refresh"], StoreTrue,
+                "Download file even if there is a cached item");
+        ap.refer(&mut url)
+            .add_argument("url", Store,
+                "A file to download")
+            .required();
+        ap.stop_on_first_argument(true);
+        match ap.parse(args.clone(), &mut stdout(), &mut stderr()) {
+            Ok(()) => {}
+            Err(0) => return Ok(0),
+            Err(_) => {
+                return Ok(122);
+            }
+        }
+    }
+    // TODO(tailhook) wrap settings into Arc in the launcher's main
+    let mut capsule = State::new(&Arc::new(context.settings.clone()));
+    let (path, _) = maybe_download_and_check_hashsum(
+        &mut capsule, &url, sha256, refresh)?;
+    println!("{}", path.display());
+    return Ok(0);
 }

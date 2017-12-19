@@ -465,7 +465,7 @@ fn _build_from_image(name: &str, container: &Container,
                                container, settings.clone());
 
     let (filename, downloaded) = maybe_download_and_check_hashsum(
-        &mut ctx.capsule, image_cache_url, None)?;
+        &mut ctx.capsule, image_cache_url, None, false)?;
     warn!("Unpacking image...");
     match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
         Ok(_) => {

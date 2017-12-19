@@ -59,7 +59,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
                     "--target=/tmp/pip-install".to_string(),
                     );
                 let pip_inst = download::download_file(&mut ctx.capsule,
-                    &["https://bootstrap.pypa.io/get-pip.py"], None)?;
+                    &["https://bootstrap.pypa.io/get-pip.py"], None, false)?;
                 copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
                     .map_err(|e| format!("Error copying pip: {}", e))?;
                 run_command_at_env(ctx, &args, &Path::new("/work"), &[])?;

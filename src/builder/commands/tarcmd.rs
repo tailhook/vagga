@@ -248,7 +248,7 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
     let fpath = PathBuf::from("/vagga/root")
         .join(tar.path.strip_prefix("/").unwrap());
     let (filename, _) = maybe_download_and_check_hashsum(
-        &mut ctx.capsule, &tar.url, tar.sha256.clone())?;
+        &mut ctx.capsule, &tar.url, tar.sha256.clone(), false)?;
 
     if &Path::new(&tar.subdir) == &Path::new(".") {
         unpack_file(ctx, &filename, &fpath, &[], &[], false)?;
@@ -265,7 +265,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
     let (filename, _) = maybe_download_and_check_hashsum(
-        &mut ctx.capsule, &tar.url, tar.sha256.clone())?;
+        &mut ctx.capsule, &tar.url, tar.sha256.clone(), false)?;
 
     let tmppath = PathBuf::from("/vagga/root/tmp")
         .join(filename.file_name().unwrap());

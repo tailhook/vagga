@@ -43,6 +43,7 @@ pub fn run_command(context: &Context, mut input_args: Vec<String>)
         "build" => build::build_command(context, args),
         "run" => run::run_command(context, args),
         "script" => script::run_script(context, args),
+        "download" => download::run_download(context, args),
         _ => {
             writeln!(&mut stderr(), "Unknown command {:?}", cname).ok();
             Ok(127)
