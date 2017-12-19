@@ -3,9 +3,9 @@ setup() {
 }
 
 @test "UbuntuRelease builds" {
-    vagga _build vivid
-    link=$(readlink .vagga/vivid)
-    [[ $link = ".roots/vivid.3f72ed9c/root" ]]
+    vagga _build zesty
+    link=$(readlink .vagga/zesty)
+    [[ $link = ".roots/zesty.6a2df96c/root" ]]
 }
 
 @test "Run echo command in ubuntu release" {
@@ -48,15 +48,6 @@ setup() {
     [[ $output =~ "Command test not found." ]]
 }
 
-@test "Run vivid bc in ubuntu release" {
-    run vagga vivid-calc 100*24
-    printf "%s\n" "${lines[@]}"
-    [[ $status -eq 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "2400" ]]
-    link=$(readlink .vagga/vivid-calc)
-    [[ $link = ".roots/vivid-calc.85df7f09/root" ]]
-}
-
 @test "ubuntu_release: Run bc in xenial by url" {
     run vagga xenial-calc 17*11
     printf "%s\n" "${lines[@]}"
@@ -67,13 +58,13 @@ setup() {
     [[ $link = ".roots/xenial-url.a3ad230f/root" ]]
 }
 
-@test "ubuntu_release: Run vivid bc in ubuntu derived from release" {
-    run vagga vivid-derived-calc 100*24
+@test "ubuntu_release: Run zesty bc in ubuntu derived from release" {
+    run vagga zesty-derived-calc 100*24
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
-    link=$(readlink .vagga/vivid-derive)
-    [[ $link = ".roots/vivid-derive.06d3dfb6/root" ]]
+    link=$(readlink .vagga/zesty-derive)
+    [[ $link = ".roots/zesty-derive.38b1cb3d/root" ]]
 }
 
 @test "Run trusty bc in ubuntu release" {
@@ -86,21 +77,21 @@ setup() {
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {
-    VAGGAENV_TESTVAR=testvalue run vagga _run vivid printenv TESTVAR
+    VAGGAENV_TESTVAR=testvalue run vagga _run zesty printenv TESTVAR
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = testvalue ]]
 }
 
 @test "Test set env in ubuntu release" {
-    run vagga --environ TESTVAR=1value1 _run vivid printenv TESTVAR
+    run vagga --environ TESTVAR=1value1 _run zesty printenv TESTVAR
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = 1value1 ]]
 }
 
 @test "Test propagate env in ubuntu release" {
-    TESTVAR=2value2 run vagga --use-env TESTVAR _run vivid printenv TESTVAR
+    TESTVAR=2value2 run vagga --use-env TESTVAR _run zesty printenv TESTVAR
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = 2value2 ]]

@@ -1,17 +1,12 @@
 containers:
 
-  vivid:
+  zesty:
     setup:
-    - !UbuntuRelease { version: 15.04 } # backward-compat
+    - !UbuntuRelease { codename: zesty }
 
-  vivid-calc:
+  zesty-derive:
     setup:
-    - !UbuntuRelease { codename: vivid }
-    - !Install [bc]
-
-  vivid-derive:
-    setup:
-    - !Container vivid
+    - !Container zesty
     - !Install [bc]
 
   trusty-calc:
@@ -27,25 +22,20 @@ containers:
 
 commands:
   echo-cmd: !Command
-    container: vivid
+    container: zesty
     run: [echo]
 
   echo-shell: !Command
-    container: vivid
+    container: zesty
     run: echo
 
   echo-shell-arg: !Command
-    container: vivid
+    container: zesty
     accepts-arguments: true
     run: echo "$@"
 
-  vivid-calc: !Command
-    container: vivid-calc
-    accepts-arguments: true
-    run: echo "$*" | bc
-
-  vivid-derived-calc: !Command
-    container: vivid-derive
+  zesty-derived-calc: !Command
+    container: zesty-derive
     accepts-arguments: true
     run: echo "$*" | bc
 
