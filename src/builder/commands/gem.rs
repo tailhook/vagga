@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::fs::File;
+use std::fs::{File, symlink_metadata};
 use std::io::{Read, Write, BufReader, BufRead};
 
 use regex::Regex;
@@ -266,13 +266,17 @@ pub fn setup_bundler(ctx: &mut Context) -> Result<(), String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
 
-    let mut cmd = command(ctx, gem_exe)?;
-    cmd.args(&["install", "bundler"]);
+    // It looks like recent gem update --system installs bundler
+    let bundler = symlink_metadata("/vagga/root/usr/bin/bundle").is_ok();
+    if !bundler {
+        let mut cmd = command(ctx, gem_exe)?;
+        cmd.args(&["install", "bundler"]);
 
-    let no_doc = no_doc_args(ctx)?;
-    cmd.args(&no_doc);
+        let no_doc = no_doc_args(ctx)?;
+        cmd.args(&no_doc);
 
-    run(cmd)?;
+        run(cmd)?;
+    }
 
     Ok(())
 }
