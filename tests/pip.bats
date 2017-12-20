@@ -57,16 +57,6 @@ setup() {
     [[ $link = ".roots/py35-ubuntu.267b85b7/root" ]]
 }
 
-@test "py3: ubuntu 15.04 py3.5" {
-    vagga _build py35-ubuntu-15.04
-    run vagga _run py35-ubuntu-15.04 python3.5 -m urp -Q key=val http://example.com
-    printf "%s\n" "${lines[@]}"
-    [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
-    link=$(readlink .vagga/py35-ubuntu-15.04)
-    [[ $link = ".roots/py35-ubuntu-15.04.36ce1033/root" ]]
-}
-
 @test "py3: ubuntu git" {
     run vagga _run py3-git-ubuntu urp -Q key=val http://example.com
     printf "%s\n" "${lines[@]}"
@@ -99,7 +89,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-ubuntu)
-    [[ $link = ".roots/py3req-https-ubuntu.cb0ecee4/root" ]]
+    [[ $link = ".roots/py3req-https-ubuntu.52e428bc/root" ]]
 }
 
 @test "py3: alpine req-https.txt" {

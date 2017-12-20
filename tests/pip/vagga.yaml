@@ -36,15 +36,6 @@ containers:
     - !PipConfig {install-python: false, python-exe: python3.5}
     - !Py3Install [setuptools, urp]
 
-  py35-ubuntu-15.04:
-    setup:
-    - !UbuntuRelease {version: 15.04}
-    - !AptTrust keys: [5BB92C09DB82666C]
-    - !UbuntuPPA fkrull/deadsnakes
-    - !Install [python3.5]
-    - !PipConfig {install-python: false, python-exe: python3.5}
-    - !Py3Install [setuptools, urp]
-
   py3-git-ubuntu:
     setup:
     - !Ubuntu trusty
@@ -63,7 +54,7 @@ containers:
 
   py3req-https-ubuntu:
     setup:
-    - !UbuntuRelease { version: 15.04 }
+    - !Ubuntu zesty
     - !Py3Requirements req-https.txt
 
   py3req-https-alpine:
