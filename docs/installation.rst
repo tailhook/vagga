@@ -98,7 +98,8 @@ See instructions specific for your distribution below.
 Ubuntu
 ======
 
-To install from vagga's repository just add the following to `sources.list`::
+To install from vagga's repository just add the following to ``sources.list``
+(see actual command below)::
 
     deb [arch=amd64 trusted=yes] https://ubuntu.zerogw.com vagga main
 
