@@ -7,7 +7,7 @@ use std::os::unix::fs::MetadataExt;
 use libc::getuid;
 
 use options::build_mode::{build_mode, BuildMode};
-use config::{Config, Settings, find_config};
+use config::{Config, ConfigError, Settings, find_config};
 use config::read_settings::{read_settings, MergedSettings};
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
 
@@ -140,6 +140,12 @@ pub fn run(input_args: Vec<String>) -> i32 {
 
     let (config, cfg_dir) = match find_config(&workdir, true) {
         Ok(tup) => tup,
+        Err(e@ConfigError::NotFound(_)) => {
+            eprintln!("{}", e);
+            eprintln!("Hint: you need to `cd` into a project, \
+                       or create a file `vagga.yaml` in it.");
+            return 126;
+        }
         Err(e) => {
             writeln!(&mut err, "{}", e).ok();
             return 126;

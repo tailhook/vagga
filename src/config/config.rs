@@ -7,6 +7,7 @@ use std::process::exit;
 
 use std::collections::BTreeMap;
 
+use failure::{self, err_msg};
 use quire::{Options, Include, Error, ErrorCollector, Pos, parse_config};
 use quire::validate as V;
 use quire::{raw_parse as parse_yaml};
@@ -25,6 +26,14 @@ pub struct Config {
     pub mixins: Vec<String>,
     pub commands: BTreeMap<String, MainCommand>,
     pub containers: BTreeMap<String, Container>,
+}
+
+#[derive(Debug, Fail)]
+pub enum ConfigError {
+    #[fail(display="Config not found in path {:?}", _0)]
+    NotFound(PathBuf),
+    #[fail(display="{}", _0)]
+    Other(failure::Error),
 }
 
 impl Config {
@@ -74,19 +83,20 @@ fn find_config_path(work_dir: &Path, verbose: bool)
 }
 
 pub fn find_config(work_dir: &Path, verbose: bool)
-    -> Result<(Config, PathBuf), String>
+    -> Result<(Config, PathBuf), ConfigError>
 {
     let (cfg_dir, filename) = match find_config_path(work_dir, verbose) {
         Some(pair) => pair,
-        None => return Err(format!(
-            "Config not found in path {:?}", work_dir)),
+        None => return Err(ConfigError::NotFound(work_dir.to_path_buf())),
     };
     assert!(cfg_dir.is_absolute());
     if verbose {
         info!("Found configuration file: {:?}", &filename);
     }
-    let cfg = read_config(&filename, verbose)?;
-    validate_config(&cfg)?;
+    let cfg = read_config(&filename, verbose)
+        .map_err(|e| ConfigError::Other(err_msg(e)))?;
+    validate_config(&cfg)
+        .map_err(|e| ConfigError::Other(err_msg(e)))?;
     return Ok((cfg, cfg_dir));
 }
 
