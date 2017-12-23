@@ -10,13 +10,13 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
 
 use nix;
-use libc::{uid_t, gid_t, c_int, utime, utimbuf};
+use libc::{uid_t, gid_t, c_int, utime, utimbuf, c_char, time_t};
 use nix::fcntl::{flock, FlockArg};
 
 use path_util::ToCString;
 
 extern "C" {
-    fn lchown(path: *const i8, owner: uid_t, group: gid_t) -> c_int;
+    fn lchown(path: *const c_char, owner: uid_t, group: gid_t) -> c_int;
 }
 
 pub struct Lock {
@@ -471,8 +471,8 @@ pub fn set_times<P: AsRef<Path>>(path: P, atime: i64, mtime: i64)
 {
     let filename = CString::new(path.as_ref().as_os_str().as_bytes()).unwrap();
     let utimes = utimbuf {
-        actime: atime,
-        modtime: mtime,
+        actime: atime as time_t,
+        modtime: mtime as time_t,
     };
     let rc = unsafe { utime(filename.as_ptr(), &utimes) };
     if rc != 0 {
