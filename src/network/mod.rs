@@ -35,7 +35,8 @@ pub fn run(cmdline: Vec<String>) -> i32 {
                 "isolate" -- isolate individual node(s) from anything and from
                     each other,
                 "run" -- run arbitrary command in node's network namespaces
-                    still being in same mount (filesystem) namespace.
+                    still being in same mount (filesystem) namespace,
+                "fullmesh" -- restore network to full connectivity.
                 "#);
         ap.refer(&mut args)
             .add_argument("node", List, "
