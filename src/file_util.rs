@@ -10,14 +10,11 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
 
 use nix;
-use libc::{uid_t, gid_t, c_int, utime, utimbuf, c_char, time_t};
+use libc;
+use libc::{uid_t, gid_t, utime, utimbuf, time_t};
 use nix::fcntl::{flock, FlockArg};
 
 use path_util::ToCString;
-
-extern "C" {
-    fn lchown(path: *const c_char, owner: uid_t, group: gid_t) -> c_int;
-}
 
 pub struct Lock {
     file: fs::File,
@@ -304,7 +301,7 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
     -> Result<(), io::Error>
 {
     let c_target = target.to_cstring();
-    let rc = unsafe { lchown( c_target.as_ptr(), uid, gid) };
+    let rc = unsafe { libc::lchown( c_target.as_ptr(), uid, gid) };
     if rc != 0 {
         warn!("Can't chown {:?}: {}", target, io::Error::last_os_error());
         Ok(())
