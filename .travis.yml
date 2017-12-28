@@ -16,6 +16,8 @@ matrix:
     - <<: *linux
       env: TESTS="composer gem_bundler gem_bundler_lock"
     - os: osx
+allow_failures:
+- os: osx
 install:
 - "echo ubuntu-mirror: http://mirrors.us.kernel.org/ubuntu/ > ~/.vagga.yaml"
 - "echo alpine-mirror: http://mirrors.gigenet.com/alpinelinux/ >> ~/.vagga.yaml"
