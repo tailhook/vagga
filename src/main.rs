@@ -77,7 +77,7 @@ fn init_logging() {
     if let Err(_) = env::var("RUST_LOG") {
         env::set_var("RUST_LOG", "warn");
     }
-    env_logger::init().unwrap();
+    env_logger::init();
 }
 
 #[cfg(feature="containers")]

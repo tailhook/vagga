@@ -7,7 +7,7 @@ use std::str::FromStr;
 use std::collections::HashSet;
 use std::os::unix::io::AsRawFd;
 
-use log::LogLevel::Debug;
+use log::Level::Debug;
 use unshare::{Command, Stdio, Fd, Namespace};
 use rand::thread_rng;
 use rand::distributions::{Range, IndependentSample};
