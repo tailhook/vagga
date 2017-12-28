@@ -11,6 +11,7 @@ pub fn build_command(context: &Context, args: Vec<String>)
 {
     let mut name: String = "".to_string();
     let mut force: bool = false;
+    let mut print_version: bool = false;
     {
         let mut cmdline = args.clone();
         cmdline.insert(0, String::from("vagga _capsule build"));
@@ -24,6 +25,9 @@ pub fn build_command(context: &Context, args: Vec<String>)
         ap.refer(&mut force)
             .add_option(&["--force"], StoreTrue,
                 "Force build even if container is considered up to date");
+        ap.refer(&mut print_version)
+            .add_option(&["--print-version"], StoreTrue,
+                "Print version number to stdout after building");
         match ap.parse(cmdline, &mut stdout(), &mut stderr()) {
             Ok(()) => {}
             Err(0) => return Ok(0),
@@ -33,6 +37,11 @@ pub fn build_command(context: &Context, args: Vec<String>)
         }
     }
     build_container(context, &name, context.build_mode, true)
-    .map(|v| debug!("Container {:?} is built with version {:?}", name, v))
+    .map(|version| {
+        debug!("Container {:?} is built with version {:?}", name, version);
+        if print_version {
+            println!("{}", version);
+        }
+    })
     .map(|()| 0)
 }

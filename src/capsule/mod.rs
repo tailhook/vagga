@@ -41,6 +41,7 @@ pub fn run_command(context: &Context, mut input_args: Vec<String>)
     }
     match &cname[..] {
         "build" => build::build_command(context, args),
+        "version" => build::build_command(context, args),
         "run" => run::run_command(context, args),
         "script" => script::run_script(context, args),
         "download" => download::run_download(context, args),

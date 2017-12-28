@@ -14,6 +14,13 @@ setup() {
     [[ $output = *"Container v35-calc (d6315e30) built"* ]]
 }
 
+@test "capsule: Vagga in capsule builds container and prints version" {
+    run vagga vagga _capsule build --print-version v35-calc
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "v35-calc.d6315e30" ]]
+}
+
 @test "capsule: Vagga in capsule runs command" {
     run vagga vagga _capsule run v35-calc bc < calc.txt
     printf "%s\n" "${lines[@]}"
