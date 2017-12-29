@@ -15,7 +15,7 @@ versions:
   regex: ^version\s*=\s*"(\S+)"
 
 - file: Cargo.lock
-  block-start: ^\[root\]
+  block-start: ^name\s*=\s*"vagga"
   block-end: ^\[.*\]
   regex: ^version\s*=\s*"(\S+)"
 

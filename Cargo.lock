@@ -1,47 +1,3 @@
-[root]
-name = "vagga"
-version = "0.8.0"
-dependencies = [
- "anymap 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "blake2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bzip2 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "digest-writer 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "dir-signature 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "docopt 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "env_logger 0.5.0-rc.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "flate2 0.2.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "git2 0.6.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "itertools 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
- "libmount 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "matches 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "mopa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "net2 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)",
- "nix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "path-filter 0.1.0",
- "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "scan_dir 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sha2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "signal 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "unshare 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "url 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "xz2 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "zip 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
 [[package]]
 name = "aho-corasick"
 version = "0.5.3"
@@ -941,6 +897,50 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "utf8-ranges"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "vagga"
+version = "0.8.0"
+dependencies = [
+ "anymap 0.11.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "blake2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bzip2 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "digest-writer 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dir-signature 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "env_logger 0.5.0-rc.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "flate2 0.2.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.6.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "humantime 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "itertools 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libmount 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "matches 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mopa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "net2 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "path-filter 0.1.0",
+ "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quire 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "scan_dir 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sha2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "signal 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tar 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "unshare 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xz2 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zip 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "vcpkg"
