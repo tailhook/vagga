@@ -43,7 +43,8 @@ pub struct Context {
     pub config_dir: PathBuf,
     pub build_mode: BuildMode,
     pub prerequisites: bool,
-    pub isolate_network: bool
+    pub isolate_network: bool,
+    pub containers_only: bool,
 }
 
 fn check_export(cmd: &String) -> Option<String> {
@@ -74,6 +75,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
     let mut bmode = Default::default();
     let mut owner_check = true;
     let mut prerequisites = true;
+    let mut containers_only = false;
     let mut isolate_network = false;
 
     let export_command = input_args.get(0).and_then(check_export);
@@ -102,6 +104,10 @@ pub fn run(input_args: Vec<String>) -> i32 {
         ap.refer(&mut prerequisites)
             .add_option(&["--no-prerequisites"], StoreFalse,
             "Run only specified command(s), don't run prerequisites");
+        ap.refer(&mut containers_only)
+            .add_option(&["--containers-only"], StoreTrue,
+            "Only build container images needed to run commands,
+             don't run any commands.");
         ap.refer(&mut isolate_network)
             .add_option(
                 &["--isolate-network", "--no-network", "--no-net"],
@@ -245,14 +251,15 @@ pub fn run(input_args: Vec<String>) -> i32 {
     }
 
     let context = Context {
-        config: config,
+        config,
         settings: int_settings,
-        ext_settings: ext_settings,
+        ext_settings,
         workdir: int_workdir.to_path_buf(),
         config_dir: cfg_dir.to_path_buf(),
         build_mode: bmode,
-        prerequisites: prerequisites,
-        isolate_network: isolate_network,
+        prerequisites,
+        isolate_network,
+        containers_only,
     };
 
     if commands.len() > 0 {

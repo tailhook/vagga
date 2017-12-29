@@ -107,6 +107,10 @@ fn run_commands(context: &Context, mut commands: Vec<String>,
         };
         datas.push(data);
     }
+    if context.containers_only {
+        debug!("Containers are prepared. Ready to exit.");
+        return Ok(0);
+    }
     for data in datas.into_iter() {
         let result = match data {
             Data::Simple(info, arg, data) => {
