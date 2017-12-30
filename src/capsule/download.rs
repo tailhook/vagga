@@ -146,7 +146,7 @@ pub fn run_download(context: &Context, mut args: Vec<String>)
     let mut sha256 = None;
     let mut refresh = false;
     {
-        args.insert(0, "vagga _capsule script".to_string());
+        args.insert(0, "vagga _capsule download".to_string());
         let mut ap = ArgumentParser::new();
         ap.set_description("
             Downloads file if not cached, puts it into a cache printing the
@@ -154,7 +154,7 @@ pub fn run_download(context: &Context, mut args: Vec<String>)
             ");
         ap.refer(&mut sha256)
             .add_option(&["--sha256"], StoreOption,
-                "A SHA256 hashsum of a script (if you want to check)");
+                "A SHA256 hashsum of a file (if you want to check)");
         ap.refer(&mut refresh)
             .add_option(&["--refresh"], StoreTrue,
                 "Download file even if there is a cached item");
