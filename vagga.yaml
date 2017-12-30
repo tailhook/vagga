@@ -37,6 +37,33 @@ containers:
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
 
+  musleabihf:
+    environ:
+      HOME: /work/target
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !Text
+      /etc/apt/sources.list.d/arm.list: |
+        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports xenial universe
+    - !Install
+      - build-essential
+      - git
+      - ca-certificates
+      - cmake
+      - zlib1g-dev
+      - gcc-arm-linux-gnueabihf
+      - g++-arm-linux-gnueabihf
+    - !Sh dpkg --add-architecture armhf
+    - !Install [musl-dev:armhf]
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-1.22.1-x86_64-unknown-linux-gnu.tar.gz"
+      script: "./install.sh --prefix=/usr --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
+    - !TarInstall
+      url: "https://static.rust-lang.org/dist/rust-std-1.22.1-arm-unknown-linux-musleabihf.tar.gz"
+      script: "./install.sh --prefix=/usr \
+               --components=rust-std-arm-unknown-linux-musleabihf"
+
   testbase:
     setup:
     - !Ubuntu xenial
@@ -84,6 +111,16 @@ commands:
     description: Build vagga with optimizations
     container: rust-musl
     run: [make, release]
+
+  make-arm: !Command
+    description: Cross-compile vagga for arm
+    container: musleabihf
+    environ:
+      CFLAGS: -I/usr/include/arm-linux-musleabihf
+      CC: arm-linux-gnueabihf-gcc
+    run: |
+      export VAGGA_VERSION=$(git describe)
+      exec cargo rustc --target=arm-unknown-linux-musleabihf -- -C linker="arm-linux-gnueabihf-gcc"
 
   cargo: !Command
     description: Run arbitrary cargo command
