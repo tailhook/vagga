@@ -148,7 +148,9 @@ impl Copy {
             return None;
         }
         if self.preserve_permissions {
-            Some(stat.permissions().mode())
+            // Preserve permissions bits, sticky, setuid, setgid,
+            // ignore file kind flag, we only have regular files here
+            Some(stat.permissions().mode() & 0o7777)
         } else {
             let base_mode = if stat.is_dir() {
                 DIR_MODE
