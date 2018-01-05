@@ -1131,6 +1131,31 @@ Sub-Containers
         the end of the container build and is not propagated through
         :step:`Container` step.
 
+   content-hash
+        (default ``false``) If ``true`` this container will depend on source
+        container by the hash of the files copied.
+
+        We keep it ``false`` by default for two reasons:
+
+        1. ``true`` doesn't work for ``temporary-mount``
+        2. ``false`` means dependent container is always built, even if current
+           container is up to date and doesn't need to be rebuilt.
+
+        We still recommend to have it ``false`` for the reasons above as this is
+        how everything else in vagga works. But here is the use case for
+        ``true``:
+
+        1. We build a data-only container with content-addressing (i.e. every
+           file is accesses by a path derived from checksum of that file)
+        2. The list of checksums is imported into another container (i.e. it
+           produces links to the files in first container)
+        3. The container in (1) is not binary reproducible (i.e. every build
+           could possibly produce different checksums)
+        4. Container are then deployed independently
+
+        Note: the (3) in the list above is the main culprit of the feature. If
+        you can force binary reproducibility you can ignore this discussion.
+
 
 Node.JS Commands
 ================

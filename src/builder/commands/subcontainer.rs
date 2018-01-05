@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::fs::File;
+use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
 use libmount::{BindMount, Remount};
 
@@ -13,6 +14,8 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 use builder::error::StepError as E;
 use builder::dns::revert_name_files;
+use builder::commands::copy::{create_path_filter, hash_path};
+use builder::commands::copy::{hash_file_content};
 
 // Build Steps
 #[derive(Debug, Deserialize)]
@@ -30,6 +33,7 @@ pub struct Build {
     pub source: PathBuf,
     pub path: Option<PathBuf>,
     pub temporary_mount: Option<PathBuf>,
+    pub content_hash: bool,
 }
 
 impl Build {
@@ -42,6 +46,7 @@ impl Build {
             V::Directory::new().absolute(true).optional())
         .member("temporary_mount".to_string(),
             V::Directory::new().absolute(true).optional())
+        .member("content_hash", V::Scalar::new().default(false))
     }
 }
 
@@ -234,12 +239,43 @@ impl BuildStep for Build {
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        let cont = cfg.containers.get(&self.container)
-            .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
-        for b in cont.setup.iter() {
-            debug!("Versioning setup: {:?}", b);
-            hash.command(b.name());
-            b.hash(cfg, hash)?;
+        let cinfo = cfg.containers.get(&self.container)
+            .ok_or(VersionError::ContainerNotFound(self.container.clone()))?;
+        if self.content_hash {
+            let version = short_version(&cinfo, cfg)?;
+            let root = Path::new("/vagga/base/.roots")
+                .join(format!("{}.{}", self.container, version))
+                .join("root");
+            println!("CONTAINER PATH {:?}", root);
+            if !root.exists() {
+                return Err(VersionError::New);
+            }
+            if let Some(ref dest_rel) = self.path {
+                let filter = create_path_filter(&Vec::new(), Some(true),
+                    &None, &None, false)?;
+                let spath = self.source.strip_prefix("/")
+                    .expect("absolute_source_path");
+                hash_path(hash, &root.join(&spath), &filter, |h, p, st| {
+                    h.field("filename", p);
+                    h.field("mode", st.permissions().mode() & 0o7777);
+                    h.field("uid", st.uid());
+                    h.field("gid", st.gid());
+                    hash_file_content(h, p, st)
+                        .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
+                    Ok(())
+                })?;
+                hash.field("path", dest_rel);
+            } else if let Some(_) = self.temporary_mount {
+                unimplemented!("Build: combination of \
+                    content-hash and temporary-mount are not supported yet");
+            }
+        } else {
+            for b in cinfo.setup.iter() {
+                debug!("Versioning setup: {:?}", b);
+                hash.command(b.name());
+                b.hash(cfg, hash)?;
+            }
+            // TODO(tailhook) should we hash our params?!?!
         }
         Ok(())
     }

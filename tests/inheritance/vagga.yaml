@@ -19,13 +19,21 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !Install [checkinstall]
-    - !Text { /tmp/hello.txt: "Hello World!" }
+    - !Text { /tmp/hello.txt: "Hello, hello!" }
     - !Sh |
         mkdir /var/pkg
         checkinstall \
           --default --nodoc \
           --pkgname=hello --pkgver=1.0 --pakdir=/var/pkg \
           cp /tmp/hello.txt /usr/share/hello.txt
+
+  hellotext:
+    setup:
+    - !Ubuntu trusty
+    - !UbuntuUniverse
+    - !Install [checkinstall]
+    - !EnsureDir /usr/share/hello
+    - !Text { /usr/share/hello/hello.txt: "Hello, World!" }
 
   hellomount:
     setup:
@@ -46,6 +54,15 @@ containers:
       path: /tmp/pkg
     - !Sh dpkg -i /tmp/pkg/hello_1.0-1_amd64.deb
 
+  hellocopy-contenthash:
+    setup:
+    - !Ubuntu trusty
+    - !EnsureDir /usr/share/hello
+    - !Build
+      container: hellotext
+      source: /usr/share/hello
+      path: /usr/share/hello
+
   hellocopyfile:
     setup:
     - !Ubuntu trusty
@@ -55,6 +72,15 @@ containers:
       source: /var/pkg/hello_1.0-1_amd64.deb
       path: /tmp/pkg/hello_1.0-1_amd64.deb
     - !Sh dpkg -i /tmp/pkg/hello_1.0-1_amd64.deb
+
+  hellocopyfile-contenthash:
+    setup:
+    - !Ubuntu trusty
+    - !EnsureDir /usr/share/hello
+    - !Build
+      container: hellotext
+      source: /usr/share/hello/hello.txt
+      path: /usr/share/hello/hello.txt
 
   hellocopyfrommount:
     setup:
@@ -116,9 +142,17 @@ commands:
     container: hellocopy
     run: cat /usr/share/hello.txt
 
+  hello-copy-ch: !Command
+    container: hellocopy-contenthash
+    run: cat /usr/share/hello/hello.txt
+
   hello-copy-file: !Command
     container: hellocopyfile
     run: cat /usr/share/hello.txt
+
+  hello-copy-file-ch: !Command
+    container: hellocopyfile-contenthash
+    run: cat /usr/share/hello/hello.txt
 
   hello-copy-from-mount: !Command
     container: hellocopyfrommount

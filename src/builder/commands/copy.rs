@@ -280,7 +280,8 @@ impl BuildStep for Copy {
     }
 }
 
-fn hash_path<F>(hash: &mut Digest, path: &Path, filter: &PathFilter, hash_file: F)
+pub fn hash_path<F>(hash: &mut Digest, path: &Path,
+    filter: &PathFilter, hash_file: F)
     -> Result<(), VersionError>
     where F: Fn(&mut Digest, &Path, &Metadata) -> Result<(), VersionError>
 {
@@ -326,7 +327,7 @@ fn get_sorted_rel_paths(path: &Path, filter: &PathFilter)
     })
 }
 
-fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
+pub fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     -> Result<(), io::Error>
 {
     if stat.file_type().is_file() {
@@ -339,7 +340,7 @@ fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     Ok(())
 }
 
-fn create_path_filter(rules: &Vec<String>, no_default_rules: Option<bool>,
+pub fn create_path_filter(rules: &Vec<String>, no_default_rules: Option<bool>,
     ignore_regex: &Option<String>, include_regex: &Option<String>,
     warn_on_missing_include_rules: bool)
     -> Result<PathFilter, String>

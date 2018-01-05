@@ -72,6 +72,15 @@ setup() {
     [[ $link = ".roots/hellocopy.0ce5ff73/root" ]]
 }
 
+@test "inheritance: Build copy contenthash" {
+    run vagga hello-copy-ch
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
+    link=$(readlink .vagga/hellocopy-contenthash)
+    [[ $link = ".roots/hellocopy-contenthash.96121dc4/root" ]]
+}
+
 @test "inheritance: Build copy file" {
     run vagga hello-copy-file
     printf "%s\n" "${lines[@]}"
@@ -79,6 +88,15 @@ setup() {
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopyfile)
     [[ $link = ".roots/hellocopyfile.0ce5ff73/root" ]]
+}
+
+@test "inheritance: Build copy file with contenthash" {
+    run vagga hello-copy-file-ch
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
+    link=$(readlink .vagga/hellocopyfile-contenthash)
+    [[ $link = ".roots/hellocopyfile-contenthash.96121dc4/root" ]]
 }
 
 @test "inheritance: Deep inheritance" {
