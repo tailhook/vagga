@@ -383,7 +383,7 @@ impl Distro {
         if let Some(ref srv) = key.server {
             cmd.arg(srv);
         } else {
-            cmd.arg("keyserver.ubuntu.com");
+            cmd.arg("hkp://keyserver.ubuntu.com:80");
         }
         cmd.arg("--recv-keys");
         for item in &key.keys {
