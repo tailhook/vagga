@@ -19,7 +19,7 @@ containers:
     - !Ubuntu trusty
     - !UbuntuUniverse
     - !Install [checkinstall]
-    - !Text { /tmp/hello.txt: "Hello, hello!" }
+    - !Text { /tmp/hello.txt: "Hello World!" }
     - !Sh |
         mkdir /var/pkg
         checkinstall \
@@ -33,7 +33,7 @@ containers:
     - !UbuntuUniverse
     - !Install [checkinstall]
     - !EnsureDir /usr/share/hello
-    - !Text { /usr/share/hello/hello.txt: "Hello, World!" }
+    - !Text { /usr/share/hello/hello.txt: "Hello World!" }
 
   hellomount:
     setup:
