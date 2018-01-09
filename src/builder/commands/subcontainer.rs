@@ -246,7 +246,6 @@ impl BuildStep for Build {
             let root = Path::new("/vagga/base/.roots")
                 .join(format!("{}.{}", self.container, version))
                 .join("root");
-            println!("CONTAINER PATH {:?}", root);
             if !root.exists() {
                 return Err(VersionError::New);
             }
