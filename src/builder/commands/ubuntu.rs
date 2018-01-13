@@ -110,7 +110,7 @@ impl AptTrust {
 }
 
 #[derive(Debug, PartialEq)]
-enum AptHpks {
+enum AptHkps {
     No,
     Installed,
 }
@@ -135,7 +135,7 @@ pub struct Distro {
     codename: Option<String>,
     apt_update: bool,
     apt_https: AptHttps,
-    apt_hpks: AptHpks,
+    apt_hkps: AptHkps,
     has_indices: bool,
     has_universe: bool,
     eatmydata: EatMyData,
@@ -407,14 +407,14 @@ impl Distro {
             }
         };
         if url.starts_with("hkps:") {
-            if AptHpks::Installed != self.apt_hpks {
+            if AptHkps::Installed != self.apt_hkps {
                 if !self.has_universe {
                     debug!("Add Universe for ensure packages");
                     self.enable_universe()?;
                     self.add_universe(ctx)?;
                 }
                 self.install_apt_deps(ctx, &["gnupg-curl", "ca-certificates"])?;
-                self.apt_hpks = AptHpks::Installed;
+                self.apt_hkps = AptHkps::Installed;
             }
         }
         cmd.arg(url);
@@ -797,7 +797,7 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
         codename: None, // unknown yet
         apt_update: true,
         apt_https: AptHttps::No,
-        apt_hpks: AptHpks::No,
+        apt_hkps: AptHkps::No,
         has_indices: false,
         has_universe: false,
     })?;
