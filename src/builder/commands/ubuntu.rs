@@ -110,6 +110,12 @@ impl AptTrust {
 }
 
 #[derive(Debug, PartialEq)]
+enum AptHpks {
+    No,
+    Installed,
+}
+
+#[derive(Debug, PartialEq)]
 enum AptHttps {
     No,
     Need,
@@ -129,6 +135,7 @@ pub struct Distro {
     codename: Option<String>,
     apt_update: bool,
     apt_https: AptHttps,
+    apt_hpks: AptHpks,
     has_indices: bool,
     has_universe: bool,
     eatmydata: EatMyData,
@@ -189,15 +196,7 @@ impl Distribution for Distro {
     {
         if self.apt_update {
             if self.apt_https == AptHttps::Need {
-                let apt_https_deps = ["ca-certificates", "apt-transport-https"];
-                for dep in apt_https_deps.iter() {
-                    ctx.build_deps.insert(dep.to_string());
-                }
-                apt_get_update(ctx, &[
-                    "--no-list-cleanup",
-                    "-o", "Dir::Etc::sourcelist=sources.list",
-                    "-o", "Dir::Etc::sourceparts=-"])?;
-                apt_get_install(ctx, &apt_https_deps, &self.eatmydata)?;
+                self.install_apt_deps(ctx, &["ca-certificates", "apt-transport-https"])?;
                 self.apt_https = AptHttps::Installed;
             }
             if !self.has_indices {
@@ -374,17 +373,51 @@ impl Distro {
         })?;
         Ok(())
     }
+    fn install_apt_deps(&mut self, ctx: &mut Context, apt_deps: &[&str])
+        -> Result<(), StepError>
+    {
+        for dep in apt_deps.iter() {
+            ctx.build_deps.insert(dep.to_string());
+        }
+        apt_get_update(ctx, &[
+            "--no-list-cleanup",
+            "-o", "Dir::Etc::sourcelist=sources.list",
+            "-o", "Dir::Etc::sourceparts=-"
+            ])?;
+        if self.has_universe {
+            apt_get_update(ctx, &[
+                "--no-list-cleanup",
+                "-o", "Dir::Etc::sourcelist=sources.list.d/universe.list",
+                "-o", "Dir::Etc::sourceparts=-"
+                ])?;
+        }
+        apt_get_install(ctx, &apt_deps[..], &self.eatmydata)
+    }
     pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptTrust)
         -> Result<(), StepError>
     {
         let mut cmd = command(ctx, "apt-key")?;
         cmd.arg("adv");
         cmd.arg("--keyserver");
-        if let Some(ref srv) = key.server {
-            cmd.arg(srv);
-        } else {
-            cmd.arg("hkp://keyserver.ubuntu.com:80");
+        let url = {
+            if let Some(ref srv) = key.server {
+                srv
+            } else {
+                "hkps://keyserver.ubuntu.com:443"
+            }
+        };
+        if url.starts_with("hkps:") {
+            if AptHpks::Installed != self.apt_hpks {
+                if !self.has_universe {
+                    debug!("Add Universe for ensure packages");
+                    self.enable_universe()?;
+                    self.add_universe(ctx)?;
+                }
+                self.install_apt_deps(ctx, &["gnupg-curl", "ca-certificates"])?;
+                self.apt_hpks = AptHpks::Installed;
+            }
         }
+        cmd.arg(url);
         cmd.arg("--recv-keys");
         for item in &key.keys {
             cmd.arg(item);
@@ -764,6 +797,7 @@ pub fn configure(guard: &mut Guard, config: UbuntuRelease)
         codename: None, // unknown yet
         apt_update: true,
         apt_https: AptHttps::No,
+        apt_hpks: AptHpks::No,
         has_indices: false,
         has_universe: false,
     })?;
