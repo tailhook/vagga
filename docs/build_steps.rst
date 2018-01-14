@@ -126,7 +126,7 @@ Ubuntu Commands
 
        - !AptTrust keys: [5BB92C09DB82666C]
 
-   By default this uses ``keyserver.ubuntu.com``, but you can specify
+   By default this uses ``hkps://keyserver.ubuntu.com:443``, but you can specify
    alternative::
 
        - !AptTrust
@@ -142,8 +142,9 @@ Ubuntu Commands
    Options:
 
    server
-     (default ``keyserver.ubuntu.com``) Server to fetch keys from. May be
-     a hostname or ``hkp://hostname:port`` form.
+     (default ``hkps://keyserver.ubuntu.com:443``) Server to fetch keys from. May be
+     a hostname like ``keyserver.ubuntu.com`` or in ``hkp://hostname:port`` or
+     ``hkps://hostname:port`` form.
 
    keys
      (default ``[]``) List of keys to fetch and add to trusted keyring. Keys
