@@ -183,3 +183,22 @@ setup() {
     link=$(readlink .vagga/v37-calc)
     [[ $link = ".roots/v37-calc.ad28fb34/root" ]]
 }
+
+@test "alpine: descriptions" {
+    run vagga
+    [[ $status -eq 127 ]]
+    printf "%s\n" "${lines[@]}"
+    [[ "$output" = "Available commands:
+    echo-cmd
+    v37-calc
+                        (aliases: new-calc, just-calc)
+    vagga-alpine
+
+Old alpine commands:
+    v30-calc
+    v31-calc
+    v32-calc
+    v33-calc
+    v33-tar
+    v34-calc" ]]
+}

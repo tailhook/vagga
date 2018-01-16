@@ -1,6 +1,7 @@
 use std::io::{stdout, stderr, Write};
 use std::rc::Rc;
 use std::iter::once;
+use std::collections::HashSet;
 
 use argparse::{ArgumentParser, StoreTrue, StoreFalse};
 
@@ -156,43 +157,54 @@ pub fn print_help(config: &Config)
     -> Result<i32, String>
 {
     let mut err = stderr();
-    writeln!(&mut err, "Available commands:").ok();
-    for (k, cmd) in config.commands.iter() {
-        if k.starts_with("_") {
+    let mut visited_groups = HashSet::new();
+    for (_, group) in &config.commands {
+        if visited_groups.contains(&group.group_title()) {
             continue;
         }
-        write!(&mut err, "    {}", k).ok();
-        match cmd.description() {
-            Some(ref val) => {
-                if k.len() > 19 {
-                    err.write_all(b"\n                        ").ok();
-                } else {
-                    for _ in k.len()..19 {
+        visited_groups.insert(group.group_title());
+        if visited_groups.len() > 1 {
+            err.write_all(b"\n").ok();
+        }
+        writeln!(&mut err, "{}:",
+            group.group_title().unwrap_or("Available commands")).ok();
+        for (k, cmd) in config.commands.iter() {
+            if k.starts_with("_") || cmd.group_title() != group.group_title() {
+                continue;
+            }
+            write!(&mut err, "    {}", k).ok();
+            match cmd.description() {
+                Some(ref val) => {
+                    if k.len() > 19 {
+                        err.write_all(b"\n                        ").ok();
+                    } else {
+                        for _ in k.len()..19 {
+                            err.write_all(b" ").ok();
+                        }
                         err.write_all(b" ").ok();
                     }
-                    err.write_all(b" ").ok();
+                    if val.contains("\n") {
+                        for line in val.lines() {
+                            err.write_all(line.as_bytes()).ok();
+                            err.write_all(b"\n                        ").ok();
+                        };
+                    } else {
+                        err.write_all(val.as_bytes()).ok();
+                    }
                 }
-                if val.contains("\n") {
-                    for line in val.lines() {
-                        err.write_all(line.as_bytes()).ok();
-                        err.write_all(b"\n                        ").ok();
-                    };
-                } else {
-                    err.write_all(val.as_bytes()).ok();
-                }
+                None => {}
             }
-            None => {}
+            let aliases = cmd.aliases()
+                .iter().filter(|&x| !config.commands.contains_key(x))
+                .map(|x| &x[..])
+                .collect::<Vec<_>>();
+            if aliases.len() > 0 {
+                err.write_all(b"\n                        ").ok();
+                write!(&mut err, "(aliases: {})",
+                    aliases.join(", ")).ok();
+            }
+            err.write_all(b"\n").ok();
         }
-        let aliases = cmd.aliases()
-            .iter().filter(|&x| !config.commands.contains_key(x))
-            .map(|x| &x[..])
-            .collect::<Vec<_>>();
-        if aliases.len() > 0 {
-            err.write_all(b"\n                        ").ok();
-            write!(&mut err, "(aliases: {})",
-                aliases.join(", ")).ok();
-        }
-        err.write_all(b"\n").ok();
     }
     Ok(127)
 }

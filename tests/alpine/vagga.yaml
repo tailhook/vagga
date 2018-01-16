@@ -91,31 +91,37 @@ commands:
     run: [echo]
 
   v34-calc: !Command
+    group: "Old alpine commands"
     container: v34-calc
     accepts-arguments: true
     run: echo "$*" | bc
 
   v33-calc: !Command
+    group: "Old alpine commands"
     container: v33-calc
     accepts-arguments: true
     run: echo "$*" | bc
 
   v32-calc: !Command
+    group: "Old alpine commands"
     container: v32-calc
     accepts-arguments: true
     run: echo "$*" | bc
 
   v31-calc: !Command
+    group: "Old alpine commands"
     container: v31-calc
     accepts-arguments: true
     run: echo "$*" | bc
 
   v30-calc: !Command
+    group: "Old alpine commands"
     container: v30-calc
     accepts-arguments: true
     run: echo "$*" | bc
 
   v33-tar: !Command
+    group: "Old alpine commands"
     container: v33-tar
     run: [tar]
 

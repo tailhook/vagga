@@ -56,6 +56,7 @@ pub struct CommandInfo {
     pub expect_inotify_limit: Option<usize>,
     pub symlink_name: Option<String>,
     pub aliases: Vec<String>,
+    pub group: Option<String>,
 
     // Command
     pub tags: Vec<String>,  // Only for supervise chidlren
@@ -89,6 +90,7 @@ pub struct CapsuleInfo {
     pub expect_inotify_limit: Option<usize>,
     pub symlink_name: Option<String>,
     pub aliases: Vec<String>,
+    pub group: Option<String>,
 
     // CapsuleCommand
     pub uids: Vec<Range>,
@@ -112,6 +114,7 @@ pub struct SuperviseInfo {
     pub expect_inotify_limit: Option<usize>,
     pub symlink_name: Option<String>,
     pub aliases: Vec<String>,
+    pub group: Option<String>,
 
     // Supervise
     pub mode: SuperviseMode,
@@ -205,6 +208,13 @@ impl MainCommand {
             MainCommand::CapsuleCommand(ref c) => &c.aliases,
             MainCommand::Supervise(ref c) => &c.aliases,
         }
+    }
+    pub fn group_title(&self) -> Option<&str> {
+        match *self {
+            MainCommand::Command(ref c) => c.group.as_ref(),
+            MainCommand::CapsuleCommand(ref c) => c.group.as_ref(),
+            MainCommand::Supervise(ref c) => c.group.as_ref(),
+        }.map(|x| &x[..])
     }
 }
 
@@ -310,7 +320,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("expect_inotify_limit", V::Scalar::new().optional())
         .member("symlink_name", V::Scalar::new().optional())
         .member("prerequisites", V::Sequence::new(V::Scalar::new()))
-        .member("aliases", V::Sequence::new(V::Scalar::new()));
+        .member("aliases", V::Sequence::new(V::Scalar::new()))
+        .member("group", V::Scalar::new().optional());
     if toplevel {
         cmd = cmd.member("options", V::Scalar::new().optional());
     }

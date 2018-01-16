@@ -87,6 +87,36 @@ These parameters work for both kinds of commands:
    underscore. I.e. this is a way to hide non-underscored command by naming
    it _something and adding non-underscored alias.
 
+.. opt:: group
+
+   (no default) Which group to print command under. It's actual title of the
+   group printed when running bare `vagga`. For example:
+
+   .. code-block:: yaml
+
+      commands:
+        build: !Command # ...
+        example-app1: !Command
+          group: "Example applications"
+          # ...
+        example-app2: !Command
+          group: "Example applications"
+          # ...
+
+   Might be listed as::
+
+       $ vagga
+       Available commands:
+         build          Build the library
+
+       Example applications:
+         example-app1   Run simple example application
+         example-app2   Run a more comprehensive example applications
+
+   By default command is listed in the first section named
+   "Available commands", if all commands have a "group", then aforementioned
+   title is not printed.
+
 .. opt:: prerequisites
 
    The list of commands to run before the command, each time it is started.
