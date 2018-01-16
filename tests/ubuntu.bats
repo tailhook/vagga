@@ -51,7 +51,7 @@ setup() {
     run vagga test something
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 121 ]]
-    [[ $output =~ "Command test not found." ]]
+    [[ $output =~ 'Command "test" not found and is not an alias' ]]
 }
 
 @test "Check arch support" {
