@@ -11,19 +11,20 @@ use wrapper::capsule;
 
 
 pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {
-    // Make symlinks to make interactive life easier
-    capsule::symlink_busybox_commands()
-        .map_err(|e| error!("{}", e)).ok();
-
     if let Err(text) = setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)
     {
         error!("Error setting base file system: {}", &text);
         return 122;
     }
+
+    // Make symlinks to make interactive life easier
+    capsule::symlink_busybox_commands()
+        .map_err(|e| error!("{}", e)).ok();
+
     match Command::new("/vagga/bin/busybox")
             .arg("sh")
-            .env("PATH", "/vagga/bin")
+            .env("PATH", "/vagga/bin:/bin")
         .status()
         .map_err(|e| format!("Can't run busybox: {}", e))
     {
