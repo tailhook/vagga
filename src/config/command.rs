@@ -55,6 +55,7 @@ pub struct CommandInfo {
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
     pub symlink_name: Option<String>,
+    pub aliases: Vec<String>,
 
     // Command
     pub tags: Vec<String>,  // Only for supervise chidlren
@@ -87,6 +88,7 @@ pub struct CapsuleInfo {
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
     pub symlink_name: Option<String>,
+    pub aliases: Vec<String>,
 
     // CapsuleCommand
     pub uids: Vec<Range>,
@@ -109,6 +111,7 @@ pub struct SuperviseInfo {
     pub options: Option<String>,  // Only for toplevel
     pub expect_inotify_limit: Option<usize>,
     pub symlink_name: Option<String>,
+    pub aliases: Vec<String>,
 
     // Supervise
     pub mode: SuperviseMode,
@@ -194,6 +197,13 @@ impl MainCommand {
             MainCommand::Command(ref c) => &c.source,
             MainCommand::CapsuleCommand(ref c) => &c.source,
             MainCommand::Supervise(ref c) => &c.source,
+        }
+    }
+    pub fn aliases(&self) -> &[String] {
+        match *self {
+            MainCommand::Command(ref c) => &c.aliases,
+            MainCommand::CapsuleCommand(ref c) => &c.aliases,
+            MainCommand::Supervise(ref c) => &c.aliases,
         }
     }
 }
@@ -299,7 +309,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("pass_tcp_socket", V::Scalar::new().optional())
         .member("expect_inotify_limit", V::Scalar::new().optional())
         .member("symlink_name", V::Scalar::new().optional())
-        .member("prerequisites", V::Sequence::new(V::Scalar::new()));
+        .member("prerequisites", V::Sequence::new(V::Scalar::new()))
+        .member("aliases", V::Sequence::new(V::Scalar::new()));
     if toplevel {
         cmd = cmd.member("options", V::Scalar::new().optional());
     }

@@ -62,6 +62,31 @@ These parameters work for both kinds of commands:
    returned zero exit status. Useful to print further instructions, e.g. to
    display names of build artifacts produced by command.
 
+.. opt:: aliases
+
+   The list of names that might be used to refer to a command. For example:
+
+   .. code-block:: yaml
+
+      commands:
+        test: !Command
+          aliases: [check, run-tests]
+          container: py3
+          run: [pytest]
+
+   Note if there is a command with the same name it overrides an alias. When
+   multiple commands have single alias the result is deemed **undefined** for
+   now, we may turn it into an error/warning later or run both commands.
+
+   Overriding works also across the mixins. So command imported earlier
+   overrides alias defined later. Aliases aren't merged on encountering a
+   mixin, but rather being overriden like other settings.
+
+   Another trick is that bare ``vagga`` and ``vagga _list``
+   (without ``--hidden``) show command only if main name does not start with
+   underscore. I.e. this is a way to hide non-underscored command by naming
+   it _something and adding non-underscored alias.
+
 .. opt:: prerequisites
 
    The list of commands to run before the command, each time it is started.

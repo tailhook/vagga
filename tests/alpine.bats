@@ -166,3 +166,20 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
 }
+
+@test "alpine: Run bc on v3.7" {
+    run vagga v37-calc 50*12
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "600" ]]
+    run vagga new-calc 51*13
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "663" ]]
+    run vagga just-calc 53*14
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "742" ]]
+    link=$(readlink .vagga/v37-calc)
+    [[ $link = ".roots/v37-calc.ad28fb34/root" ]]
+}

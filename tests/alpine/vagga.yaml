@@ -79,6 +79,12 @@ containers:
     - !Container repo-simple
     - !Install [tini]
 
+  v37-calc:
+    setup:
+    - !Alpine v3.7
+    - !Install [bc]
+
+
 commands:
   echo-cmd: !Command
     container: v31
@@ -112,6 +118,15 @@ commands:
   v33-tar: !Command
     container: v33-tar
     run: [tar]
+
+  v37-calc: !Command
+    container: v37-calc
+    aliases:
+    - new-calc
+    - just-calc
+    - echo-cmd  # not really, conflicts with a command
+    accepts-arguments: true
+    run: echo "$*" | bc
 
   vagga-alpine: !Command
     container: vagga-alpine

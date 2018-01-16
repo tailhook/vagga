@@ -34,10 +34,23 @@ pub fn run_multiple_commands(context: &Context, commands: Vec<String>)
     run_commands(context, commands, Vec::new())
 }
 
-fn run_commands(context: &Context, mut commands: Vec<String>,
+fn run_commands(context: &Context, commands: Vec<String>,
     last_command_args: Vec<String>)
     -> Result<i32, String>
 {
+    let mut commands = commands.into_iter().map(|name| {
+        if !context.config.commands.contains_key(&name) {
+            for (cname, cmd) in &context.config.commands {
+                if cmd.aliases().contains(&name) {
+                    return Ok(cname.to_string());
+                }
+            }
+            return Err(format!("Command {:?} not found and is not an alias",
+                               name));
+        } else {
+            Ok(name)
+        }
+    }).collect::<Result<_, _>>()?;
     if context.prerequisites {
         commands = prerequisites::scan(context, commands);
     }
