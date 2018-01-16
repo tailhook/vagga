@@ -189,7 +189,7 @@ pub fn print_help(config: &Config)
             .collect::<Vec<_>>();
         if aliases.len() > 0 {
             err.write_all(b"\n                        ").ok();
-            writeln!(&mut err, "(aliases: {})",
+            write!(&mut err, "(aliases: {})",
                 aliases.join(", ")).ok();
         }
         err.write_all(b"\n").ok();
