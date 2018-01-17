@@ -1,5 +1,5 @@
 use std::env;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use quire::{parse_config, parse_string, Options};
@@ -29,6 +29,7 @@ struct SecureSettings {
     run_symlinks_as_commands: Option<bool>,
     disable_auto_clean: Option<bool>,
     environ: BTreeMap<String, String>,
+    propagate_environ: BTreeSet<String>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -53,7 +54,8 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("run_symlinks_as_commands", V::Scalar::new().optional())
         .member("disable_auto_clean", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
-            V::Scalar::new(), V::Scalar::new()));
+            V::Scalar::new(), V::Scalar::new()))
+        .member("propagate_environ", V::Sequence::new(V::Scalar::new()));
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -95,6 +97,7 @@ pub struct MergedSettings {
     pub cache_dir: Option<PathBuf>,
     pub shared_cache: bool,
     pub disable_auto_clean: bool,
+    pub propagate_environ: BTreeSet<String>,
 }
 
 fn merge_settings(cfg: SecureSettings, project_root: &Path,
@@ -154,6 +157,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     }
     for (k, v) in &cfg.environ {
         int_settings.environ.insert(k.clone(), v.clone());
+    }
+    for item in &cfg.propagate_environ {
+        ext_settings.propagate_environ.insert(item.clone());
     }
     if let Some(cfg) = cfg.site_settings.get(project_root) {
         if let Some(ref dir) = cfg.storage_dir {
@@ -218,6 +224,7 @@ pub fn read_settings(project_root: &Path)
         cache_dir: None,
         shared_cache: false,
         disable_auto_clean: false,
+        propagate_environ: BTreeSet::new(),
     };
     let mut int_settings = Settings {
         proxy_env_vars: true,

@@ -5,11 +5,12 @@ use std::fs::metadata;
 use std::os::unix::fs::MetadataExt;
 
 use libc::getuid;
+use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
 
 use options::build_mode::{build_mode, BuildMode};
 use config::{Config, ConfigError, Settings, find_config};
 use config::read_settings::{read_settings, MergedSettings};
-use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
+use launcher::environ::set_initial_vaggaenv_vars;
 
 mod list;
 mod user;
@@ -29,10 +30,11 @@ mod capsule;
 pub mod wrap;
 pub mod system;
 pub mod network;
-mod socket;
-mod volumes;
+mod environ;
 mod options;
 mod prerequisites;
+mod socket;
+mod volumes;
 
 
 pub struct Context {
@@ -228,25 +230,11 @@ pub fn run(input_args: Vec<String>) -> i32 {
     let int_workdir = workdir.strip_prefix(&cfg_dir)
                              .unwrap_or(&Path::new("."));
 
-    for k in propagate_env.into_iter() {
-        if k.chars().find(|&c| c == '=').is_some() {
-            writeln!(&mut err, "Environment variable name \
-                (for option `-e`/`--use-env`) \
-                can't contain equals `=` character. \
-                To set key-value pair use `-E`/`--environ` option").ok();
+    match set_initial_vaggaenv_vars(propagate_env, set_env, &ext_settings) {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("Error propagating environment: {}", e);
             return 126;
-        } else {
-            env::set_var(&("VAGGAENV_".to_string() + &k[..]),
-                env::var_os(&k).unwrap_or(From::from("")));
-        }
-    }
-    for pair in set_env.into_iter() {
-        let mut pairiter = pair[..].splitn(2, '=');
-        let key = "VAGGAENV_".to_string() + pairiter.next().unwrap();
-        if let Some(value) = pairiter.next() {
-            env::set_var(&key, value.to_string());
-        } else {
-            env::remove_var(&key);
         }
     }
 

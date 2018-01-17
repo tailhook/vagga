@@ -83,6 +83,24 @@ Supported settings:
     ``http_proxy``, ``https_proxy``, ``ftp_proxy``, ``all_proxy``,
     ``no_proxy``.
 
+.. opt:: propagate-env-vars
+
+    A list of variables and patterns that are propagated into the container
+    by default. Example:
+
+    .. code-block:: yaml
+
+        propagate-env-vars:
+        - "GIT_BRANCH"
+        - "JENKINS_*"
+        - "CI_*"
+
+    This is intended to use on CI system where parameters of build job is
+    safe to propagate.
+
+    While technically you can specify `"*"` it's very dangerous and
+    error-prone option to enable.
+
 .. opt:: external-volumes
 
    A mapping of volume names to the directories inside the host file system.
