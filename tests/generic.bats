@@ -268,7 +268,7 @@ setup() {
 @test "generic: check for environment variable name validity" {
     run vagga -e key=value printenv
     printf "%s\n" "${lines[@]}"
-    [[ ${lines[${#lines[@]}-2]} = 'Environment variable name (for option `-e`/`--use-env`) can'"'"'t contain equals `=` character. To set key-value pair use `-E`/`--environ` option' ]]
+    [[ ${lines[${#lines[@]}-2]} = 'Error propagating environment: Environment variable name (for option `-e`/`--use-env`) can'"'"'t contain equals `=` character. To set key-value pair use `-E`/`--environ` option' ]]
 }
 
 @test "generic: unpack local tar" {
