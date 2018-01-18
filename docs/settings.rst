@@ -83,14 +83,14 @@ Supported settings:
     ``http_proxy``, ``https_proxy``, ``ftp_proxy``, ``all_proxy``,
     ``no_proxy``.
 
-.. opt:: propagate-env-vars
+.. opt:: propagate-environ
 
     A list of variables and patterns that are propagated into the container
     by default. Example:
 
     .. code-block:: yaml
 
-        propagate-env-vars:
+        propagate-environ:
         - "GIT_BRANCH"
         - "JENKINS_*"
         - "CI_*"
