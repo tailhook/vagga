@@ -89,7 +89,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-ubuntu)
-    [[ $link = ".roots/py3req-https-ubuntu.52e428bc/root" ]]
+    [[ $link = ".roots/py3req-https-ubuntu.cf364a3d/root" ]]
 }
 
 @test "py3: alpine req-https.txt" {

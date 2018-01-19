@@ -54,7 +54,7 @@ containers:
 
   py3req-https-ubuntu:
     setup:
-    - !Ubuntu zesty
+    - !Ubuntu artful
     - !Py3Requirements req-https.txt
 
   py3req-https-alpine:
