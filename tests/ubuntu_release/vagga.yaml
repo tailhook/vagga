@@ -1,12 +1,12 @@
 containers:
 
-  zesty:
+  artful:
     setup:
-    - !UbuntuRelease { codename: zesty }
+    - !UbuntuRelease { codename: artful }
 
-  zesty-derive:
+  artful-derive:
     setup:
-    - !Container zesty
+    - !Container artful
     - !Install [bc]
 
   trusty-calc:
@@ -22,20 +22,20 @@ containers:
 
 commands:
   echo-cmd: !Command
-    container: zesty
+    container: artful
     run: [echo]
 
   echo-shell: !Command
-    container: zesty
+    container: artful
     run: echo
 
   echo-shell-arg: !Command
-    container: zesty
+    container: artful
     accepts-arguments: true
     run: echo "$@"
 
-  zesty-derived-calc: !Command
-    container: zesty-derive
+  artful-derived-calc: !Command
+    container: artful-derive
     accepts-arguments: true
     run: echo "$*" | bc
 
