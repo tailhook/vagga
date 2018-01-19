@@ -5,14 +5,13 @@ use std::os::unix::fs::symlink;
 use std::path::Path;
 
 use argparse::{ArgumentParser};
-use unshare::{Command};
 use serde_json;
 
-use config::command::CapsuleInfo;
+use config::command::{CapsuleInfo, Run};
 
 use super::setup;
 use super::Wrapper;
-use super::util::{find_cmd};
+use super::util::{gen_command};
 use file_util::Dir;
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 
@@ -89,13 +88,8 @@ pub fn commandline_cmd(_cmd_name: &str, command: &CapsuleInfo,
     wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<i32, String>
 {
-    if command.run.len() == 0 {
-        return Err(format!(
-            r#"Command has empty "run" parameter. Nothing to run."#));
-    }
-    // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
-            .unwrap_or(&command.run[0][..] != "/bin/sh");
+            .unwrap_or(!matches!(command.run, Run::Shell(..)));
     let mut args = Vec::new();
     if !has_args {
         let mut ap = ArgumentParser::new();
@@ -113,8 +107,6 @@ pub fn commandline_cmd(_cmd_name: &str, command: &CapsuleInfo,
         cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
-    let mut cmdline = command.run.clone();
-    cmdline.extend(args.into_iter());
 
     setup::setup_base_filesystem(
         wrapper.project_root, wrapper.ext_settings)?;
@@ -122,10 +114,8 @@ pub fn commandline_cmd(_cmd_name: &str, command: &CapsuleInfo,
     symlink_busybox_commands()?;
 
     let env = setup::get_capsule_environment(&wrapper.settings, command)?;
-    let cpath = find_cmd(&cmdline.remove(0), &env)?;
-
-    let mut cmd = Command::new(&cpath);
-    cmd.args(&cmdline);
+    let mut cmd = gen_command(&Vec::new(), &command.run, &env)?;
+    cmd.args(&args);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
     let ref s = wrapper.settings;

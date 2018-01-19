@@ -22,6 +22,7 @@ pub struct Container {
 
     pub environ_file: Option<PathBuf>,
     pub environ: BTreeMap<String, String>,
+    pub default_shell: Vec<String>,
     pub resolv_conf_path: Option<PathBuf>,
     pub hosts_file_path: Option<PathBuf>,
     pub volumes: BTreeMap<PathBuf, Volume>,
@@ -49,6 +50,7 @@ pub fn container_validator<'a>() -> V::Structure<'a> {
     .member("auto_clean", V::Scalar::new().default(false))
     .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
     .member("environ_file", V::Scalar::new().optional())
+    .member("default_shell", V::Sequence::new(V::Scalar::new()))
     .member("resolv_conf_path",
         V::Directory::new()  // Well, should be file
         .absolute(true).optional()

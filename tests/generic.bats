@@ -602,3 +602,10 @@ site_settings:
     [[ $status = 0 ]]
     [[ $(cat /etc/resolv.conf) = $output ]]
 }
+
+@test "generic: alternate shell (bash)" {
+    run vagga bash-shell
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = '\"hello\"' ]]
+}

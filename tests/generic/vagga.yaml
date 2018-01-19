@@ -271,6 +271,12 @@ containers:
         ln -sfn /state/resolv.conf /etc/resolv.conf
         ln -sfn /state/hosts /etc/hosts
 
+  bash:
+    setup:
+    - !Alpine v3.7
+    - !Install [bash]
+    default-shell: [/bin/bash, -c, $cmdline, "--"]
+
 commands:
   two-lines: !Supervise
     children:
@@ -440,3 +446,8 @@ commands:
       /var/cache: !Empty
     run: |
       touch /home/hemingway/quote.txt
+
+  bash-shell: !Command
+    container: bash
+    run: |
+      printf "%q" '"hello"'

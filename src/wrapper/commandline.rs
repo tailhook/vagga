@@ -6,15 +6,13 @@ use std::str::FromStr;
 
 use libc::pid_t;
 use argparse::{ArgumentParser};
-use unshare::{Command};
 
 use config::volumes::{Volume, PersistentInfo};
-use config::command::CommandInfo;
-use config::command::WriteMode;
+use config::command::{CommandInfo, WriteMode, Run};
 
 use super::setup;
 use super::Wrapper;
-use super::util::{find_cmd, warn_if_data_container};
+use super::util::{gen_command, warn_if_data_container};
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap};
 use wrapper::init_persistent::{Guard, PersistentVolumeGuard};
@@ -24,13 +22,9 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
     wrapper: &Wrapper, mut cmdline: Vec<String>)
     -> Result<i32, String>
 {
-    if command.run.len() == 0 {
-        return Err(format!(
-            r#"Command has empty "run" parameter. Nothing to run."#));
-    }
     // TODO(tailhook) detect other shells too
     let has_args = command.accepts_arguments
-            .unwrap_or(&command.run[0][..] != "/bin/sh");
+            .unwrap_or(!matches!(command.run, Run::Shell(..)));
     let mut args = Vec::new();
     if !has_args {
         let mut ap = ArgumentParser::new();
@@ -48,8 +42,6 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
         cmdline.remove(0);
         args.extend(cmdline.into_iter());
     }
-    let mut cmdline = command.run.clone();
-    cmdline.extend(args.into_iter());
 
     let pid: pid_t = read_link(&Path::new("/proc/self"))
         .map_err(|e| format!("Can't read /proc/self: {}", e))
@@ -98,10 +90,8 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
 
     let env = setup::get_environment(&wrapper.settings, cconfig,
         Some(&command))?;
-    let cpath = find_cmd(&cmdline.remove(0), &env)?;
-
-    let mut cmd = Command::new(&cpath);
-    cmd.args(&cmdline);
+    let mut cmd = gen_command(&cconfig.default_shell, &command.run, &env)?;
+    cmd.args(&args);
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
     if let Some(euid) = command.external_user_id {

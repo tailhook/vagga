@@ -6,12 +6,11 @@ use std::str::FromStr;
 
 use libc::pid_t;
 use argparse::{ArgumentParser, Store};
-use unshare::Command;
 
 use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
 use super::super::config::command::ChildCommand as CC;
 use super::Wrapper;
-use super::util::{find_cmd, warn_if_data_container};
+use super::util::{gen_command, warn_if_data_container};
 use super::setup;
 use process_util::{run_and_wait, convert_status, copy_env_vars};
 use process_util::{set_fake_uidmap, cmd_err};
@@ -76,11 +75,7 @@ fn supervise_child_command(cmdname: &String, name: &String, bridge: bool,
 
     let env = setup::get_environment(&wrapper.settings, cconfig,
         Some(&command))?;
-    let mut cmdline = command.run.clone();
-    let cpath = find_cmd(&cmdline.remove(0), &env)?;
-
-    let mut cmd = Command::new(&cpath);
-    cmd.args(&cmdline);
+    let mut cmd = gen_command(&cconfig.default_shell, &command.run, &env)?;
     cmd.env_clear();
     copy_env_vars(&mut cmd, &wrapper.settings);
     cmd.env("VAGGA_COMMAND", cmdname);

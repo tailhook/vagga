@@ -120,3 +120,19 @@ Container Parameters
    Example::
 
      data-dirs: [/var/lib/postgres]
+
+.. opt:: default-shell
+
+   (default ``[/bin/sh, -c, $cmdline, "--"]``) Alternative shell to run
+   commands with. This shell is only used to run commands which have
+   :opt:`run` argument as a string. If :opt:`run` is a list then default
+   shell is **not** used.
+
+   You can use any command, not only sh-compatible, for example ``python``, but
+   that may be unexpected o user so use your best judgement. Also take closer
+   look on the default invocation, in particular:
+
+   1. ``$cmdline`` is replaced with the contents of :opt:`run`
+   2. ``--`` is a common convention to prevent user command's arguments
+       conflicting with shell's arguments (this is useful if
+       :opt:`accepts-arguments` is enabled)

@@ -3,10 +3,9 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use quire::validate as V;
-use quire::ast::Ast as A;
-use quire::ast::Ast;
-use quire::ast::Tag::{NonSpecific};
-use quire::ast::ScalarKind::{Plain};
+use quire::{Error, ErrorCollector, Pos};
+use quire::ast::{Ast, Ast as A};
+use quire::ast::Tag::{NonSpecific, LocalTag};
 
 use config::Range;
 use super::volumes::{Volume, volume_validator};
@@ -42,6 +41,14 @@ pub struct Network {
     pub ports: BTreeMap<u16, u16>,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub enum Run {
+    Shell(String),
+    Command(Vec<String>),
+}
+
+struct RunValidator;
+
 #[derive(Deserialize, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common for toplevel commands
@@ -68,7 +75,7 @@ pub struct CommandInfo {
     pub environ: BTreeMap<String, String>,
     pub volumes: BTreeMap<PathBuf, Volume>,
     pub write_mode: WriteMode,
-    pub run: Vec<String>,
+    pub run: Run,
     pub user_id: u32,
     pub external_user_id: Option<u32>,
     pub group_id: u32,
@@ -98,7 +105,7 @@ pub struct CapsuleInfo {
     pub work_dir: Option<String>,
     pub accepts_arguments: Option<bool>,
     pub environ: BTreeMap<String, String>,
-    pub run: Vec<String>,
+    pub run: Run,
 }
 
 #[derive(Deserialize, Clone, PartialEq, Eq)]
@@ -257,25 +264,6 @@ impl ChildCommand {
     }
 }
 
-fn shell_command(ast: Ast) -> Vec<Ast> {
-    match ast {
-        A::Scalar(pos, _, style, value) => {
-            return vec!(
-                A::Scalar(pos.clone(), NonSpecific, Plain,
-                          "/bin/sh".to_string()),
-                A::Scalar(pos.clone(), NonSpecific, Plain,
-                          "-c".to_string()),
-                A::Scalar(pos.clone(), NonSpecific, style,
-                          value),
-                A::Scalar(pos.clone(), NonSpecific, Plain,
-                          "--".to_string()),
-                );
-        }
-        _ => unreachable!(),
-    }
-}
-
-
 fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
     let mut cmd = cmd
         .member("pid1mode", V::Scalar::new().default("wait"))
@@ -287,8 +275,7 @@ fn run_fields<'a>(cmd: V::Structure, network: bool) -> V::Structure {
             V::Directory::new().absolute(true),
             volume_validator()))
         .member("write_mode", V::Scalar::new().default("read-only"))
-        .member("run", V::Sequence::new(V::Scalar::new())
-            .parser(shell_command as fn(Ast) -> Vec<Ast>))
+        .member("run", RunValidator)
         .member("user_id", V::Numeric::new().min(0).max(1 << 30).default(0))
         .member("external_user_id",
             V::Numeric::new().min(0).max(1 << 30).optional())
@@ -354,8 +341,7 @@ pub fn command_validator<'a>() -> V::Enum<'a> {
         .member("uids", V::Sequence::new(V::Scalar::new()))
         .member("gids", V::Sequence::new(V::Scalar::new()))
         .member("work_dir", V::Scalar::new().optional())
-        .member("run", V::Sequence::new(V::Scalar::new())
-            .parser(shell_command as fn(Ast) -> Vec<Ast>))
+        .member("run", RunValidator)
         .member("environ", V::Mapping::new(V::Scalar::new(), V::Scalar::new()))
         .member("accepts_arguments", V::Scalar::new().optional());
 
@@ -375,5 +361,37 @@ impl Networking for ChildCommand {
             &ChildCommand::Command(ref cmd) => cmd.network.as_ref(),
             &ChildCommand::BridgeCommand(_) => None,
         }
+    }
+}
+
+
+impl V::Validator for RunValidator {
+    fn default(&self, _: Pos) -> Option<Ast> {
+        return None
+    }
+    fn validate(&self, ast: Ast, err: &ErrorCollector) -> Ast {
+        match ast {
+            A::Seq(pos, _, items) => {
+                let mut res = Vec::new();
+                for val in items.into_iter() {
+                    let value = V::Scalar::new().validate(val, err);
+                    res.push(value);
+                }
+                if res.len() < 1 {
+                    err.add_error(Error::validation_error(&pos,
+                        format!("`run` must contain \
+                            at least a command to run")));
+                }
+                return A::Seq(pos, LocalTag("Command".into()), res);
+            }
+            A::Scalar(pos, NonSpecific, style, val) => {
+                return A::Scalar(pos, LocalTag("Shell".into()), style, val);
+            }
+            ast => {
+                err.add_error(Error::validation_error(&ast.pos(),
+                    format!("Value must be a sequence or a scalar")));
+                return ast;
+            }
+        };
     }
 }
