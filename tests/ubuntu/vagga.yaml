@@ -21,9 +21,9 @@ containers:
     - !Ubuntu xenial
     - !Install [bc]
 
-  yakkety-universe:
+  artful-universe:
     setup:
-    - !UbuntuRelease { codename: yakkety }
+    - !UbuntuRelease { codename: artful }
     - !UbuntuUniverse
     - !Install [cowsay]
 

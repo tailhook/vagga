@@ -79,14 +79,14 @@ setup() {
     [[ $link = ".roots/xenial-calc.321f6a11/root" ]]
 }
 
-@test "Test yakkety universe" {
-    run vagga _build yakkety-universe
+@test "Test artful universe" {
+    run vagga _build artful-universe
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
-    link=$(readlink .vagga/yakkety-universe)
-    [[ $link = ".roots/yakkety-universe.b144039e/root" ]]
+    link=$(readlink .vagga/artful-universe)
+    [[ $link = ".roots/artful-universe.6c8e0ae6/root" ]]
 
-    run vagga _run yakkety-universe /usr/games/cowsay "Have you mooed today?"
+    run vagga _run artful-universe /usr/games/cowsay "Have you mooed today?"
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Have you mooed today?"* ]]
