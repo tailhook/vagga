@@ -288,3 +288,49 @@ If you'd like something more stable, try:
 .. _vagga-docker: https://github.com/tailhook/vagga-docker
 .. _vagga-box: https://github.com/tailhook/vagga-box
 .. _this faq entry: https://vagga.readthedocs.io/en/latest/errors.html#don-t-run-vagga-on-shared-folders
+
+.. _raspbian:
+
+Raspbian Stretch (Debian 9)
+===========================
+
+Either compile on Raspberry Pi (be patient as it needs quite a while; take care not to run out of memory):
+
+.. code-block:: console
+
+    $ git clone https://github.com/tailhook/vagga.git
+    $ cd vagga
+    $ VAGGA_VERSION=$(git describe) CFLAGS=-I/usr/include/arm-linux-musleabihf cargo build --target=arm-unknown-linux-musleabihf
+
+Or cross compile (recommended):
+
+.. code-block:: console
+
+    $ git clone https://github.com/tailhook/vagga.git
+    $ cd vagga
+    $ vagga make-arm
+    $ scp target/arm-unknown-linux-musleabihf/debug/vagga <user@pi>:<path to vagga repo>
+
+Installation needs to be run from inside cloned vagga repo on Raspberry Pi.
+
+.. code-block:: console
+
+    $ ./fetch_binaries.sh armhf
+    $ sudo ./install.sh
+    $ vagga -V
+    $ sudo apt install uidmap
+
+Run container with Alpine should be fine on all Pi models whereas Ubuntu is only confirmed for "Pi 2 model B" https://wiki.ubuntu.com/ARM/RaspberryPi
+
+To run container with Ubuntu add ubuntu-miror to your vagga settings file
+
+.. code-block:: console
+
+    $ echo 'ubuntu-mirror: http://ports.ubuntu.com/ubuntu-ports' >> ~/.vagga.yaml
+    $ # if you get error because of failed 'apt-get update' try different mirror, e.g.
+    $ echo 'ubuntu-mirror: http://ftp.tu-chemnitz.de/pub/linux/ubuntu-ports/' >> ~/.vagga.yaml
+
+In your vagga.yaml select proper architecture::
+
+       setup:
+       - !UbuntuRelease { codename: xenial, arch: armhf }
