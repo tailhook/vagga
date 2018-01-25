@@ -313,6 +313,7 @@ pub fn run(sup: &SuperviseInfo, args: Args, data: Data,
                     .map_err(|e| format!("Error setting netns: {}", e))?;
                 set_namespace(&uts_ns, Namespace::Uts)
                     .map_err(|e| format!("Error setting netns: {}", e))?;
+                cmd.env("VAGGA_IN_NAMESPACE", "1");
             }
 
             cmd.make_group_leader(true);

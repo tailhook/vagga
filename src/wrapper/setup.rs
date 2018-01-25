@@ -18,6 +18,7 @@ use container::root::{change_root};
 use container::mount::{unmount, mount_system_dirs};
 use container::mount::{mount_proc, mount_dev, mount_run};
 use container::util::{hardlink_dir, clean_dir};
+use container::network::detect_local_dns;
 use config::read_settings::{MergedSettings};
 use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
 use file_util::{Dir, safe_ensure_dir};
@@ -186,6 +187,10 @@ fn make_mountpoint(project_root: &Path) -> Result<(), String> {
     return Ok(());
 }
 
+fn env_is_set(key: &str) -> bool {
+    env::var(key).map(|x| x.len() > 0).unwrap_or(false)
+}
+
 pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     -> Result<(), String>
 {
@@ -237,10 +242,31 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
     BindMount::new(Path::new("/etc/hosts"), hosts_path)
         .mount()
         .map_err(|e| format!("Error mounting /etc/hosts: {}", e))?;
+
+    let local_dns = if env_is_set("VAGGA_IN_NAMESPACE") ||
+                       env_is_set("VAGGA_NAMESPACE_DIR")
+    {
+        detect_local_dns().map_err(|e| format!("{}", e))?
+    } else {
+        None
+    };
+    let resolv_source = if let Some(_) = local_dns {
+        // TODO(tailhook) do it on detached tmpfs
+        File::create("/tmp/resolv.conf")
+            .and_then(|mut f|
+                // redirect to a gateway IP
+                write!(&mut f, "nameserver 172.23.255.1"))
+            .map_err(|e| format!("Can't create temporary resolv.conf: {}", e))?;
+        Path::new("/tmp/resolv.conf")
+    } else {
+        Path::new("/etc/resolv.conf")
+    };
     let ref resolv_path = etc_dir.join("resolv.conf");
-    File::create(resolv_path).map_err(|e|
-        format!("Cannot create {:?} file: {}", resolv_path, e))?;
-    BindMount::new(&Path::new("/etc/resolv.conf"), resolv_path)
+    if !resolv_path.exists() {
+        File::create(resolv_path).map_err(|e|
+            format!("Cannot create {:?} file: {}", resolv_path, e))?;
+    }
+    BindMount::new(&resolv_source, resolv_path)
         .mount()
         .map_err(|e| format!("Error copying /etc/resolv.conf: {}", e))?;
 

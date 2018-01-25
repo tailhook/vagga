@@ -7,17 +7,18 @@ use std::str::FromStr;
 use std::collections::HashSet;
 use std::os::unix::io::AsRawFd;
 
-use log::Level::Debug;
-use unshare::{Command, Stdio, Fd, Namespace};
-use rand::thread_rng;
-use rand::distributions::{Range, IndependentSample};
-use libc::{geteuid};
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
-use serde_json;
+use libc::{geteuid};
 use libmount::BindMount;
+use log::Level::Debug;
+use rand::distributions::{Range, IndependentSample};
+use rand::thread_rng;
+use serde_json;
+use unshare::{Command, Stdio, Fd, Namespace};
 
 use container::uidmap::get_max_uidmap;
+use container::network::detect_local_dns;
 use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
 use sha2::{Sha256, Digest as DTrait};
@@ -222,10 +223,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg("net.ipv4.conf.vagga.route_localnet=1");
     commands.push(cmd);
 
-    let nameservers = get_nameservers()?;
-    info!("Detected nameservers: {:?}", nameservers);
-
-    let local_dns = &nameservers[..] == ["127.0.0.1".to_string()];
+    let local_dns = detect_local_dns().map_err(|e| format!("{}", e))?;
 
     if !dry_run {
         File::create(&netns_file)
@@ -247,10 +245,10 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     commands.push(cmd);
 
     let mut iprules = vec!();
-    if local_dns {
+    if let Some(ref ip) = local_dns {
         iprules.push(vec!("-I", "INPUT",
                           "-i", &interface_name[..],
-                          "-d", "127.0.0.1",
+                          "-d", ip,
                           "-j", "ACCEPT"));
         //  The "tcp" rule doesn't actually work for now for dnsmasq
         //  because dnsmasq tries to find out real source IP.
@@ -258,11 +256,11 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
                           "-p", "tcp", "-i", "vagga",
                           "-d", &host_ip[..], "--dport", "53",
-                          "-j", "DNAT", "--to-destination", "127.0.0.1"));
+                          "-j", "DNAT", "--to-destination", ip));
         iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
                           "-p", "udp", "-i", "vagga",
                           "-d", &host_ip[..], "--dport", "53",
-                          "-j", "DNAT", "--to-destination", "127.0.0.1"));
+                          "-j", "DNAT", "--to-destination", ip));
     }
     iprules.push(vec!("-t", "nat", "-A", "POSTROUTING",
                       "-s", &network[..], "-j", "MASQUERADE"));
@@ -394,26 +392,30 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
                    "-s", &network[..], "-j", "MASQUERADE"]);
         commands.push(cmd);
 
-        let mut cmd = sudo_iptables();
-        cmd.args(&["-D", "INPUT",
-                   "-i", &interface_name[..],
-                   "-d", "127.0.0.1",
-                   "-j", "ACCEPT"]);
-        commands.push(cmd);
+        let local_dns = detect_local_dns().map_err(|e| format!("{}", e))?;
 
-        let mut cmd = sudo_iptables();
-        cmd.args(&["-t", "nat", "-D", "PREROUTING",
-                   "-p", "tcp", "-i", "vagga",
-                   "-d", &host_ip[..], "--dport", "53",
-                   "-j", "DNAT", "--to-destination", "127.0.0.1"]);
-        commands.push(cmd);
+        if let Some(ref ip) = local_dns {
+            let mut cmd = sudo_iptables();
+            cmd.args(&["-D", "INPUT",
+                       "-i", &interface_name[..],
+                       "-d", ip,
+                       "-j", "ACCEPT"]);
+            commands.push(cmd);
 
-        let mut cmd = sudo_iptables();
-        cmd.args(&["-t", "nat", "-D", "PREROUTING",
-                   "-p", "udp", "-i", "vagga",
-                   "-d", &host_ip[..], "--dport", "53",
-                   "-j", "DNAT", "--to-destination", "127.0.0.1"]);
-        commands.push(cmd);
+            let mut cmd = sudo_iptables();
+            cmd.args(&["-t", "nat", "-D", "PREROUTING",
+                       "-p", "tcp", "-i", "vagga",
+                       "-d", &host_ip[..], "--dport", "53",
+                       "-j", "DNAT", "--to-destination", ip]);
+            commands.push(cmd);
+
+            let mut cmd = sudo_iptables();
+            cmd.args(&["-t", "nat", "-D", "PREROUTING",
+                       "-p", "udp", "-i", "vagga",
+                       "-d", &host_ip[..], "--dport", "53",
+                       "-j", "DNAT", "--to-destination", ip]);
+            commands.push(cmd);
+        }
     }
 
     println!("We will run network setup commands with sudo.");
@@ -452,22 +454,6 @@ pub fn join_gateway_namespaces() -> Result<(), String> {
     set_namespace(nsdir.join("netns"), Namespace::Net)
         .map_err(|e| format!("Error setting networkns: {}", e))?;
     Ok(())
-}
-
-pub fn get_nameservers() -> Result<Vec<String>, String> {
-    File::open(&Path::new("/etc/resolv.conf"))
-        .map(BufReader::new)
-        .and_then(|f| {
-            let mut ns = vec!();
-            for line in f.lines() {
-                let line = line?;
-                if line[..].starts_with("nameserver ") {
-                    ns.push(line[11..].trim().to_string());
-                }
-            }
-            Ok(ns)
-        })
-        .map_err(|e| format!("Can't read resolv.conf: {}", e))
 }
 
 fn get_interfaces() -> Result<HashSet<u32>, String> {
