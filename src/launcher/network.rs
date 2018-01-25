@@ -226,6 +226,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     info!("Detected nameservers: {:?}", nameservers);
 
     let local_dns = &nameservers[..] == ["127.0.0.1".to_string()];
+    let systemd_dns = &nameservers[..] == ["127.0.0.53".to_string()];
 
     if !dry_run {
         File::create(&netns_file)
@@ -263,6 +264,19 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
                           "-p", "udp", "-i", "vagga",
                           "-d", &host_ip[..], "--dport", "53",
                           "-j", "DNAT", "--to-destination", "127.0.0.1"));
+    } else if systemd_dns {
+        iprules.push(vec!("-I", "INPUT",
+                          "-i", &interface_name[..],
+                          "-d", "127.0.0.1",
+                          "-j", "ACCEPT"));
+        iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
+                          "-p", "tcp", "-i", "vagga",
+                          "-d", &host_ip[..], "--dport", "53",
+                          "-j", "DNAT", "--to-destination", "127.0.0.53"));
+        iprules.push(vec!("-t", "nat", "-I", "PREROUTING",
+                          "-p", "udp", "-i", "vagga",
+                          "-d", &host_ip[..], "--dport", "53",
+                          "-j", "DNAT", "--to-destination", "127.0.0.53"));
     }
     iprules.push(vec!("-t", "nat", "-A", "POSTROUTING",
                       "-s", &network[..], "-j", "MASQUERADE"));
