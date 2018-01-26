@@ -4,7 +4,7 @@ use std::io::{stdout, stderr, Write};
 use std::time::{Instant, Duration};
 
 use libmount::Tmpfs;
-use argparse::{ArgumentParser, List};
+use argparse::{ArgumentParser, List, StoreTrue};
 use signal::trap::Trap;
 use libc::{pid_t};
 use unshare::Signal::{SIGINT, SIGTERM, SIGCHLD, SIGTTIN, SIGTTOU, SIGTSTP};
@@ -38,6 +38,8 @@ Supervise options:
                        This matches both names and tags
   --exclude <tag> ...  Don't run specified processes.
                        This excludes both names and tags\
+  --tabbed-ui          Use tabbed UI (easy process in separate tab) instead of
+                       just wall of text
 ";
 
 
@@ -47,6 +49,7 @@ pub struct Args {
     only: Vec<String>,
     exclude: Vec<String>,
     build_mode: BuildMode,
+    tabbed: bool,
 }
 
 pub struct Data {
@@ -73,11 +76,13 @@ pub fn parse_args(sup: &SuperviseInfo, context: &Context,
             exclude: args.get_vec("--exclude")
                 .iter().map(|x| x.to_string()).collect(),
             build_mode: context.build_mode,
+            tabbed: args.get_bool("--tabbed-ui"),
         })
     } else {  // this may eventually be used be ported to docopt
         let mut only: Vec<String> = Vec::new();
         let mut exclude: Vec<String> = Vec::new();
         let mut bmode = context.build_mode;
+        let mut tabbed = false;
         {
             args.insert(0, "vagga ".to_string() + &cmd);
             let mut ap = ArgumentParser::new();
@@ -91,6 +96,9 @@ pub fn parse_args(sup: &SuperviseInfo, context: &Context,
                 .add_option(&["--exclude"], List, "
                     Don't run specified processes.
                     This excludes both names and tags");
+            ap.refer(&mut tabbed).add_option(&["--tabbed-ui"], StoreTrue, "
+                Use tabbed UI (easy process in separate tab) instead of
+                just wall of text");
             build_mode(&mut ap, &mut bmode);
             match ap.parse(args, &mut stdout(), &mut stderr()) {
                 Ok(()) => {}
@@ -101,9 +109,8 @@ pub fn parse_args(sup: &SuperviseInfo, context: &Context,
         Ok(Args {
             cmdname: cmd,
             environ: HashMap::new(),
-            only: only,
-            exclude: exclude,
             build_mode: bmode,
+            only, exclude, tabbed,
         })
     }
 }
