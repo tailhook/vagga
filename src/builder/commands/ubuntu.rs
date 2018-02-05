@@ -380,13 +380,11 @@ impl Distro {
             ctx.build_deps.insert(dep.to_string());
         }
         apt_get_update(ctx, &[
-            "--no-list-cleanup",
             "-o", "Dir::Etc::sourcelist=sources.list",
             "-o", "Dir::Etc::sourceparts=-"
             ])?;
         if self.has_universe {
             apt_get_update(ctx, &[
-                "--no-list-cleanup",
                 "-o", "Dir::Etc::sourcelist=sources.list.d/universe.list",
                 "-o", "Dir::Etc::sourceparts=-"
                 ])?;
@@ -824,6 +822,7 @@ fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
 {
     let mut cmd = command(ctx, "apt-get")?;
     cmd.arg("update");
+    cmd.arg("--no-list-cleanup");
     cmd.args(options);
     run(cmd)
          .map_err(|error| {
