@@ -9,17 +9,16 @@ use std::os::unix::io::AsRawFd;
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
-use failure::{Error, ResultExt};
 use libc::{geteuid};
 use libmount::BindMount;
 use log::Level::Debug;
 use rand::distributions::{Range, IndependentSample};
 use rand::thread_rng;
-use resolv_conf::{self, ScopedIp};
 use serde_json;
 use unshare::{Command, Stdio, Fd, Namespace};
 
 use container::uidmap::get_max_uidmap;
+use container::network::detect_local_dns;
 use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
 use sha2::{Sha256, Digest as DTrait};
@@ -224,15 +223,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     cmd.arg("net.ipv4.conf.vagga.route_localnet=1");
     commands.push(cmd);
 
-    let nameservers = get_nameservers().map_err(|e| format!("{}", e))?;
-    info!("Detected nameservers: {:?}", nameservers);
-
-    let local_dns = match nameservers.first() {
-        Some(&ScopedIp::V4(ip))
-        if nameservers.len() == 1 && ip.octets()[..3] == [127, 0, 0]
-        => Some(ip.to_string()),
-        _ => None,
-    };
+    let local_dns = detect_local_dns().map_err(|e| format!("{}", e))?;
 
     if !dry_run {
         File::create(&netns_file)
@@ -401,15 +392,7 @@ pub fn destroy_netns(_config: &Config, mut args: Vec<String>)
                    "-s", &network[..], "-j", "MASQUERADE"]);
         commands.push(cmd);
 
-        let nameservers = get_nameservers().map_err(|e| format!("{}", e))?;
-        info!("Detected nameservers: {:?}", nameservers);
-
-        let local_dns = match nameservers.first() {
-            Some(&ScopedIp::V4(ip))
-            if nameservers.len() == 1 && ip.octets()[..3] == [127, 0, 0]
-            => Some(ip.to_string()),
-            _ => None,
-        };
+        let local_dns = detect_local_dns().map_err(|e| format!("{}", e))?;
 
         if let Some(ref ip) = local_dns {
             let mut cmd = sudo_iptables();
@@ -471,16 +454,6 @@ pub fn join_gateway_namespaces() -> Result<(), String> {
     set_namespace(nsdir.join("netns"), Namespace::Net)
         .map_err(|e| format!("Error setting networkns: {}", e))?;
     Ok(())
-}
-
-pub fn get_nameservers() -> Result<Vec<ScopedIp>, Error> {
-    let mut buf = Vec::with_capacity(1024);
-    File::open(&Path::new("/etc/resolv.conf"))
-        .and_then(|mut f| f.read_to_end(&mut buf))
-        .context("error reading resolv.conf")?;
-    let config = resolv_conf::Config::parse(&buf)
-        .context("error reading resolv.conf")?;
-    return Ok(config.nameservers);
 }
 
 fn get_interfaces() -> Result<HashSet<u32>, String> {
