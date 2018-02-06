@@ -823,9 +823,9 @@ fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
     -> Result<(), StepError>
 {
     let mut cmd = command(ctx, "apt-get")?;
+    cmd.arg("-oDir::cache::pkgcache=");
+    cmd.arg("-oDir::cache::srcpkgcache=");
     cmd.arg("update");
-    cmd.arg("-o").arg("Dir::cache::pkgcache=");
-    cmd.arg("-o").arg("Dir::cache::srcpkgcache=");
     cmd.args(options);
     run(cmd)
          .map_err(|error| {
@@ -877,10 +877,10 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
 {
     let mut cmd = command(ctx, "apt-get")?;
     eat_my_data(&mut cmd, ctx, emd);
+    cmd.arg("-oDir::cache::pkgcache=");
+    cmd.arg("-oDir::cache::srcpkgcache=");
     cmd.arg("install");
     cmd.arg("-y");
-    cmd.arg("-o").arg("Dir::cache::pkgcache=");
-    cmd.arg("-o").arg("Dir::cache::srcpkgcache=");
     cmd.args(packages);
 
     let _lock = apt_get_lock()?;
