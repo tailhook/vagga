@@ -879,11 +879,18 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
     eat_my_data(&mut cmd, ctx, emd);
     cmd.arg("-oDir::cache::pkgcache=");
     cmd.arg("-oDir::cache::srcpkgcache=");
+    if ctx.settings.ubuntu_skip_locking {
+        cmd.arg("-oDebug::NoLocking=yes");
+    }
     cmd.arg("install");
     cmd.arg("-y");
     cmd.args(packages);
 
-    let _lock = apt_get_lock()?;
+    let _lock = if !ctx.settings.ubuntu_skip_locking {
+        Some(apt_get_lock()?)
+    } else {
+        None
+    };
     run(cmd)
 }
 

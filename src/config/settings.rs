@@ -14,6 +14,7 @@ pub struct Settings {
     pub version_check: bool,
     pub proxy_env_vars: bool,
     pub ubuntu_mirror: Option<String>,
+    pub ubuntu_skip_locking: bool,
     pub alpine_mirror: Option<String>,
     pub uid_map: Option<(Vec<(uid_t, uid_t, uid_t)>,
                          Vec<(gid_t, gid_t, gid_t)>)>,

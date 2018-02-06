@@ -219,6 +219,11 @@ not to do so.
     The best value for this settings is probably
     ``http://<COUNTRY_CODE>.archive.ubuntu.com/ubuntu/``.
 
+.. opt:: ubuntu-skip-locking
+
+   Enables ``-o Debug::NoLocking=yes``. This is *super-experimental*, but
+   allows to build multiple ubuntu images in parallel even when they use the
+   same cache (i.e. in the same project, or when using :opt:`cache-dir`)
 
 .. opt:: alpine-mirror
 

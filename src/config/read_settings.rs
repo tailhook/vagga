@@ -17,6 +17,7 @@ struct SecureSettings {
     version_check: Option<bool>,
     proxy_env_vars: Option<bool>,
     ubuntu_mirror: Option<String>,
+    ubuntu_skip_locking: Option<bool>,
     alpine_mirror: Option<String>,
     #[serde(default)]
     site_settings: BTreeMap<PathBuf, SecureSettings>,
@@ -42,6 +43,7 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("version_check", V::Scalar::new().optional())
         .member("proxy_env_vars", V::Scalar::new().optional())
         .member("ubuntu_mirror", V::Scalar::new().optional())
+        .member("ubuntu_skip_locking", V::Scalar::new().optional())
         .member("alpine_mirror", V::Scalar::new().optional())
         .member("external_volumes", V::Mapping::new(
             V::Directory::new().absolute(false),
@@ -69,6 +71,7 @@ struct InsecureSettings {
     version_check: Option<bool>,
     shared_cache: Option<bool>,
     ubuntu_mirror: Option<String>,
+    ubuntu_skip_locking: Option<bool>,
     alpine_mirror: Option<String>,
     build_lock_wait: Option<bool>,
     run_symlinks_as_commands: Option<bool>,
@@ -81,6 +84,7 @@ pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
     .member("version_check", V::Scalar::new().optional())
     .member("shared_cache", V::Scalar::new().optional())
     .member("ubuntu_mirror", V::Scalar::new().optional())
+    .member("ubuntu_skip_locking", V::Scalar::new().optional())
     .member("alpine_mirror", V::Scalar::new().optional())
     .member("run_symlinks_as_commands", V::Scalar::new().optional())
     .member("disable_auto_clean", V::Scalar::new().optional())
@@ -127,6 +131,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     }
     if let Some(ref val) = cfg.ubuntu_mirror {
         int_settings.ubuntu_mirror = Some(val.clone());
+    }
+    if let Some(val) = cfg.ubuntu_skip_locking {
+        int_settings.ubuntu_skip_locking = val;
     }
     if let Some(ref val) = cfg.alpine_mirror {
         int_settings.alpine_mirror = Some(val.clone());
@@ -178,6 +185,9 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
         }
         if let Some(ref val) = cfg.ubuntu_mirror {
             int_settings.ubuntu_mirror = Some(val.clone());
+        }
+        if let Some(val) = cfg.ubuntu_skip_locking {
+            int_settings.ubuntu_skip_locking = val;
         }
         if let Some(ref val) = cfg.alpine_mirror {
             int_settings.alpine_mirror = Some(val.clone());
@@ -231,6 +241,7 @@ pub fn read_settings(project_root: &Path)
         version_check: true,
         uid_map: None,
         ubuntu_mirror: None,
+        ubuntu_skip_locking: false,
         alpine_mirror: None,
         push_image_script: None,
         build_lock_wait: false,
@@ -282,6 +293,9 @@ pub fn read_settings(project_root: &Path)
         }
         if let Some(ref val) = cfg.ubuntu_mirror {
             int_settings.ubuntu_mirror = Some(val.clone());
+        }
+        if let Some(val) = cfg.ubuntu_skip_locking {
+            int_settings.ubuntu_skip_locking = val;
         }
         if let Some(ref val) = cfg.alpine_mirror {
             int_settings.alpine_mirror = Some(val.clone());
