@@ -269,10 +269,12 @@ impl Distribution for Distro {
         }
         let mut cmd = command(ctx, "apt-get")?;
         eat_my_data(&mut cmd, ctx, &self.eatmydata);
+        cmd.arg("-oDir::cache::pkgcache=");
+        cmd.arg("-oDir::cache::srcpkgcache=");
         cmd.arg("autoremove").arg("-y");
 
         {
-            let _lock = apt_get_lock()?;
+            let _lock = apt_get_lock(!ctx.settings.ubuntu_skip_locking);
             run(cmd)?;
         }
 
@@ -845,13 +847,18 @@ fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
          })
 }
 
-fn apt_get_lock() -> Result<Lock, StepError> {
-    Lock::exclusive_wait(
-        Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
-        "Another build process is executing `apt-get install` command \
-         against the same apt cache. Waiting ...")
-    .map_err(|e| StepError::Lock(
-        "Cannot aquire lock before running `apt-get install`", e))
+fn apt_get_lock(enabled: bool) -> Result<Option<Lock>, StepError> {
+    if enabled {
+        Lock::exclusive_wait(
+            Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
+            "Another build process is executing `apt-get install` command \
+             against the same apt cache. Waiting ...")
+        .map(Some)
+        .map_err(|e| StepError::Lock(
+            "Cannot aquire lock before running `apt-get install`", e))
+    } else {
+        Ok(None)
+    }
 }
 
 fn eat_my_data(cmd: &mut Command, ctx: &Context, emd: &EatMyData) {
@@ -886,11 +893,7 @@ fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
     cmd.arg("-y");
     cmd.args(packages);
 
-    let _lock = if !ctx.settings.ubuntu_skip_locking {
-        Some(apt_get_lock()?)
-    } else {
-        None
-    };
+    let _lock = apt_get_lock(!ctx.settings.ubuntu_skip_locking)?;
     run(cmd)
 }
 
