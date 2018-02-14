@@ -255,7 +255,7 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
         File::create("/tmp/resolv.conf")
             .and_then(|mut f|
                 // redirect to a gateway IP
-                write!(&mut f, "nameserver 172.23.255.1"))
+                writeln!(&mut f, "nameserver 172.23.255.1"))
             .map_err(|e| format!("Can't create temporary resolv.conf: {}", e))?;
         Path::new("/tmp/resolv.conf")
     } else {
