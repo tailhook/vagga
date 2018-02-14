@@ -2,6 +2,8 @@ containers:
   travis:
     setup:
     - !Ubuntu xenial
+    - !UbuntuUniverse
+    - !BuildDeps [autoconf, automake, autotools-dev, autogen, libtool, libltdl-dev]
     - !GemInstall [travis]
 
 commands:
