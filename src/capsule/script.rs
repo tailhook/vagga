@@ -1,5 +1,7 @@
 use std::io::{stdout, stderr};
+use std::fs::{set_permissions};
 use std::sync::Arc;
+use std::os::unix::fs::PermissionsExt;
 
 use argparse::{ArgumentParser};
 use argparse::{List, Store, StoreOption, StoreTrue};
@@ -50,10 +52,11 @@ pub fn run_script(context: &Context, mut args: Vec<String>)
     let mut capsule = State::new(&Arc::new(context.settings.clone()));
     let (path, _) = download::maybe_download_and_check_hashsum(
         &mut capsule, &url, sha256, refresh)?;
+    set_permissions(&path, PermissionsExt::from_mode(0o755))
+        .map_err(|e| format!("can't set permissions for {:?}: {}", path, e))?;
 
-    let mut cmd: Command = Command::new("/bin/sh");
+    let mut cmd: Command = Command::new(&path);
     cmd.workdir(&context.workdir);
-    cmd.arg(&path);
     cmd.args(&cmdargs);
     let res = run_and_wait(&mut cmd).map(convert_status);
 
