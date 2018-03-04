@@ -4,9 +4,9 @@
 Command Line
 ============
 
-When running ``vagga``, it  finds the ``vagga.yaml`` or ``.vagga/vagga.yaml``
-file in current working directory or any of its parents and uses that as a
-project root directory.
+When running ``vagga``, it  finds the ``vagga.yaml`` file in current working
+directory or any of its parents and uses that as a project root directory
+(alternative files are supported too, see below).
 
 When running ``vagga`` without arguments it displays a short summary of which
 commands are defined by ``vagga.yaml``, like this::
@@ -21,6 +21,17 @@ vagga.
 
 There are also builtin commands. All builtin commands start with underscore
 ``_`` character to be clearly distinguished from user-defined commands.
+
+
+Full list of files that mark directory as vagga's project:
+
+1. ``vagga.yaml`` primary and preferred one
+2. ``.vagga/vagga.yaml`` as an alternative to ``vagga.yaml`` (useful if you
+   don't want to commit it to a git)
+3. ``vagga.local.yaml`` or ``.vagga.local.yaml`` or ``.vagga/local.yaml``
+   which contain additional :opt:`mixins` also mark project directory even
+   if no ``vagga.yaml`` is present (since vagga 0.8.1)
+
 
 Multiple Commands
 =================

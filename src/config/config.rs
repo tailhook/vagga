@@ -20,6 +20,12 @@ use super::range::Range;
 use super::validate::validate_config;
 use super::version::{MinimumVagga, MinimumVaggaError};
 
+static LOCAL_MIXINS: &'static[&'static str] = &[
+    "vagga.local.yaml",
+    ".vagga.local.yaml",
+    ".vagga/local.yaml",
+];
+
 #[derive(Deserialize)]
 pub struct Config {
     pub minimum_vagga: Option<String>,
@@ -58,7 +64,7 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
 }
 
 fn find_config_path(work_dir: &Path, verbose: bool)
-    -> Option<(PathBuf, PathBuf)>
+    -> Option<(PathBuf, Option<PathBuf>)>
 {
     let mut dir = work_dir.to_path_buf();
     loop {
@@ -69,11 +75,17 @@ fn find_config_path(work_dir: &Path, verbose: bool)
 
         let fname = dir.join(".vagga/vagga.yaml");
         if fname.exists() {
-            return Some((dir, fname));
+            return Some((dir, Some(fname)));
         }
         let fname = dir.join("vagga.yaml");
         if fname.exists() {
-            return Some((dir, fname));
+            return Some((dir, Some(fname)));
+        }
+
+        for fname in LOCAL_MIXINS {
+            if dir.join(&fname).exists() {
+                return Some((dir, None));
+            }
         }
 
         if !dir.pop() {
@@ -93,7 +105,8 @@ pub fn find_config(work_dir: &Path, verbose: bool)
     if verbose {
         info!("Found configuration file: {:?}", &filename);
     }
-    let cfg = read_config(&filename, verbose)
+    let cfg = read_config(&cfg_dir,
+            filename.as_ref().map(|x| x.as_path()), verbose)
         .map_err(|e| ConfigError::Other(err_msg(e)))?;
     validate_config(&cfg)
         .map_err(|e| ConfigError::Other(err_msg(e)))?;
@@ -228,11 +241,36 @@ fn single_file(filename: &Path, opt: &Options, is_mixin: bool)
     })
 }
 
-pub fn read_config(filename: &Path, verbose: bool) -> Result<Config, String> {
+fn empty_config() -> Config {
+    Config {
+        minimum_vagga: None,
+        mixins: Vec::new(),
+        commands: BTreeMap::new(),
+        containers: BTreeMap::new(),
+    }
+}
+
+pub fn read_config(dir: &Path, filename: Option<&Path>, verbose: bool)
+    -> Result<Config, String>
+{
     let mut opt = Options::default();
     opt.allow_include(include_file);
-    let mut config = single_file(filename, &opt, false)?;
-    read_mixins(filename,
+    let mut config = match filename {
+        Some(ref filename) => single_file(filename, &opt, false)?,
+        None => empty_config(),
+    };
+    let pseudo_filename = dir.join("vagga.yaml");
+
+    let mixins = LOCAL_MIXINS.iter()
+        .filter(|m| dir.join(m).exists())
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>();
+    if mixins.len() > 0 {
+        read_mixins(&dir.join("vagga.yaml"),
+            &mixins, &mut config, &opt, verbose)?;
+    }
+
+    read_mixins(filename.unwrap_or_else(|| &pseudo_filename),
         &mem::replace(&mut config.mixins, Vec::new()),
         &mut config, &opt, verbose)?;
 

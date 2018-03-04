@@ -34,7 +34,22 @@ There is also two top-level options:
 
    .. versionadded:: 0.7.1
 
+   .. versionchanged:: 0.8.1
+
+      There are implicit mixins:
+
+      1. ``vagga.local.yaml``
+      2. ``.vagga.local.yaml`` (hidden)
+      3. ``.vagga/local.yaml`` (in vagga dir)
+
+      They should be used to add or override local commands which shouldn't be
+      committed to a central repository. They work similarly as normal mixins
+      and can contain additional mixins themselves.
+
+
    .. _includes: http://rust-quire.readthedocs.io/en/latest/user.html#includes
+
+
 
 .. opt:: minimum-vagga
 
