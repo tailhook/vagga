@@ -138,6 +138,9 @@ pub fn get_vagga_base(project_root: &Path, settings: &MergedSettings)
 fn vagga_base(project_root: &Path, settings: &MergedSettings)
     -> Result<PathBuf, String>
 {
+    if env_is_set("_VAGGA_IN_CAPSULE") {
+        return Ok("/vagga/base".into());
+    }
     match _vagga_base(project_root, settings) {
         Ok(Err((lnkdir, dir))) => {
             let ref svar = settings.storage_subdir_from_env_var;

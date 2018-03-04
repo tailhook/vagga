@@ -108,6 +108,7 @@ fn build_internal(context: &Context, name: &str, args: &[String],
         [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
     if capsule {
         // TODO(tailhook) check that uid map matches
+        cmd.env("_VAGGA_IN_CAPSULE", "1");
     } else {
         cmd.map_users_for(
             context.config.get_container(name)?, &context.settings)?;
