@@ -1069,12 +1069,18 @@ impl BuildStep for UbuntuRelease {
 impl EMDParams {
     fn find(codename: &str, arch: &str) -> Option<EMDParams> {
         match (codename, arch) {
-            ("xenial", "amd64") => Some(EMDParams {
+            ("xenial", "amd64") |
+            ("artful", "amd64") |
+            ("bionic", "amd64")
+            => Some(EMDParams {
                 needs_universe: false,
                 package: "libeatmydata1",
                 preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
             }),
-            ("xenial", "i386") => Some(EMDParams {
+            ("xenial", "i386") |
+            ("artful", "i386") |
+            ("bionic", "i386")
+            => Some(EMDParams {
                 needs_universe: false,
                 package: "libeatmydata1",
                 preload: "/usr/lib/i386-linux-gnu/libeatmydata.so",
