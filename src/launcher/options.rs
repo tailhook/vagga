@@ -1,7 +1,6 @@
 use std::fmt;
 use std::fmt::Write;
 use std::iter::repeat;
-use std::ascii::AsciiExt;
 use std::collections::HashMap;
 
 use docopt::{Docopt, Value, ArgvMap};
