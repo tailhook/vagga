@@ -2,7 +2,6 @@ use std::env;
 use std::fs::File;
 use std::fs::{hard_link, read_link, read_dir, rename, remove_dir, remove_file};
 use std::ffi::OsString;
-use std::ascii::AsciiExt;
 use std::io::{self, Read, Write, BufReader};
 use std::io::{stdout, stderr};
 use std::io::ErrorKind::NotFound;
