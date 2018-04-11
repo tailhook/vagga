@@ -173,6 +173,21 @@ fn include_file(pos: &Pos, include: &Include,
             })
             .unwrap_or_else(|| Ast::void(pos))
         }
+        Include::Sequence { .. } => {
+            err.add_error(Error::preprocess_error(pos,
+                "sequence includes aren't supported yet".into()));
+            return Ast::void(pos);
+        }
+        Include::Mapping { .. } => {
+            err.add_error(Error::preprocess_error(pos,
+                "mapping includes aren't supported yet".into()));
+            return Ast::void(pos);
+        }
+        _ => {
+            err.add_error(Error::preprocess_error(pos,
+                "only single file includes are supported yet".into()));
+            return Ast::void(pos);
+        }
     }
 }
 
