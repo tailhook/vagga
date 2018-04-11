@@ -677,7 +677,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quire"
 version = "0.3.1"
-source = "git+https://github.com/tailhook/rust-quire?rev=9e75f86#9e75f86f4299294a9bcd55d0d6311ee3fe0f9f86"
+source = "git+https://github.com/tailhook/rust-quire?rev=221cbdb#221cbdba2b8994e935e235df03beb50a4d408fea"
 dependencies = [
  "humannum 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "humantime 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1072,7 +1072,7 @@ dependencies = [
  "nix 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "path-filter 0.1.0",
  "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=9e75f86)",
+ "quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=221cbdb)",
  "rand 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "resolv-conf 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1260,7 +1260,7 @@ dependencies = [
 "checksum podio 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "780fb4b6698bbf9cf2444ea5d22411cef2953f0824b98f33cf454ec5615645bd"
 "checksum proc-macro2 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "cd07deb3c6d1d9ff827999c7f9b04cdfd66b1b17ae508e14fe47b620f2282ae0"
 "checksum quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "eda5fe9b71976e62bc81b781206aaa076401769b2143379d3eb2118388babac4"
-"checksum quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=9e75f86)" = "<none>"
+"checksum quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=221cbdb)" = "<none>"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
 "checksum quote 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1eca14c727ad12702eb4b6bfb5a232287dcf8385cb8ca83a3eeaf6519c44c408"
 "checksum rand 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)" = "15a732abf9d20f0ad8eeb6f909bf6868722d9a06e1e50802b6a70351f40b4eb1"
