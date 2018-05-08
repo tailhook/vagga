@@ -351,21 +351,21 @@ impl BuildStep for GemBundle {
         hash.field("gemfile", &self.gemfile);
         let gemlock = path.parent()
             .map(|dir| dir.join("Gemfile.lock"))
-            .ok_or("Gemfile should be under /work".to_owned())?;
+            .ok_or("Gemfile should be under /work")?;
         if gemlock.exists() {
             let mut lockfile = File::open(&path)
-                .map_err(|e| VersionError::Io(e, gemlock.clone()))?;
+                .map_err(|e| VersionError::io(e, &gemlock))?;
             hash.file(&path, &mut lockfile)
-                .map_err(|e| VersionError::Io(e, gemlock.clone()))?;
+                .map_err(|e| VersionError::io(e, &gemlock))?;
         }
 
         let f = File::open(&path)
-            .map_err(|e| VersionError::Io(e, path.clone()))?;
+            .map_err(|e| VersionError::io(e, &path))?;
         let reader = BufReader::new(f);
 
         for line in reader.lines() {
             let line = line
-                .map_err(|e| VersionError::Io(e, path.clone()))?;
+                .map_err(|e| VersionError::io(e, &path))?;
             let line = line.trim();
             if line.is_empty() || line.starts_with("#") {
                 continue

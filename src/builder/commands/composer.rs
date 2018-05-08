@@ -485,9 +485,9 @@ fn get<'x>(dic: &'x Json, key: &str) -> &'x Json {
 }
 
 fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
-    File::open(&path).map_err(|e| VersionError::Io(e, path.to_path_buf()))
+    File::open(&path).map_err(|e| VersionError::io(e, path))
     .and_then(|mut f| from_reader(&mut f)
-        .map_err(|e| VersionError::Json(e, path.to_path_buf())))
+        .map_err(|e| format_err!("bad json in {:?}: {}", path, e).into()))
     .and_then(|data: Json| {
         let packages = data.get("packages")
             .ok_or("Missing 'packages' property from composer.lock".to_owned())?;
@@ -524,9 +524,9 @@ impl BuildStep for ComposerDependencies {
         }
 
         let path = base_path.join("composer.json");
-        File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))
+        File::open(&path).map_err(|e| VersionError::io(e, &path))
         .and_then(|mut f| from_reader(&mut f)
-            .map_err(|e| VersionError::Json(e, path.to_path_buf())))
+            .map_err(|e| format_err!("bad json in {:?}: {}", &path, e).into()))
         .map(|data| {
             // Jsons are sorted so should be hash as string predictably
             hash.field("require", get(&data, "require"));

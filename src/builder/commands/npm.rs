@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
 use libmount::BindMount;
-use quick_error::ResultExt;
 use quire::validate as V;
 use regex::Regex;
 use serde_json::{Value as Json, from_reader};
@@ -110,7 +109,8 @@ impl YarnDependencies {
 fn get_all_patterns(lock_file: &Path)
     -> Result<HashSet<String>, VersionError>
 {
-    let f = BufReader::new(File::open(lock_file).context(lock_file)?);
+    let f = BufReader::new(File::open(lock_file)
+        .map_err(|e| VersionError::io(e, lock_file))?);
     return _get_all_patterns(f, lock_file)
 }
 
@@ -119,7 +119,7 @@ fn _get_all_patterns<B: BufRead>(f: B, lock_file: &Path)
 {
     let mut result = HashSet::new();
     for line in f.lines() {
-        let line = line.context(lock_file)?;
+        let line = line.map_err(|e| VersionError::io(e, lock_file))?;
         if line.starts_with(" ") || line.starts_with("#") {
             continue;
         }
@@ -339,9 +339,10 @@ impl BuildStep for NpmDependencies {
         -> Result<(), VersionError>
     {
         let path = Path::new("/work").join(&self.file);
-        File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))
+        File::open(&path)
+            .map_err(|e| VersionError::io(e, &path))
         .and_then(|mut f| from_reader(&mut f)
-            .map_err(|e| VersionError::Json(e, path.to_path_buf())))
+            .map_err(|e| format_err!("bad json in {:?}: {}", &path, e).into()))
         .map(|data| {
             if self.package {
                 npm_hash_deps(&data, "dependencies", hash);
@@ -453,8 +454,9 @@ impl BuildStep for YarnDependencies {
         let package = Path::new("/work").join(&self.dir).join("package.json");
         if lock_file.exists() {
             let data: Json = from_reader(
-                &mut File::open(&package).context(&package)?)
-                .context(&package)?;
+                &mut File::open(&package)
+                    .map_err(|e| VersionError::io(e, &package))?)
+                .map_err(|e| format_err!("bad json in {:?}: {}", package, e))?;
             let patterns = get_all_patterns(&lock_file)?;
 
             // This is what yarn as of v0.23.0, i.e. checks whether all
@@ -476,8 +478,10 @@ impl BuildStep for YarnDependencies {
                 npm_hash_deps(&data, "optionalDependencies", hash);
             }
 
-            let mut file = File::open(&lock_file).context(&lock_file)?;
-            hash.file(&lock_file, &mut file).context(&lock_file)?;
+            let mut file = File::open(&lock_file)
+                .map_err(|e| VersionError::io(e, &lock_file))?;
+            hash.file(&lock_file, &mut file)
+                .map_err(|e| VersionError::io(e, &lock_file))?;
             Ok(())
         } else {
             debug!("No lockfile exits at {:?}", lock_file);

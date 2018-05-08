@@ -92,7 +92,7 @@ impl BuildStep for Depends {
                 h.field("is_executable", is_executable);
             }
             hash_file_content(h, p, st)
-                .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
+                .map_err(|e| VersionError::io(e, p))?;
             Ok(())
         })?;
         Ok(())
@@ -181,7 +181,7 @@ impl BuildStep for Copy {
                 h.field("uid", self.owner_uid.unwrap_or(st.uid()));
                 h.field("gid", self.owner_gid.unwrap_or(st.gid()));
                 hash_file_content(h, p, st)
-                    .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
+                    .map_err(|e| VersionError::io(e, p))?;
                 Ok(())
             })?;
             hash.field("path", &self.path);
@@ -292,7 +292,7 @@ pub fn hash_path<F>(hash: &mut Digest, path: &Path,
             for rel_path in &all_rel_paths {
                 let ref abs_path = path.join(rel_path);
                 let stat = abs_path.symlink_metadata()
-                    .map_err(|e| VersionError::Io(e, PathBuf::from(abs_path)))?;
+                    .map_err(|e| VersionError::io(e, abs_path))?;
                 hash_file(hash, abs_path, &stat)?;
             }
         }
@@ -303,7 +303,7 @@ pub fn hash_path<F>(hash: &mut Digest, path: &Path,
             return Err(VersionError::New);
         }
         Err(e) => {
-            return Err(VersionError::Io(e, path.into()));
+            return Err(VersionError::io(e, path));
         }
     }
     Ok(())

@@ -215,7 +215,7 @@ impl BuildStep for Container {
         -> Result<(), VersionError>
     {
         let cont = cfg.containers.get(&self.0)
-            .ok_or(VersionError::ContainerNotFound(self.0.to_string()))?;
+            .ok_or_else(|| format_err!("container {:?} not found", self.0))?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
             hash.command(b.name());
@@ -240,9 +240,11 @@ impl BuildStep for Build {
         -> Result<(), VersionError>
     {
         let cinfo = cfg.containers.get(&self.container)
-            .ok_or(VersionError::ContainerNotFound(self.container.clone()))?;
+            .ok_or_else(|| format_err!("Container {} not found",
+                self.container))?;
         if self.content_hash {
-            let version = short_version(&cinfo, cfg)?;
+            let version = short_version(&cinfo, cfg)
+                .map_err(|(s, e)| format_err!("{}: {}", s, e))?;
             let root = Path::new("/vagga/base/.roots")
                 .join(format!("{}.{}", self.container, version))
                 .join("root");
@@ -260,7 +262,7 @@ impl BuildStep for Build {
                     h.field("uid", st.uid());
                     h.field("gid", st.gid());
                     hash_file_content(h, p, st)
-                        .map_err(|e| VersionError::Io(e, PathBuf::from(p)))?;
+                        .map_err(|e| VersionError::io(e, p))?;
                     Ok(())
                 })?;
                 hash.field("path", dest_rel);
@@ -295,8 +297,11 @@ impl BuildStep for SubConfig {
         let path = match self.source {
             Source::Container(ref container) => {
                 let cinfo = cfg.containers.get(container)
-                    .ok_or(VersionError::ContainerNotFound(container.clone()))?;
-                let version = short_version(&cinfo, cfg)?;
+                    .ok_or_else(|| {
+                        format_err!("container {:?} not found", container)
+                    })?;
+                let version = short_version(&cinfo, cfg)
+                    .map_err(|(s, e)| format_err!("{}: {}", s, e))?;
                 Path::new("/vagga/base/.roots")
                     .join(format!("{}.{}", container, version))
                     .join("root").join(&self.path)
@@ -315,7 +320,9 @@ impl BuildStep for SubConfig {
             path.parent().expect("has parent directory"),
             Some(&path), true)?;
         let cont = subcfg.containers.get(&self.container)
-            .ok_or(VersionError::ContainerNotFound(self.container.to_string()))?;
+            .ok_or_else(|| {
+                format_err!("container {:?} not found", self.container)
+            })?;
         for b in cont.setup.iter() {
             debug!("Versioning setup: {:?}", b);
             hash.command(b.name());

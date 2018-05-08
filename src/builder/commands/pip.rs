@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
+use failure::Error;
 use quire::validate as V;
 use super::super::context::{Context};
 use super::super::packages;
@@ -336,25 +337,25 @@ fn parse_req_filename(line: &str) -> Option<&str> {
     return None;
 }
 
-fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>) ->
-               Result<(), VersionError> {
+fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>)
+    -> Result<(), Error>
+{
 
     let path = Path::new("/work").join(fname).canonicalize()
-                   .map_err(|e| VersionError::Io(e, fname.to_path_buf()))?;
+                   .map_err(|e| VersionError::io(e, fname))?;
 
     let name = format!("{:?}", path);
     if used.contains(&name[..]) {
-        return Err(VersionError::String(
-            format!("Cyclic requirement: {}", name)))
+        bail!("Cyclic requirement: {}", name);
     }
 
     used.insert(name);
 
-    let f = File::open(&path).map_err(|e| VersionError::Io(e, path.clone()))?;
+    let f = File::open(&path).map_err(|e| VersionError::io(e, &path))?;
 
     let f = BufReader::new(f);
     for line in f.lines() {
-        let line = line.map_err(|e| VersionError::Io(e, path.clone()))?;
+        let line = line.map_err(|e| VersionError::io(e, &path))?;
         let chunk = line[..].trim();
         // Ignore empty lines and comments
         if chunk.len() == 0 || chunk.starts_with("#") {
@@ -375,7 +376,7 @@ impl BuildStep for Py2Requirements {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        version_req(hash, &self.0, &mut HashSet::new())
+        Ok(version_req(hash, &self.0, &mut HashSet::new())?)
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
@@ -396,7 +397,7 @@ impl BuildStep for Py3Requirements {
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
-        version_req(hash, &self.0, &mut HashSet::new())
+        Ok(version_req(hash, &self.0, &mut HashSet::new())?)
     }
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
