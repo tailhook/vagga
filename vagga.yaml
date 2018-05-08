@@ -100,7 +100,7 @@ commands:
     work-dir: docs
     epilog: |
       --------------------------------------------------------
-      Documentation is built under docs/_build/html/index.html
+        xdg-open docs/_build/html/index.html
 
   make: !Command
     description: Build vagga
