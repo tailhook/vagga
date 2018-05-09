@@ -17,6 +17,7 @@ pub use self::version::short_version;
 pub use self::error::Error;
 
 
+#[cfg(feature="containers")]
 pub fn run(input_args: Vec<String>) -> i32 {
     let mut container: String = "".to_string();
     let mut settings: Settings = Default::default();

@@ -43,24 +43,24 @@ extern crate resolv_conf;
 #[cfg(feature="containers")] extern crate dir_signature;
 
 #[cfg(feature="containers")] #[macro_use] mod macros;
-#[cfg(feature="containers")] mod config;
+mod config;
 #[cfg(feature="containers")] mod container;
 #[cfg(feature="containers")] mod file_util;
-#[cfg(feature="containers")] mod path_util;
+mod path_util;
 #[cfg(feature="containers")] mod process_util;
 #[cfg(feature="containers")] mod tty_util;
 #[cfg(feature="containers")] mod options;
-#[cfg(feature="containers")] mod digest;
-#[cfg(feature="containers")] mod build_step;
+mod digest;
+mod build_step;
 #[cfg(feature="containers")] mod storage_dir;
 
 // Commands
 #[cfg(feature="containers")] mod launcher;
 #[cfg(feature="containers")] mod network;
 #[cfg(feature="containers")] mod setup_netns;
-#[cfg(feature="containers")] mod version;
+mod version;
 #[cfg(feature="containers")] mod wrapper;
-#[cfg(feature="containers")] mod builder;
+mod builder;
 #[cfg(feature="containers")] mod runner;
 #[cfg(feature="containers")] mod capsule;
 

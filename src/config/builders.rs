@@ -111,6 +111,13 @@ pub enum CommandName {
 pub struct NameVisitor;
 pub struct StepVisitor;
 
+#[cfg(not(feature="containers"))]
+pub fn builder_validator<'x>() -> V::Enum<'x> {
+    // TODO(tailhook) temporarily, until we support all commands here
+    V::Enum::new()
+}
+
+#[cfg(feature="containers")]
 pub fn builder_validator<'x>() -> V::Enum<'x> {
     V::Enum::new()
     .option("Alpine", cmd::alpine::Alpine::config())
@@ -247,6 +254,19 @@ impl<'a> Visitor<'a> for StepVisitor {
     fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "build step is one of {}", COMMANDS.join(", "))
     }
+    #[cfg(not(feature="containers"))]
+    fn visit_enum<A>(self, data: A) -> Result<Step, A::Error>
+        where A: EnumAccess<'a>,
+    {
+        use self::CommandName::*;
+        let (tag, v): (CommandName, _) = data.variant()?;
+        match tag {
+            // TODO(tailhook) temporarily, until we support all commands here
+            _ => unimplemented!(),
+        }
+    }
+
+    #[cfg(feature="containers")]
     fn visit_enum<A>(self, data: A) -> Result<Step, A::Error>
         where A: EnumAccess<'a>,
     {

@@ -9,6 +9,7 @@ use quire::ast::Tag::{NonSpecific, LocalTag};
 
 use config::Range;
 use super::volumes::{Volume, volume_validator};
+#[cfg(feature="containers")]
 use launcher::system::SystemInfo;
 
 #[derive(Deserialize, Clone, PartialEq, Eq, Copy)]
@@ -157,6 +158,7 @@ impl MainCommand {
             MainCommand::CapsuleCommand(ref cmd) => cmd.options.as_ref(),
         }
     }
+    #[cfg(feature="containers")]
     pub fn system<'x>(&'x self) -> SystemInfo {
         match *self {
             MainCommand::Command(ref cmd) => SystemInfo {
