@@ -67,3 +67,8 @@ Indices and tables
 
 * :ref:`genindex`
 
+
+Credits
+=======
+
+Logo created by `NineArt <http://www.nineart.co/>`_.
