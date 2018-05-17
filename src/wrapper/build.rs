@@ -568,7 +568,7 @@ fn find_and_hardlink_identical_files(wrapper: &Wrapper,
 {
     let (tmp_root_dir, project_name, _cont_dirs) =
         if wrapper.settings.hard_link_between_projects &&
-        wrapper.ext_settings.storage_dir.is_some()
+            wrapper.ext_settings.storage_dir.is_some()
     {
         let storage_dir = Path::new("/vagga/storage");
         let project_path = try_msg!(
@@ -591,11 +591,13 @@ fn find_and_hardlink_identical_files(wrapper: &Wrapper,
         let cont_dirs = collect_container_dirs(&roots_dir, None)?;
         (cont_info.tmp_root_dir.clone(), None, cont_dirs)
     };
+    // Collect only containers with signature file
     let mut cont_dirs = _cont_dirs.iter()
         .filter(|d| d.path != finalpath)
         .filter(|d| d.path.join("index.ds1").is_file())
         .map(|d| d)
         .collect::<Vec<_>>();
+    // Sort by project, container name and date modified
     cont_dirs.sort_by_key(|d| {
         (d.project == project_name,
          &d.project,
@@ -603,9 +605,11 @@ fn find_and_hardlink_identical_files(wrapper: &Wrapper,
          &d.name,
          d.modified)
     });
+    // Group by project and container name
     let grouped_cont_dirs = cont_dirs.into_iter()
         .rev()
         .group_by(|d| (&d.project, &d.name));
+    // Take only 3 last version of each container
     let cont_dirs = grouped_cont_dirs.into_iter()
         .map(|(_, group)| group.take(3))
         .flatten();

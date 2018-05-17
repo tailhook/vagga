@@ -460,7 +460,7 @@ pub fn hardlink_container_files<I, P>(tmp_dir: &Path, cont_dirs: I)
                             if maybe_link_file(
                                 tgt, &lnk, &lnk_stat, &lnk_hashes, &tmp)?
                             {
-                                trace!("Hardlinking {:?} -> {:?}", lnk, tgt);
+                                trace!("Hardlinked {:?} -> {:?}", lnk, tgt);
                                 count += 1;
                                 size += tgt_size;
                                 break;
@@ -633,15 +633,16 @@ pub fn hardlink_all_identical_files<I, P>(cont_dirs: I)
                 let tgt_ino = tgt_meta.ino();
                 linked_inodes.clear();
                 for &(ref cont_dir, ref lnk_path, ref lnk_meta) in links {
-                    let tmp_path = cont_dir.join(".lnk.tmp");
                     let lnk_ino = lnk_meta.ino();
                     if lnk_ino == tgt_ino {
                         continue;
                     }
+                    let tmp_path = cont_dir.join(".lnk.tmp");
                     match safe_hardlink(tgt_path, lnk_path, &tmp_path) {
                         Ok(_) => {
+                            trace!("Hardlinked {:?} -> {:?}", lnk_path, tgt_path);
+                            count += 1;
                             if !linked_inodes.contains(&lnk_ino) {
-                                count += 1;
                                 size += lnk_meta.size();
                             }
                             linked_inodes.insert(lnk_ino);
