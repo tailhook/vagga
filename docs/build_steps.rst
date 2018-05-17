@@ -623,14 +623,20 @@ Generic Commands
 
    Examples::
 
-      setup:
       # Only put tag information into the container's hash
       - !GitDescribe
+
       # Also write the most recent tag into the file
       - !GitDescribe /version.txt
+
       # Specify another path to the git repository
       - !GitDescribe
         repo: /work/subrepo
+        output-file: /version.txt
+
+      # Find last tag that starts with "v", e.g. "v0.1.2"
+      - !GitDescribe
+        match: v*
         output-file: /version.txt
 
    Options:
@@ -640,6 +646,13 @@ Generic Commands
 
    output-file
       (optional) Writes the most recent tag into the file.
+
+   pattern
+      (optional) Takes into account only tags that match the glob pattern.
+      This parameter corresponds ``--match`` option of the ``git describe``
+      command.
+
+      .. versionadded:: 0.8.1
 
    .. versionadded:: 0.8.0
 

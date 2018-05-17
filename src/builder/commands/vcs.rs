@@ -62,6 +62,7 @@ impl GitInstall {
 #[derive(Deserialize, Debug)]
 pub struct GitDescribe {
     repo: PathBuf,
+    pattern: Option<String>,
     output_file: Option<PathBuf>,
 }
 
@@ -81,6 +82,7 @@ impl GitDescribe {
     pub fn config() -> V::Structure<'static> {
         V::Structure::new()
             .member("repo", V::Directory::new().default("/work"))
+            .member("pattern", V::Scalar::new().optional())
             .member("output_file",
                 V::Directory::new().optional().absolute(true))
             .parser(git_describe_parser)
@@ -96,7 +98,11 @@ impl GitDescribe {
         };
         let git_repo = Repository::open_ext(repo_path,
             RepositoryOpenFlags::empty(), &[] as &[&OsStr])?;
-        let describe = git_repo.describe(&DescribeOptions::default())?;
+        let mut options = DescribeOptions::default();
+        if let Some(ref pattern) = self.pattern {
+            options.pattern(pattern);
+        }
+        let describe = git_repo.describe(&options)?;
         Ok(format!("{}", describe.format(None)?))
     }
 }
