@@ -52,4 +52,14 @@ setup() {
     new_link=$(readlink .vagga/git-describe)
     [[ $link != $new_link ]]
     [[ $(cat .vagga/git-describe/version.txt) = "v0.0.1-1-"* ]]
+
+    git add .gitignore
+    git commit -m ".gitignore added"
+    git tag -a ignoreme0.0.1 -m "ignore me"
+    git describe
+
+    run vagga _build git-describe-pattern
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $(cat .vagga/git-describe-pattern/version.txt) = "v0.0.1-2-"* ]]
 }

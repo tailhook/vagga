@@ -23,6 +23,12 @@ containers:
     setup:
     - !GitDescribe
 
+  git-describe-pattern:
+    setup:
+    - !GitDescribe
+      pattern: v*
+      output-file: /version.txt
+
 
 commands:
   urp-git: !Command
