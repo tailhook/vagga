@@ -21,6 +21,12 @@ containers:
     - !Ubuntu xenial
     - !Install [bc]
 
+  build-deps-with-version:
+    setup:
+    - !Ubuntu xenial
+    - !BuildDeps [bc=1.06.95-9build1]
+    - !Sh echo "631 * 761" | bc
+
   artful-universe:
     setup:
     - !UbuntuRelease { codename: artful }

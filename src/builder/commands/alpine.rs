@@ -156,7 +156,16 @@ impl Distribution for Distro {
     }
     fn finish(&mut self, ctx: &mut Context) -> Result<(), String>
     {
-        let pkgs = ctx.build_deps.clone().into_iter().collect();
+        let pkg_version_re = Regex::new("=|>|<|>=|<=|~=")
+            .map_err(|e| format!("{}", e))?;
+        let pkgs = ctx.build_deps.iter()
+            .map(|p| {
+                pkg_version_re.splitn(p, 2)
+                    .next()
+                    .map(|n| n.to_string())
+                    .unwrap_or(p.clone())
+            })
+            .collect();
         remove(ctx, &pkgs)?;
         let mut cmd = Command::new("/vagga/bin/apk");
         cmd
