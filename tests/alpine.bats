@@ -80,6 +80,19 @@ setup() {
     [[ $link = ".roots/v30-calc.6d9ec833/root" ]]
 }
 
+@test "alpine: BuildDeps" {
+    run vagga _build build-deps-with-version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *"480191"* ]]
+    link=$(readlink .vagga/build-deps-with-version)
+    [[ $link = ".roots/build-deps-with-version.5d980472/root" ]]
+
+    run vagga _run build-deps-with-version bc
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 124 ]]
+}
+
 @test "alpine: Run vagga inside alpine" {
     cp ../../vagga vagga_inside_alpine/
     cp ../../apk vagga_inside_alpine/

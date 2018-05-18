@@ -79,6 +79,19 @@ setup() {
     [[ $link = ".roots/xenial-calc.321f6a11/root" ]]
 }
 
+@test "Test BuildDeps with version" {
+    run vagga _build build-deps-with-version
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    [[ $output = *"480191"* ]]
+    link=$(readlink .vagga/build-deps-with-version)
+    [[ $link = ".roots/build-deps-with-version.293fcc59/root" ]]
+
+    run vagga _run build-deps-with-version bc
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 124 ]]
+}
+
 @test "Test artful universe" {
     run vagga _build artful-universe
     printf "%s\n" "${lines[@]}"

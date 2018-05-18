@@ -260,7 +260,14 @@ impl Distribution for Distro {
     }
     fn finish(&mut self, ctx: &mut Context) -> Result<(), String>
     {
-        let pkgs: Vec<_> = ctx.build_deps.clone().into_iter().collect();
+        let pkgs: Vec<String> = ctx.build_deps.iter()
+            .map(|p| {
+                p.splitn(2, '=')
+                    .next()
+                    .map(|n| n.to_string())
+                    .unwrap_or(p.clone())
+            })
+            .collect();
         if pkgs.len() > 0 {
             let mut cmd = command(ctx, "apt-mark")?;
             cmd.arg("auto");
