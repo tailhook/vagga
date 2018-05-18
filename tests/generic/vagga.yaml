@@ -375,6 +375,7 @@ commands:
 
   isolated-command: !Command
     container: busybox
+    isolate-network: true
     run: |
       ip link
 

@@ -167,6 +167,8 @@ These parameters work for both kinds of commands:
 
 .. opt:: options
 
+   .. _docopt: http://docopt.org/
+
    This is a docopt_ definition for the options that this command accepts.
    Example:
 
@@ -272,7 +274,19 @@ These parameters work for both kinds of commands:
 
    .. versionadded:: 0.7.1
 
-.. _docopt: http://docopt.org/
+.. _isolate-network:
+
+.. opt:: isolate-network
+
+   Run command within isolated network namespace. Isolated network will
+   have only a loopback device, so processes won't have access to the internet.
+   For example, it is possible to run several test suites each start service
+   that binds the same port. Also you can run arbitrary command inside isolated
+   network using ``--isolate-network`` commandline option.
+
+   .. versionadded:: 0.7.0 only for ``!Supervise``
+
+   .. versionadded:: 0.8.1
 
 
 Parameters of `!Command`
@@ -474,16 +488,6 @@ Parameters of `!Supervise`
    signal (so they finish without being able to intercept signal
    unconditionally). If you don't like this behavior set the parameter to
    some large value.
-
-.. _isolate-network:
-
-.. opt:: isolate-network
-
-   Run all processes within isolated network namespace. Isolated network will
-   have only a loopback device, so processes won't have access to the internet.
-   For example, it is possible to run several test suites each start service
-   that binds the same port. Also you can run arbitrary command inside isolated
-   network using ``--isolate-network`` commandline option.
 
 
 Parameters of `!CapsuleCommand`

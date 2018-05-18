@@ -71,7 +71,7 @@ pub fn run(cinfo: &CommandInfo, args: Args, version: Version,
     context: &Context)
     -> Result<i32, String>
 {
-    if context.isolate_network {
+    if cinfo.isolate_network || context.isolate_network {
         try_msg!(network::isolate_network(),
             "Cannot setup isolated network: {err}");
     }

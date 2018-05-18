@@ -58,7 +58,7 @@ pub fn prepare_containers(_: &CapsuleInfo, _: &Args, _: &Context)
 pub fn run(cinfo: &CapsuleInfo, args: Args, _data: Data, context: &Context)
     -> Result<i32, String>
 {
-    if context.isolate_network {
+    if cinfo.isolate_network || context.isolate_network {
         try_msg!(network::isolate_network(),
             "Cannot setup isolated network: {err}");
     }

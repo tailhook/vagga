@@ -65,6 +65,7 @@ pub struct CommandInfo {
     pub symlink_name: Option<String>,
     pub aliases: Vec<String>,
     pub group: Option<String>,
+    pub isolate_network: bool,
 
     // Command
     pub tags: Vec<String>,  // Only for supervise chidlren
@@ -99,6 +100,7 @@ pub struct CapsuleInfo {
     pub symlink_name: Option<String>,
     pub aliases: Vec<String>,
     pub group: Option<String>,
+    pub isolate_network: bool,
 
     // CapsuleCommand
     pub uids: Vec<Range>,
@@ -123,10 +125,10 @@ pub struct SuperviseInfo {
     pub symlink_name: Option<String>,
     pub aliases: Vec<String>,
     pub group: Option<String>,
+    pub isolate_network: bool,
 
     // Supervise
     pub mode: SuperviseMode,
-    pub isolate_network: bool,
     pub kill_unresponsive_after: u32,
     pub children: BTreeMap<String, ChildCommand>,
 }
@@ -310,7 +312,8 @@ fn command_fields<'a>(mut cmd: V::Structure, toplevel: bool) -> V::Structure
         .member("symlink_name", V::Scalar::new().optional())
         .member("prerequisites", V::Sequence::new(V::Scalar::new()))
         .member("aliases", V::Sequence::new(V::Scalar::new()))
-        .member("group", V::Scalar::new().optional());
+        .member("group", V::Scalar::new().optional())
+        .member("isolate_network", V::Scalar::new().default(false));
     if toplevel {
         cmd = cmd.member("options", V::Scalar::new().optional());
     }
@@ -332,7 +335,6 @@ pub fn command_validator<'a>() -> V::Enum<'a> {
 
     let sup = sup
         .member("mode", V::Scalar::new().default("stop-on-failure"))
-        .member("isolate_network", V::Scalar::new().default(false))
         .member("children", V::Mapping::new(
             V::Scalar::new(),
             subcommand_validator()))
