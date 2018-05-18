@@ -221,7 +221,7 @@ setup() {
 
 @test "generic: isolated Command" {
     vagga _build busybox
-    run vagga --isolate-network isolated-command
+    run vagga isolated-command
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
