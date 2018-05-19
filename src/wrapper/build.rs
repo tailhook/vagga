@@ -611,8 +611,7 @@ fn find_and_hardlink_identical_files(wrapper: &Wrapper,
         .group_by(|d| (&d.project, &d.name));
     // Take only 3 last version of each container
     let cont_dirs = grouped_cont_dirs.into_iter()
-        .map(|(_, group)| group.take(3))
-        .flatten();
+        .flat_map(|(_, group)| group.take(3));
     let cont_paths = cont_dirs.into_iter()
         .map(|d| &d.path);
     match hardlink_container_files(&tmp_root_dir, cont_paths)
