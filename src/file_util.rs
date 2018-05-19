@@ -273,7 +273,7 @@ impl Drop for Lock {
 pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String)
     -> Result<(), String>
 {
-    use sha2::Sha256;
+    use sha2::{Sha256, Digest};
     use digest_writer::Writer;
     use digest::hex;
 
