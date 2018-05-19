@@ -182,9 +182,12 @@ fn build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     let dir_name = _build_container(&cont_info, wrapper)?;
     let destlink = Path::new("/work/.vagga").join(cont_info.name);
     let tmplink = destlink.with_extension("tmp");
-    if tmplink.exists() {
-        remove_file(&tmplink)
-            .map_err(|e| format!("Error removing temporary link: {}", e))?;
+    match remove_file(&tmplink) {
+        Ok(()) => {}
+        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {}
+        Err(e) => {
+            return Err(format!("Error removing temporary link: {}", e))?;
+        }
     }
     let roots = if wrapper.ext_settings.storage_dir.is_some() {
         // at this point `.lnk` should already be created even if we use
