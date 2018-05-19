@@ -36,7 +36,7 @@ humantime = "1.0.0"
 quick-error = "1.2.0"
 docopt = "0.8.1"
 quire = { git="https://github.com/tailhook/rust-quire", rev="221cbdb" }
-lazy_static = "0.2.2"
+lazy_static = "1.0.0"
 dir-signature = { version="0.2.3", optional=true }
 itertools = "0.6.1"
 git2 = { version="0.7.1", default-features=false }
