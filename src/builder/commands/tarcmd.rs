@@ -1,11 +1,11 @@
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, Read, Seek, SeekFrom, BufReader};
 use std::fs::{File, Permissions};
 use std::fs::{create_dir_all, set_permissions, hard_link};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
 
 use tar::Archive;
-use flate2::FlateReadExt;
+use flate2::read::GzDecoder;
 use xz2::read::XzDecoder;
 use bzip2::read::BzDecoder;
 use libmount::BindMount;
@@ -68,15 +68,14 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     info!("Unpacking {:?} -> {:?}", src, tgt);
     let read_err = |e| format!("Error reading {:?}: {}", src, e);
 
-    let mut file = File::open(&src).map_err(&read_err)?;
+    let mut file = BufReader::new(File::open(&src).map_err(&read_err)?);
 
     let mut buf = [0u8; 8];
     let nbytes = file.read(&mut buf).map_err(&read_err)?;
     file.seek(SeekFrom::Start(0)).map_err(&read_err)?;
     let magic = &buf[..nbytes];
     if magic.len() >= 2 && magic[..2] == [0x1f, 0x8b] {
-        return unpack_stream(
-            file.gz_decode().map_err(&read_err)?,
+        return unpack_stream(GzDecoder::new(file),
             src, tgt, includes, excludes, preserve_owner);
     } else if magic.len() >= 6 && magic[..6] ==
         [ 0xFD, b'7', b'z', b'X', b'Z', 0x00]

@@ -29,7 +29,7 @@ libmount = { version="0.1.7", optional=true }
 zip = "0.3.2"
 xz2 = "0.1.0"
 tar = "0.4.8"
-flate2 = "0.2.13"
+flate2 = "1.0.1"
 bzip2 = "0.3.0"
 net2 = "0.2.23"
 humantime = "1.0.0"
