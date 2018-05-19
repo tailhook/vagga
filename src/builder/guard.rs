@@ -1,10 +1,6 @@
 use std::path::Path;
-use std::io::BufWriter;
-use std::fs::{File, remove_file};
+use std::fs::remove_file;
 use std::collections::HashMap;
-
-use dir_signature::{v1, ScannerConfig as Sig};
-use dir_signature::HashType;
 
 use builder::context::Context;
 use builder::distrib::{Unknown,Distribution};
@@ -12,7 +8,7 @@ use builder::error::{Error};
 use builder::commands::{composer, gem, npm, pip, dirs};
 use builder::packages;
 use build_step::BuildStep;
-use container::util::clean_dir;
+use container::util::{clean_dir, write_container_signature};
 use container::mount::{unmount, mount_system_dirs, mount_proc, mount_run};
 use container::mount::unmount_system_dirs;
 use file_util::{Dir, copy, truncate_file};
@@ -164,7 +160,8 @@ impl<'a> Guard<'a> {
         if self.ctx.settings.index_all_images {
             self.ctx.timelog.mark(format_args!("Indexing"))
                 .map_err(|e| format!("Can't write timelog: {}", e))?;
-            index_image()?;
+            warn!("Indexing container...");
+            write_container_signature(Path::new("/vagga/container"))?;
         }
 
         self.ctx.timelog.mark(format_args!("Finish"))
@@ -215,16 +212,4 @@ fn warn_duplicate_data_dir(rel_path: &Path, is_final: bool) {
     } else {
         warn!("{:?} is a prefix of other directory", path);
     }
-}
-
-pub fn index_image() -> Result<(), String> {
-    let index = File::create("/vagga/container/index.ds1")
-        .map_err(|e| format!("Can't write index: {}", e))?;
-    warn!("Indexing container...");
-    v1::scan(Sig::new()
-            .auto_threads()
-            .hash(HashType::blake2b_256())
-            .add_dir("/vagga/root", "/"),
-        &mut BufWriter::new(index)
-    ).map_err(|e| format!("Error indexing: {}", e))
 }

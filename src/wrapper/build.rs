@@ -1,31 +1,30 @@
 use std::env;
 use std::fs::File;
-use std::fs::{hard_link, read_link, read_dir, rename, remove_dir, remove_file};
+use std::fs::{read_link, rename, remove_dir, remove_file};
 use std::ffi::OsString;
-use std::io::{self, Read, Write, BufReader};
+use std::io::{self, Read, Write};
 use std::io::{stdout, stderr};
 use std::io::ErrorKind::NotFound;
 use std::path::{Path, PathBuf};
-use std::time::{Instant, SystemTime};
-use std::os::unix::fs::{MetadataExt, symlink};
+use std::time::Instant;
+use std::os::unix::fs::symlink;
 use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use serde_json;
 use unshare::{Command, Namespace, ExitStatus};
 use libmount::BindMount;
-use dir_signature::v1::{Entry, EntryKind, Parser};
-use dir_signature::v1::merge::FileMergeBuilder;
 use itertools::Itertools;
 
 use builder::context::Context;
 use builder::commands::tarcmd::unpack_file;
-use builder::guard;
 use capsule::download::maybe_download_and_check_hashsum;
 use config::{Config, Container, Settings};
-use container::util::clean_dir;
+use container::util::{clean_dir, hardlink_container_files};
+use container::util::write_container_signature;
+use container::util::{collect_container_dirs, collect_containers_from_storage};
 use container::mount::{unmount};
-use file_util::{Dir, Lock, copy};
+use file_util::{Dir, Lock, copy, human_size};
 use process_util::{capture_fd3_status, copy_env_vars};
 use super::Wrapper;
 use super::setup;
@@ -58,41 +57,41 @@ impl<'a> ContainerInfo<'a> {
     }
 }
 
-pub fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
+fn prepare_tmp_root_dir(path: &Path) -> Result<(), String> {
     if path.exists() {
         clean_dir(path, true)
              .map_err(|x| format!("Error removing directory: {}", x))?;
     }
     try_msg!(Dir::new(path).recursive(true).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     let rootdir = path.join("root");
     try_msg!(Dir::new(&rootdir).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
 
     let tgtbase = Path::new("/vagga/container");
     try_msg!(Dir::new(&tgtbase).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(BindMount::new(path, &tgtbase).mount(),
         "mount container: {err}");
 
     let tgtroot = Path::new("/vagga/root");
     try_msg!(Dir::new(&tgtroot).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(BindMount::new(&rootdir, &tgtroot).mount(),
         "mount container root: {err}");
 
     try_msg!(Dir::new(&tgtroot.join("dev")).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(Dir::new(&tgtroot.join("sys")).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(Dir::new(&tgtroot.join("proc")).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(Dir::new(&tgtroot.join("run")).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(Dir::new(&tgtroot.join("tmp")).mode(0o1777).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     try_msg!(Dir::new(&tgtroot.join("work")).create(),
-         "Error creating directory: {err}");
+        "Error creating directory: {err}");
     return Ok(());
 }
 
@@ -319,7 +318,6 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
         return Ok(dir_name);
     }
 
-
     prepare_tmp_root_dir(&cont_info.tmp_root_dir).map_err(|e|
         format!("Error preparing root dir: {}", e))?;
 
@@ -385,23 +383,14 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
             }
         };
     let dir_name = format!("{}.{}", cont_info.name, &ver[..8]);
-    let finalpath = Path::new("/vagga/base/.roots").join(&dir_name);
+    let roots_dir = PathBuf::from("/vagga/base/.roots");
+    let finalpath = roots_dir.join(&dir_name);
 
     if wrapper.settings.index_all_images &&
         wrapper.settings.hard_link_identical_files
     {
-        match find_and_link_identical_files(
-            cont_info.name, &cont_info.tmp_root_dir, &finalpath)
-        {
-            Ok((count, size)) if count > 0 => warn!(
-                "Found and linked {} ({}) identical files \
-                 from other containers", count, human_size(size)),
-            Ok(_) => {
-                debug!("No hardlinks done: either no source directories found \
-                        or no identical files");
-            },
-            Err(msg) => warn!("Error when linking container files: {}", msg),
-        }
+        find_and_hardlink_identical_files(
+            &wrapper, cont_info, &roots_dir, &finalpath)?;
     }
 
     debug!("Committing {:?} -> {:?}", cont_info.tmp_root_dir, &finalpath);
@@ -466,7 +455,9 @@ fn _build_from_image(name: &str, container: &Container,
     let (filename, downloaded) = maybe_download_and_check_hashsum(
         &mut ctx.capsule, image_cache_url, None, false)?;
     warn!("Unpacking image...");
-    match unpack_file(&mut ctx, &filename, &Path::new("/vagga/root"), &[], &[], true) {
+    let cont_dir = Path::new("/vagga/container");
+    let root_dir = Path::new("/vagga/root");
+    match unpack_file(&mut ctx, &filename, root_dir, &[], &[], true) {
         Ok(_) => {
             info!("Succesfully unpack image {}", image_cache_url);
             // If container is okay, we need to store uid_map used for
@@ -482,7 +473,8 @@ fn _build_from_image(name: &str, container: &Container,
                         "Error unlinking cache file: {}", e)).ok();
             }
             if settings.index_all_images {
-                guard::index_image()?;
+                warn!("Indexing container...");
+                write_container_signature(cont_dir)?;
             }
         },
         Err(e) => {
@@ -492,179 +484,6 @@ fn _build_from_image(name: &str, container: &Container,
     }
 
     Ok(())
-}
-
-#[cfg(feature="containers")]
-fn find_and_link_identical_files(container_name: &str,
-    tmp_dir: &Path, final_dir: &Path)
-    -> Result<(u32, u64), String>
-{
-    let container_root = tmp_dir.join("root");
-    let main_ds_path = tmp_dir.join("index.ds1");
-    if !main_ds_path.exists() {
-        warn!("No index file exists. Can't hardlink");
-        return Ok((0, 0));
-    }
-    let main_ds_reader = BufReader::new(try_msg!(File::open(&main_ds_path),
-        "Error opening file {path:?}: {err}", path=&main_ds_path));
-    let mut main_ds_parser = try_msg!(Parser::new(main_ds_reader),
-        "Error parsing signature file: {err}");
-
-    let _paths_names_times = get_container_paths_names_times(final_dir)?;
-    let mut paths_names_times = _paths_names_times.iter()
-        .map(|&(ref p, ref n, ref t)| (p, n, t))
-        .collect::<Vec<_>>();
-    // Sort by current container name equality
-    // then by container name and then by modification date
-    paths_names_times.sort_by_key(|&(_, n, t)| {
-        (n == container_name, n, t)
-    });
-    let mut merged_ds_builder = FileMergeBuilder::new();
-    for (_, cont_group) in paths_names_times
-        .into_iter()
-        .rev()
-        .group_by(|&(_, n, _)| n)
-        .into_iter()
-    {
-        for (cont_path, _, _) in cont_group.take(5) {
-            merged_ds_builder.add(&cont_path.join("root"),
-                                  &cont_path.join("index.ds1"));
-        }
-    }
-    let mut merged_ds = try_msg!(merged_ds_builder.finalize(),
-        "Error parsing signature files: {err}");
-    let mut merged_ds_iter = merged_ds.iter();
-
-    let tmp = tmp_dir.join(".link.tmp");
-    let mut count = 0;
-    let mut size = 0;
-    for entry in main_ds_parser.iter() {
-        match entry {
-            Ok(Entry::File{
-                path: ref lnk_path,
-                exe: lnk_exe,
-                size: lnk_size,
-                hashes: ref lnk_hashes,
-            }) => {
-                let lnk = container_root.join(
-                    match lnk_path.strip_prefix("/") {
-                        Ok(lnk_path) => lnk_path,
-                        Err(_) => continue,
-                    });
-                let lnk_stat = lnk.symlink_metadata().map_err(|e|
-                    format!("Error querying file stats: {}", e))?;
-                for tgt_entry in merged_ds_iter
-                    .advance(&EntryKind::File(lnk_path))
-                {
-                    match tgt_entry {
-                        (tgt_base_path,
-                         Ok(Entry::File{
-                             path: ref tgt_path,
-                             exe: tgt_exe,
-                             size: tgt_size,
-                             hashes: ref tgt_hashes}))
-                            if lnk_exe == tgt_exe &&
-                            lnk_size == tgt_size &&
-                            lnk_hashes == tgt_hashes =>
-                        {
-                            let tgt = tgt_base_path.join(
-                                match tgt_path.strip_prefix("/") {
-                                    Ok(path) => path,
-                                    Err(_) => continue,
-                                });
-                            let tgt_stat = tgt.symlink_metadata().map_err(|e|
-                                format!("Error querying file stats: {}", e))?;
-                            if lnk_stat.mode() != tgt_stat.mode() ||
-                                lnk_stat.uid() != tgt_stat.uid() ||
-                                lnk_stat.gid() != lnk_stat.gid()
-                            {
-                                continue;
-                            }
-                            if let Err(_) = hard_link(&tgt, &tmp) {
-                                remove_file(&tmp).map_err(|e|
-                                    format!("Error removing file after failed \
-                                             hard linking: {}", e))?;
-                                continue;
-                            }
-                            if let Err(_) = rename(&tmp, &lnk) {
-                                remove_file(&tmp).map_err(|e|
-                                    format!("Error removing file after failed \
-                                             renaming: {}", e))?;
-                                continue;
-                            }
-                            count += 1;
-                            size += tgt_size;
-                            break;
-                        },
-                        _ => continue,
-                    }
-                }
-            },
-            _ => {},
-        }
-    }
-
-    Ok((count, size))
-}
-
-#[cfg(not(feature="containers"))]
-fn find_and_link_identical_files(container_name: &str,
-    tmp_dir: &Path, final_dir: &Path)
-    -> Result<(u32, u64), String>
-{
-    unimplemented!();
-}
-
-fn get_container_paths_names_times(exclude_path: &Path)
-    -> Result<Vec<(PathBuf, String, SystemTime)>, String>
-{
-    Ok(try_msg!(read_dir("/vagga/base/.roots"),
-                "Error reading directory: {err}")
-        .filter_map(|x| x.ok())
-        .map(|x| x.path())
-        .filter(|p| {
-            p != exclude_path &&
-                p.is_dir() &&
-                p.join("index.ds1").is_file()
-        })
-        .filter_map(|p| {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .map(|n| n.to_string())
-                .map(|n| (p, n))
-        })
-        .filter(|&(_, ref d)| !d.starts_with("."))
-        .filter_map(|(p, d)| {
-            let mut dir_name_parts = d.rsplitn(2, '.');
-            dir_name_parts.next();
-            dir_name_parts.next()
-                .map(|n| (p, n.to_string()))
-        })
-        .filter_map(|(p, n)| {
-            p.metadata()
-                .and_then(|m| m.modified()).ok()
-                .map(|t| (p, n, t))
-        })
-        .collect::<Vec<_>>())
-}
-
-fn human_size(size: u64) -> String {
-    fn format_size(s: f64, p: &str) -> String {
-        if s < 10.0 {
-            format!("{:.1}{}B", s, p)
-        } else {
-            format!("{:.0}{}B", s, p)
-        }
-    }
-
-    let mut s = size as f64;
-    for prefix in &["", "K", "M", "G", "T"][..] {
-        if s < 1000.0 {
-            return format_size(s, prefix);
-        }
-        s /= 1000.0;
-    }
-    return format_size(s, "P");
 }
 
 pub fn build_container_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
@@ -743,3 +562,69 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
     }
 }
 
+fn find_and_hardlink_identical_files(wrapper: &Wrapper,
+    cont_info: &ContainerInfo, roots_dir: &Path, finalpath: &Path)
+    -> Result<(), String>
+{
+    let (tmp_root_dir, project_name, _cont_dirs) =
+        if wrapper.settings.hard_link_between_projects &&
+            wrapper.ext_settings.storage_dir.is_some()
+    {
+        let storage_dir = Path::new("/vagga/storage");
+        let project_path = try_msg!(
+            read_link(Path::new("/work/.vagga/.lnk")),
+            "Cannot read .vagga/.lnk symlink: {err}");
+        let project_name = project_path.file_name()
+            .ok_or(format!("Cannot detect project name"))?
+            .to_str()
+            .ok_or(format!("Cannot convert project name to string"))?
+            .to_string();
+        let tmp_dir_name = cont_info.tmp_root_dir.file_name()
+            .ok_or(format!("Cannot detect tmp dir name"))?;
+        let tmp_root_dir = storage_dir
+            .join(&project_name)
+            .join(".roots")
+            .join(tmp_dir_name);
+        let cont_dirs = collect_containers_from_storage(storage_dir)?;
+        (tmp_root_dir, Some(project_name), cont_dirs)
+    } else {
+        let cont_dirs = collect_container_dirs(&roots_dir, None)?;
+        (cont_info.tmp_root_dir.clone(), None, cont_dirs)
+    };
+    // Collect only containers with signature file
+    let mut cont_dirs = _cont_dirs.iter()
+        .filter(|d| d.path != finalpath)
+        .filter(|d| d.path.join("index.ds1").is_file())
+        .map(|d| d)
+        .collect::<Vec<_>>();
+    // Sort by project, container name and date modified
+    cont_dirs.sort_by_key(|d| {
+        (d.project == project_name,
+         &d.project,
+         d.name == cont_info.name,
+         &d.name,
+         d.modified)
+    });
+    // Group by project and container name
+    let grouped_cont_dirs = cont_dirs.into_iter()
+        .rev()
+        .group_by(|d| (&d.project, &d.name));
+    // Take only 3 last version of each container
+    let cont_dirs = grouped_cont_dirs.into_iter()
+        .map(|(_, group)| group.take(3))
+        .flatten();
+    let cont_paths = cont_dirs.into_iter()
+        .map(|d| &d.path);
+    match hardlink_container_files(&tmp_root_dir, cont_paths)
+    {
+        Ok((count, size)) if count > 0 => warn!(
+            "Found and linked {} ({}) identical files \
+             from other containers", count, human_size(size)),
+        Ok(_) => {
+            debug!("No hardlinks done: either no source directories found \
+                    or no identical files");
+        },
+        Err(msg) => warn!("Error when linking container files: {}", msg),
+    }
+    Ok(())
+}

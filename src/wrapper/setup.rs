@@ -236,6 +236,14 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
              .readonly(true)
              .mount(), "mount /vagga/bin: {err}");
 
+    if let Some(ref storage_dir) = settings.storage_dir {
+        let tgtstorage = vagga_dir.join("storage");
+        try_msg!(Dir::new(&tgtstorage).create(),
+            "Error creating {path:?} directory: {err}", path=&tgtstorage);
+        try_msg!(BindMount::new(storage_dir, &tgtstorage).mount(),
+            "mount storage: {err}");
+    }
+
     let etc_dir = mnt_dir.join("etc");
     try_msg!(Dir::new(&etc_dir).create(),
              "Error creating /etc: {err}");

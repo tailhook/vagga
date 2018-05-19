@@ -1,0 +1,6 @@
+containers:
+  hello-and-bye:
+    setup:
+    - !Text
+      /etc/hello.txt: Hello world!
+      /etc/bye.txt: Good bye!

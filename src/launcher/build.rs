@@ -22,7 +22,8 @@ pub fn build_container(context: &Context, name: &String, mode: BuildMode,
             &["--no-image-download".to_string()], capsule)?,
         NoBuild => format!("{}.{}", &name, get_version(context, &name)?),
         NoVersion => {
-            version_from_symlink(format!(".vagga/{}", name))?
+            version_from_symlink(
+                context.config_dir.join(".vagga").join(name))?
         }
     };
     Ok(ver)
