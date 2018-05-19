@@ -21,10 +21,10 @@ containers:
     - !Install [file]  # dependency of checkinstall (bug #46)
 
     - !TarInstall
-      url: "https://static.rust-lang.org/dist/rust-1.25.0-x86_64-unknown-linux-gnu.tar.gz"
+      url: "https://static.rust-lang.org/dist/rust-1.26.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
     - !TarInstall
-      url: "https://static.rust-lang.org/dist/rust-std-1.25.0-x86_64-unknown-linux-musl.tar.gz"
+      url: "https://static.rust-lang.org/dist/rust-std-1.26.0-x86_64-unknown-linux-musl.tar.gz"
       script: "./install.sh --prefix=/musl \
                --components=rust-std-x86_64-unknown-linux-musl"
     - !Sh 'ln -s /musl/lib/rustlib/x86_64-unknown-linux-musl /usr/lib/rustlib/x86_64-unknown-linux-musl'
@@ -57,10 +57,10 @@ containers:
     - !Sh dpkg --add-architecture armhf
     - !Install [musl-dev:armhf]
     - !TarInstall
-      url: "https://static.rust-lang.org/dist/rust-1.25.0-x86_64-unknown-linux-gnu.tar.gz"
+      url: "https://static.rust-lang.org/dist/rust-1.26.0-x86_64-unknown-linux-gnu.tar.gz"
       script: "./install.sh --prefix=/usr --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
     - !TarInstall
-      url: "https://static.rust-lang.org/dist/rust-std-1.25.0-arm-unknown-linux-musleabihf.tar.gz"
+      url: "https://static.rust-lang.org/dist/rust-std-1.26.0-arm-unknown-linux-musleabihf.tar.gz"
       script: "./install.sh --prefix=/usr \
                --components=rust-std-arm-unknown-linux-musleabihf"
 
