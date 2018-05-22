@@ -48,7 +48,7 @@ impl PersistentVolumeGuard {
             .gid(vol.owner_gid)
             .create()?;
         let volumes_base = unsafe {
-            open(volbase.to_cstring().as_ptr(), fcntl::O_PATH.bits())
+            open(volbase.to_cstring().as_ptr(), fcntl::OFlag::O_PATH.bits())
         };
         if volumes_base < 0 {
             return Err(io::Error::last_os_error());

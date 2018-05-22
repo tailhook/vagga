@@ -12,13 +12,13 @@ use unshare::Namespace;
 pub fn to_clone_flag(ns: Namespace) -> ::nix::sched::CloneFlags {
     use nix::sched::*;
     match ns {
-        Namespace::Mount => CLONE_NEWNS,
-        Namespace::Uts => CLONE_NEWUTS,
-        Namespace::Ipc => CLONE_NEWIPC,
-        Namespace::User => CLONE_NEWUSER,
-        Namespace::Pid => CLONE_NEWPID,
-        Namespace::Net => CLONE_NEWNET,
-        Namespace::Cgroup => CLONE_NEWCGROUP,
+        Namespace::Mount => CloneFlags::CLONE_NEWNS,
+        Namespace::Uts => CloneFlags::CLONE_NEWUTS,
+        Namespace::Ipc => CloneFlags::CLONE_NEWIPC,
+        Namespace::User => CloneFlags::CLONE_NEWUSER,
+        Namespace::Pid => CloneFlags::CLONE_NEWPID,
+        Namespace::Net => CloneFlags::CLONE_NEWNET,
+        Namespace::Cgroup => CloneFlags::CLONE_NEWCGROUP,
     }
 }
 

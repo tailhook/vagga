@@ -12,8 +12,7 @@ use argparse::{StoreTrue, StoreFalse};
 use libc::{geteuid};
 use libmount::BindMount;
 use log::Level::Debug;
-use rand::distributions::{Range, IndependentSample};
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use serde_json;
 use unshare::{Command, Stdio, Fd, Namespace};
 
@@ -487,8 +486,7 @@ fn get_unused_inteface_no() -> Result<u32, String> {
     // simultaneously. It fails miserably only if there are > 100 or they
     // are spawning too often.
     let busy = get_interfaces()?;
-    let start = Range::new(0u32, MAX_INTERFACES - 100)
-                .ind_sample(&mut thread_rng());
+    let start = thread_rng().gen_range(0u32, MAX_INTERFACES - 100);
     for index in start..MAX_INTERFACES {
         if busy.contains(&index) {
             continue;
@@ -709,14 +707,14 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
 
 #[cfg(feature="containers")]
 pub fn isolate_network() -> Result<(), String> {
-    use nix::sched::{setns, CLONE_NEWUSER, CLONE_NEWNET};
+    use nix::sched::{setns, CloneFlags};
 
     let isolated_net = try_msg!(
         create_isolated_network(),
         "Cannot create network namespace: {err}");
-    try_msg!(setns(isolated_net.userns.as_raw_fd(), CLONE_NEWUSER),
+    try_msg!(setns(isolated_net.userns.as_raw_fd(), CloneFlags::CLONE_NEWUSER),
         "Cannot set user namespace: {err}");
-    try_msg!(setns(isolated_net.netns.as_raw_fd(), CLONE_NEWNET),
+    try_msg!(setns(isolated_net.netns.as_raw_fd(), CloneFlags::CLONE_NEWNET),
         "Cannot set network namespace: {err}");
     Ok(())
 }

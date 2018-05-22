@@ -230,7 +230,7 @@ impl Lock {
         let f = fs::File::create(path)?;
         match flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock) {
             Ok(()) => {}
-            Err(nix::Error::Sys(nix::Errno::EAGAIN)) => {
+            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
                 warn!("{}", message);
                 let lock_start = Instant::now();
                 flock(f.as_raw_fd(), FlockArg::LockExclusive)
