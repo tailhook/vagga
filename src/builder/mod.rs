@@ -31,7 +31,6 @@ pub mod commands {
     pub mod composer;
     #[cfg(feature="containers")]
     pub mod vcs;
-    #[cfg(feature="containers")]
     pub mod download;
     #[cfg(feature="containers")]
     pub mod subcontainer;

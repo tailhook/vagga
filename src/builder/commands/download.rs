@@ -3,8 +3,6 @@ use std::fs::{set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 
 use quire::validate as V;
-use file_util::copy;
-use capsule::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -41,9 +39,19 @@ impl BuildStep for Download {
         hash.field("mode", self.mode);
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
+        unreachable!();
+    }
+    #[cfg(feature="containers")]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        use capsule::download::maybe_download_and_check_hashsum;
+        use file_util::copy;
+
         if build {
             let fpath = PathBuf::from("/vagga/root")
                 .join(self.path.strip_prefix("/").unwrap());
