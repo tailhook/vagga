@@ -115,7 +115,7 @@ impl fmt::Display for MinimumVaggaError {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MinimumVagga {
     pub optional: bool,
     pub current_version: Option<String>,

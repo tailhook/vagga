@@ -35,7 +35,7 @@ net2 = { version="0.2.23", optional=true }
 humantime = "1.0.0"
 quick-error = "1.2.0"
 docopt = "1.0.0"
-quire = { git="https://github.com/tailhook/rust-quire", rev="221cbdb" }
+quire = { git="https://github.com/tailhook/rust-quire", rev="cbdfe17" }
 lazy_static = "1.0.0"
 dir-signature = { version="0.2.3", optional=true }
 itertools = "0.7.8"

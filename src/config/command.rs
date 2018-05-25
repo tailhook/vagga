@@ -48,6 +48,7 @@ pub enum Run {
     Command(Vec<String>),
 }
 
+#[derive(Debug)]
 struct RunValidator;
 
 #[derive(Deserialize, Clone, PartialEq, Eq)]

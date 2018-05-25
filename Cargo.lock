@@ -667,13 +667,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quire"
 version = "0.3.1"
-source = "git+https://github.com/tailhook/rust-quire?rev=221cbdb#221cbdba2b8994e935e235df03beb50a4d408fea"
+source = "git+https://github.com/tailhook/rust-quire?rev=cbdfe17#cbdfe172aac0982584974edc4380dab75ed7fc4e"
 dependencies = [
  "humannum 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "humantime 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.1.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "regex 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.59 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1086,7 +1084,7 @@ dependencies = [
  "nix 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "path-filter 0.1.0",
  "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=221cbdb)",
+ "quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=cbdfe17)",
  "rand 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "resolv-conf 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1273,7 +1271,7 @@ dependencies = [
 "checksum podio 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "780fb4b6698bbf9cf2444ea5d22411cef2953f0824b98f33cf454ec5615645bd"
 "checksum proc-macro2 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a45f2f0ae0b5757f6fe9e68745ba25f5246aea3598984ed81d013865873c1f84"
 "checksum quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "eda5fe9b71976e62bc81b781206aaa076401769b2143379d3eb2118388babac4"
-"checksum quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=221cbdb)" = "<none>"
+"checksum quire 0.3.1 (git+https://github.com/tailhook/rust-quire?rev=cbdfe17)" = "<none>"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
 "checksum quote 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9e53eeda07ddbd8b057dde66d9beded11d0dfda13f0db0769e6b71d6bcf2074e"
 "checksum rand 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "eba5f8cb59cc50ed56be8880a5c7b496bfd9bd26394e176bc67884094145c2c5"
