@@ -15,7 +15,6 @@ pub use self::error::StepError;
 #[cfg(feature="containers")]
 pub mod context;
 pub mod commands {
-    #[cfg(feature="containers")]
     pub mod ubuntu;
     #[cfg(feature="containers")]
     pub mod generic;

@@ -1,25 +1,26 @@
 use std::fs::{rename, set_permissions, Permissions};
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::os::unix::fs::{symlink};
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use quire::validate as V;
-use unshare::{Command, Stdio};
-use scan_dir::ScanDir;
+#[cfg(feature="containers")] use unshare::{Stdio};
+#[cfg(feature="containers")] use scan_dir::ScanDir;
 
-use capsule::download::download_file;
-use super::super::context::{Context};
-use super::super::commands::tarcmd::unpack_file;
-use super::super::packages;
-use builder::commands::generic::{command, run, find_cmd};
-use builder::distrib::{Distribution, Named, DistroBox};
-use builder::dns::revert_name_files;
-use file_util::{Dir, Lock, copy, copy_utime, safe_remove};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use container::util::clean_dir;
+#[cfg(feature="containers")] use builder::commands::generic::{command, run, find_cmd};
+#[cfg(feature="containers")] use builder::commands::tarcmd::unpack_file;
+#[cfg(feature="containers")] use builder::context::{Context};
+#[cfg(feature="containers")] use builder::distrib::{Distribution, Named, DistroBox};
+#[cfg(feature="containers")] use builder::dns::revert_name_files;
+#[cfg(feature="containers")] use builder::packages;
+#[cfg(feature="containers")] use container::util::clean_dir;
+#[cfg(feature="containers")] use file_util::{Dir, Lock, copy, copy_utime, safe_remove};
 
+#[cfg(feature="containers")]
+use self::build::*;
 
 // Build Steps
 #[derive(Debug, Deserialize)]
@@ -141,12 +142,15 @@ pub struct Distro {
     eatmydata: EatMyData,
 }
 
+#[cfg(feature="containers")]
 impl Named for Distro {
     fn static_name() -> &'static str { "ubuntu" }
 }
 
+#[cfg(feature="containers")]
 impl Distribution for Distro {
     fn name(&self) -> &'static str { "Ubuntu" }
+    #[cfg(feature="containers")]
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
         fetch_ubuntu_core(ctx, &self.config)?;
         let codename = read_ubuntu_codename()?;
@@ -165,6 +169,7 @@ impl Distribution for Distro {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn add_repo(&mut self, ctx: &mut Context, repo: &str)
         -> Result<(), StepError>
     {
@@ -191,6 +196,7 @@ impl Distribution for Distro {
         self.add_debian_repo(ctx, &ubuntu_repo)?;
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn install(&mut self, ctx: &mut Context, pkgs: &[String])
         -> Result<(), StepError>
     {
@@ -216,6 +222,7 @@ impl Distribution for Distro {
         apt_get_install(ctx, &pkgs[..], &self.eatmydata)?;
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn ensure_packages(&mut self, ctx: &mut Context,
         features: &[packages::Package])
         -> Result<Vec<packages::Package>, StepError>
@@ -258,6 +265,7 @@ impl Distribution for Distro {
         }
         return Ok(unsupp);
     }
+    #[cfg(feature="containers")]
     fn finish(&mut self, ctx: &mut Context) -> Result<(), String>
     {
         let pkgs: Vec<String> = ctx.build_deps.iter()
@@ -275,7 +283,7 @@ impl Distribution for Distro {
             run(cmd)?;
         }
         let mut cmd = command(ctx, "apt-get")?;
-        eat_my_data(&mut cmd, ctx, &self.eatmydata);
+        build::eat_my_data(&mut cmd, ctx, &self.eatmydata);
         cmd.arg("-oDir::cache::pkgcache=");
         cmd.arg("-oDir::cache::srcpkgcache=");
         cmd.arg("autoremove").arg("-y");
@@ -338,6 +346,7 @@ impl Distro {
         self.apt_update = true;
         Ok(())
     }
+    #[cfg(feature="containers")]
     pub fn add_debian_repo(&mut self, ctx: &mut Context, repo: &UbuntuRepo)
         -> Result<(), String>
     {
@@ -370,6 +379,7 @@ impl Distro {
             })
             .map_err(|e| format!("Error writing {} file: {}", name, e))
     }
+    #[cfg(feature="containers")]
     pub fn add_ubuntu_ppa(&mut self, ctx: &mut Context, name: &str)
         -> Result<(), StepError>
     {
@@ -382,6 +392,7 @@ impl Distro {
         })?;
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn install_apt_deps(&mut self, ctx: &mut Context, apt_deps: &[&str])
         -> Result<(), StepError>
     {
@@ -402,6 +413,7 @@ impl Distro {
         }
         apt_get_install(ctx, &apt_deps[..], &self.eatmydata)
     }
+    #[cfg(feature="containers")]
     pub fn add_apt_key(&mut self, ctx: &mut Context, key: &AptTrust)
         -> Result<(), StepError>
     {
@@ -433,6 +445,7 @@ impl Distro {
         }
         run(cmd)
     }
+    #[cfg(feature="containers")]
     pub fn ensure_codename(&mut self, ctx: &mut Context)
         -> Result<(), StepError>
     {
@@ -444,6 +457,7 @@ impl Distro {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     pub fn get_codename(&mut self, ctx: &mut Context)
         -> Result<&str, StepError>
     {
@@ -451,6 +465,7 @@ impl Distro {
         Ok(self.codename.as_ref().unwrap())
     }
 
+    #[cfg(feature="containers")]
     pub fn add_universe(&mut self, ctx: &mut Context)
         -> Result<(), String>
     {
@@ -481,6 +496,7 @@ impl Distro {
         self.codename.as_ref().map(|cn| cn == "precise").unwrap_or(false)
     }
 
+    #[cfg(feature="containers")]
     fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
             packages::BuildEssential => Some(vec!()),
@@ -522,6 +538,7 @@ impl Distro {
         }
     }
 
+    #[cfg(feature="containers")]
     fn build_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
         match pkg {
             packages::BuildEssential => Some(vec![
@@ -556,6 +573,7 @@ impl Distro {
         }
     }
 
+    #[cfg(feature="containers")]
     fn copy_apt_lists_from_cache(&self) -> io::Result<()> {
         let dir = format!("/vagga/cache/apt-lists-{}",
                           self.codename.as_ref().unwrap());
@@ -577,6 +595,7 @@ impl Distro {
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
     }
 
+    #[cfg(feature="containers")]
     fn copy_apt_lists_to_cache(&self) -> io::Result<()> {
         if !self.has_indices {
             return Ok(());
@@ -597,6 +616,7 @@ impl Distro {
             Ok(())
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
     }
+    #[cfg(feature="containers")]
     fn ensure_eat_my_data(&mut self, ctx: &mut Context)
         -> Result<(), StepError>
     {
@@ -623,287 +643,6 @@ impl Distro {
     }
 }
 
-pub fn read_ubuntu_codename() -> Result<String, String>
-{
-    let lsb_release_path = "/vagga/root/etc/lsb-release";
-    let lsb_release_file = BufReader::new(
-        try_msg!(File::open(&Path::new(lsb_release_path)),
-            "Error reading /etc/lsb-release: {err}"));
-
-    for line in lsb_release_file.lines() {
-        let line = try_msg!(line, "Error reading lsb file: {err}");
-        if let Some(equals_pos) = line.find('=') {
-            let key = line[..equals_pos].trim();
-
-            if key == "DISTRIB_CODENAME" {
-                let value = line[(equals_pos + 1)..].trim();
-                return Ok(value.to_string());
-            }
-        }
-    }
-
-    Err(format!("Coudn't read codename from '{lsb_release_path}'",
-                lsb_release_path=lsb_release_path))
-}
-
-pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
-    -> Result<(), String>
-{
-    let urls = if let Some(ref url) = rel.url {
-        vec![url.to_string()]
-    } else if let Some(ref version) = rel.version {
-        let ver = if version.len() > 5 && version[5..].starts_with('.') {
-            // ignore everything after second dot
-            // i.e. 12.04.5 == 12.04
-            &version[..5]
-        } else {
-            &version[..]
-        };
-        let codename = match ver {
-            "12.04" => "precise",
-            "14.04" => "trusty",
-            "14.10" => "utopic",
-            "15.04" => "vivid",
-            "15.10" => "wily",
-            "16.04" => "xenial",
-            // Note: no new names here
-            // This list is only provided for backwards compatibility
-            _ => return Err(format!("Unknown version {:?}. \
-                Note, we only have certain number of hardcoded versions \
-                for backwards-compatibility. You should use `codename` \
-                property (or `!Ubuntu` step) for first-class support",
-               version)),
-        };
-        warn!("Note `!UbuntuRelease {{ version: {0:?} }}` is deprecated. \
-               Use `!UbuntuRelease {{ codename: {1:?} }}` or `!Ubuntu {1:?}` \
-               instead", version, codename);
-        vec![
-            format!(
-                "https://partner-images.canonical.com/core/\
-                 {codename}/current/\
-                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
-                arch=rel.arch, codename=codename),
-            format!(
-                "https://partner-images.canonical.com/core/unsupported/\
-                 {codename}/current/\
-                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
-                arch=rel.arch, codename=codename),
-        ]
-    } else if let Some(ref codename) = rel.codename {
-        vec![
-            format!(
-                "https://partner-images.canonical.com/core/\
-                 {codename}/current/\
-                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
-                arch=rel.arch, codename=codename),
-            format!(
-                "https://partner-images.canonical.com/core/unsupported/\
-                 {codename}/current/\
-                 ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
-                arch=rel.arch, codename=codename),
-        ]
-    } else {
-        return Err(format!("UbuntuRelease tag must contain one of \
-            `codename` (preferred), `version` (deprecated) \
-            or `url` (if you need something special)"));
-    };
-    let filename = download_file(&mut ctx.capsule, &urls, None, false)?;
-    unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
-        &[Path::new("dev"),
-          Path::new("sys"),
-          Path::new("proc"),
-          Path::new("etc/resolv.conf"),
-          Path::new("etc/hosts")], false)?;
-
-    Ok(())
-}
-
-fn set_sources_list(ctx: &mut Context, distro: &mut Distro)
-    -> Result<(), String>
-{
-    let mirror = ctx.settings.ubuntu_mirror().to_string();
-    let suite = distro.get_codename(ctx)?;
-    let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
-    let sources_list_tmp = Path::new("/vagga/root/etc/apt/sources.list.tmp");
-    File::create(sources_list_tmp)
-        .and_then(|mut f| {
-            write!(
-                &mut f,
-                "deb {mirror} {suite} main restricted\n\
-                 deb {mirror} {suite}-updates main restricted\n\
-                 deb {mirror} {suite}-security main restricted\n",
-                mirror=mirror, suite=suite
-            )
-        })
-        .map_err(|e| format!("Error writing sources.list file: {}", e))?;
-    rename(sources_list_tmp, sources_list)
-        .map_err(|e| format!("Error renaming sources.list file: {}", e))
-}
-
-fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
-    -> Result<(), String>
-{
-    // Do not attempt to start init scripts
-    let policy_file = Path::new("/vagga/root/usr/sbin/policy-rc.d");
-    File::create(&policy_file)
-        .and_then(|mut f| f.write_all(b"#!/bin/sh\nexit 101\n"))
-        .map_err(|e| format!("Error writing policy-rc.d file: {}", e))?;
-    set_permissions(&policy_file, Permissions::from_mode(0o755))
-        .map_err(|e| format!("Can't chmod file: {}", e))?;
-
-    // Do not need to fsync() after package installation
-    File::create(
-            &Path::new("/vagga/root/etc/dpkg/dpkg.cfg.d/02apt-speedup"))
-        .and_then(|mut f| f.write_all(b"force-unsafe-io"))
-        .map_err(|e| format!("Error writing dpkg config: {}", e))?;
-
-    // Do not install recommends by default
-    File::create(
-            &Path::new("/vagga/root/etc/apt/apt.conf.d/01norecommend"))
-        .and_then(|mut f| f.write_all(br#"
-            APT::Install-Recommends "0";
-            APT::Install-Suggests "0";
-        "#))
-        .map_err(|e| format!("Error writing apt config: {}", e))?;
-
-    revert_name_files()?;
-
-    set_sources_list(ctx, distro)?;
-
-    if find_cmd(ctx, "locale-gen").is_err() {
-        apt_get_update::<&str>(ctx, &[])?;
-        apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
-    }
-
-    let mut cmd = command(ctx, "locale-gen")?;
-    cmd.arg("en_US.UTF-8");
-    run(cmd)?;
-
-    // TODO(tailhook) reconsider this. It was fun to remove unneeded files
-    //                until we have !Container which fails ot reuse ubuntu
-    //                container when /var/lib/apt is clean
-    // ctx.add_remove_dir(Path::new("/var/lib/apt"));
-    // TODO(tailhook) decide if we want to delete package databases
-    // ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
-    return Ok(());
-}
-
-pub fn clobber_chfn() -> Result<(), String> {
-    try_msg!(symlink("/bin/true", "/vagga/root/usr/bin/.tmp.chfn"),
-        "Can't clobber chfn (symlink error): {err}");
-    try_msg!(rename("/vagga/root/usr/bin/.tmp.chfn",
-                    "/vagga/root/usr/bin/chfn"),
-        "Can't clobber chfn (rename error): {err}");
-    Ok(())
-}
-
-pub fn configure(guard: &mut Guard, config: UbuntuRelease)
-    -> Result<(), StepError>
-{
-    guard.distro.set(Distro {
-        eatmydata: if config.eatmydata { EatMyData::Need } else { EatMyData::No },
-        config: config,
-        codename: None, // unknown yet
-        apt_update: true,
-        apt_https: AptHttps::No,
-        apt_hkps: AptHkps::No,
-        has_indices: false,
-        has_universe: false,
-    })?;
-    configure_common(&mut guard.ctx)
-}
-
-fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
-    ctx.add_cache_dir(Path::new("/var/cache/apt"),
-                           "apt-cache".to_string())?;
-    ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
-                       "noninteractive".to_string());
-    ctx.environ.insert("LANG".to_string(),
-                       "en_US.UTF-8".to_string());
-    ctx.environ.insert("PATH".to_string(),
-                       "/usr/local/sbin:/usr/local/bin:\
-                        /usr/sbin:/usr/bin:/sbin:/bin:\
-                        /usr/games:/usr/local/games\
-                        ".to_string());
-    Ok(())
-}
-
-fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
-    -> Result<(), StepError>
-{
-    let mut cmd = command(ctx, "apt-get")?;
-    cmd.arg("-oDir::cache::pkgcache=");
-    cmd.arg("-oDir::cache::srcpkgcache=");
-    cmd.arg("update");
-    cmd.args(options);
-    run(cmd)
-         .map_err(|error| {
-             if ctx.settings.ubuntu_mirror.is_none() {
-                 warn!("The `apt-get update` failed. You have no mirror \
-                     setup, and default one is not always perfect.\n\
-                     Add the following to your ~/.vagga.yaml:\
-                     \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
-                     Where CC is a two-letter country code where you currently are.\
-                     ");
-             } else {
-                 warn!("The `apt-get update` failed. \
-                     If this happens too often, consider changing \
-                     the `ubuntu-mirror` in settings");
-             }
-             error
-         })
-}
-
-fn apt_get_lock(enabled: bool) -> Result<Option<Lock>, StepError> {
-    if enabled {
-        Lock::exclusive_wait(
-            Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
-            "Another build process is executing `apt-get install` command \
-             against the same apt cache. Waiting ...")
-        .map(Some)
-        .map_err(|e| StepError::Lock(
-            "Cannot aquire lock before running `apt-get install`", e))
-    } else {
-        Ok(None)
-    }
-}
-
-fn eat_my_data(cmd: &mut Command, ctx: &Context, emd: &EatMyData) {
-    if let EatMyData::Preload(preload) = *emd {
-        match ctx.environ.get("LD_PRELOAD") {
-            None => {
-                cmd.env("LD_PRELOAD", preload);
-            },
-            Some(v) => {
-                if !v.is_empty() {
-                    cmd.env("LD_PRELOAD", format!("{}:{}", v, preload));
-                } else {
-                    cmd.env("LD_PRELOAD", preload);
-                }
-            },
-        }
-    }
-}
-
-fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
-    packages: &[T], emd: &EatMyData)
-    -> Result<(), StepError>
-{
-    let mut cmd = command(ctx, "apt-get")?;
-    eat_my_data(&mut cmd, ctx, emd);
-    cmd.arg("-oDir::cache::pkgcache=");
-    cmd.arg("-oDir::cache::srcpkgcache=");
-    if ctx.settings.ubuntu_skip_locking {
-        cmd.arg("-oDebug::NoLocking=yes");
-    }
-    cmd.arg("install");
-    cmd.arg("-y");
-    cmd.args(packages);
-
-    let _lock = apt_get_lock(!ctx.settings.ubuntu_skip_locking)?;
-    run(cmd)
-}
-
 impl BuildStep for Ubuntu {
     fn name(&self) -> &'static str { "Ubuntu" }
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
@@ -912,6 +651,13 @@ impl BuildStep for Ubuntu {
         hash.field("codename", &self.0);
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        unreachable!();
+    }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -941,6 +687,13 @@ impl BuildStep for UbuntuUniverse {
         // Nothing to do: singleton command
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        unreachable!();
+    }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -966,6 +719,13 @@ impl BuildStep for UbuntuPPA {
         hash.field("ppa_name", &self.0);
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        unreachable!();
+    }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -991,6 +751,13 @@ impl BuildStep for AptTrust {
         hash.field("keys", &self.keys);
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        unreachable!();
+    }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -1018,6 +785,7 @@ impl BuildStep for UbuntuRepo {
         hash.field("trusted", self.trusted);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -1042,6 +810,12 @@ impl BuildStep for UbuntuRepo {
         }
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        unreachable!();
+    }
     fn is_dependent_on(&self) -> Option<&str> {
         None
     }
@@ -1059,6 +833,7 @@ impl BuildStep for UbuntuRelease {
         hash.field("keep_chfn_command", self.keep_chfn_command);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -1068,41 +843,340 @@ impl BuildStep for UbuntuRelease {
         }
         Ok(())
     }
+    #[cfg(not(feature="containers"))]
+    fn build(&self, guard: &mut Guard, build: bool)
+        -> Result<(), StepError>
+    {
+        unreachable!();
+    }
     fn is_dependent_on(&self) -> Option<&str> {
         None
     }
 }
 
-impl EMDParams {
-    fn find(codename: &str, arch: &str) -> Option<EMDParams> {
-        match (codename, arch) {
-            ("xenial", "amd64") |
-            ("artful", "amd64") |
-            ("bionic", "amd64")
-            => Some(EMDParams {
-                needs_universe: false,
-                package: "libeatmydata1",
-                preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
-            }),
-            ("xenial", "i386") |
-            ("artful", "i386") |
-            ("bionic", "i386")
-            => Some(EMDParams {
-                needs_universe: false,
-                package: "libeatmydata1",
-                preload: "/usr/lib/i386-linux-gnu/libeatmydata.so",
-            }),
-            ("trusty", _) => Some(EMDParams {
-                needs_universe: true,
-                package: "eatmydata",
-                preload: "/usr/lib/libeatmydata/libeatmydata.so",
-            }),
-            ("precise", _) => Some(EMDParams {
-                needs_universe: true,
-                package: "eatmydata",
-                preload: "/usr/lib/libeatmydata/libeatmydata.so",
-            }),
-            _ => None,
+#[cfg(feature="containers")]
+mod build {
+    use std::os::unix::fs::{PermissionsExt};
+    use std::io::BufRead;
+    use unshare::{Command};
+    use capsule::download::download_file;
+
+    use super::*;
+
+    pub fn read_ubuntu_codename() -> Result<String, String>
+    {
+        let lsb_release_path = "/vagga/root/etc/lsb-release";
+        let lsb_release_file = BufReader::new(
+            try_msg!(File::open(&Path::new(lsb_release_path)),
+                "Error reading /etc/lsb-release: {err}"));
+
+        for line in lsb_release_file.lines() {
+            let line = try_msg!(line, "Error reading lsb file: {err}");
+            if let Some(equals_pos) = line.find('=') {
+                let key = line[..equals_pos].trim();
+
+                if key == "DISTRIB_CODENAME" {
+                    let value = line[(equals_pos + 1)..].trim();
+                    return Ok(value.to_string());
+                }
+            }
+        }
+
+        Err(format!("Coudn't read codename from '{lsb_release_path}'",
+                    lsb_release_path=lsb_release_path))
+    }
+
+    pub fn fetch_ubuntu_core(ctx: &mut Context, rel: &UbuntuRelease)
+        -> Result<(), String>
+    {
+        let urls = if let Some(ref url) = rel.url {
+            vec![url.to_string()]
+        } else if let Some(ref version) = rel.version {
+            let ver = if version.len() > 5 && version[5..].starts_with('.') {
+                // ignore everything after second dot
+                // i.e. 12.04.5 == 12.04
+                &version[..5]
+            } else {
+                &version[..]
+            };
+            let codename = match ver {
+                "12.04" => "precise",
+                "14.04" => "trusty",
+                "14.10" => "utopic",
+                "15.04" => "vivid",
+                "15.10" => "wily",
+                "16.04" => "xenial",
+                // Note: no new names here
+                // This list is only provided for backwards compatibility
+                _ => return Err(format!("Unknown version {:?}. \
+                    Note, we only have certain number of hardcoded versions \
+                    for backwards-compatibility. You should use `codename` \
+                    property (or `!Ubuntu` step) for first-class support",
+                   version)),
+            };
+            warn!("Note `!UbuntuRelease {{ version: {0:?} }}` is deprecated. \
+                   Use `!UbuntuRelease {{ codename: {1:?} }}` or `!Ubuntu {1:?}` \
+                   instead", version, codename);
+            vec![
+                format!(
+                    "https://partner-images.canonical.com/core/\
+                     {codename}/current/\
+                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                    arch=rel.arch, codename=codename),
+                format!(
+                    "https://partner-images.canonical.com/core/unsupported/\
+                     {codename}/current/\
+                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                    arch=rel.arch, codename=codename),
+            ]
+        } else if let Some(ref codename) = rel.codename {
+            vec![
+                format!(
+                    "https://partner-images.canonical.com/core/\
+                     {codename}/current/\
+                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                    arch=rel.arch, codename=codename),
+                format!(
+                    "https://partner-images.canonical.com/core/unsupported/\
+                     {codename}/current/\
+                     ubuntu-{codename}-core-cloudimg-{arch}-root.tar.gz",
+                    arch=rel.arch, codename=codename),
+            ]
+        } else {
+            return Err(format!("UbuntuRelease tag must contain one of \
+                `codename` (preferred), `version` (deprecated) \
+                or `url` (if you need something special)"));
+        };
+        let filename = download_file(&mut ctx.capsule, &urls, None, false)?;
+        unpack_file(ctx, &filename, &Path::new("/vagga/root"), &[],
+            &[Path::new("dev"),
+              Path::new("sys"),
+              Path::new("proc"),
+              Path::new("etc/resolv.conf"),
+              Path::new("etc/hosts")], false)?;
+
+        Ok(())
+    }
+
+    pub fn set_sources_list(ctx: &mut Context, distro: &mut Distro)
+        -> Result<(), String>
+    {
+        let mirror = ctx.settings.ubuntu_mirror().to_string();
+        let suite = distro.get_codename(ctx)?;
+        let sources_list = Path::new("/vagga/root/etc/apt/sources.list");
+        let sources_list_tmp = Path::new("/vagga/root/etc/apt/sources.list.tmp");
+        File::create(sources_list_tmp)
+            .and_then(|mut f| {
+                write!(
+                    &mut f,
+                    "deb {mirror} {suite} main restricted\n\
+                     deb {mirror} {suite}-updates main restricted\n\
+                     deb {mirror} {suite}-security main restricted\n",
+                    mirror=mirror, suite=suite
+                )
+            })
+            .map_err(|e| format!("Error writing sources.list file: {}", e))?;
+        rename(sources_list_tmp, sources_list)
+            .map_err(|e| format!("Error renaming sources.list file: {}", e))
+    }
+
+    pub fn init_ubuntu_core(ctx: &mut Context, distro: &mut Distro)
+        -> Result<(), String>
+    {
+        // Do not attempt to start init scripts
+        let policy_file = Path::new("/vagga/root/usr/sbin/policy-rc.d");
+        File::create(&policy_file)
+            .and_then(|mut f| f.write_all(b"#!/bin/sh\nexit 101\n"))
+            .map_err(|e| format!("Error writing policy-rc.d file: {}", e))?;
+        set_permissions(&policy_file, Permissions::from_mode(0o755))
+            .map_err(|e| format!("Can't chmod file: {}", e))?;
+
+        // Do not need to fsync() after package installation
+        File::create(
+                &Path::new("/vagga/root/etc/dpkg/dpkg.cfg.d/02apt-speedup"))
+            .and_then(|mut f| f.write_all(b"force-unsafe-io"))
+            .map_err(|e| format!("Error writing dpkg config: {}", e))?;
+
+        // Do not install recommends by default
+        File::create(
+                &Path::new("/vagga/root/etc/apt/apt.conf.d/01norecommend"))
+            .and_then(|mut f| f.write_all(br#"
+                APT::Install-Recommends "0";
+                APT::Install-Suggests "0";
+            "#))
+            .map_err(|e| format!("Error writing apt config: {}", e))?;
+
+        revert_name_files()?;
+
+        set_sources_list(ctx, distro)?;
+
+        if find_cmd(ctx, "locale-gen").is_err() {
+            apt_get_update::<&str>(ctx, &[])?;
+            apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
+        }
+
+        let mut cmd = command(ctx, "locale-gen")?;
+        cmd.arg("en_US.UTF-8");
+        run(cmd)?;
+
+        // TODO(tailhook) reconsider this. It was fun to remove unneeded files
+        //                until we have !Container which fails ot reuse ubuntu
+        //                container when /var/lib/apt is clean
+        // ctx.add_remove_dir(Path::new("/var/lib/apt"));
+        // TODO(tailhook) decide if we want to delete package databases
+        // ctx.add_remove_dir(Path::new("/var/lib/dpkg"));
+        return Ok(());
+    }
+
+    pub fn clobber_chfn() -> Result<(), String> {
+        try_msg!(symlink("/bin/true", "/vagga/root/usr/bin/.tmp.chfn"),
+            "Can't clobber chfn (symlink error): {err}");
+        try_msg!(rename("/vagga/root/usr/bin/.tmp.chfn",
+                        "/vagga/root/usr/bin/chfn"),
+            "Can't clobber chfn (rename error): {err}");
+        Ok(())
+    }
+
+    pub fn configure(guard: &mut Guard, config: UbuntuRelease)
+        -> Result<(), StepError>
+    {
+        guard.distro.set(Distro {
+            eatmydata: if config.eatmydata { EatMyData::Need } else { EatMyData::No },
+            config: config,
+            codename: None, // unknown yet
+            apt_update: true,
+            apt_https: AptHttps::No,
+            apt_hkps: AptHkps::No,
+            has_indices: false,
+            has_universe: false,
+        })?;
+        configure_common(&mut guard.ctx)
+    }
+
+    pub fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
+        ctx.add_cache_dir(Path::new("/var/cache/apt"),
+                               "apt-cache".to_string())?;
+        ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
+                           "noninteractive".to_string());
+        ctx.environ.insert("LANG".to_string(),
+                           "en_US.UTF-8".to_string());
+        ctx.environ.insert("PATH".to_string(),
+                           "/usr/local/sbin:/usr/local/bin:\
+                            /usr/sbin:/usr/bin:/sbin:/bin:\
+                            /usr/games:/usr/local/games\
+                            ".to_string());
+        Ok(())
+    }
+
+    pub fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
+        -> Result<(), StepError>
+    {
+        let mut cmd = command(ctx, "apt-get")?;
+        cmd.arg("-oDir::cache::pkgcache=");
+        cmd.arg("-oDir::cache::srcpkgcache=");
+        cmd.arg("update");
+        cmd.args(options);
+        run(cmd)
+             .map_err(|error| {
+                 if ctx.settings.ubuntu_mirror.is_none() {
+                     warn!("The `apt-get update` failed. You have no mirror \
+                         setup, and default one is not always perfect.\n\
+                         Add the following to your ~/.vagga.yaml:\
+                         \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
+                         Where CC is a two-letter country code where you currently are.\
+                         ");
+                 } else {
+                     warn!("The `apt-get update` failed. \
+                         If this happens too often, consider changing \
+                         the `ubuntu-mirror` in settings");
+                 }
+                 error
+             })
+    }
+
+    pub fn apt_get_lock(enabled: bool) -> Result<Option<Lock>, StepError> {
+        if enabled {
+            Lock::exclusive_wait(
+                Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
+                "Another build process is executing `apt-get install` command \
+                 against the same apt cache. Waiting ...")
+            .map(Some)
+            .map_err(|e| StepError::Lock(
+                "Cannot aquire lock before running `apt-get install`", e))
+        } else {
+            Ok(None)
         }
     }
+
+    pub(in super) fn eat_my_data(cmd: &mut Command, ctx: &Context, emd: &EatMyData) {
+        if let EatMyData::Preload(preload) = *emd {
+            match ctx.environ.get("LD_PRELOAD") {
+                None => {
+                    cmd.env("LD_PRELOAD", preload);
+                },
+                Some(v) => {
+                    if !v.is_empty() {
+                        cmd.env("LD_PRELOAD", format!("{}:{}", v, preload));
+                    } else {
+                        cmd.env("LD_PRELOAD", preload);
+                    }
+                },
+            }
+        }
+    }
+
+    pub(in super) fn apt_get_install<T: AsRef<OsStr>>(ctx: &mut Context,
+        packages: &[T], emd: &EatMyData)
+        -> Result<(), StepError>
+    {
+        let mut cmd = command(ctx, "apt-get")?;
+        eat_my_data(&mut cmd, ctx, emd);
+        cmd.arg("-oDir::cache::pkgcache=");
+        cmd.arg("-oDir::cache::srcpkgcache=");
+        if ctx.settings.ubuntu_skip_locking {
+            cmd.arg("-oDebug::NoLocking=yes");
+        }
+        cmd.arg("install");
+        cmd.arg("-y");
+        cmd.args(packages);
+
+        let _lock = apt_get_lock(!ctx.settings.ubuntu_skip_locking)?;
+        run(cmd)
+    }
+
+
+    impl EMDParams {
+        pub fn find(codename: &str, arch: &str) -> Option<EMDParams> {
+            match (codename, arch) {
+                ("xenial", "amd64") |
+                ("artful", "amd64") |
+                ("bionic", "amd64")
+                => Some(EMDParams {
+                    needs_universe: false,
+                    package: "libeatmydata1",
+                    preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
+                }),
+                ("xenial", "i386") |
+                ("artful", "i386") |
+                ("bionic", "i386")
+                => Some(EMDParams {
+                    needs_universe: false,
+                    package: "libeatmydata1",
+                    preload: "/usr/lib/i386-linux-gnu/libeatmydata.so",
+                }),
+                ("trusty", _) => Some(EMDParams {
+                    needs_universe: true,
+                    package: "eatmydata",
+                    preload: "/usr/lib/libeatmydata/libeatmydata.so",
+                }),
+                ("precise", _) => Some(EMDParams {
+                    needs_universe: true,
+                    package: "eatmydata",
+                    preload: "/usr/lib/libeatmydata/libeatmydata.so",
+                }),
+                _ => None,
+            }
+        }
+    }
+
 }

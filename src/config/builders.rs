@@ -115,6 +115,13 @@ pub struct StepVisitor;
 pub fn builder_validator<'x>() -> V::Enum<'x> {
     // TODO(tailhook) temporarily, until we support all commands here
     V::Enum::new()
+    .option("Ubuntu", cmd::ubuntu::Ubuntu::config())
+    .option("UbuntuRelease", cmd::ubuntu::UbuntuRelease::config())
+    .option("UbuntuRepo", cmd::ubuntu::UbuntuRepo::config())
+    .option("UbuntuPPA", cmd::ubuntu::UbuntuPPA::config())
+    .option("UbuntuUniverse", cmd::ubuntu::UbuntuUniverse::config())
+    .option("AptTrust", cmd::ubuntu::AptTrust::config())
+    .option("Download", cmd::download::Download::config())
 }
 
 #[cfg(feature="containers")]
@@ -261,6 +268,12 @@ impl<'a> Visitor<'a> for StepVisitor {
         use self::CommandName::*;
         let (tag, v): (CommandName, _) = data.variant()?;
         match tag {
+            Ubuntu => decode::<cmd::ubuntu::Ubuntu, _>(v),
+            UbuntuRepo => decode::<cmd::ubuntu::UbuntuRepo, _>(v),
+            UbuntuRelease => decode::<cmd::ubuntu::UbuntuRelease, _>(v),
+            UbuntuPPA => decode::<cmd::ubuntu::UbuntuPPA, _>(v),
+            UbuntuUniverse => decode::<cmd::ubuntu::UbuntuUniverse, _>(v),
+            Download => decode::<cmd::download::Download, _>(v),
             // TODO(tailhook) temporarily, until we support all commands here
             _ => unimplemented!(),
         }
