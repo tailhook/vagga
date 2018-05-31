@@ -133,7 +133,7 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
             }
             dir_builder.create().map_err(&write_err)?;
         } else if entry.is_symlink() {
-            let src = src.header().link_name().map_err(&read_err)?
+            let src = src.link_name().map_err(&read_err)?
                 .ok_or(format!("Error unpacking {:?}, broken symlink", path))?;
             match symlink(&src, &path) {
                 Ok(_) => {},
