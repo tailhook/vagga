@@ -40,6 +40,13 @@ containers:
     - !UbuntuPPA chris-lea/redis-server
     - !Install [redis-tools]
 
+  ppa_bionic:
+    setup:
+    - !Ubuntu bionic
+    - !AptTrust keys: [C7917B12]
+    - !UbuntuPPA chris-lea/redis-server
+    - !Install [redis-tools]
+
   dependency-conflict:
     setup:
     - !Ubuntu trusty

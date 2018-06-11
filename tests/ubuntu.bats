@@ -148,6 +148,17 @@ setup() {
     [[ $link = ".roots/ppa.0148c3ff/root" ]]
 }
 
+@test "ubuntu: install from ppa in bionic" {
+    run vagga _run ppa_bionic redis-cli --version
+    printf "%s\n" "${lines[@]}"
+    printf "Status: %d\n" "$status"
+    [[ $status -eq 0 ]]
+    [[ $output != "" ]]
+    link=$(readlink .vagga/ppa_bionic)
+    printf "Container link $link"
+    [[ $link = ".roots/ppa_bionic.40375668/root" ]]
+}
+
 @test "ubuntu: UbuntuRepo minimal" {
     run vagga _build ubuntu-repo-minimal
     printf "%s\n" "${lines[@]}"

@@ -434,7 +434,13 @@ impl Distro {
                     self.enable_universe()?;
                     self.add_universe(ctx)?;
                 }
-                self.install_apt_deps(ctx, &["gnupg-curl", "ca-certificates"])?;
+                let packages = match self.get_codename(ctx)? {
+                    "precise" => &["gnupg-curl", "ca-certificates"],
+                    "trusty" => &["gnupg-curl", "ca-certificates"],
+                    "xenial" => &["gnupg-curl", "ca-certificates"],
+                    _ /* >= bionic */ => &["gnupg", "ca-certificates"],
+                };
+                self.install_apt_deps(ctx, packages)?;
                 self.apt_hkps = AptHkps::Installed;
             }
         }
