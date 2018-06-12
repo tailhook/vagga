@@ -2,12 +2,16 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
 
+#[cfg(feature="containers")]
 use unshare::{Command, Namespace};
 use quire::validate as V;
 
-use super::super::context::Context;
+#[cfg(feature="containers")]
+use builder::context::Context;
+#[cfg(feature="containers")]
 use process_util::{capture_stdout, run_success, cmd_show};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
 use launcher::network::create_isolated_network;
 
 // Build Steps
@@ -65,6 +69,7 @@ impl Env {
 }
 
 
+#[cfg(feature="containers")]
 pub fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
     -> Result<PathBuf, StepError>
 {
@@ -92,12 +97,14 @@ pub fn find_cmd<P:AsRef<Path>>(ctx: &Context, cmd: P)
         "-- empty PATH --".to_string()));
 }
 
+#[cfg(feature="containers")]
 fn setup_command(ctx: &Context, cmd: &mut Command)
 {
     cmd.chroot_dir("/vagga/root");
     set_environ(ctx, cmd);
 }
 
+#[cfg(feature="containers")]
 fn set_environ(ctx: &Context, cmd: &mut Command) {
     cmd.env_clear();
     for (k, v) in ctx.environ.iter() {
@@ -105,6 +112,7 @@ fn set_environ(ctx: &Context, cmd: &mut Command) {
     }
 }
 
+#[cfg(feature="containers")]
 pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     path: &Path, env: &[(&str, &str)])
     -> Result<(), String>
@@ -126,18 +134,21 @@ pub fn run_command_at_env(ctx: &mut Context, cmdline: &[String],
     run_success(cmd)
 }
 
+#[cfg(feature="containers")]
 pub fn run_command_at(ctx: &mut Context, cmdline: &[String], path: &Path)
     -> Result<(), String>
 {
     run_command_at_env(ctx, cmdline, path, &[])
 }
 
+#[cfg(feature="containers")]
 pub fn run_command(ctx: &mut Context, cmd: &[String])
     -> Result<(), String>
 {
     return run_command_at_env(ctx, cmd, &Path::new("/work"), &[]);
 }
 
+#[cfg(feature="containers")]
 pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
     env: &[(&str, &str)])
     -> Result<Vec<u8>, String>
@@ -162,6 +173,7 @@ pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
 }
 
 
+#[cfg(feature="containers")]
 pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
     -> Result<Command, StepError>
 {
@@ -181,6 +193,7 @@ pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
     Ok(cmd)
 }
 
+#[cfg(feature="containers")]
 pub fn run(mut cmd: Command) -> Result<(), StepError> {
     debug!("Running {}", cmd_show(&cmd));
 
@@ -193,12 +206,14 @@ pub fn run(mut cmd: Command) -> Result<(), StepError> {
 
 impl BuildStep for Sh {
     fn name(&self) -> &'static str { "Sh" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("script", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -217,12 +232,14 @@ impl BuildStep for Sh {
 
 impl BuildStep for Cmd {
     fn name(&self) -> &'static str { "Cmd" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("command-line", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -238,6 +255,7 @@ impl BuildStep for Cmd {
 
 impl BuildStep for Env {
     fn name(&self) -> &'static str { "Env" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -247,6 +265,7 @@ impl BuildStep for Env {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -262,6 +281,7 @@ impl BuildStep for Env {
 
 impl BuildStep for RunAs {
     fn name(&self) -> &'static str { "RunAs" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -274,6 +294,7 @@ impl BuildStep for RunAs {
         hash.field("script", &self.script);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
