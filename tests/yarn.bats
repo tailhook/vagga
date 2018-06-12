@@ -41,7 +41,8 @@ END
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-7]} = "  File: /usr/lib/node_modules/classnames" ]]
     link=$(readlink .vagga/pkg)
-    [[ $link = ".roots/pkg.1a63a916/root" ]]
+    echo "Link: $link"
+    [[ $link = ".roots/pkg.2921d396/root" ]]
     run vagga _run pkg resolve .
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "/work" ]]
@@ -53,5 +54,6 @@ END
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.0.1" ]]
     link=$(readlink .vagga/version)
-    [[ $link = ".roots/version.58b6add6/root" ]]
+    echo "Link: $link"
+    [[ $link = ".roots/version.0a8ecf27/root" ]]
 }
