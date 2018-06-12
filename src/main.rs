@@ -1,4 +1,7 @@
 #![recursion_limit="100"]
+#![cfg_attr(not(feature="containers"), allow(unused_imports))]
+// TODO(tailhook) fix this one when migration is complete
+#![cfg_attr(not(feature="containers"), allow(dead_code))]
 
 use std::env;
 use std::process::exit;

@@ -651,17 +651,12 @@ impl Distro {
 
 impl BuildStep for Ubuntu {
     fn name(&self) -> &'static str { "Ubuntu" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("codename", &self.0);
         Ok(())
-    }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
     }
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
@@ -687,17 +682,12 @@ impl BuildStep for Ubuntu {
 
 impl BuildStep for UbuntuUniverse {
     fn name(&self) -> &'static str { "UbuntuUniverse" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, _hash: &mut Digest)
         -> Result<(), VersionError>
     {
         // Nothing to do: singleton command
         Ok(())
-    }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
     }
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
@@ -719,17 +709,12 @@ impl BuildStep for UbuntuUniverse {
 
 impl BuildStep for UbuntuPPA {
     fn name(&self) -> &'static str { "UbuntuPPA" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("ppa_name", &self.0);
         Ok(())
-    }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
     }
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
@@ -750,18 +735,13 @@ impl BuildStep for UbuntuPPA {
 
 impl BuildStep for AptTrust {
     fn name(&self) -> &'static str { "AptTrust" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.opt_field("server", &self.server);
         hash.field("keys", &self.keys);
         Ok(())
-    }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
     }
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
@@ -782,6 +762,7 @@ impl BuildStep for AptTrust {
 
 impl BuildStep for UbuntuRepo {
     fn name(&self) -> &'static str { "UbuntuRepo" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -816,12 +797,6 @@ impl BuildStep for UbuntuRepo {
         }
         Ok(())
     }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
-    }
     fn is_dependent_on(&self) -> Option<&str> {
         None
     }
@@ -829,6 +804,7 @@ impl BuildStep for UbuntuRepo {
 
 impl BuildStep for UbuntuRelease {
     fn name(&self) -> &'static str { "UbuntuRelease" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -848,12 +824,6 @@ impl BuildStep for UbuntuRelease {
             guard.distro.bootstrap(&mut guard.ctx)?;
         }
         Ok(())
-    }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None

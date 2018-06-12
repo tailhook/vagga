@@ -13,6 +13,7 @@ use config::Settings;
 mod version;
 mod error;
 
+#[cfg(feature="containers")]
 pub use self::version::short_version;
 pub use self::error::Error;
 

@@ -3,6 +3,7 @@ use super::error::Error;
 use build_step::{BuildStep, Digest};
 
 
+#[cfg(feature="containers")]
 fn all(container: &Container, cfg: &Config, debug_info: bool, dump: bool)
     -> Result<String, (String, Error)>
 {
@@ -32,6 +33,7 @@ fn all(container: &Container, cfg: &Config, debug_info: bool, dump: bool)
     Ok(format!("{:x}", hash))
 }
 
+#[cfg(feature="containers")]
 pub fn short_version(container: &Container, cfg: &Config)
     -> Result<String, (String, Error)>
 {
@@ -39,6 +41,7 @@ pub fn short_version(container: &Container, cfg: &Config)
     Ok(hash_str[..8].to_string())
 }
 
+#[cfg(feature="containers")]
 pub fn long_version(container: &Container, cfg: &Config,
     debug_info: bool, dump: bool)
     -> Result<String, (String, Error)>

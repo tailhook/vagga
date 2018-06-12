@@ -27,6 +27,7 @@ impl Download {
 
 impl BuildStep for Download {
     fn name(&self) -> &'static str { "Download" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -38,12 +39,6 @@ impl BuildStep for Download {
         hash.field("path", &self.path);
         hash.field("mode", self.mode);
         Ok(())
-    }
-    #[cfg(not(feature="containers"))]
-    fn build(&self, guard: &mut Guard, build: bool)
-        -> Result<(), StepError>
-    {
-        unreachable!();
     }
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
