@@ -4,17 +4,19 @@ use std::fmt::{Write as WriteFmt};
 use std::path::Path;
 
 use quire::validate as V;
+#[cfg(feature="containers")]
 use unshare::{Command, Stdio};
 use regex::Regex;
 
-use super::super::context::{Context};
-use capsule::packages as capsule;
-use super::super::packages;
-use file_util::Dir;
-use process_util::capture_stdout;
-use builder::distrib::{Distribution, Named, DistroBox};
+#[cfg(feature="containers")] use builder::context::{Context};
+#[cfg(feature="containers")] use capsule::packages as capsule;
+#[cfg(feature="containers")] use builder::packages;
+#[cfg(feature="containers")] use file_util::Dir;
+#[cfg(feature="containers")] use process_util::capture_stdout;
+#[cfg(feature="containers")] use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use config::version::Version;
+#[cfg(feature="containers")]
 use builder::dns::revert_name_files;
 
 
@@ -61,10 +63,12 @@ pub struct Distro {
     pub apk_update: bool,
 }
 
+#[cfg(feature="containers")]
 impl Named for Distro {
     fn static_name() -> &'static str { "alpine" }
 }
 
+#[cfg(feature="containers")]
 impl Distribution for Distro {
     fn name(&self) -> &'static str { "Alpine" }
     fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError> {
@@ -186,6 +190,7 @@ impl Distribution for Distro {
     }
 }
 
+#[cfg(feature="containers")]
 impl Distro {
     pub fn add_alpine_repo(&mut self, _: &mut Context, repo: &AlpineRepo)
         -> Result<(), String>
@@ -318,6 +323,7 @@ fn check_version(version: &String) -> Result<(), String> {
     }
 }
 
+#[cfg(feature="containers")] 
 fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
     -> Result<(), String>
 {
@@ -343,6 +349,7 @@ fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
 }
 
 
+#[cfg(feature="containers")]
 pub fn remove(_ctx: &mut Context, pkgs: &Vec<String>)
     -> Result<(), String>
 {
@@ -356,6 +363,7 @@ pub fn remove(_ctx: &mut Context, pkgs: &Vec<String>)
     }
 }
 
+#[cfg(feature="containers")]
 pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: &str)
     -> Result<(), StepError>
@@ -380,12 +388,14 @@ pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
 
 impl BuildStep for Alpine {
     fn name(&self) -> &'static str { "Alpine" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("version", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -404,6 +414,7 @@ impl BuildStep for Alpine {
 
 impl BuildStep for AlpineRepo {
     fn name(&self) -> &'static str { "AlpineRepo" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -413,6 +424,7 @@ impl BuildStep for AlpineRepo {
         hash.opt_field("tag", &self.tag);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {

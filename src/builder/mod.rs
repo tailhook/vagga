@@ -17,7 +17,6 @@ pub mod context;
 pub mod commands {
     pub mod ubuntu;
     pub mod generic;
-    #[cfg(feature="containers")]
     pub mod alpine;
     #[cfg(feature="containers")]
     pub mod pip;
