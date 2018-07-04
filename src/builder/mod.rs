@@ -18,9 +18,7 @@ pub mod commands {
     pub mod ubuntu;
     pub mod generic;
     pub mod alpine;
-    #[cfg(feature="containers")]
     pub mod pip;
-    #[cfg(feature="containers")]
     pub mod gem;
     #[cfg(feature="containers")]
     pub mod npm;

@@ -5,11 +5,17 @@ use std::io::{Read, Write, BufReader, BufRead};
 use regex::Regex;
 use quire::validate as V;
 
-use super::super::context::Context;
-use super::super::packages;
-use super::generic::{capture_command, run_command_at_env};
+#[cfg(feature="containers")]
+use builder::context::Context;
+#[cfg(feature="containers")]
+use builder::packages;
+#[cfg(feature="containers")]
+use builder::commands::generic::{capture_command, run_command_at_env};
+#[cfg(feature="containers")]
 use builder::distrib::Distribution;
+#[cfg(feature="containers")]
 use builder::commands::generic::{command, run};
+#[cfg(feature="containers")]
 use process_util::capture_stdout;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -70,6 +76,7 @@ impl Default for GemConfig {
     }
 }
 
+#[cfg(feature="containers")]
 fn no_doc_args(ctx: &mut Context) -> Result<Vec<&'static str>, String> {
     if ctx.gem_settings.update_gem {
         Ok(vec!("--no-document"))
@@ -83,6 +90,7 @@ fn no_doc_args(ctx: &mut Context) -> Result<Vec<&'static str>, String> {
     }
 }
 
+#[cfg(feature="containers")]
 fn gem_version(ctx: &mut Context) -> Result<f32, String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
@@ -106,6 +114,7 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
         .map_err(|e| format!("Erro parsing gem version: {}", e))
 }
 
+#[cfg(feature="containers")]
 fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
@@ -142,6 +151,7 @@ fn requires_git(gemfile: &Path) -> Result<bool, String> {
     Ok(re.is_match(&gemfile_data))
 }
 
+#[cfg(feature="containers")]
 fn scan_features(settings: &GemConfig, info: Option<&GemBundle>)
     -> Result<Vec<packages::Package>, String>
 {
@@ -166,6 +176,7 @@ fn scan_features(settings: &GemConfig, info: Option<&GemBundle>)
     Ok(res)
 }
 
+#[cfg(feature="containers")]
 pub fn install(distro: &mut Box<Distribution>,
     ctx: &mut Context, pkgs: &Vec<String>)
     -> Result<(), String>
@@ -194,6 +205,7 @@ pub fn install(distro: &mut Box<Distribution>,
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn bundle(distro: &mut Box<Distribution>,
     ctx: &mut Context, info: &GemBundle)
     -> Result<(), StepError>
@@ -232,6 +244,7 @@ pub fn bundle(distro: &mut Box<Distribution>,
     run(cmd)
 }
 
+#[cfg(feature="containers")]
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
     if ctx.gem_settings.gem_exe.is_none() &&
         ctx.gem_settings.update_gem
@@ -260,6 +273,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn setup_bundler(ctx: &mut Context) -> Result<(), String> {
     configure(ctx)?;
 
@@ -281,6 +295,7 @@ pub fn setup_bundler(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     let gem_exe = ctx.gem_settings.gem_exe.clone()
         .unwrap_or(DEFAULT_GEM_EXE.to_owned());
@@ -301,12 +316,14 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
 
 impl BuildStep for GemInstall {
     fn name(&self) -> &'static str { "GemInstall" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -322,6 +339,7 @@ impl BuildStep for GemInstall {
 
 impl BuildStep for GemConfig {
     fn name(&self) -> &'static str { "GemConfig" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -330,6 +348,7 @@ impl BuildStep for GemConfig {
         hash.field("update_gem", self.update_gem);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -343,6 +362,7 @@ impl BuildStep for GemConfig {
 
 impl BuildStep for GemBundle {
     fn name(&self) -> &'static str { "GemBundle" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -375,6 +395,7 @@ impl BuildStep for GemBundle {
 
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {

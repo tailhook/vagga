@@ -5,11 +5,14 @@ use std::path::{Path, PathBuf};
 
 use failure::Error;
 use quire::validate as V;
-use super::super::context::{Context};
-use super::super::packages;
-use super::generic::{run_command_at_env, capture_command};
-use builder::distrib::Distribution;
-use file_util::Dir;
+#[cfg(feature="containers")]
+use builder::context::{Context};
+#[cfg(feature="containers")]
+use builder::packages;
+#[cfg(feature="containers")]
+use builder::commands::generic::{run_command_at_env, capture_command};
+#[cfg(feature="containers")] use builder::distrib::Distribution;
+#[cfg(feature="containers")] use file_util::Dir;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
@@ -92,6 +95,7 @@ impl Default for PipConfig {
 }
 
 
+#[cfg(feature="containers")]
 pub fn scan_features(settings: &PipConfig, ver: u8, pkgs: &Vec<String>)
     -> Vec<packages::Package>
 {
@@ -126,6 +130,7 @@ pub fn scan_features(settings: &PipConfig, ver: u8, pkgs: &Vec<String>)
     return res;
 }
 
+#[cfg(feature="containers")]
 fn pip_args(ctx: &mut Context, ver: u8) -> Vec<String> {
     let mut args = vec!(
         ctx.pip_settings.python_exe.clone()
@@ -159,6 +164,7 @@ fn pip_args(ctx: &mut Context, ver: u8) -> Vec<String> {
     return args;
 }
 
+#[cfg(feature="containers")]
 pub fn pip_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: u8, pkgs: &Vec<String>)
     -> Result<(), String>
@@ -171,6 +177,7 @@ pub fn pip_install(distro: &mut Box<Distribution>, ctx: &mut Context,
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }
 
+#[cfg(feature="containers")]
 pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
     ver: u8, reqtxt: &Path)
     -> Result<(), String>
@@ -200,6 +207,7 @@ pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
         ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
 }
 
+#[cfg(feature="containers")]
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
     let cache_root = Path::new("/vagga/root/tmp/pip-cache");
     try_msg!(Dir::new(&cache_root).recursive(true).create(),
@@ -218,6 +226,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn freeze(ctx: &mut Context) -> Result<(), String> {
     use std::fs::File;  // TODO(tailhook) migrate whole module
     use std::io::Write;  // TODO(tailhook) migrate whole module
@@ -256,6 +265,7 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
 
 impl BuildStep for PipConfig {
     fn name(&self) -> &'static str { "PipConfig" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -271,6 +281,7 @@ impl BuildStep for PipConfig {
         hash.opt_field("python_exe", &self.python_exe);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -284,12 +295,14 @@ impl BuildStep for PipConfig {
 
 impl BuildStep for Py2Install {
     fn name(&self) -> &'static str { "Py2Install" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -306,12 +319,14 @@ impl BuildStep for Py2Install {
 
 impl BuildStep for Py3Install {
     fn name(&self) -> &'static str { "Py3Install" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -373,11 +388,13 @@ fn version_req(hash: &mut Digest, fname: &Path, used: &mut HashSet<String>)
 
 impl BuildStep for Py2Requirements {
     fn name(&self) -> &'static str { "Py2Requirements" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         Ok(version_req(hash, &self.0, &mut HashSet::new())?)
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -394,11 +411,13 @@ impl BuildStep for Py2Requirements {
 
 impl BuildStep for Py3Requirements {
     fn name(&self) -> &'static str { "Py3Requirements" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         Ok(version_req(hash, &self.0, &mut HashSet::new())?)
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
