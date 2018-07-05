@@ -2,19 +2,26 @@ use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
 
+use quire::validate as V;
+#[cfg(feature="containers")]
 use libmount::{BindMount, Remount};
 
-use quire::validate as V;
 use config::read_config;
 use config::containers::Container as Cont;
+#[cfg(feature="containers")]
 use version::short_version;
+#[cfg(feature="containers")]
 use container::util::{copy_dir};
+#[cfg(feature="containers")]
 use file_util::{Dir, ShallowCopy};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
-use builder::error::StepError as E;
+use builder::StepError as E;
+#[cfg(feature="containers")]
 use builder::dns::revert_name_files;
+#[cfg(feature="containers")]
 use builder::commands::copy::{create_path_filter, hash_path};
+#[cfg(feature="containers")]
 use builder::commands::copy::{hash_file_content};
 
 // Build Steps
@@ -93,6 +100,7 @@ impl SubConfig {
     }
 }
 
+#[cfg(feature="containers")]
 pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
 {
@@ -134,6 +142,7 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     Ok(())
 }
 
+#[cfg(feature="containers")]
 fn real_copy(name: &String, cont: &Cont, guard: &mut Guard)
     -> Result<(), StepError>
 {
@@ -152,6 +161,7 @@ fn real_copy(name: &String, cont: &Cont, guard: &mut Guard)
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn clone(name: &String, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
 {
@@ -167,6 +177,7 @@ pub fn clone(name: &String, guard: &mut Guard, build: bool)
     Ok(())
 }
 
+#[cfg(feature="containers")]
 fn find_config(cfg: &SubConfig, guard: &mut Guard)
     -> Result<Config, StepError>
 {
@@ -196,6 +207,7 @@ fn find_config(cfg: &SubConfig, guard: &mut Guard)
     Ok(read_config(&path.parent().expect("parent exists"), Some(&path), true)?)
 }
 
+#[cfg(feature="containers")]
 pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
     -> Result<(), StepError>
 {
@@ -211,6 +223,7 @@ pub fn subconfig(cfg: &SubConfig, guard: &mut Guard, build: bool)
 
 impl BuildStep for Container {
     fn name(&self) -> &'static str { "Container" }
+    #[cfg(feature="containers")]
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -223,6 +236,7 @@ impl BuildStep for Container {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -236,6 +250,7 @@ impl BuildStep for Container {
 }
 impl BuildStep for Build {
     fn name(&self) -> &'static str { "Build" }
+    #[cfg(feature="containers")]
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -280,6 +295,7 @@ impl BuildStep for Build {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, do_build: bool)
         -> Result<(), StepError>
     {
@@ -291,6 +307,7 @@ impl BuildStep for Build {
 }
 impl BuildStep for SubConfig {
     fn name(&self) -> &'static str { "SubConfig" }
+    #[cfg(feature="containers")]
     fn hash(&self, cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -330,6 +347,7 @@ impl BuildStep for SubConfig {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
