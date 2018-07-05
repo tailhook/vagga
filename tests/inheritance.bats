@@ -81,6 +81,16 @@ setup() {
     [[ $link = ".roots/hellocopy-contenthash.96121dc4/root" ]]
 }
 
+@test "inheritance: Build copy rules" {
+    run vagga hello-copy-rules
+    printf "%s\n" "${lines[@]}"
+    [[ $status -eq 0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
+    link=$(readlink .vagga/hellocopy-rules)
+    printf "link: %s\n" "$link"
+    [[ $link = ".roots/hellocopy-rules.1c88be7f/root" ]]
+}
+
 @test "inheritance: Build copy file" {
     run vagga hello-copy-file
     printf "%s\n" "${lines[@]}"

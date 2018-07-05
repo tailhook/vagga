@@ -17,8 +17,8 @@ use quick_error::ResultExt;
 
 
 const DEFAULT_UMASK: u32 = 0o002;
-const DEFAULT_ATIME: i64 = 1;
-const DEFAULT_MTIME: i64 = 1;
+pub const DEFAULT_ATIME: i64 = 1;
+pub const DEFAULT_MTIME: i64 = 1;
 
 const DIR_MODE: u32 = 0o777;
 const FILE_MODE: u32 = 0o666;

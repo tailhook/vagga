@@ -63,6 +63,17 @@ containers:
       source: /usr/share/hello
       path: /usr/share/hello
 
+  hellocopy-rules:
+    setup:
+    - !Ubuntu trusty
+    - !EnsureDir /usr/share
+    - !Build
+      container: hellotext
+      source: /usr/share
+      path: /usr/share
+      rules:
+      - /hello
+
   hellocopyfile:
     setup:
     - !Ubuntu trusty
@@ -144,6 +155,10 @@ commands:
 
   hello-copy-ch: !Command
     container: hellocopy-contenthash
+    run: cat /usr/share/hello/hello.txt
+
+  hello-copy-rules: !Command
+    container: hellocopy-rules
     run: cat /usr/share/hello/hello.txt
 
   hello-copy-file: !Command

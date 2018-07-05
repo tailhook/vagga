@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::os::unix::fs::{PermissionsExt, MetadataExt};
@@ -5,15 +6,14 @@ use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use quire::validate as V;
 #[cfg(feature="containers")]
 use libmount::{BindMount, Remount};
+use quick_error::ResultExt;
 
 use config::read_config;
 use config::containers::Container as Cont;
-#[cfg(feature="containers")]
-use version::short_version;
-#[cfg(feature="containers")]
-use container::util::{copy_dir};
-#[cfg(feature="containers")]
-use file_util::{Dir, ShallowCopy};
+#[cfg(feature="containers")] use version::short_version;
+#[cfg(feature="containers")] use container::util::{copy_dir};
+#[cfg(feature="containers")] use file_util::{Dir, ShallowCopy};
+#[cfg(feature="containers")] use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 use builder::StepError as E;
@@ -21,6 +21,8 @@ use builder::StepError as E;
 use builder::dns::revert_name_files;
 #[cfg(feature="containers")]
 use builder::commands::copy::{create_path_filter, hash_path};
+#[cfg(feature="containers")]
+use builder::commands::copy::{DEFAULT_ATIME, DEFAULT_MTIME};
 #[cfg(feature="containers")]
 use builder::commands::copy::{hash_file_content};
 
@@ -41,6 +43,7 @@ pub struct Build {
     pub path: Option<PathBuf>,
     pub temporary_mount: Option<PathBuf>,
     pub content_hash: bool,
+    pub rules: Vec<String>,
 }
 
 impl Build {
@@ -54,6 +57,7 @@ impl Build {
         .member("temporary_mount".to_string(),
             V::Directory::new().absolute(true).optional())
         .member("content_hash", V::Scalar::new().default(false))
+        .member("rules", V::Sequence::new(V::Scalar::new()))
     }
 }
 
@@ -107,37 +111,69 @@ pub fn build(binfo: &Build, guard: &mut Guard, build: bool)
     let ref name = binfo.container;
     let cont = guard.ctx.config.containers.get(name)
         .expect("Subcontainer not found");  // TODO
-    if build {
-        let version = short_version(&cont, &guard.ctx.config)
-            .map_err(|(s, e)| format!("step {}: {}", s, e))?;
-        let container = Path::new("/vagga/base/.roots")
-            .join(format!("{}.{}", name, version));
-        let path = container.join("root")
-            .join(binfo.source.strip_prefix("/").unwrap());
+    if !build {
+        return Ok(())
+    }
+    let version = short_version(&cont, &guard.ctx.config)
+        .map_err(|(s, e)| format!("step {}: {}", s, e))?;
+    let container = Path::new("/vagga/base/.roots")
+        .join(format!("{}.{}", name, version));
+    let ref src = container.join("root")
+        .join(binfo.source.strip_prefix("/").unwrap());
 
-        // Update container use when using it as subcontainer (fixes #267)
-        File::create(Path::new(&container).join("last_use"))
-            .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
+    // Update container use when using it as subcontainer (fixes #267)
+    File::create(Path::new(&container).join("last_use"))
+        .map_err(|e| warn!("Can't write image usage info: {}", e)).ok();
 
-        if let Some(ref dest_rel) = binfo.path {
-            let dest = Path::new("/vagga/root")
-                .join(dest_rel.strip_prefix("/").unwrap());
-            if path.is_dir() {
-                try_msg!(copy_dir(&path, &dest, None, None),
-                    "Error copying dir {p:?}: {err}", p=path);
-            } else {
-                try_msg!(ShallowCopy::new(&path, &dest).copy(),
-                    "Error copying file {p:?}: {err}", p=path);
-            }
-        } else if let Some(ref dest_rel) = binfo.temporary_mount {
-            let dest = Path::new("/vagga/root")
-                .join(dest_rel.strip_prefix("/").unwrap());
-            try_msg!(Dir::new(&dest).create(),
-                "Error creating destination dir: {err}");
-            BindMount::new(&path, &dest).mount()?;
-            Remount::new(&dest).bind(true).readonly(true).remount()?;
-            guard.ctx.mounted.push(dest);
+    if let Some(ref dest_rel) = binfo.path {
+        let ref dest = Path::new("/vagga/root")
+            .join(dest_rel.strip_prefix("/").unwrap());
+        let ref typ = src.symlink_metadata()
+            .map_err(|e| StepError::Read(src.into(), e))?;
+        if typ.is_dir() {
+            ShallowCopy::new(src, dest)
+                .src_stat(typ)
+                .copy()
+                .context((src, dest))?;
+            let filter = create_path_filter(&binfo.rules, Some(true),
+                &None, &None, true)?;
+            let mut processed_paths = HashSet::new();
+            filter.walk(src, |iter| {
+                for entry in iter {
+                    let fpath = entry.path();
+                    // We know that directory is inside
+                    // the source
+                    let path = fpath.strip_prefix(&src).unwrap();
+                    let parents: Vec<_> = path
+                        .iter_self_and_parents()
+                        .take_while(|p| !processed_paths.contains(*p))
+                        .collect();
+                    for parent in parents.iter().rev() {
+                        let ref fdest = dest.join(parent);
+                        let ref fsrc = src.join(parent);
+                        let ref fsrc_stat = fsrc.symlink_metadata()
+                            .map_err(|e| StepError::Read(src.into(), e))?;
+                        let mut cp = ShallowCopy::new(fsrc, fdest);
+                        cp.src_stat(fsrc_stat);
+                        cp.times(DEFAULT_ATIME, DEFAULT_MTIME);
+                        cp.copy().context((fsrc, fdest))?;
+                        processed_paths.insert(PathBuf::from(parent));
+                    }
+                }
+                Ok(())
+            }).map_err(StepError::PathFilter).and_then(|x| x)?;
+        } else {
+            try_msg!(ShallowCopy::new(&src, &dest).copy(),
+                "Error copying file {p:?}: {err}", p=src);
         }
+    } else if let Some(ref dest_rel) = binfo.temporary_mount {
+        let dest = Path::new("/vagga/root")
+            .join(dest_rel.strip_prefix("/").unwrap());
+        try_msg!(Dir::new(&dest).create(),
+            "Error creating destination dir: {err}");
+        BindMount::new(&src, &dest).mount()?;
+        Remount::new(&dest).bind(true).readonly(true).remount()?;
+        guard.ctx.mounted.push(dest);
     }
     Ok(())
 }
@@ -267,7 +303,7 @@ impl BuildStep for Build {
                 return Err(VersionError::New);
             }
             if let Some(ref dest_rel) = self.path {
-                let filter = create_path_filter(&Vec::new(), Some(true),
+                let filter = create_path_filter(&self.rules, Some(true),
                     &None, &None, false)?;
                 let spath = self.source.strip_prefix("/")
                     .expect("absolute_source_path");
@@ -286,6 +322,10 @@ impl BuildStep for Build {
                     content-hash and temporary-mount are not supported yet");
             }
         } else {
+            if !self.rules.is_empty() && self.temporary_mount.is_some() {
+                unimplemented!("Build: combination of \
+                    rules and temporary-mount are not supported yet");
+            }
             for b in cinfo.setup.iter() {
                 debug!("Versioning setup: {:?}", b);
                 hash.command(b.name());

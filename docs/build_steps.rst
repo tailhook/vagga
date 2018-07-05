@@ -794,9 +794,9 @@ Files and Directories
        ``["!dir/", "/"]`` will match all paths except ``dir`` directories
 
      By default there are some ignore rules that correspond ``ignore-regex``
-     expression:
-       ``["!.git/", "!.hg/", "!.svn/", "!.vagga/", "!*.bak", "!*.orig", "!*~",
-       "!#*#", "!.#*"]``
+     expression: ``["!.git/", "!.hg/", "!.svn/", "!.vagga/",
+     "!*.bak", "!*.orig", "!*~", "!#*#", "!.#*"]``
+     (Note: they apply to :step:`Copy` but not :step:`Build`)
 
      .. versionadded:: 0.8.0
 
@@ -1091,6 +1091,25 @@ Sub-Containers
    configuration from the source container and allows to fetch only parts of
    the resulting container.
 
+   Since vagga v0.8.1 you can also use more fine-grained rules:
+
+   .. code-block:: yaml
+
+          nginx:
+            setup:
+            - !Alpine v3.5
+            - !Install [nginx]
+            - !Build
+              container: jsstatic
+              source: /var/assets
+              path: /srv/www
+              rules:
+              - /js
+              - /css
+              - /img
+
+   See :step:`Copy` command for better explanation of how ``rules`` work.
+
    Another motivating example is building a package::
 
         containers:
@@ -1135,6 +1154,13 @@ Sub-Containers
    path
         Target directory (absolue path inside the resulting container) to copy
         (either ``path`` or ``temporary-mount`` required)
+
+   rules
+        List of rules for copying. Similarly to :step:`Copy` command,
+        if this list is specified we copy only files matching rules
+        from `source` to `path` instead of full directory.
+
+        .. versionadded:: v0.8.1
 
    temporary-mount
         A directory to mount ``source`` into. This is useful if you don't want
