@@ -104,13 +104,7 @@ fn main() {
     exit(code);
 }
 
-#[cfg(all(not(feature="containers"), not(feature="docker_runner")))]
+#[cfg(not(feature="containers"))]
 fn main() {
     unimplemented!();
-}
-
-#[cfg(feature="docker_runner")]
-fn main() {
-    init_logging();
-    exit(launcher::run(env::args().collect()));
 }
