@@ -20,7 +20,6 @@ pub mod commands {
     pub mod alpine;
     pub mod pip;
     pub mod gem;
-    #[cfg(feature="containers")]
     pub mod npm;
     #[cfg(feature="containers")]
     pub mod composer;

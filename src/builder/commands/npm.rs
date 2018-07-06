@@ -4,23 +4,32 @@ use std::fs::{self, File, remove_dir};
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
-use libmount::BindMount;
+#[cfg(feature="containers")] use libmount::BindMount;
 use quire::validate as V;
 use regex::Regex;
 use serde_json::{Value as Json, from_reader};
 use scan_dir;
-use unshare::{Stdio};
+#[cfg(feature="containers")] use unshare::{Stdio};
 
+#[cfg(feature="containers")]
 use builder::commands::generic::{command, run};
+#[cfg(feature="containers")]
 use builder::distrib::{Distribution, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
 use capsule::download::download_file;
+#[cfg(feature="containers")]
 use container::mount::unmount;
+#[cfg(feature="containers")]
 use container::root::temporary_change_root;
+#[cfg(feature="containers")]
 use container::util::clean_dir;
+#[cfg(feature="containers")]
 use file_util::{safe_ensure_dir, copy, force_symlink};
-use super::super::context::{Context};
-use super::super::packages;
+#[cfg(feature="containers")]
+use builder::context::{Context};
+#[cfg(feature="containers")]
+use builder::packages;
 
 lazy_static! {
     static ref YARN_PATTERN: Regex = Regex::new(r#""[^"]+"|[^,]+"#).unwrap();
@@ -137,6 +146,7 @@ fn _get_all_patterns<B: BufRead>(f: B, lock_file: &Path)
     Ok(result)
 }
 
+#[cfg(feature="containers")]
 fn scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     -> Vec<packages::Package>
 {
@@ -153,6 +163,7 @@ fn scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     return res;
 }
 
+#[cfg(feature="containers")]
 pub fn parse_feature(info: &str, features: &mut Vec<packages::Package>) {
     // Note: the info is a package name/git-url in NpmInstall but it's just
     // a version number for NpmDependencies. That's how npm works.
@@ -161,6 +172,7 @@ pub fn parse_feature(info: &str, features: &mut Vec<packages::Package>) {
     } // TODO(tailhook) implement whole a lot of other npm version kinds
 }
 
+#[cfg(feature="containers")]
 pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), StepError>
@@ -183,6 +195,7 @@ pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     run(cmd)
 }
 
+#[cfg(feature="containers")]
 fn scan_dic(json: &Json, key: &str,
     packages: &mut Vec<String>, features: &mut Vec<packages::Package>)
     -> Result<(), StepError>
@@ -211,6 +224,7 @@ fn scan_dic(json: &Json, key: &str,
     }
 }
 
+#[cfg(feature="containers")]
 pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
     info: &NpmDependencies)
     -> Result<(), StepError>
@@ -261,6 +275,7 @@ pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
     run(cmd)
 }
 
+#[cfg(feature="containers")]
 pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     let path = Path::new("/vagga/container/npm-list.txt");
     let file = File::create(&path)
@@ -286,6 +301,7 @@ fn npm_hash_deps(data: &Json, key: &str, hash: &mut Digest) {
 
 impl BuildStep for NpmConfig {
     fn name(&self) -> &'static str { "NpmConfig" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -300,6 +316,7 @@ impl BuildStep for NpmConfig {
         hash.opt_field("yarn_version", &self.yarn_version);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -313,12 +330,14 @@ impl BuildStep for NpmConfig {
 
 impl BuildStep for NpmInstall {
     fn name(&self) -> &'static str { "NpmInstall" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -335,6 +354,7 @@ impl BuildStep for NpmInstall {
 
 impl BuildStep for NpmDependencies {
     fn name(&self) -> &'static str { "NpmDependencies" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -362,6 +382,7 @@ impl BuildStep for NpmDependencies {
             }
         })
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -376,6 +397,7 @@ impl BuildStep for NpmDependencies {
     }
 }
 
+#[cfg(feature="containers")]
 fn yarn_scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     -> Vec<packages::Package>
 {
@@ -392,6 +414,7 @@ fn yarn_scan_features(settings: &NpmConfig, pkgs: &Vec<String>)
     return res;
 }
 
+#[cfg(feature="containers")]
 pub fn setup_yarn(ctx: &mut Context)
     -> Result<(), String>
 {
@@ -446,6 +469,7 @@ fn check_deps(deps: Option<&Json>, patterns: &HashSet<String>) -> bool {
 
 impl BuildStep for YarnDependencies {
     fn name(&self) -> &'static str { "YarnDependencies" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -488,6 +512,7 @@ impl BuildStep for YarnDependencies {
             Err(VersionError::New)
         }
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
