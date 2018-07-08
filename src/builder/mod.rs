@@ -21,7 +21,6 @@ pub mod commands {
     pub mod pip;
     pub mod gem;
     pub mod npm;
-    #[cfg(feature="containers")]
     pub mod composer;
     #[cfg(feature="containers")]
     pub mod vcs;

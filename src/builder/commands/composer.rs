@@ -3,21 +3,22 @@ use std::fs::{self, File};
 use std::io::{self, Write};
 use std::os::unix;
 
-use unshare::{Command};
+#[cfg(feature="containers")] use unshare::{Command};
 use scan_dir::{self, ScanDir};
 use regex::Regex;
 use serde_json::{Value as Json, from_reader};
 use quire::validate as V;
 
-use super::super::context::{Context};
-use super::super::packages;
-use super::generic::{run_command, capture_command};
-use builder::distrib::Distribution;
-use builder::commands::generic::{command, run};
-use capsule::download;
-use file_util::Dir;
-use process_util::capture_stdout;
-use file_util;
+#[cfg(feature="containers")] use builder::context::{Context};
+#[cfg(feature="containers")] use builder::packages;
+#[cfg(feature="containers")]
+use builder::commands::generic::{run_command, capture_command};
+#[cfg(feature="containers")] use builder::distrib::Distribution;
+#[cfg(feature="containers")] use builder::commands::generic::{command, run};
+#[cfg(feature="containers")] use capsule::download;
+#[cfg(feature="containers")] use file_util::Dir;
+#[cfg(feature="containers")] use process_util::capture_stdout;
+#[cfg(feature="containers")] use file_util;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
@@ -114,6 +115,7 @@ impl Default for ComposerConfig {
     }
 }
 
+#[cfg(feature="containers")]
 fn scan_features(settings: &ComposerConfig)
     -> Vec<packages::Package>
 {
@@ -134,6 +136,7 @@ fn scan_features(settings: &ComposerConfig)
     return res;
 }
 
+#[cfg(feature="containers")]
 fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
     let runtime = ctx.composer_settings
         .runtime_exe
@@ -145,6 +148,7 @@ fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
     Ok(cmd)
 }
 
+#[cfg(feature="containers")]
 pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), String>
@@ -163,6 +167,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn composer_dependencies(distro: &mut Box<Distribution>,
     ctx: &mut Context, info: &ComposerDependencies)
     -> Result<(), StepError>
@@ -195,6 +200,7 @@ pub fn composer_dependencies(distro: &mut Box<Distribution>,
     run(cmd)
 }
 
+#[cfg(feature="containers")]
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
     ctx.add_cache_dir(Path::new(COMPOSER_CACHE),
                            "composer-cache".to_string())?;
@@ -220,6 +226,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
     try_msg!(Dir::new(COMPOSER_HOME).recursive(true).create(),
         "Error creating composer home dir {d:?}: {err}", d=COMPOSER_HOME);
@@ -259,6 +266,7 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 fn update_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
     let args = [
         runtime.to_owned(),
@@ -270,6 +278,7 @@ fn update_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
     run_command(ctx, &args)
 }
 
+#[cfg(feature="containers")]
 fn install_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
     let composer_inst = download::download_file(&mut ctx.capsule,
         &[COMPOSER_BOOTSTRAP], None, false)?;
@@ -286,6 +295,7 @@ fn install_composer(ctx: &mut Context, runtime: &str) -> Result<(), String> {
     run_command(ctx, &args)
 }
 
+#[cfg(feature="containers")]
 fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
     let vagga_ini_content = {
         let include_path = ctx.composer_settings
@@ -322,12 +332,14 @@ fn setup_include_path(ctx: &mut Context) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 fn create_vagga_ini(location: &Path, content: &str) -> Result<(), String> {
     File::create(location)
         .and_then(|mut f| f.write_all(content.as_bytes()))
         .map_err(|e| format!("Error creating file {:?}: {}", location, e))
 }
 
+#[cfg(feature="containers")]
 fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     // find php main config directory (/etc/php or /etc/php5 or both)
     let etc_php: Vec<PathBuf> =
@@ -384,6 +396,7 @@ fn find_conf_dirs() -> Result<Vec<PathBuf>, scan_dir::Error> {
     )
 }
 
+#[cfg(feature="containers")]
 fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
     let runtime_exe = ctx.composer_settings
         .runtime_exe
@@ -407,6 +420,7 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
     Ok(PathBuf::from(conf_d))
 }
 
+#[cfg(feature="containers")]
 pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
     list_packages(ctx)
         .map_err(|e| warn!("Can't list composer packages: {}", e)).ok();
@@ -418,6 +432,7 @@ pub fn finish(ctx: &mut Context) -> Result<(), StepError> {
     Ok(())
 }
 
+#[cfg(feature="containers")]
 fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
     let mut cmd = composer_cmd(ctx)?;
     cmd.arg("show");
@@ -434,6 +449,7 @@ fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
 
 impl BuildStep for ComposerConfig {
     fn name(&self) -> &'static str { "ComposerConfig" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -445,6 +461,7 @@ impl BuildStep for ComposerConfig {
         hash.opt_field("vendor_dir", &self.vendor_dir);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -458,12 +475,14 @@ impl BuildStep for ComposerConfig {
 
 impl BuildStep for ComposerInstall {
     fn name(&self) -> &'static str { "ComposerInstall" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -506,6 +525,7 @@ fn hash_lock_file(path: &Path, hash: &mut Digest) -> Result<(), VersionError> {
 
 impl BuildStep for ComposerDependencies {
     fn name(&self) -> &'static str { "ComposerDependencies" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -540,6 +560,7 @@ impl BuildStep for ComposerDependencies {
             hash.field("require-dev", get(&data, "autoload-dev"));
         })
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
