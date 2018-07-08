@@ -28,7 +28,6 @@ pub mod commands {
     pub mod copy;
     pub mod text;
     pub mod dirs;
-    #[cfg(feature="containers")]
     pub mod packaging;
     #[cfg(feature="containers")]
     pub mod tarcmd;

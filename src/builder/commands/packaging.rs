@@ -33,12 +33,14 @@ impl Repo {
 
 impl BuildStep for Install {
     fn name(&self) -> &'static str { "Install" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -58,12 +60,14 @@ impl BuildStep for Install {
 
 impl BuildStep for BuildDeps {
     fn name(&self) -> &'static str { "BuildDeps" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("packages", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -84,12 +88,14 @@ impl BuildStep for BuildDeps {
 
 impl BuildStep for Repo {
     fn name(&self) -> &'static str { "Repo" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("name", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
