@@ -30,7 +30,6 @@ pub mod commands {
     pub mod dirs;
     pub mod packaging;
     pub mod tarcmd;
-    #[cfg(feature="containers")]
     pub mod unzip;
 }
 #[cfg(feature="containers")] pub mod guard;

@@ -3,12 +3,16 @@ use std::fs::{File, Permissions, set_permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature="containers")]
 use zip::ZipArchive;
-
 use quire::validate as V;
+
+#[cfg(feature="containers")]
 use builder::context::Context;
+#[cfg(feature="containers")]
 use capsule::download::maybe_download_and_check_hashsum;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
 use file_util::{Dir, copy_stream};
 
 
@@ -31,6 +35,7 @@ impl Unzip {
 }
 
 
+#[cfg(feature="containers")]
 pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
     subdir: &Path)
     -> Result<(), String>
@@ -91,6 +96,7 @@ pub fn unzip_file(_ctx: &mut Context, src: &Path, dst: &Path,
 
 impl BuildStep for Unzip {
     fn name(&self) -> &'static str { "Unzip" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -103,6 +109,7 @@ impl BuildStep for Unzip {
         hash.field("subdir", &self.subdir);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
