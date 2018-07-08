@@ -15,6 +15,8 @@ use scan_dir;
 use builder::commands::generic::{command, run};
 #[cfg(feature="containers")]
 use builder::distrib::{Distribution, DistroBox};
+#[cfg(feature="containers")]
+use builder::commands::ubuntu;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
 use capsule::download::download_file;
@@ -181,6 +183,27 @@ pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
                            "npm-cache".to_string())?;
     let features = scan_features(&ctx.npm_settings, pkgs);
     packages::ensure_packages(distro, ctx, &features)?;
+    if !ctx.npm_configured {
+        if let Some(ubuntu) = distro.downcast_ref::<ubuntu::Distro>() {
+            match ubuntu.codename.as_ref().map(|x| &x[..]) {
+                | Some("trusty")
+                | Some("precise")
+                => {
+                    // Old npm requires switching
+                    // to system certificates manually
+                    let mut cmd = command(ctx, &ctx.npm_settings.npm_exe)?;
+                    cmd.arg("config");
+                    cmd.arg("set");
+                    cmd.arg("ca");
+                    cmd.arg("");
+                    run(cmd)?;
+                }
+                | Some(_)
+                | None
+                => {}
+            }
+        }
+    }
 
     if pkgs.len() == 0 {
         return Ok(());

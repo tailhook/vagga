@@ -133,7 +133,7 @@ enum EatMyData {
 #[derive(Debug)]
 pub struct Distro {
     config: UbuntuRelease,
-    codename: Option<String>,
+    pub codename: Option<String>,
     apt_update: bool,
     apt_https: AptHttps,
     apt_hkps: AptHkps,
