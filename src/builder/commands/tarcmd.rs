@@ -4,18 +4,24 @@ use std::fs::{create_dir_all, set_permissions, hard_link};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
 
-use tar::Archive;
-use flate2::read::GzDecoder;
-use xz2::read::XzDecoder;
-use bzip2::read::BzDecoder;
-use libmount::BindMount;
+#[cfg(feature="containers")] use tar::Archive;
+#[cfg(feature="containers")] use flate2::read::GzDecoder;
+#[cfg(feature="containers")] use xz2::read::XzDecoder;
+#[cfg(feature="containers")] use bzip2::read::BzDecoder;
+#[cfg(feature="containers")] use libmount::BindMount;
 use quire::validate as V;
 
+#[cfg(feature="containers")]
 use capsule::download::{maybe_download_and_check_hashsum};
+#[cfg(feature="containers")]
 use container::mount::{unmount};
+#[cfg(feature="containers")]
 use builder::context::Context;
+#[cfg(feature="containers")]
 use builder::commands::generic::run_command_at;
+#[cfg(feature="containers")]
 use builder::dns::revert_name_files;
+#[cfg(feature="containers")]
 use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -60,6 +66,7 @@ impl TarInstall {
 }
 
 
+#[cfg(feature="containers")]
 pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
     includes: &[&Path], excludes: &[&Path], preserve_owner: bool)
     -> Result<(), String>
@@ -91,6 +98,7 @@ pub fn unpack_file(_ctx: &mut Context, src: &Path, tgt: &Path,
 
 }
 
+#[cfg(feature="containers")]
 fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
     includes: &[&Path], excludes: &[&Path], preserve_owner: bool)
     -> Result<(), String>
@@ -218,6 +226,7 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn unpack_subdir(ctx: &mut Context, filename: &Path, dest: &Path,
     subdir: &Path)
     -> Result<(), String>
@@ -242,6 +251,7 @@ pub fn unpack_subdir(ctx: &mut Context, filename: &Path, dest: &Path,
     res
 }
 
+#[cfg(feature="containers")]
 pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
 {
     let fpath = PathBuf::from("/vagga/root")
@@ -260,6 +270,7 @@ pub fn tar_command(ctx: &mut Context, tar: &Tar) -> Result<(), String>
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
     -> Result<(), String>
 {
@@ -300,6 +311,7 @@ pub fn tar_install(ctx: &mut Context, tar: &TarInstall)
 
 impl BuildStep for Tar {
     fn name(&self) -> &'static str { "Tar" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -312,6 +324,7 @@ impl BuildStep for Tar {
         hash.field("subdir", &self.subdir);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -327,6 +340,7 @@ impl BuildStep for Tar {
 
 impl BuildStep for TarInstall {
     fn name(&self) -> &'static str { "TarInstall" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -339,6 +353,7 @@ impl BuildStep for TarInstall {
         hash.field("script", &self.script);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {

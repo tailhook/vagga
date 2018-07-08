@@ -29,7 +29,6 @@ pub mod commands {
     pub mod text;
     pub mod dirs;
     pub mod packaging;
-    #[cfg(feature="containers")]
     pub mod tarcmd;
     #[cfg(feature="containers")]
     pub mod unzip;
