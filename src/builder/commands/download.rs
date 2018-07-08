@@ -6,7 +6,7 @@ use quire::validate as V;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Download {
     pub url: String,
     pub path: PathBuf,

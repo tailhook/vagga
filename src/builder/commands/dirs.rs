@@ -12,7 +12,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use file_util::Dir;
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EnsureDir(PathBuf);
 
 impl EnsureDir {
@@ -21,7 +21,7 @@ impl EnsureDir {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Remove(PathBuf);
 
 impl Remove {
@@ -30,7 +30,7 @@ impl Remove {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EmptyDir(PathBuf);
 
 impl EmptyDir {
@@ -39,7 +39,7 @@ impl EmptyDir {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CacheDirs(BTreeMap<PathBuf, String>);
 
 impl CacheDirs {

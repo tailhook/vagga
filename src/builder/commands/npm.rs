@@ -38,7 +38,7 @@ lazy_static! {
 }
 
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NpmConfig {
     pub install_node: bool,
     pub install_yarn: bool,
@@ -58,7 +58,7 @@ impl NpmConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NpmInstall(Vec<String>);
 
 impl NpmInstall {
@@ -67,7 +67,7 @@ impl NpmInstall {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct NpmDependencies {
     pub file: PathBuf,
     pub package: bool,
@@ -101,7 +101,7 @@ impl Default for NpmConfig {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct YarnDependencies {
     pub dir: PathBuf,
     pub production: bool,

@@ -42,7 +42,7 @@ const LOCKFILE_RELEVANT_KEYS: &'static [&'static str] = &[
 
 const CONF_D: &'static str = "conf.d";
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ComposerConfig {
     // It is used 'runtime' instead of 'php' in order to support hhvm in the future
     pub install_runtime: bool,
@@ -65,7 +65,7 @@ impl ComposerConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ComposerInstall(Vec<String>);
 
 impl ComposerInstall {
@@ -74,7 +74,7 @@ impl ComposerInstall {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ComposerDependencies {
     pub working_dir: Option<String>,
     pub dev: bool,

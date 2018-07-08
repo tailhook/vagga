@@ -23,7 +23,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use self::build::*;
 
 // Build Steps
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Ubuntu(String);
 
 struct EMDParams {
@@ -38,7 +38,7 @@ impl Ubuntu {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UbuntuRelease {
     pub codename: Option<String>,
     pub version: Option<String>,
@@ -60,7 +60,7 @@ impl UbuntuRelease {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UbuntuUniverse;
 
 impl UbuntuUniverse {
@@ -69,7 +69,7 @@ impl UbuntuUniverse {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UbuntuPPA(String);
 
 impl UbuntuPPA {
@@ -78,7 +78,7 @@ impl UbuntuPPA {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UbuntuRepo {
     pub url: Option<String>,
     pub suite: Option<String>,
@@ -96,7 +96,7 @@ impl UbuntuRepo {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct AptTrust {
     pub server: Option<String>,
     pub keys: Vec<String>,

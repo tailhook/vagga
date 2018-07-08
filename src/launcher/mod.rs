@@ -13,6 +13,7 @@ use config::read_settings::{read_settings, MergedSettings};
 use launcher::environ::set_initial_vaggaenv_vars;
 
 mod list;
+mod integration;
 #[cfg(feature="containers")] mod user;
 #[cfg(feature="containers")] mod pack;
 #[cfg(feature="containers")] mod push;
@@ -299,6 +300,9 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
         "_list" => {
             list::print_list(&context.config, args)
+        }
+        "_dump_config" => {
+            integration::dump_config(&context.config, args)
         }
         #[cfg(feature="containers")]
         "_version_hash" => {

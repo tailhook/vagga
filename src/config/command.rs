@@ -12,7 +12,7 @@ use super::volumes::{Volume, volume_validator};
 #[cfg(feature="containers")]
 use launcher::system::SystemInfo;
 
-#[derive(Deserialize, Clone, PartialEq, Eq, Copy)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Pid1Mode {
     exec = 0,
@@ -20,14 +20,14 @@ pub enum Pid1Mode {
     wait_all_children = 2,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum SuperviseMode {
     wait_all_successful,
     stop_on_failure,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]
 pub enum WriteMode {
     read_only,
@@ -35,14 +35,14 @@ pub enum WriteMode {
     transient_hard_link_copy,
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Network {
     pub ip: String,
     pub hostname: Option<String>,
     pub ports: BTreeMap<u16, u16>,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Run {
     Shell(String),
     Command(Vec<String>),
@@ -51,7 +51,7 @@ pub enum Run {
 #[derive(Debug)]
 struct RunValidator;
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct CommandInfo {
     // Common for toplevel commands
     pub source: Option<Rc<PathBuf>>,
@@ -85,7 +85,7 @@ pub struct CommandInfo {
     pub supplementary_gids: Vec<u32>,
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct CapsuleInfo {
     // Common for toplevel commands
     // TODO(tailhook) remove unuseful fields here
@@ -112,7 +112,7 @@ pub struct CapsuleInfo {
     pub run: Run,
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct SuperviseInfo {
     // Common
     pub source: Option<Rc<PathBuf>>,
@@ -134,7 +134,7 @@ pub struct SuperviseInfo {
     pub children: BTreeMap<String, ChildCommand>,
 }
 
-#[derive(Deserialize, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum MainCommand {
     Command(CommandInfo),
     CapsuleCommand(CapsuleInfo),
@@ -230,7 +230,7 @@ impl MainCommand {
     }
 }
 
-#[derive(Deserialize, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum ChildCommand {
     Command(CommandInfo),
     BridgeCommand(CommandInfo),

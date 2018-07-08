@@ -4,7 +4,7 @@ use libc::uid_t;
 use serde::de::{Deserializer, Deserialize, Error};
 
 
-#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Serialize)]
 pub struct Range {
     start: uid_t,
     end: uid_t,

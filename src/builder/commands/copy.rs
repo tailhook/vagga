@@ -45,7 +45,7 @@ const DEFAULT_IGNORE_RULES: &'static [&'static str] = &[
 ];
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Depends {
     pub path: PathBuf,
     pub ignore_regex: Option<String>,
@@ -116,7 +116,7 @@ impl BuildStep for Depends {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Copy {
     pub source: PathBuf,
     pub path: PathBuf,

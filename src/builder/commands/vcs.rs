@@ -24,7 +24,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use process_util::run_success;
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Git {
     pub url: String,
     pub revision: Option<String>,
@@ -42,7 +42,7 @@ impl Git {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GitInstall {
     pub url: String,
     pub revision: Option<String>,
@@ -66,7 +66,7 @@ impl GitInstall {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GitDescribe {
     repo: PathBuf,
     pattern: Option<String>,

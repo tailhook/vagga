@@ -8,7 +8,7 @@ use quire::validate as V;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Text(BTreeMap<PathBuf, String>);
 
 impl Text {

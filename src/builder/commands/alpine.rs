@@ -27,10 +27,10 @@ const VERSION_WITH_PHP5: &'static str = "v3.4";
 
 
 // Build Steps
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Alpine(String);
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AlpineRepo {
     url: Option<String>,
     branch: Option<String>,

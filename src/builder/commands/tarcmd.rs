@@ -26,7 +26,7 @@ use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Tar {
     pub url: String,
     pub sha256: Option<String>,
@@ -44,7 +44,7 @@ impl Tar {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TarInstall {
     pub url: String,
     pub sha256: Option<String>,

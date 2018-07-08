@@ -27,7 +27,7 @@ use builder::commands::copy::{DEFAULT_ATIME, DEFAULT_MTIME};
 use builder::commands::copy::{hash_file_content};
 
 // Build Steps
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Container(String);
 
 impl Container {
@@ -36,7 +36,7 @@ impl Container {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Build {
     pub container: String,
     pub source: PathBuf,
@@ -62,21 +62,21 @@ impl Build {
 }
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GitSource {
     pub url: String,
     pub revision: Option<String>,
     pub branch: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Source {
     Git(GitSource),
     Container(String),
     Directory,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SubConfig {
     pub source: Source,
     pub path: PathBuf,

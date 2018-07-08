@@ -16,7 +16,7 @@ use builder::commands::generic::{run_command_at_env, capture_command};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PipConfig {
     pub find_links: Vec<String>,
     pub index_urls: Vec<String>,
@@ -42,7 +42,7 @@ impl PipConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Py2Install(Vec<String>);
 
 impl Py2Install {
@@ -51,7 +51,7 @@ impl Py2Install {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Py2Requirements(PathBuf);
 
 impl Py2Requirements {
@@ -60,7 +60,7 @@ impl Py2Requirements {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Py3Install(Vec<String>);
 
 impl Py3Install {
@@ -69,7 +69,7 @@ impl Py3Install {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Py3Requirements(PathBuf);
 
 impl Py3Requirements {

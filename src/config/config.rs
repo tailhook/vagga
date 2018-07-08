@@ -26,7 +26,7 @@ static LOCAL_MIXINS: &'static[&'static str] = &[
     ".vagga/local.yaml",
 ];
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Config {
     pub minimum_vagga: Option<String>,
     pub mixins: Vec<String>,

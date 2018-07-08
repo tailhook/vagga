@@ -6,7 +6,7 @@ use quire::ast::{Ast, Tag};
 use libc::{uid_t, gid_t};
 
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct SnapshotInfo {
     pub size: usize,
     pub owner_uid: Option<uid_t>,
@@ -14,7 +14,7 @@ pub struct SnapshotInfo {
     pub container: Option<String>,
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct PersistentInfo {
     pub name: String,
     pub owner_uid: uid_t,
@@ -22,7 +22,7 @@ pub struct PersistentInfo {
     pub init_command: Option<String>,
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub enum Volume {
     Tmpfs(TmpfsInfo),
     BindRW(PathBuf),
@@ -35,12 +35,12 @@ pub enum Volume {
     Persistent(PersistentInfo),
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Dir {
     pub mode: u32,
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct TmpfsInfo {
     pub size: usize,
     pub mode: u32,

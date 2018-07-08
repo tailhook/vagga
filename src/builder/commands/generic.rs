@@ -15,7 +15,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use launcher::network::create_isolated_network;
 
 // Build Steps
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Sh(String);
 
 impl Sh {
@@ -24,7 +24,7 @@ impl Sh {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Cmd(Vec<String>);
 
 impl Cmd {
@@ -33,7 +33,7 @@ impl Cmd {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RunAs {
     pub user_id: u32,
     pub group_id: u32,
@@ -57,7 +57,7 @@ impl RunAs {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Env(BTreeMap<String, String>);
 
 impl Env {

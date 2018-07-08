@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::fmt::Debug;
 
-
 // Convenient reexports
 pub use version::{Error as VersionError};
 pub use builder::{StepError, Guard};
@@ -11,8 +10,9 @@ pub use digest::Digest;
 #[derive(Clone, Debug)]
 pub struct Step(pub Rc<BuildStep>);
 
+mopafy!(BuildStep);
 
-pub trait BuildStep: Debug {
+pub trait BuildStep: ::mopa::Any + Debug {
     fn name(&self) -> &'static str;
     #[cfg(feature="containers")]
     fn hash(&self, cfg: &Config, hash: &mut Digest)

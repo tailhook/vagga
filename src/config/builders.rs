@@ -4,6 +4,7 @@ use std::rc::Rc;
 use builder::commands as cmd;
 use quire::validate as V;
 use serde::de::{self, Deserializer, Deserialize};
+use serde::ser::{Serializer, Serialize};
 use serde::de::{VariantAccess, Visitor, EnumAccess};
 
 use build_step::{Step, BuildStep};
@@ -315,5 +316,107 @@ impl<'a> Deserialize<'a> for CommandName {
 impl<'a> Deserialize<'a> for Step {
     fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Step, D::Error> {
         d.deserialize_enum("BuildStep", COMMANDS, StepVisitor)
+    }
+}
+
+impl Serialize for Step {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        if let Some(b) = self.0.downcast_ref::<cmd::alpine::Alpine>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::alpine::AlpineRepo>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::ubuntu::Ubuntu>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::ubuntu::UbuntuRepo>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::ubuntu::UbuntuRelease>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::ubuntu::UbuntuPPA>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::ubuntu::UbuntuUniverse>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::ubuntu::AptTrust>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::packaging::Repo>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::packaging::Install>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::packaging::BuildDeps>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::vcs::Git>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::vcs::GitInstall>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::vcs::GitDescribe>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::pip::PipConfig>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::pip::Py2Install>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::pip::Py2Requirements>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::pip::Py3Install>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::pip::Py3Requirements>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::tarcmd::Tar>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::tarcmd::TarInstall>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::unzip::Unzip>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::generic::Sh>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::generic::Cmd>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::generic::RunAs>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::generic::Env>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::text::Text>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::copy::Copy>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::download::Download>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::dirs::EnsureDir>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::dirs::CacheDirs>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::dirs::EmptyDir>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::dirs::Remove>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::copy::Depends>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::subcontainer::Container>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::subcontainer::Build>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::subcontainer::SubConfig>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::npm::NpmConfig>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::npm::NpmDependencies>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::npm::YarnDependencies>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::npm::NpmInstall>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::gem::GemInstall>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::gem::GemBundle>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::gem::GemConfig>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::composer::ComposerInstall>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::composer::ComposerDependencies>() {
+            b.serialize(s)
+        } else if let Some(b) = self.0.downcast_ref::<cmd::composer::ComposerConfig>() {
+            b.serialize(s)
+        } else {
+            unreachable!("all steps should be serializeable");
+        }
     }
 }

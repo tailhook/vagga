@@ -4,7 +4,7 @@ use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 // Build Steps
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Install(Vec<String>);
 
 impl Install {
@@ -13,7 +13,7 @@ impl Install {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BuildDeps(Vec<String>);
 
 impl BuildDeps {
@@ -22,7 +22,7 @@ impl BuildDeps {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Repo(String);
 
 impl Repo {
