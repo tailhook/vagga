@@ -27,7 +27,6 @@ pub mod commands {
     pub mod subcontainer;
     pub mod copy;
     pub mod text;
-    #[cfg(feature="containers")]
     pub mod dirs;
     #[cfg(feature="containers")]
     pub mod packaging;

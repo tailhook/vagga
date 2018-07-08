@@ -5,8 +5,10 @@ use std::collections::BTreeMap;
 use quire::validate as V;
 
 use std::path::{Path, PathBuf};
+#[cfg(feature="containers")]
 use container::util::{clean_dir};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
 use file_util::Dir;
 
 
@@ -48,6 +50,7 @@ impl CacheDirs {
     }
 }
 
+#[cfg(feature="containers")]
 pub fn remove(path: &PathBuf)
     -> Result<(), StepError>
 {
@@ -72,6 +75,7 @@ pub fn remove(path: &PathBuf)
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn ensure(path: &PathBuf)
     -> Result<(), StepError>
 {
@@ -110,12 +114,14 @@ pub fn ensure(path: &PathBuf)
 
 impl BuildStep for EnsureDir {
     fn name(&self) -> &'static str { "EnsureDir" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("path", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -139,12 +145,14 @@ impl BuildStep for EnsureDir {
 
 impl BuildStep for EmptyDir {
     fn name(&self) -> &'static str { "EmptyDir" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("path", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -159,6 +167,7 @@ impl BuildStep for EmptyDir {
 
 impl BuildStep for CacheDirs {
     fn name(&self) -> &'static str { "CacheDirs" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -168,6 +177,7 @@ impl BuildStep for CacheDirs {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -183,12 +193,14 @@ impl BuildStep for CacheDirs {
 
 impl BuildStep for Remove {
     fn name(&self) -> &'static str { "Remove" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
         hash.field("path", &self.0);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
