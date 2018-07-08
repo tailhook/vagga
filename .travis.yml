@@ -31,7 +31,7 @@ install:
     vagga _build test
   else
     brew install md5sha1sum
-    cargo build --no-default-features --features config_runner
+    VAGGA_VERSION=$(git describe) cargo build --no-default-features --features config_runner
   fi
   set +e
 script:
