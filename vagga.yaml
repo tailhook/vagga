@@ -110,6 +110,18 @@ commands:
     container: rust-musl
     run: [make]
 
+  make-no-containers: !Command
+    description: Build no-containers build of vagga
+    container: rust-musl
+    environ:
+      VAGGA_VERSION: v0.0.0-dev
+    run: |
+      set -ex
+      cargo build --target=x86_64-unknown-linux-musl \
+        --no-default-features --features=config_runner
+      cp --remove-destination target/x86_64-unknown-linux-musl/debug/vagga \
+         ./vagga-no-containers
+
   make-release: !Command
     description: Build vagga with optimizations
     container: rust-musl

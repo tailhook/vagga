@@ -6,7 +6,7 @@ use config::command::{CapsuleInfo};
 use process_util::{run_and_wait, convert_status};
 use super::wrap::Wrapper;
 use super::network;
-use launcher::user::ArgError;
+use launcher::options::ArgError;
 use launcher::Context;
 use launcher::socket;
 use launcher::options::parse_docopts;

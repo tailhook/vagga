@@ -13,28 +13,28 @@ use config::read_settings::{read_settings, MergedSettings};
 use launcher::environ::set_initial_vaggaenv_vars;
 
 mod list;
-mod user;
-mod pack;
-mod push;
-pub mod build;
-mod storage;
-mod underscore;
-mod completion;
-mod commands;
-mod storage_dir;
+#[cfg(feature="containers")] mod user;
+#[cfg(feature="containers")] mod pack;
+#[cfg(feature="containers")] mod push;
+#[cfg(feature="containers")] pub mod build;
+#[cfg(feature="containers")] mod storage;
+#[cfg(feature="containers")] mod underscore;
+#[cfg(feature="containers")] mod completion;
+#[cfg(feature="containers")] mod commands;
+#[cfg(feature="containers")] mod storage_dir;
 
-mod supervisor;
-mod simple;
-mod capsule;
+#[cfg(feature="containers")] mod supervisor;
+#[cfg(feature="containers")] mod simple;
+#[cfg(feature="containers")] mod capsule;
 
-pub mod wrap;
-pub mod system;
-pub mod network;
+#[cfg(feature="containers")] pub mod wrap;
+#[cfg(feature="containers")] pub mod system;
+#[cfg(feature="containers")] pub mod network;
 mod environ;
 mod options;
-mod prerequisites;
-mod socket;
-mod volumes;
+#[cfg(feature="containers")] mod prerequisites;
+#[cfg(feature="containers")] mod socket;
+#[cfg(feature="containers")] mod volumes;
 
 
 pub struct Context {
@@ -173,7 +173,13 @@ pub fn run(input_args: Vec<String>) -> i32 {
             return 126;
         }
     };
-    if !int_settings.run_symlinks_as_commands || export_command.is_none() {
+
+    let no_symlink =
+        !cfg!(feature="containers")
+        || !int_settings.run_symlinks_as_commands
+        || export_command.is_none();
+
+    if no_symlink {
         stdout().write_all(&cli_out).ok();
         stderr().write_all(&cli_err).ok();
         match cli_ok {
@@ -201,7 +207,15 @@ pub fn run(input_args: Vec<String>) -> i32 {
 
     if &cname[..] == "_network" {
         args.insert(0, "vagga _network".to_string());
+
+        #[cfg(feature="containers")]
         return ::network::run(args);
+
+        #[cfg(not(feature="containers"))]
+        {
+            eprintln!("vagga was built without containers support");
+            return 127;
+        }
     }
 
     if owner_check {
@@ -251,15 +265,23 @@ pub fn run(input_args: Vec<String>) -> i32 {
     };
 
     if commands.len() > 0 {
-        let result = user::run_multiple_commands(&context, commands);
-        match result {
-            Ok(rc) => {
-                return rc;
+        #[cfg(feature="containers")]
+        {
+            let result = user::run_multiple_commands(&context, commands);
+            match result {
+                Ok(rc) => {
+                    return rc;
+                }
+                Err(text) =>  {
+                    writeln!(&mut err, "{}", text).ok();
+                    return 121;
+                }
             }
-            Err(text) =>  {
-                writeln!(&mut err, "{}", text).ok();
-                return 121;
-            }
+        }
+        #[cfg(not(feature="containers"))]
+        {
+            eprintln!("vagga was built without containers support");
+            return 127;
         }
     }
 
@@ -267,18 +289,22 @@ pub fn run(input_args: Vec<String>) -> i32 {
         "" => {
             list::print_help(&context.config)
         }
+        #[cfg(feature="containers")]
         "_create_netns" => {
             network::create_netns(&context.config, args)
         }
+        #[cfg(feature="containers")]
         "_destroy_netns" => {
             network::destroy_netns(&context.config, args)
         }
         "_list" => {
             list::print_list(&context.config, args)
         }
+        #[cfg(feature="containers")]
         "_version_hash" => {
             underscore::version_hash(&context, &cname, args)
         }
+        #[cfg(feature="containers")]
         "_build_shell" | "_clean" | "_check_overlayfs_support" |
         "_hardlink" | "_verify" => {
             underscore::passthrough(&context, &cname, args)
@@ -291,38 +317,56 @@ pub fn run(input_args: Vec<String>) -> i32 {
             println!("{}", int_workdir.display());
             Ok(0)
         }
+        #[cfg(feature="containers")]
         "_build" => {
             build::build_command(&context, args)
         }
+        #[cfg(feature="containers")]
         "_run" => {
             underscore::run_command(&context, args)
         }
+        #[cfg(feature="containers")]
         "_run_in_netns" => {
             underscore::run_in_netns(&context, cname, args)
         }
+        #[cfg(feature="containers")]
         "_pack_image" => {
             pack::pack_command(&context, args)
         }
+        #[cfg(feature="containers")]
         "_push_image" => {
             push::push_command(&context, args)
         }
+        #[cfg(feature="containers")]
         "_init_storage_dir" => {
             storage::init_dir(&context.ext_settings, &cfg_dir, args)
         }
+        // TODO(tailhook) allow completion in no-containers mode
+        #[cfg(feature="containers")]
         "_compgen" => {
             completion::generate_completions(&context.config, args)
         }
+        // TODO(tailhook) allow help in no-containers mode
+        #[cfg(feature="containers")]
         "_help" => {
             completion::generate_command_help(&context, args)
         }
+        #[cfg(feature="containers")]
         "_update_symlinks" => {
             commands::update_symlinks(&context, args)
         }
+        #[cfg(feature="containers")]
         "_capsule" => {
             ::capsule::run_command(&context, args)
         }
+        #[cfg(feature="containers")]
         _ => {
             user::run_user_command(&context, cname, args)
+        }
+        #[cfg(not(feature="containers"))]
+        _ => {
+            eprintln!("vagga was built without containers support");
+            return 127;
         }
     };
 

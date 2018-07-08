@@ -5,11 +5,6 @@ use launcher::{supervisor, simple, capsule};
 use launcher::Context;
 
 
-pub enum ArgError {
-    Exit(i32),
-    Error(String),
-}
-
 enum Args<'a> {
     Simple(&'a CommandInfo, simple::Args),
     Capsule(&'a CapsuleInfo, capsule::Args),
@@ -22,18 +17,21 @@ enum Data<'a> {
     Supervise(&'a SuperviseInfo, supervisor::Args, supervisor::Data),
 }
 
+#[cfg(feature="containers")]
 pub fn run_user_command(context: &Context, cmd: String, args: Vec<String>)
     -> Result<i32, String>
 {
     run_commands(context, vec![cmd], args)
 }
 
+#[cfg(feature="containers")]
 pub fn run_multiple_commands(context: &Context, commands: Vec<String>)
     -> Result<i32, String>
 {
     run_commands(context, commands, Vec::new())
 }
 
+#[cfg(feature="containers")]
 fn run_commands(context: &Context, commands: Vec<String>,
     last_command_args: Vec<String>)
     -> Result<i32, String>
@@ -54,7 +52,7 @@ fn run_commands(context: &Context, commands: Vec<String>,
     if context.prerequisites {
         commands = prerequisites::scan(context, commands);
     }
-    use self::ArgError::*;
+    use launcher::options::ArgError::*;
     let mut all_args = Vec::new();
     let last_cmd = commands.len() -1;
     let mut last_cmd_args = Some(last_command_args);

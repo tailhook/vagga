@@ -1,5 +1,6 @@
 use argparse::{ArgumentParser, StoreConst};
 
+#[cfg(feature="containers")]
 use capsule::packages as capsule;
 
 
@@ -19,6 +20,7 @@ impl CompressionType {
         }
     }
 
+    #[cfg(feature="containers")]
     pub fn get_capsule_feature(&self) -> capsule::Feature {
         match *self {
             CompressionType::Gzip => capsule::Gzip,

@@ -8,7 +8,7 @@ use super::build::{build_container};
 use super::wrap::Wrapper;
 use super::network;
 use launcher::volumes::prepare_volumes;
-use launcher::user::ArgError;
+use launcher::options::ArgError;
 use launcher::Context;
 use launcher::socket;
 use launcher::options::parse_docopts;

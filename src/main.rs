@@ -53,13 +53,14 @@ mod config;
 mod path_util;
 #[cfg(feature="containers")] mod process_util;
 #[cfg(feature="containers")] mod tty_util;
-#[cfg(feature="containers")] mod options;
+mod options;
 mod digest;
 mod build_step;
 #[cfg(feature="containers")] mod storage_dir;
 
 // Commands
-#[cfg(feature="containers")] mod launcher;
+#[cfg(any(feature="containers", feature="config_runner"))]
+mod launcher;
 #[cfg(feature="containers")] mod network;
 #[cfg(feature="containers")] mod setup_netns;
 mod version;
@@ -75,7 +76,7 @@ fn init_logging() {
     env_logger::init();
 }
 
-#[cfg(feature="containers")]
+#[cfg(any(feature="containers", feature="config_runner"))]
 fn main() {
     init_logging();
     let mut args = env::args().collect::<Vec<_>>();
@@ -92,19 +93,29 @@ fn main() {
         "".to_string()
     };
     let code = match &ep[..] {
+        #[cfg(feature="containers")]
         "launcher" => launcher::run(args),
+        #[cfg(feature="containers")]
         "network" => network::run(args),
+        #[cfg(feature="containers")]
         "setup_netns" => setup_netns::run(args),
+        #[cfg(feature="containers")]
         "version" => version::run(args),
+        #[cfg(feature="containers")]
         "wrapper" => wrapper::run(args),
+        #[cfg(feature="containers")]
         "build" | "builder" => builder::run(args),
+        #[cfg(feature="containers")]
         "runner" => runner::run(args),
+        #[cfg(any(feature="containers", feature="config_runner"))]
         _ => launcher::run(args),
     };
     exit(code);
 }
 
-#[cfg(not(feature="containers"))]
+#[cfg(not(any(feature="containers", feature="config_runner")))]
 fn main() {
-    unimplemented!();
+    eprintln!("No runner configured. Use one of:");
+    eprintln!("  --features=containers");
+    eprintln!("  --features=config_runner");
 }

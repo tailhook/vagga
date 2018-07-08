@@ -57,6 +57,7 @@ containers = [
     "net2", "git2",
 ]
 docker_runner = []
+config_runner = []
 
 [profile.release]
 debug = true

@@ -25,7 +25,7 @@ use file_util::Dir;
 use process_util::{convert_status, send_signal, send_pg_signal};
 use super::wrap::Wrapper;
 use launcher::volumes::prepare_volumes;
-use launcher::user::ArgError;
+use launcher::options::ArgError;
 use launcher::socket;
 use launcher::Context;
 use launcher::options::parse_docopts;

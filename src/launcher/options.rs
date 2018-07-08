@@ -5,7 +5,10 @@ use std::collections::HashMap;
 
 use docopt::{Docopt, Value, ArgvMap};
 
-use launcher::user::ArgError;
+pub enum ArgError {
+    Exit(i32),
+    Error(String),
+}
 
 struct Escaped<T: AsRef<str>>(T);
 
