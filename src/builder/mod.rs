@@ -22,7 +22,6 @@ pub mod commands {
     pub mod gem;
     pub mod npm;
     pub mod composer;
-    #[cfg(feature="containers")]
     pub mod vcs;
     pub mod download;
     pub mod subcontainer;

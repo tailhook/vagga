@@ -4,16 +4,23 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use std::collections::BTreeMap;
 
+#[cfg(feature="containers")]
 use git2::{self, DescribeOptions, Repository, RepositoryOpenFlags};
-use unshare::{Command, Stdio};
-
 use quire::ast::{Ast, Tag};
 use quire::validate as V;
+#[cfg(feature="containers")]
+use unshare::{Command, Stdio};
+
+#[cfg(feature="containers")]
 use builder::commands::subcontainer::GitSource;
+#[cfg(feature="containers")]
 use capsule::packages as capsule;
-use super::super::context::Context;
-use super::generic::run_command_at;
+#[cfg(feature="containers")]
+use builder::context::Context;
+#[cfg(feature="containers")]
+use builder::commands::generic::run_command_at;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
 use process_util::run_success;
 
 
@@ -88,6 +95,7 @@ impl GitDescribe {
             .parser(git_describe_parser)
     }
 
+    #[cfg(feature="containers")]
     fn describe(&self) -> Result<String, git2::Error> {
         let _repo_path;
         let repo_path = if self.repo.is_relative() {
@@ -107,6 +115,7 @@ impl GitDescribe {
     }
 }
 
+#[cfg(feature="containers")]
 fn git_cache(url: &String) -> Result<PathBuf, String> {
     let dirname = url.replace("%", "%25").replace("/", "%2F");
     let cache_path = Path::new("/vagga/cache/git").join(&dirname);
@@ -130,6 +139,7 @@ fn git_cache(url: &String) -> Result<PathBuf, String> {
     Ok(cache_path)
 }
 
+#[cfg(feature="containers")]
 fn git_checkout(cache_path: &Path, dest: &Path,
     revision: &Option<String>, branch: &Option<String>)
     -> Result<(), String>
@@ -149,7 +159,7 @@ fn git_checkout(cache_path: &Path, dest: &Path,
     Ok(())
 }
 
-
+#[cfg(feature="containers")]
 pub fn git_command(ctx: &mut Context, git: &Git) -> Result<(), String>
 {
     capsule::ensure(&mut ctx.capsule, &[capsule::Git])?;
@@ -162,6 +172,7 @@ pub fn git_command(ctx: &mut Context, git: &Git) -> Result<(), String>
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn git_install(ctx: &mut Context, git: &GitInstall)
     -> Result<(), String>
 {
@@ -182,6 +193,7 @@ pub fn git_install(ctx: &mut Context, git: &GitInstall)
         &workdir);
 }
 
+#[cfg(feature="containers")]
 #[allow(unused)]
 pub fn fetch_git_source(capsule: &mut capsule::State, git: &GitSource)
     -> Result<(), String>
@@ -198,6 +210,7 @@ pub fn fetch_git_source(capsule: &mut capsule::State, git: &GitSource)
 
 impl BuildStep for Git {
     fn name(&self) -> &'static str { "Git" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -207,6 +220,7 @@ impl BuildStep for Git {
         hash.field("path", &self.path);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -222,6 +236,7 @@ impl BuildStep for Git {
 
 impl BuildStep for GitInstall {
     fn name(&self) -> &'static str { "GitInstall" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -232,6 +247,7 @@ impl BuildStep for GitInstall {
         hash.field("script", &self.script);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -247,6 +263,7 @@ impl BuildStep for GitInstall {
 
 impl BuildStep for GitDescribe {
     fn name(&self) -> &'static str { "GitDescribe" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -255,6 +272,7 @@ impl BuildStep for GitDescribe {
         hash.field("describe", &self.describe()?);
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, _guard: &mut Guard, build: bool) -> Result<(), StepError> {
         if build {
             if let Some(ref output_file) = self.output_file {
