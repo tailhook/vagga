@@ -7,10 +7,14 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use libc::{uid_t, gid_t};
 use quire::ast::{Ast, Tag};
 use quire::validate as V;
-use path_filter::{PathFilter, FilterError};
 
+#[cfg(feature="containers")]
+use path_filter::{PathFilter, FilterError};
+#[cfg(feature="containers")]
 use container::root::temporary_change_root;
+#[cfg(feature="containers")]
 use file_util::ShallowCopy;
+#[cfg(feature="containers")]
 use path_util::IterSelfAndParents;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use quick_error::ResultExt;
@@ -76,6 +80,7 @@ impl Depends {
 
 impl BuildStep for Depends {
     fn name(&self) -> &'static str { "Depends" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -97,6 +102,7 @@ impl BuildStep for Depends {
         })?;
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, _guard: &mut Guard, _build: bool)
         -> Result<(), StepError>
     {
@@ -168,6 +174,7 @@ impl Copy {
 
 impl BuildStep for Copy {
     fn name(&self) -> &'static str { "Copy" }
+    #[cfg(feature="containers")]
     fn hash(&self, _cfg: &Config, hash: &mut Digest)
         -> Result<(), VersionError>
     {
@@ -205,6 +212,7 @@ impl BuildStep for Copy {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn build(&self, _guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
@@ -280,6 +288,7 @@ impl BuildStep for Copy {
     }
 }
 
+#[cfg(feature="containers")]
 pub fn hash_path<F>(hash: &mut Digest, path: &Path,
     filter: &PathFilter, hash_file: F)
     -> Result<(), VersionError>
@@ -309,6 +318,7 @@ pub fn hash_path<F>(hash: &mut Digest, path: &Path,
     Ok(())
 }
 
+#[cfg(feature="containers")]
 fn get_sorted_rel_paths(path: &Path, filter: &PathFilter)
     -> Result<BTreeSet<PathBuf>, Vec<FilterError>>
 {
@@ -327,6 +337,7 @@ fn get_sorted_rel_paths(path: &Path, filter: &PathFilter)
     })
 }
 
+#[cfg(feature="containers")]
 pub fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     -> Result<(), io::Error>
 {
@@ -340,6 +351,7 @@ pub fn hash_file_content(hash: &mut Digest, path: &Path, stat: &Metadata)
     Ok(())
 }
 
+#[cfg(feature="containers")]
 pub fn create_path_filter(rules: &Vec<String>, no_default_rules: Option<bool>,
     ignore_regex: &Option<String>, include_regex: &Option<String>,
     warn_on_missing_include_rules: bool)
