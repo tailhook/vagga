@@ -35,24 +35,42 @@ use options::version_hash::Options;
 struct ContainerInfo<'a> {
     pub name: &'a str,
     pub container: &'a Container,
-    pub tmp_root_dir: PathBuf,
     pub force: bool,
     pub no_image: bool,
+    pub versioned_build_dir: bool,
+}
+struct BuildInfo<'a> {
+    pub name: &'a str,
+    pub container: &'a Container,
+    pub force: bool,
+    pub no_image: bool,
+    pub tmp_root_dir: PathBuf,
 }
 
 impl<'a> ContainerInfo<'a> {
     pub fn new(name: &'a str, container: &'a Container,
-        force: bool, no_image: bool)
+        force: bool, no_image: bool, versioned_build_dir: bool)
         -> ContainerInfo<'a>
     {
-        let tmp_root_dir = PathBuf::from(
-            &format!("/vagga/base/.roots/.tmp.{}", name));
-        ContainerInfo {
-            name: name,
-            container: container,
-            tmp_root_dir: tmp_root_dir,
-            force: force,
-            no_image: no_image,
+        ContainerInfo { name, container, force, no_image, versioned_build_dir }
+    }
+    pub fn with_version(&self, version: &Option<String>) -> BuildInfo {
+        let ContainerInfo {
+            name, container, force, no_image,
+            versioned_build_dir,
+        } = self;
+        let tmp_root_dir = match (version, versioned_build_dir) {
+            (Some(ver), true) => {
+                PathBuf::from(&format!("/vagga/base/.roots/.tmp.{}.{}",
+                                       name, &ver[..8]))
+            }
+            _ => {
+                PathBuf::from(&format!("/vagga/base/.roots/.tmp.{}", name))
+            }
+        };
+        BuildInfo {
+            name, container, tmp_root_dir,
+            force: *force, no_image: *no_image,
         }
     }
 }
@@ -179,7 +197,7 @@ fn _get_version_hash(options: &Options, wrapper: &Wrapper)
 fn build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     -> Result<String, String>
 {
-    let dir_name = _build_container(&cont_info, wrapper)?;
+    let dir_name = _build_container(cont_info, wrapper)?;
     let destlink = Path::new("/work/.vagga").join(cont_info.name);
     let tmplink = destlink.with_extension("tmp");
     match remove_file(&tmplink) {
@@ -300,8 +318,12 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     }
     debug!("Container version: {:?}", ver);
 
+    let cont_info = cont_info.with_version(&ver);
     let lock_name = cont_info.tmp_root_dir.with_file_name(
-        format!(".tmp.{}.lock", cont_info.name));
+        format!("{}.lock",
+            cont_info.tmp_root_dir.file_name()
+                .and_then(|f| f.to_str())
+                .expect("tmp_root_dir has a valid file name")));
     let mut _lock_guard = if wrapper.settings.build_lock_wait {
         Lock::exclusive_wait(&lock_name,
             "Other process is doing a build. Waiting...")
@@ -326,7 +348,7 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
 
     let build_start = Instant::now();
 
-    match maybe_build_from_image(cont_info, &ver, wrapper) {
+    match maybe_build_from_image(&cont_info, &ver, wrapper) {
         Ok(true) => {}
         Ok(false) => {
             let mut cmd = Command::new("/vagga/bin/vagga");
@@ -393,7 +415,7 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
         wrapper.settings.hard_link_identical_files
     {
         find_and_hardlink_identical_files(
-            &wrapper, cont_info, &roots_dir, &finalpath)?;
+            &wrapper, &cont_info, &roots_dir, &finalpath)?;
     }
 
     debug!("Committing {:?} -> {:?}", cont_info.tmp_root_dir, &finalpath);
@@ -409,7 +431,7 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     return Ok(dir_name);
 }
 
-fn maybe_build_from_image(cont_info: &ContainerInfo, version: &Option<String>,
+fn maybe_build_from_image(cont_info: &BuildInfo, version: &Option<String>,
     wrapper: &Wrapper)
     -> Result<bool, String>
 {
@@ -538,7 +560,8 @@ pub fn build_wrapper(name: &str, force: bool, no_image: bool, wrapper: &Wrapper)
         }
     }
 
-    let cont_info = ContainerInfo::new(name, container, force, no_image);
+    let cont_info = ContainerInfo::new(name, container, force, no_image,
+        wrapper.settings.versioned_build_dir);
     return build_container(&cont_info, wrapper)
 }
 
@@ -566,7 +589,7 @@ pub fn print_version_hash_cmd(wrapper: &Wrapper, cmdline: Vec<String>)
 }
 
 fn find_and_hardlink_identical_files(wrapper: &Wrapper,
-    cont_info: &ContainerInfo, roots_dir: &Path, finalpath: &Path)
+    cont_info: &BuildInfo, roots_dir: &Path, finalpath: &Path)
     -> Result<(), String>
 {
     let (tmp_root_dir, project_name, _cont_dirs) =

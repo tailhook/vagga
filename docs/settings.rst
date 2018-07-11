@@ -287,4 +287,20 @@ not to do so.
    Disables ``auto-clean`` option in all containers. This is useful on CI
    systems where multiple parallel builds should work.
 
+.. opt:: versioned-build-dir
+
+   (default ``false``) When building container, say ``mycontainer`` by default
+   we use ``.tmp.mycontainer`` dir for building. This settings enables naming
+   dir ``.tmp.mycontainer.1a2b3c4`` where ``1a2b3c4`` is a container version
+   being built.
+
+   Note: for some containers where we can't determine version before building
+   a container this setting does nothing.
+
+   It's useful to turn this setting on on CI systems with configured
+   ``storage_dir``, when multiple versions of a single container could be
+   being built simultaneously. It makes little sense to enable it on
+   a workstation.
+
+
 
