@@ -319,14 +319,15 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
     debug!("Container version: {:?}", ver);
 
     let cont_info = cont_info.with_version(&ver);
+    let build_dir_name = cont_info.tmp_root_dir.file_name()
+        .and_then(|f| f.to_str())
+        .expect("tmp_root_dir has a valid file name");
     let lock_name = cont_info.tmp_root_dir.with_file_name(
-        format!("{}.lock",
-            cont_info.tmp_root_dir.file_name()
-                .and_then(|f| f.to_str())
-                .expect("tmp_root_dir has a valid file name")));
+        format!("{}.lock", build_dir_name));
     let mut _lock_guard = if wrapper.settings.build_lock_wait {
         Lock::exclusive_wait(&lock_name,
-            "Other process is doing a build. Waiting...")
+            &format!("Other process is doing a build ({}). Waiting...",
+                    build_dir_name))
         .map_err(|e| format!("Can't lock container build ({}). \
                               Aborting...", e))?
 
