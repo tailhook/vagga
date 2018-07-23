@@ -247,7 +247,7 @@ impl Distribution for Distro {
                 unsupp.push(*i);
                 continue;
             }
-            if let Some(lst) = self.system_deps(*i) {
+            if let Some(lst) = self.system_deps(*i, ctx) {
                 for i in lst.into_iter() {
                     let istr = i.to_string();
                     ctx.build_deps.remove(&istr);
@@ -503,7 +503,9 @@ impl Distro {
     }
 
     #[cfg(feature="containers")]
-    fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
+    fn system_deps(&mut self, pkg: packages::Package, ctx: &mut Context)
+        -> Option<Vec<&'static str>>
+    {
         match pkg {
             packages::BuildEssential => Some(vec!()),
             packages::Https => Some(vec!()),
@@ -516,7 +518,14 @@ impl Distro {
             packages::PipPy3 => None,
             // Node.js
             packages::NodeJs if self.needs_node_legacy() => {
-                Some(vec!("nodejs", "nodejs-legacy"))
+                match self.get_codename(ctx).expect("codename is set") {
+                    | "precise"
+                    | "trusty"
+                    | "xenial"
+                    => Some(vec!["nodejs", "nodejs-legacy"]),
+                    // all newer releases
+                    _ => Some(vec!["nodejs", "npm"]),
+                }
             }
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),

@@ -4,14 +4,14 @@ containers:
     setup:
     - !NpmInstall [resolve-cli]
 
-  pkg-ubuntu:
+  pkg-xenial:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu xenial
     - !NpmInstall [resolve-cli]
 
-  pkg-precise:
+  pkg-bionic:
     setup:
-    - !UbuntuRelease { version: 12.04.5 }
+    - !Ubuntu bionic
     - !NpmInstall [resolve-cli]
 
   pkg-alpine:

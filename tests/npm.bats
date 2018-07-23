@@ -11,22 +11,24 @@ setup() {
     [[ $link = ".roots/pkg.e76ae0ec/root" ]]
 }
 
-@test "npm: ubuntu pkg" {
-    run vagga _run pkg-ubuntu resolve .
+@test "npm: bionic pkg" {
+    run vagga _run pkg-bionic resolve .
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
-    link=$(readlink .vagga/pkg-ubuntu)
-    [[ $link = ".roots/pkg-ubuntu.daaf621e/root" ]]
+    link=$(readlink .vagga/pkg-bionic)
+    printf "Link:  %s" "$link"
+    [[ $link = ".roots/pkg-bionic.75d76405/root" ]]
 }
 
-@test "npm: precise pkg" {
-    run vagga _run pkg-precise resolve .
+@test "npm: xenial pkg" {
+    run vagga _run pkg-xenial resolve .
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
-    link=$(readlink .vagga/pkg-precise)
-    [[ $link = ".roots/pkg-precise.431bfbb9/root" ]]
+    link=$(readlink .vagga/pkg-xenial)
+    printf "Link:  %s" "$link"
+    [[ $link = ".roots/pkg-xenial.f8666b62/root" ]]
 }
 
 @test "npm: alpine pkg" {
