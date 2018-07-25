@@ -732,6 +732,10 @@ impl BuildStep for UbuntuPPA {
         if build {
             let ref mut ctx = guard.ctx;
             guard.distro.specific(|u: &mut Distro| {
+                // Need to install eatmydata before installing https
+                // transport because latter takes ~ 100 seconds without
+                // libeatmydata
+                u.ensure_eat_my_data(ctx)?;
                 u.add_ubuntu_ppa(ctx, &self.0)
             })?;
         }
