@@ -214,10 +214,7 @@ impl Distribution for Distro {
             }
             self.ensure_eat_my_data(ctx)?;
             // may be already updated by eatmydata
-            if self.apt_update {
-                self.apt_update = false;
-                apt_get_update::<&str>(ctx, &[])?;
-            }
+            apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
         }
         apt_get_install(ctx, &pkgs[..], &self.eatmydata)?;
         Ok(())
@@ -403,13 +400,13 @@ impl Distro {
             "--no-list-cleanup",
             "-o", "Dir::Etc::sourcelist=sources.list",
             "-o", "Dir::Etc::sourceparts=-"
-            ])?;
+            ], &mut true)?;
         if self.has_universe {
             apt_get_update(ctx, &[
                 "--no-list-cleanup",
                 "-o", "Dir::Etc::sourcelist=sources.list.d/universe.list",
                 "-o", "Dir::Etc::sourceparts=-"
-                ])?;
+                ], &mut true)?;
         }
         apt_get_install(ctx, &apt_deps[..], &self.eatmydata)
     }
@@ -645,14 +642,42 @@ impl Distro {
                     self.enable_universe()?;
                     self.add_universe(ctx)?;
                 }
-                self.apt_update = false;
-                apt_get_update::<&str>(ctx, &[])?;
+                apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
                 apt_get_install(ctx, &[params.package], &EatMyData::No)?;
                 self.eatmydata = EatMyData::Preload(params.preload);
             } else {
                 info!("Unsupported distribution for eatmydata. Ignoring");
                 self.eatmydata = EatMyData::No;
             }
+        }
+        Ok(())
+    }
+    fn ensure_locales(&mut self, ctx: &mut Context)
+        -> Result<(), StepError>
+    {
+        if self.eatmydata == EatMyData::Need {
+            self.ensure_codename(ctx)?;
+            let eatmy = EMDParams::find(
+                self.codename.as_ref().unwrap(), &self.config.arch);
+            if let Some(ref params) = eatmy {
+                if params.needs_universe {
+                    debug!("Add Universe for eat my data");
+                    self.enable_universe()?;
+                    self.add_universe(ctx)?;
+                }
+                apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
+                apt_get_install(ctx, &[params.package, "locales"],
+                                &EatMyData::No)?;
+                self.eatmydata = EatMyData::Preload(params.preload);
+            } else {
+                info!("Unsupported distribution for eatmydata. Ignoring");
+                self.eatmydata = EatMyData::No;
+                apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
+                apt_get_install(ctx, &["locales"], &self.eatmydata)?;
+            }
+        } else {
+            apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
+            apt_get_install(ctx, &["locales"], &self.eatmydata)?;
         }
         Ok(())
     }
@@ -1000,8 +1025,7 @@ mod build {
         set_sources_list(ctx, distro)?;
 
         if find_cmd(ctx, "locale-gen").is_err() {
-            apt_get_update::<&str>(ctx, &[])?;
-            apt_get_install(ctx, &["locales"], &distro.eatmydata)?;
+            distro.ensure_locales(ctx)?;
         }
 
         let mut cmd = command(ctx, "locale-gen")?;
@@ -1057,9 +1081,14 @@ mod build {
         Ok(())
     }
 
-    pub fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T])
+    pub fn apt_get_update<T: AsRef<OsStr>>(ctx: &mut Context, options: &[T],
+        needed: &mut bool)
         -> Result<(), StepError>
     {
+        if !*needed {
+            return Ok(());
+        }
+        *needed = false;
         let mut cmd = command(ctx, "apt-get")?;
         cmd.arg("-oDir::cache::pkgcache=");
         cmd.arg("-oDir::cache::srcpkgcache=");
