@@ -9,8 +9,8 @@ use std::rc::Rc;
 
 use globset::{Error as GlobError, GlobBuilder, GlobSet, GlobSetBuilder};
 use regex::{Error as RegexError, Regex};
-use walkdir::{DirEntry, Error as WalkDirError, Iter as WalkDirIter, WalkDir,
-    WalkDirIterator};
+use walkdir::{DirEntry, Error as WalkDirError, IntoIter as WalkDirIter};
+use walkdir::{WalkDir};
 
 quick_error! {
     #[derive(Debug)]
