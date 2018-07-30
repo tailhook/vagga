@@ -10,7 +10,7 @@ Vagga 0.8.1
 
 * ``vagga --version`` no works without ``vagga.yaml``
 * Add ``rules`` param to ``!Build`` similar to ``!Copy``
-* Add ``propagate-env-vars`` setting
+* Add ``propagate-environ`` setting
 * Add ``group`` option for commands
 * Add ``aliases`` option for commands
 * Add ``default-shell`` container option
