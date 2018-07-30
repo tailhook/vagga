@@ -2,10 +2,42 @@
 Release Notes
 =============
 
-Vagga 0.8.0
+
+Vagga 0.8.1
 ===========
 
 :Release Date: future
+
+* ``vagga --version`` no works without ``vagga.yaml``
+* Add ``rules`` param to ``!Build`` similar to ``!Copy``
+* Add ``propagate-env-vars`` setting
+* Add ``group`` option for commands
+* Add ``aliases`` option for commands
+* Add ``default-shell`` container option
+* ``!AptTrust`` uses TLS for downloading keys by default
+* Add ``content-hash`` option for ``!Build``
+* Add ``vagga --containers-only`` which is useful to prepare all the containers
+  needed to run some command
+* Add ``vagga.local.yaml`` and similar implicit mixins used for overriding
+  things locally
+* Add ``pattern`` parameter to ``!GitDescribe`` command
+* Add ``isolate-network`` parameter for ``!Command`` and ``!CapsuleCommand``
+* Add ``vagga _hardlink`` and ``vagga _verify`` commands and
+  ``hard-link-between-project`` setting
+* Add ``vagga _capsule download`` and ``vagga _capsule script`` subcommands
+  to make writing capsule commands easier
+* Add ``ubuntu-skip-locking`` setting
+* Add ``versioned-build-dir`` setting
+* Bugfix: long symbolic links were truncated when unpacking tar
+* Bugfix: AptTrust was broken on ubuntu bionic
+* Note: Ubuntu precise is no longer supported, as well as old non-LTS releases,
+  they may work, but some features may work suboptimal or even incorrectly
+
+
+Vagga 0.8.0
+===========
+
+:Release Date: 22.09.2017
 
 * **[breaking]** ``!Copy`` now resets file modification time to unixtime ``1``,
   this improves reproducibility of containers
