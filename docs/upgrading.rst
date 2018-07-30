@@ -3,6 +3,13 @@ Upgrading
 =========
 
 
+Upgrading 0.8.0 -> 0.8.1
+========================
+
+Should be backwards compatible, but note that ubuntu precise is no
+longer supported, use on your own risk.
+
+
 Upgrading 0.7.x -> 0.8.0
 ========================
 
