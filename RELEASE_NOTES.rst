@@ -8,7 +8,7 @@ Vagga 0.8.1
 
 :Release Date: future
 
-* ``vagga --version`` no works without ``vagga.yaml``
+* ``vagga --version`` now works without ``vagga.yaml``
 * Add ``rules`` param to ``!Build`` similar to ``!Copy``
 * Add ``propagate-environ`` setting
 * Add ``group`` option for commands
