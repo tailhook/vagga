@@ -652,6 +652,7 @@ impl Distro {
         }
         Ok(())
     }
+    #[cfg(feature="containers")]
     fn ensure_locales(&mut self, ctx: &mut Context)
         -> Result<(), StepError>
     {
