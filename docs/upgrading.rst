@@ -6,8 +6,12 @@ Upgrading
 Upgrading 0.8.0 -> 0.8.1
 ========================
 
-Should be backwards compatible, but note that ubuntu precise is no
-longer supported, use on your own risk.
+Patterns in ``rules`` of ``!Copy`` and ``!Depends`` previously allowed
+backslash to escape first ``!`` character (meaning negative rule). Now
+it can also be used to escape ``*``, ``?`` and ``\`` character itself.
+
+Also note that ubuntu precise is no longer supported as well as unsupported
+non-LTS releases, use on your own risk.
 
 
 Upgrading 0.7.x -> 0.8.0

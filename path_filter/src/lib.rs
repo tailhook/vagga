@@ -112,6 +112,7 @@ impl PathFilter {
         for rule in ruleset.iter() {
             globset.add(GlobBuilder::new(&rule.glob)
                         .literal_separator(rule.literal_sep)
+                        .backslash_escape(true)
                         .build()?);
         }
 
@@ -220,7 +221,8 @@ fn prepare_rule(rule: &str, cooked_rules: &mut Vec<Rc<Rule>>,
     } else {
         false
     };
-    if rule.starts_with('\\') {
+    if rule.starts_with('\\') && rule[1..].starts_with('!') {
+        // only escape '!' here, other escapes go to the glob pattern
         rule = &rule[1..];
     }
     let has_slash = rule.find('/').is_some();
@@ -561,12 +563,19 @@ mod test {
         assert!(f.matched("dir", false).is_none());
         assert!(f.matched("dir", true).is_none());
 
-        let f = PathFilter::glob(&vec!("\\\\dir/")).unwrap();
-        assert!(f.matched("\\dir", false).is_none());
-        assert!(f.matched("\\dir", true).is_include());
-        assert!(f.matched("\\dir/test.rs", false).is_include());
-        assert!(f.matched("dir", false).is_none());
+        let f = PathFilter::glob(&vec!(r"\\dir/")).unwrap();
+        assert!(f.matched(r"\dir", false).is_none());
+        assert!(f.matched(r"\dir", true).is_include());
+        assert!(f.matched(r"\dir/test.rs", false).is_include());
+        assert!(f.matched("di", false).is_none());
         assert!(f.matched("dir", true).is_none());
+
+        let f = PathFilter::glob(&vec!(r"dir\*/")).unwrap();
+        assert!(f.matched(r"dirx", true).is_none());
+        assert!(f.matched(r"dir*", true).is_include());
+        assert!(f.matched(r"dir*/test.rs", false).is_include());
+        assert!(f.matched("di", false).is_none());
+        assert!(f.matched("dir*x", false).is_none());
     }
 
     #[test]
