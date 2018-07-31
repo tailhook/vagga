@@ -6,7 +6,7 @@ Release Notes
 Vagga 0.8.1
 ===========
 
-:Release Date: future
+:Release Date: 31.07.2018
 
 * ``vagga --version`` now works without ``vagga.yaml``
 * Add ``rules`` param to ``!Build`` similar to ``!Copy``

@@ -909,7 +909,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "vagga"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "anymap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
