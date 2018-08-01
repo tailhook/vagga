@@ -211,6 +211,25 @@ vagga _update_symlinks
 
   .. versionadded:: 0.7.1
 
+vagga _verify <container-name>
+  Checks checksums of the container files against an index. This is only
+  useful if ``index-all-images`` is set to true.
+
+  It's useful to find out if some container was modified by a mistake
+  (container contents are not protected in the host system).
+
+  .. versionadded:: 0.8.1
+
+vagga _hardlink [--global]
+  Scans all containers for identical files (using some heuristics) and
+  hardlink matching files. See :opt:`hard-link-identical-files`
+  for precautions.
+
+  The ``--global`` flag allows to scan all projects. This works only if
+  ``storage-dir`` is set.
+
+  .. versionadded:: 0.8.1
+
 
 Normal Commands
 ===============
