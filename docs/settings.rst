@@ -279,8 +279,25 @@ not to do so.
        edit files in multiple containers at the same time (this is similar
        to ``transient-hard-link-copy`` in a some way)
 
-
     .. versionadded:: 0.7.2
+
+    .. versionadded:: 0.8.1
+
+       You can now use ``vagga _verify <container>`` to check that contents
+       of the container match checksums in the index and are not mistakenly
+       modified.
+
+.. opt:: hard-link-between-projects
+
+   Similar to :opt:`hard-link-identical-files` but also makes hardlinks
+   to containers of different projects. Similar precautions apply.
+
+   This option works only if ``storage-dir`` is specified.
+
+   This option optimizes disk space right after container is built.
+   Use ``vagga _hardlink --global`` to optimize older containers.
+
+   .. versionadded:: 0.8.1
 
 .. opt:: disable-auto-clean
 
