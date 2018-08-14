@@ -69,7 +69,7 @@ containers:
       suite: vagga
       components: [main]
       trusted: true
-    - !Install [vagga=0.8.0-1]
+    - !Install [vagga=0.8.1-1]
 
   ubuntu-repo-https:
     setup:
