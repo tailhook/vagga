@@ -283,6 +283,9 @@ impl Distribution for Distro {
         build::eat_my_data(&mut cmd, ctx, &self.eatmydata);
         cmd.arg("-oDir::cache::pkgcache=");
         cmd.arg("-oDir::cache::srcpkgcache=");
+        if ctx.settings.ubuntu_skip_locking {
+            cmd.arg("-oDebug::NoLocking=yes");
+        }
         cmd.arg("autoremove").arg("-y");
 
         {
