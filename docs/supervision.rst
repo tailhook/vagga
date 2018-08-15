@@ -17,7 +17,7 @@ run in different namespaces, so they don't share ``/tmp``, ``/proc`` and so on.
 Supervision Modes
 =================
 
-There are three basic modes of operation:
+There are two basic modes of operation:
 
 * ``stop-on-failure`` -- stops all processes as soon as any single one is dead
   (default)
