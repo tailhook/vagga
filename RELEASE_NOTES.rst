@@ -3,6 +3,15 @@ Release Notes
 =============
 
 
+Vagga 0.8.2
+===========
+
+:Release Date: future
+
+* Vagga now resets O_NONBLOCK flag on stdout after each command during build
+  (because some programs, e.g. nodejs fail to do that)
+
+
 Vagga 0.8.1
 ===========
 

@@ -1,9 +1,12 @@
 use std::env;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::collections::BTreeMap;
+#[cfg(feature="containers")] use std::os::unix::io::RawFd;
 
-#[cfg(feature="containers")]
-use unshare::{Command, Namespace};
+#[cfg(feature="containers")] use unshare::{Command, Namespace};
+#[cfg(feature="containers")] use libc;
+#[cfg(feature="containers")] use nix;
 use quire::validate as V;
 
 #[cfg(feature="containers")]
@@ -193,15 +196,42 @@ pub fn command<P:AsRef<Path>>(ctx: &Context, cmdname: P)
     Ok(cmd)
 }
 
+fn check_blocking(fd: RawFd) {
+    unsafe {
+        loop {
+            let fl = match libc::fcntl(fd, libc::F_GETFL) {
+                -1 if nix::errno::errno() == libc::EINTR => continue,
+                -1 => {
+                    error!("Error getting file flags of {}: {}", fd,
+                        io::Error::last_os_error());
+                    return;
+                }
+                fl => fl,
+            };
+            if fl & libc::O_NONBLOCK != 0 {
+                if libc::fcntl(fd, libc::F_SETFL, fl & !libc::O_NONBLOCK) == -1
+                {
+                    error!("Error setting file flags of {}: {}", fd,
+                        io::Error::last_os_error());
+                }
+            }
+            break;
+        }
+    }
+}
+
 #[cfg(feature="containers")]
 pub fn run(mut cmd: Command) -> Result<(), StepError> {
     debug!("Running {}", cmd_show(&cmd));
 
-    match cmd.status() {
+    let result = match cmd.status() {
         Ok(ref s) if s.success() => Ok(()),
         Ok(s) => Err(StepError::CommandFailed(Box::new(cmd), s)),
         Err(e) => Err(StepError::CommandError(Box::new(cmd), e)),
-    }
+    };
+    check_blocking(1);
+    check_blocking(2);
+    return result;
 }
 
 impl BuildStep for Sh {
