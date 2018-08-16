@@ -356,8 +356,7 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
             cmd.arg("__builder__");
             cmd.gid(0);
             cmd.groups(Vec::new());
-            cmd.unshare(
-                [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+            cmd.unshare(&[Namespace::Mount, Namespace::Ipc, Namespace::Pid]);
             cmd.arg(cont_info.name);
             if let Some(ref ver) = ver {
                 cmd.arg("--container-version");

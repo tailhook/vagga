@@ -150,7 +150,7 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
 
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg("__setup_netns__");
-    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.unshare(&[Namespace::Net]);
     set_uidmap(&mut cmd, &get_max_uidmap().unwrap(), true);
     cmd.env_clear();
     // we never need proxy env vars here
@@ -533,7 +533,7 @@ pub fn setup_bridge(link_to: &Path, port_forwards: &Vec<(u16, String, u16)>)
         "--gateway-ip", &eip[..],
         "--port-forwards", &serde_json::to_string(port_forwards).unwrap()[..],
         ]);
-    cmd.unshare([Namespace::Net].iter().cloned());
+    cmd.unshare(&[Namespace::Net]);
     cmd.env_clear();
     // we never need proxy env vars here
     cmd.env("TERM".to_string(),
@@ -620,7 +620,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
                         "--ip", &ip[..],
                         "--hostname", hostname,
                         "--gateway-ip", "172.23.0.254"]);
-    cmd.unshare([Namespace::Net, Namespace::Uts].iter().cloned());
+    cmd.unshare(&[Namespace::Net, Namespace::Uts]);
     // we never need proxy env vars here
     cmd.env("TERM".to_string(),
             env::var_os("TERM").unwrap_or(From::from("dumb")));
@@ -678,7 +678,7 @@ pub fn create_isolated_network() -> Result<IsolatedNetwork, String> {
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg("__setup_netns__");
     cmd.arg("isolated");
-    cmd.unshare([Namespace::User, Namespace::Net].iter().cloned());
+    cmd.unshare(&[Namespace::User, Namespace::Net]);
     let uid_map = get_max_uidmap()?;
     set_uidmap(&mut cmd, &uid_map, true);
     cmd.env_clear();

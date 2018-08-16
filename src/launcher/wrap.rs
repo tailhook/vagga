@@ -68,8 +68,7 @@ impl Wrapper for Command {
             }
         }
 
-        cmd.unshare(
-            [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+        cmd.unshare(&[Namespace::Mount, Namespace::Ipc, Namespace::Pid]);
         cmd
     }
     fn workdir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Self {

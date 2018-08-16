@@ -61,8 +61,7 @@ pub fn get_version(context: &Context, name: &str) -> Result<String, String> {
             cmd.env("_VAGGA_STORAGE_SUBDIR", "");
         }
     }
-    cmd.unshare(
-        [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+    cmd.unshare(&[Namespace::Mount, Namespace::Ipc, Namespace::Pid]);
     cmd.map_users_for(context.config.get_container(name)?, &context.settings)?;
 
     capture_fd3(cmd)
@@ -105,8 +104,7 @@ fn build_internal(context: &Context, name: &str, args: &[String],
             cmd.env("_VAGGA_STORAGE_SUBDIR", "");
         }
     }
-    cmd.unshare(
-        [Namespace::Mount, Namespace::Ipc, Namespace::Pid].iter().cloned());
+    cmd.unshare(&[Namespace::Mount, Namespace::Ipc, Namespace::Pid]);
     if capsule {
         // TODO(tailhook) check that uid map matches
         cmd.env("_VAGGA_IN_CAPSULE", "1");
