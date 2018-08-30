@@ -1340,12 +1340,12 @@ Node.JS Commands
         (default is latest) The yarn verison to install for the ``!Yarn*``
         commands. Only useful if ``install-yarn`` is enabled.
 
-        Example::
+        Example:
 
         .. code-block:: yaml
 
-            - !NpmInstall
-              yarn-version: 1.0.1
+           - !NpmConfig
+             yarn-version: 1.0.1
 
         .. versionadded:: v0.8.0
 
