@@ -148,6 +148,30 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
         return Err("Namespaces already created".to_string());
     }
 
+    let mut commands = vec!();
+
+    let mut nforward = String::with_capacity(100);
+    File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
+        .and_then(|mut f| f.read_to_string(&mut nforward))
+        .map_err(|e| format!("Can't read sysctl: {}", e))?;
+
+    if nforward[..].trim() == "0" {
+        let mut cmd = sudo_sysctl();
+        cmd.arg("net.ipv4.ip_forward=1");
+        commands.push(cmd);
+    } else {
+        info!("Sysctl is ok [{}]", nforward[..].trim());
+    }
+
+    if !dry_run && !commands.is_empty() {
+        println!("");
+        println!("The following commands will be run first:");
+        // need to setup ip_forward before creating new namespaces
+        for cmd in commands.drain(..) {
+            run_success(cmd)?;
+        }
+    }
+
     let mut cmd = Command::new(env::current_exe().unwrap());
     cmd.arg("__setup_netns__");
     cmd.unshare(&[Namespace::Net]);
@@ -184,8 +208,6 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     println!("We will run network setup commands with sudo.");
     println!("You may need to enter your password.");
 
-    let mut commands = vec!();
-
     let mut cmd = sudo_ip_cmd();
     cmd.args(&["link", "add", "vagga_guest", "type", "veth",
               "peer", "name", &interface_name[..]]);
@@ -204,19 +226,6 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     let mut cmd = sudo_ip_cmd();
     cmd.args(&["link", "set", &interface_name, "up"]);
     commands.push(cmd);
-
-    let mut nforward = String::with_capacity(100);
-    File::open(&Path::new("/proc/sys/net/ipv4/ip_forward"))
-        .and_then(|mut f| f.read_to_string(&mut nforward))
-        .map_err(|e| format!("Can't read sysctl: {}", e))?;
-
-    if nforward[..].trim() == "0" {
-        let mut cmd = sudo_sysctl();
-        cmd.arg("net.ipv4.ip_forward=1");
-        commands.push(cmd);
-    } else {
-        info!("Sysctl is ok [{}]", nforward[..].trim());
-    }
 
     let mut cmd = sudo_sysctl();
     cmd.arg("net.ipv4.conf.vagga.route_localnet=1");
@@ -270,7 +279,6 @@ pub fn create_netns(_config: &Config, mut args: Vec<String>)
     for cmd in commands.iter() {
         println!("    {}", cmd_show(&cmd));
     }
-
 
 
     if iptables {
