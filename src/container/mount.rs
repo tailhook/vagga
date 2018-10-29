@@ -8,7 +8,6 @@ use std::ptr::null;
 use libc::{c_ulong, c_int};
 use libmount::{BindMount, Tmpfs};
 
-use file_util::Dir;
 use path_util::ToCString;
 
 // sys/mount.h
@@ -185,7 +184,5 @@ pub fn mount_run(run_dir: &Path) -> Result<(), String> {
         .size_bytes(100 << 20)
         .mode(0o755)
         .mount().map_err(|e| format!("{}", e))?;
-    try_msg!(Dir::new(&run_dir.join("shm")).mode(0o1777).create(),
-        "Error creating /vagga/root/run/shm: {err}");
     Ok(())
 }
