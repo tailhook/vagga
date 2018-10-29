@@ -1,20 +1,20 @@
 #!/bin/sh -ex
 ALPINE_VERSION=v3.8
 ALPINE_MIRROR=http://dl-cdn.alpinelinux.org/alpine/
-APK_TOOLS=apk-tools-static-2.10.0-r0.apk
-BUSYBOX=busybox-static-1.28.4-r0.apk
+APK_TOOLS=apk-tools-static-2.10.1-r0.apk
+BUSYBOX=busybox-static-1.28.4-r1.apk
 ALPINE_KEYS=alpine-keys-2.1-r1.apk
 
 ARCH=${1:-x86_64}
 
 SHA1SUMS_x86_64="\
-309a288e7730bd1e00f06fb54a8da90f35286a9e  $APK_TOOLS
-09a1b792741e902a817fb9512b65692230323cc0  $BUSYBOX
+6a669b68be304249d5d3398b8db2cc5cc23674bf  $APK_TOOLS
+e14d923f6e24f7a47bb0d8bd1cd8d0d6868d8ae8  $BUSYBOX
 4dd03fa0dfeefdd81ac13d77e0d3ed069821de33  $ALPINE_KEYS"
 
 SHA1SUMS_armhf="\
-9a19667aebd4b404c6be547c451e6c1bdd693953  $APK_TOOLS
-0bc1f7bcc242ea15c4b1fcbd6faeb9b52b5046de  $BUSYBOX
+b30f18f5743d13f1845577e98e629a93c49212a4  $APK_TOOLS
+26a281d4c940e00eba6c9d0772acb1fb56731c32  $BUSYBOX
 a10caf9d8162d5ca16fc77729cfebf9c79d8c87b  $ALPINE_KEYS"
 
 FETCH_DIR="alpine/"$ARCH
