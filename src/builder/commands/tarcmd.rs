@@ -1,8 +1,10 @@
-use std::io::{self, Read, Seek, SeekFrom, BufReader};
+use std::cmp::min;
 use std::fs::{File, Permissions};
 use std::fs::{create_dir_all, set_permissions, hard_link};
+use std::io::{self, Read, Seek, SeekFrom, BufReader};
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
+use std::u32;
 
 #[cfg(feature="containers")] use tar::Archive;
 #[cfg(feature="containers")] use flate2::read::GzDecoder;
@@ -129,8 +131,8 @@ fn unpack_stream<F: Read>(file: F, srcpath: &Path, tgt: &Path,
 
         // Some archives don't have uids
         // TODO(tailhook) should this be handled in tar-rs?
-        let uid = src.header().uid().unwrap_or(0);
-        let gid = src.header().gid().unwrap_or(0);
+        let uid = min(src.header().uid().unwrap_or(0), u32::MAX as u64) as u32;
+        let gid = min(src.header().gid().unwrap_or(0), u32::MAX as u64) as u32;
 
         if entry.is_dir() {
             let mode = src.header().mode().map_err(&read_err)?;
