@@ -970,6 +970,7 @@ mod build {
             &[Path::new("dev"),
               Path::new("sys"),
               Path::new("proc"),
+              Path::new("run"),
               Path::new("etc/resolv.conf"),
               Path::new("etc/hosts")], false)?;
 
