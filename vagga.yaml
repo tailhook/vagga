@@ -2,12 +2,10 @@ containers:
 
   docs:
     setup:
-    - !Alpine v3.4
-    - !Install [alpine-base, py-sphinx, make]
+    - !Alpine v3.8
+    - !Repo community
+    - !Install [alpine-base, py2-sphinx, make]
     - !Py2Requirements docs/requirements.txt
-    # Seems like Alpine v3.4 has broken Sphinx package
-    # so install imagesize dependency manually
-    - !Py2Install [imagesize==0.7.1]
 
   rust-musl:
     environ: &rustenv
