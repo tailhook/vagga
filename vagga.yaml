@@ -15,7 +15,7 @@ containers:
       PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
     setup:
-    - !Ubuntu xenial
+    - !Ubuntu bionic
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates, cmake, zlib1g-dev]
     - !Install [file]  # dependency of checkinstall (bug #46)
@@ -44,11 +44,11 @@ containers:
     environ:
       HOME: /work/target
     setup:
-    - !Ubuntu xenial
+    - !Ubuntu bionic
     - !UbuntuUniverse
     - !Text
       /etc/apt/sources.list.d/arm.list: |
-        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports xenial universe
+        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports bionic universe
     - !Install
       - build-essential
       - git
@@ -69,7 +69,7 @@ containers:
 
   testbase:
     setup:
-    - !Ubuntu xenial
+    - !Ubuntu bionic
     - !UbuntuUniverse
     - !BuildDeps [wget]
     - !Install [make, curl, zip, file, git]
