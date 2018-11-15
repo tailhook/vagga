@@ -8,6 +8,7 @@ use std::ptr::null;
 use libc::{c_ulong, c_int};
 use libmount::{BindMount, Tmpfs};
 
+use file_util::Dir;
 use path_util::ToCString;
 
 // sys/mount.h
@@ -97,7 +98,7 @@ pub fn mount_pseudo(target: &Path, name: &str, options: &str)
     // Seems this is similar to why proc is mounted with the flag
     let flags = 0xC0ED0000; //MS_MGC_VAL
 
-    debug!("Pseusofs mount {:?} {} {}", target, name, options);
+    debug!("Pseudofs mount {:?} {} {}", target, name, options);
     let rc = unsafe { mount(
         c_name.as_bytes().as_ptr(),
         c_target.as_bytes().as_ptr(),
@@ -131,12 +132,10 @@ pub fn unmount(target: &Path) -> Result<(), String> {
 }
 
 pub fn mount_system_dirs() -> Result<(), String> {
-    mount_dev(&Path::new("/vagga/root/dev"))?;
-    BindMount::new("/sys", "/vagga/root/sys").mount()
-        .map_err(|e| e.to_string())?;
-    mount_proc(&Path::new("/vagga/root/proc"))?;
-    BindMount::new("/work", "/vagga/root/work").mount()
-        .map_err(|e| e.to_string())?;
+    mount_dev(Path::new("/vagga/root/dev"))?;
+    mount_proc(Path::new("/vagga/root/proc"))?;
+    mount_bind(Path::new("/sys"), Path::new("/vagga/root/sys"))?;
+    mount_bind(Path::new("/work"), Path::new("/vagga/root/work"))?;
     return Ok(())
 }
 
@@ -148,9 +147,14 @@ pub fn unmount_system_dirs() -> Result<(), String> {
     Ok(())
 }
 
+fn mount_bind(dir: &Path, target_dir: &Path) -> Result<(), String> {
+    debug!("Bind mount {:?}", target_dir);
+    BindMount::new(dir, &target_dir).mount()
+        .map_err(|e| e.to_string())
+}
+
 pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
-    BindMount::new("/dev", &dev_dir).mount()
-        .map_err(|e| e.to_string())?;
+    mount_bind(Path::new("/dev"), dev_dir)?;
 
     let pts_dir = dev_dir.join("pts");
     mount_pseudo(&pts_dir, "devpts", "newinstance")?;
@@ -168,8 +172,7 @@ pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
         }
         Err(ref e) if e.kind() == ErrorKind::InvalidInput => {
             // It's just a device. Let's try bind mount
-            BindMount::new(pts_dir.join("ptmx"), &ptmx_path).mount()
-                .map_err(|e| e.to_string())?;
+            mount_bind(&pts_dir.join("ptmx"), &ptmx_path)?;
         }
         Err(e) => {
             warn!("Can't stat /dev/ptmx: {}. \
@@ -180,9 +183,14 @@ pub fn mount_dev(dev_dir: &Path) -> Result<(), String> {
 }
 
 pub fn mount_run(run_dir: &Path) -> Result<(), String> {
+    debug!("Tmpfs mount {:?}", run_dir);
     Tmpfs::new(&run_dir)
         .size_bytes(100 << 20)
         .mode(0o755)
         .mount().map_err(|e| format!("{}", e))?;
+    // We should create /run/shm directory since
+    // some systems have /dev/shm as a symlink to the /run/shm
+    try_msg!(Dir::new(&run_dir.join("shm")).mode(0o1777).create(),
+        "Error creating /vagga/root/run/shm: {err}");
     Ok(())
 }
