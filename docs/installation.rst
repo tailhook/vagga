@@ -269,6 +269,25 @@ Also make sure you have musl-gcc in your path::
 Then just build using cargo and the appropriate target::
 
     $ cargo build --target x86_64-unknown-linux-musl
+    
+Build from source (Gentoo, docker)
+==========================
+
+Clone vagga repository
+
+   $ git clone https://github.com/tailhook/vagga && cd vagga
+   
+Describe vagga version
+
+   $ git describe 
+   
+For example: `v0.8.1-19-g372bded`
+
+Compile vagga with dockerized rust:
+
+   $ docker run --rm --user "$(id -u)":"$(id -g)" -e VAGGA_VERSION=v0.8.1-19-g372bded -v "$PWD":/usr/src/myapp -w /usr/src/myapp rust cargo build --release
+   
+Compiled binary move to `/usr/local/bin`
 
 
 OS X / Windows
