@@ -270,8 +270,8 @@ Then just build using cargo and the appropriate target::
 
     $ cargo build --target x86_64-unknown-linux-musl
     
-Build from source (Gentoo, docker)
-==================================
+Build from source using Docker
+==============================
 
 Clone vagga repository
 
@@ -281,7 +281,7 @@ Describe vagga version
 
    $ git describe 
    
-For example: `v0.8.1-19-g372bded`
+Result would be something like `v0.8.1-19-g372bded`
 
 Compile vagga with dockerized rust:
 
