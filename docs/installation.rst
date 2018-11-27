@@ -271,7 +271,7 @@ Then just build using cargo and the appropriate target::
     $ cargo build --target x86_64-unknown-linux-musl
     
 Build from source (Gentoo, docker)
-==========================
+==================================
 
 Clone vagga repository
 
