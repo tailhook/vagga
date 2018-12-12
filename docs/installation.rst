@@ -285,7 +285,7 @@ Result would be something like ``v0.8.1-19-g372bded``
 
 Compile vagga with dockerized rust::
 
-   $ docker run --rm --user "$(id -u)":"$(id -g)" -e VAGGA_VERSION=v0.8.1-19-g372bded -v "$PWD":/usr/src/vagga -w /usr/src/vagga rust cargo build --release
+   $ docker run --rm --user "$(id -u)":"$(id -g)" -e VAGGA_VERSION=v0.8.1-19-g372bded -v "$PWD":/usr/src/vagga -w /usr/src/vagga rust cargo build --target x86_64-unknown-linux-musl --release
 
 Compiled binary is moved to ``/usr/local/bin``
 
