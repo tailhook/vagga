@@ -7,6 +7,7 @@ use libc::{getpgrp, kill, ioctl};
 use nix;
 use nix::errno::Errno;
 use nix::unistd::{isatty, dup};
+use std::os::raw::c_ulong;
 
 
 #[cfg(target_env="musl")]
@@ -94,7 +95,7 @@ unsafe fn get_group(fd: c_int)
     -> Result<pid_t, io::Error>
 {
     let mut pgrp = 0;
-    let res = ioctl(fd, ffi::TIOCGPGRP, &mut pgrp);
+    let res = ioctl(fd, ffi::TIOCGPGRP as c_ulong, &mut pgrp);
     if res == 0 {
         Ok(pgrp)
     } else {
@@ -104,7 +105,7 @@ unsafe fn get_group(fd: c_int)
 
 // dealing with file descriptors is always unsafe
 unsafe fn give_tty_to(fd: c_int, pgrp: pid_t) -> Result<(), io::Error> {
-    let res = ioctl(fd, ffi::TIOCSPGRP, &pgrp);
+    let res = ioctl(fd, ffi::TIOCSPGRP as c_ulong, &pgrp);
     if res == 0 {
         Ok(())
     } else {
