@@ -22,6 +22,7 @@ To find out commands you may run bare ``vagga``::
    commandline
    environment
    settings
+   gitlab
    errors
    system_settings
    overlayfs
