@@ -23,6 +23,18 @@ For example, here is good settings for Gitlab CI:
 Note: some of these settings are non-secure if single gitlab runner is used
 across organizations. See :ref:`Settings` for more info on each setting.
 
+Make sure to create dirs::
+
+    mkdir /var/lib/gitlab-runner/containers
+    mkdir /var/lib/gitlab-runner/cache
+
+Also check that subuid/subgid were allocated, the following line or equivalent
+must be **both** in ``/etc/subuid`` and ``/etc/subgid``::
+
+    gitlab-runner:200000:65536
+
+
+
 Gitlab-runner config:
 
 .. code-block:: toml
