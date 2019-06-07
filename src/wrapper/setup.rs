@@ -221,7 +221,13 @@ pub fn setup_base_filesystem(project_root: &Path, settings: &MergedSettings)
         // Need this go get some selinux-aware commands to work (see #65)
         Remount::new(&sys_dir.join("fs/selinux"))
             .bind(true).readonly(true).remount()
-            .map_err(|e| warn!("remount /sys/fs/selinux: {}", e)).ok();
+            .map_err(|e| {
+                let err = e.to_string();
+                // Sometimes dir exists but is not a mountpoint, that's okay
+                if !err.contains("Cannot find mount point") {
+                    warn!("remount /sys/fs/selinux: {}", e)
+                }
+            }).ok();
     }
 
     let vagga_dir = mnt_dir.join("vagga");
