@@ -17,7 +17,7 @@ use path_util::IterSelfAndParents;
 
 pub struct Guard<'a> {
     pub ctx: Context<'a>,
-    pub distro: Box<Distribution>,
+    pub distro: Box<dyn Distribution>,
 }
 
 

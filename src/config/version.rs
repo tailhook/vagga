@@ -105,13 +105,12 @@ impl<'a> PartialOrd for Version<'a> {
 pub struct MinimumVaggaError(String);
 
 impl Error for MinimumVaggaError {
-    fn description(&self) -> &str { "Minimum Vagga Error" }
-    fn cause(&self) -> Option<&Error> { None }
+    fn cause(&self) -> Option<&dyn Error> { None }
 }
 
 impl fmt::Display for MinimumVaggaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}: {}", self.description(), self.0)
+        write!(f, "Minimum Vagga Error: {}", self.0)
     }
 }
 

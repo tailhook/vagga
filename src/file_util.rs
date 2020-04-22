@@ -191,7 +191,7 @@ fn _copy(from: &Path, to: &Path, mode: Option<u32>) -> io::Result<()> {
     Ok(())
 }
 
-pub fn copy_stream(reader: &mut Read, writer: &mut Write)
+pub fn copy_stream(reader: &mut dyn Read, writer: &mut dyn Write)
     -> io::Result<()>
 {
     // Smaller buffer on the stack
@@ -270,7 +270,7 @@ impl Drop for Lock {
     }
 }
 
-pub fn check_stream_hashsum(mut reader: &mut Read, sha256: &String)
+pub fn check_stream_hashsum(mut reader: &mut dyn Read, sha256: &String)
     -> Result<(), String>
 {
     use sha2::{Sha256, Digest};

@@ -63,7 +63,7 @@ pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
     setup_info
         .volumes(&command.volumes)
         .write_mode(write_mode);
-    let mut guards = Vec::<Box<Guard>>::new();
+    let mut guards = Vec::<Box<dyn Guard>>::new();
     for (_, &volume) in &setup_info.volumes {
         match volume {
             &Volume::Persistent(ref info @ PersistentInfo {

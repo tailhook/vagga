@@ -68,7 +68,7 @@ impl Digest {
             self.field(key, val);
         }
     }
-    pub fn file(&mut self, name: &Path, reader: &mut Read)
+    pub fn file(&mut self, name: &Path, reader: &mut dyn Read)
         -> Result<(), io::Error>
     {
         io::copy(reader, &mut self.sha)?;

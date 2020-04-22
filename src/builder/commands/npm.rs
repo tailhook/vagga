@@ -175,7 +175,7 @@ pub fn parse_feature(info: &str, features: &mut Vec<packages::Package>) {
 }
 
 #[cfg(feature="containers")]
-pub fn npm_install(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn npm_install(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), StepError>
 {
@@ -248,7 +248,7 @@ fn scan_dic(json: &Json, key: &str,
 }
 
 #[cfg(feature="containers")]
-pub fn npm_deps(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn npm_deps(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     info: &NpmDependencies)
     -> Result<(), StepError>
 {
@@ -442,7 +442,7 @@ pub fn setup_yarn(ctx: &mut Context)
     -> Result<(), String>
 {
     let ver = match ctx.npm_settings.yarn_version {
-        Some(ref ver) => ver.trim_left_matches('v').to_string(),
+        Some(ref ver) => ver.trim_start_matches('v').to_string(),
         None => {
             let path = download_file(&mut ctx.capsule,
                 &["https://yarnpkg.com/latest-version"],

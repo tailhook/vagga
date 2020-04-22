@@ -165,7 +165,7 @@ fn pip_args(ctx: &mut Context, ver: u8) -> Vec<String> {
 }
 
 #[cfg(feature="containers")]
-pub fn pip_install(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn pip_install(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     ver: u8, pkgs: &Vec<String>)
     -> Result<(), String>
 {
@@ -178,7 +178,7 @@ pub fn pip_install(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 #[cfg(feature="containers")]
-pub fn pip_requirements(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn pip_requirements(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     ver: u8, reqtxt: &Path)
     -> Result<(), String>
 {
@@ -228,7 +228,6 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
 
 #[cfg(feature="containers")]
 pub fn freeze(ctx: &mut Context) -> Result<(), String> {
-    use std::fs::File;  // TODO(tailhook) migrate whole module
     use std::io::Write;  // TODO(tailhook) migrate whole module
     if ctx.featured_packages.contains(&packages::PipPy2) {
         let python_exe = ctx.pip_settings.python_exe.clone()

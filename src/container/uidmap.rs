@@ -40,7 +40,7 @@ fn read_id_map(file_path: &str, username: &str, id: uid_t)
                 file_path, num+1, line));
         }
         let start = FromStr::from_str(parts[1]);
-        let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_right());
+        let count: Result<uid_t, _> = FromStr::from_str(parts[2].trim_end());
         if parts.len() != 3 || start.is_err() ||
             count.is_err() || count == Ok(0)
         {

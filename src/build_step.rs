@@ -8,7 +8,7 @@ pub use config::Config;
 pub use digest::Digest;
 
 #[derive(Clone, Debug)]
-pub struct Step(pub Rc<BuildStep>);
+pub struct Step(pub Rc<dyn BuildStep>);
 
 mopafy!(BuildStep);
 

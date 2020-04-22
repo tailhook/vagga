@@ -78,7 +78,7 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
 }
 
 
-pub fn ensure_packages(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn ensure_packages(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     features: &[Package])
     -> Result<(), StepError>
 {

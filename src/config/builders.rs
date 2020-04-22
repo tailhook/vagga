@@ -139,7 +139,7 @@ fn decode<'x, T, V>(v: V)
         T: BuildStep + Deserialize<'x> + 'static,
         V: VariantAccess<'x>,
 {
-    v.newtype_variant::<T>().map(|x| Step(Rc::new(x) as Rc<BuildStep>))
+    v.newtype_variant::<T>().map(|x| Step(Rc::new(x) as Rc<dyn BuildStep>))
 }
 
 impl<'a> Deserialize<'a> for CommandName {

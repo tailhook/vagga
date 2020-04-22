@@ -177,7 +177,7 @@ fn scan_features(settings: &GemConfig, info: Option<&GemBundle>)
 }
 
 #[cfg(feature="containers")]
-pub fn install(distro: &mut Box<Distribution>,
+pub fn install(distro: &mut Box<dyn Distribution>,
     ctx: &mut Context, pkgs: &Vec<String>)
     -> Result<(), String>
 {
@@ -206,7 +206,7 @@ pub fn install(distro: &mut Box<Distribution>,
 }
 
 #[cfg(feature="containers")]
-pub fn bundle(distro: &mut Box<Distribution>,
+pub fn bundle(distro: &mut Box<dyn Distribution>,
     ctx: &mut Context, info: &GemBundle)
     -> Result<(), StepError>
 {

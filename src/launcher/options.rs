@@ -69,8 +69,8 @@ pub fn parse_docopts(description: &Option<String>,
     let mut env = HashMap::new();
     for (orig_key, value) in parsed.map.iter() {
         let key = orig_key
-            .trim_left_matches('-').trim_left_matches('<')
-            .trim_right_matches('>');
+            .trim_start_matches('-').trim_start_matches('<')
+            .trim_end_matches('>');
         let env_var = format!("VAGGAOPT_{}",
             key.replace("-", "_").to_ascii_uppercase());
         let env_var2 = format!("VAGGACLI_{}",

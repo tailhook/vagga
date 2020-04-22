@@ -85,7 +85,7 @@ struct InsecureSettings {
     environ: BTreeMap<String, String>,
 }
 
-pub fn insecure_settings_validator<'a>() -> Box<V::Validator + 'a> {
+pub fn insecure_settings_validator<'a>() -> Box<dyn V::Validator + 'a> {
     Box::new(V::Structure::new()
     .member("version_check", V::Scalar::new().optional())
     .member("shared_cache", V::Scalar::new().optional())

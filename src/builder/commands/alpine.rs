@@ -323,7 +323,7 @@ fn check_version(version: &String) -> Result<(), String> {
     }
 }
 
-#[cfg(feature="containers")] 
+#[cfg(feature="containers")]
 fn setup_base(ctx: &mut Context, version: &String, mirror: &String)
     -> Result<(), String>
 {
@@ -364,7 +364,7 @@ pub fn remove(_ctx: &mut Context, pkgs: &Vec<String>)
 }
 
 #[cfg(feature="containers")]
-pub fn configure(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn configure(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     ver: &str)
     -> Result<(), StepError>
 {

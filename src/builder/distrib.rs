@@ -77,7 +77,7 @@ pub trait DistroBox {
     fn npm_configure(&mut self, ctx: &mut Context) -> Result<(), StepError>;
 }
 
-impl DistroBox for Box<Distribution> {
+impl DistroBox for Box<dyn Distribution> {
     fn set<D: Distribution+Sized>(&mut self, value: D) -> Result<(), StepError> {
         if self.is::<Unknown>() {
             *self = Box::new(value);

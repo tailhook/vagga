@@ -28,7 +28,7 @@ quick_error! {
             display("this step requires some linux distribution to be active")
         }
         // Should substep include container name? or is it obvours?
-        SubStep(step: Rc<BuildStep>, err: Box<StepError>) {
+        SubStep(step: Rc<dyn BuildStep>, err: Box<StepError>) {
             display("sub-step {:?} failed: {}", step, err)
         }
         /// Trying to run command failed because command is not found
@@ -105,7 +105,7 @@ quick_error! {
 quick_error! {
     #[derive(Debug)]
     pub enum Error {
-        Step(step: Rc<BuildStep>, err: StepError) {
+        Step(step: Rc<dyn BuildStep>, err: StepError) {
             display("step {:?} failed: {}", step, err)
         }
         /// Compatibility error wrapper, should be removed in future

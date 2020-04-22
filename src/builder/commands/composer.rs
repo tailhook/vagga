@@ -149,7 +149,7 @@ fn composer_cmd(ctx: &mut Context) -> Result<Command, StepError> {
 }
 
 #[cfg(feature="containers")]
-pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
+pub fn composer_install(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), String>
 {
@@ -168,7 +168,7 @@ pub fn composer_install(distro: &mut Box<Distribution>, ctx: &mut Context,
 }
 
 #[cfg(feature="containers")]
-pub fn composer_dependencies(distro: &mut Box<Distribution>,
+pub fn composer_dependencies(distro: &mut Box<dyn Distribution>,
     ctx: &mut Context, info: &ComposerDependencies)
     -> Result<(), StepError>
 {
@@ -236,7 +236,7 @@ pub fn bootstrap(ctx: &mut Context) -> Result<(), String> {
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
     let default_runtime = Path::new("/vagga/root")
-        .join(DEFAULT_RUNTIME.trim_left_matches('/'));
+        .join(DEFAULT_RUNTIME.trim_start_matches('/'));
     // if using a custom runtime, link it to '/usr/bin/php' so that packages expecting the `php`
     // binary to be on PATH can work correctly
     if runtime_exe != DEFAULT_RUNTIME {
