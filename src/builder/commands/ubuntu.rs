@@ -301,14 +301,6 @@ impl Distribution for Distro {
         cmd.stdout(Stdio::from_file(output));
         run(cmd)
             .map_err(|e| warn!("Can't list debian packages: {}", e)).ok();
-        if ctx.settings.ubuntu_mirror.is_none() {
-            warn!("To make future builds faster you should set a preferred \
-               ubuntu mirror.\n\
-               Add the following to your ~/.vagga.yaml:\
-               \n  ubuntu-mirror: http://CC.archive.ubuntu.com/ubuntu\n\
-               Where CC is a two-letter country code where you currently are.\
-               ");
-        }
 
         self.copy_apt_lists_to_cache()
             .map_err(|e| error!("error when caching apt-lists: {}. Ignored.",
