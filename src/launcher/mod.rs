@@ -91,7 +91,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
             Run `vagga` without arguments to see the list of commands.
             ");
         ap.add_option(&["-V", "--version"],
-            Print(env!("VAGGA_VERSION").to_string()),
+            Print(env!("CARGO_PKG_VERSION").to_string()),
             "Show vagga version and exit");
         ap.refer(&mut set_env)
           .add_option(&["-E", "--env", "--environ"], Collect,

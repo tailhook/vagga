@@ -53,7 +53,7 @@ pub fn config_validator<'a>() -> V::Structure<'a> {
     V::Structure::new()
     .member("minimum_vagga", MinimumVagga::new()
         .optional()
-        .current_version(env!("VAGGA_VERSION").to_string()))
+        .current_version(env!("CARGO_PKG_VERSION").to_string()))
     .member("mixins", V::Sequence::new(V::Scalar::new()))
     .member("containers", V::Mapping::new(
         V::Scalar::new(),
