@@ -17,7 +17,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 500
       - name: Install musl-tools
         run: "sudo apt-get install musl-tools"
       - uses: actions-rs/toolchain@v1
@@ -35,5 +37,7 @@ jobs:
           key: vagga-cache-v1
       - run: |
           make release  # slower build, faster tests
-          ./vagga -EUBUNTU_MIRROR=https://us.archive.ubuntu.com test
+          ./vagga -eUBUNTU_MIRROR test
+        env:
+          UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
 
