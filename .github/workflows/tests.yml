@@ -36,3 +36,5 @@ jobs:
       - run: |
           make
           ./vagga test
+        env:
+          UBUNTU_MIRROR: https://us.archive.ubuntu.com
