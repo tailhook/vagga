@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 35
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -26,6 +26,13 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-musl
           default: true
+    - uses: Swatinem/rust-cache@v1
+      - name: Cache multiple paths
+        uses: actions/cache@v2
+        with:
+          path: |
+            tmp/cache
+          key: vagga-cache-v1
       - run: |
           make
           ./vagga test
