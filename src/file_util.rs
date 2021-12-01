@@ -13,7 +13,10 @@ use nix;
 use libc;
 use libc::{uid_t, gid_t, utime, utimbuf, time_t};
 use nix::fcntl::{flock, FlockArg};
+use digest_traits::Digest;
+use sha2::Sha256;
 
+use digest::hex;
 use path_util::ToCString;
 
 pub struct Lock {
@@ -273,14 +276,10 @@ impl Drop for Lock {
 pub fn check_stream_hashsum(mut reader: &mut dyn Read, sha256: &String)
     -> Result<(), String>
 {
-    use sha2::{Sha256, Digest};
-    use digest_writer::Writer;
-    use digest::hex;
-
-    let mut hash = Writer::new(Sha256::new());
+    let mut hash = Sha256::new();
     try_msg!(io::copy(&mut reader, &mut hash),
         "Error when calculating hashsum: {err}");
-    let hash_str = format!("{:x}", hex(&hash.into_inner()));
+    let hash_str = format!("{:x}", hex(&hash));
     if !hash_str.starts_with(sha256) {
         return Err(format!("Hashsum mismatch: expected {} but was {}",
             sha256, hash_str));

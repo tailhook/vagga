@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use argparse::{ArgumentParser};
 use argparse::{Store, StoreOption, StoreTrue};
-use sha2::{Digest, Sha256};
+use digest_traits::Digest;
+use sha2::Sha256;
 use unshare::{Command, Stdio};
 
 use capsule::Context;
@@ -29,7 +30,7 @@ pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>,
         Some(ref sha256) => sha256[..8].to_string(),
         None => {
             let mut hash = Sha256::new();
-            hash.input(urls[0].as_ref().as_bytes());
+            hash.update(urls[0].as_ref().as_bytes());
             format!("{:.8x}", hex(&hash))
         },
     };
