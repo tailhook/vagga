@@ -20,7 +20,7 @@ use config::version::Version;
 use builder::dns::revert_name_files;
 
 
-pub static LATEST_VERSION: &'static str = "v3.14";
+pub static LATEST_VERSION: &'static str = "v3.15";
 static ALPINE_VERSION_REGEX: &'static str = r"^v\d+.\d+$";
 
 const VERSION_WITH_PHP5: &'static str = "v3.4";
