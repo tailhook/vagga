@@ -24,16 +24,16 @@ pub trait Distribution: Any {
     fn name(&self) -> &'static str;
 
     /// Downloads initial image of distribution
-    fn bootstrap(&mut self, &mut Context) -> Result<(), StepError>;
+    fn bootstrap(&mut self, ctx: &mut Context) -> Result<(), StepError>;
 
     /// Does distro-specific cleanup at the end of the build
-    fn finish(&mut self, &mut Context) -> Result<(), String> { Ok(()) }
+    fn finish(&mut self, _ctx: &mut Context) -> Result<(), String> { Ok(()) }
 
     /// Adds repository
-    fn add_repo(&mut self, &mut Context, &str) -> Result<(), StepError>;
+    fn add_repo(&mut self, ctx: &mut Context, repo: &str) -> Result<(), StepError>;
 
     /// Install normal packages
-    fn install(&mut self, &mut Context, &[String]) -> Result<(), StepError>;
+    fn install(&mut self, ctx: &mut Context, pkgs: &[String]) -> Result<(), StepError>;
 
     /// Install special predefined packages for specific features
     fn ensure_packages(&mut self, ctx: &mut Context,
