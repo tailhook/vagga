@@ -3,9 +3,9 @@ setup() {
 }
 
 @test "alpine: Alpine builds" {
-    vagga _build v31
-    link=$(readlink .vagga/v31)
-    [[ $link = ".roots/v31.03b5220b/root" ]]
+    vagga _build v3.15
+    link=$(readlink .vagga/v3.15)
+    [[ $link = ".roots/v3.15.86210ade/root" ]]
 }
 
 @test "alpine: Check stdout" {
@@ -62,22 +62,13 @@ setup() {
     [[ $link = ".roots/v32-calc.a90f78f7/root" ]]
 }
 
-@test "alpine: Run bc on v3.1" {
-    run vagga v31-calc 100*24
-    printf "%s\n" "${lines[@]}"
-    [[ $status -eq 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "2400" ]]
-    link=$(readlink .vagga/v31-calc)
-    [[ $link = ".roots/v31-calc.effa8865/root" ]]
-}
-
-@test "alpine: Run bc on v3.0" {
-    run vagga v30-calc 23*7+3
+@test "alpine: Run bc on v3.15" {
+    run vagga v3.15-calc 23*7+3
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
-    link=$(readlink .vagga/v30-calc)
-    [[ $link = ".roots/v30-calc.6d9ec833/root" ]]
+    link=$(readlink .vagga/v3.15-calc)
+    [[ $link = ".roots/v3.15-calc.9826f0b8/root" ]]
 }
 
 @test "alpine: BuildDeps" {
@@ -203,13 +194,12 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ "$output" = "Available commands:
     echo-cmd
+    v3.15-calc
     v37-calc
                         (aliases: new-calc, just-calc)
     vagga-alpine
 
 Old alpine commands:
-    v30-calc
-    v31-calc
     v32-calc
     v33-calc
     v33-tar

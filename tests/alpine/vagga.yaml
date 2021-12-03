@@ -1,5 +1,10 @@
 containers:
 
+  v3.15-calc:
+    setup:
+    - !Alpine v3.15
+    - !Install [bc]
+
   v34-calc:
     setup:
     - !Alpine v3.4
@@ -20,19 +25,9 @@ containers:
     - !Alpine v3.2
     - !Install [bc]
 
-  v31:
+  v3.15:
     setup:
-    - !Alpine v3.1
-
-  v31-calc:
-    setup:
-    - !Alpine v3.1
-    - !Install [bc]
-
-  v30-calc:
-    setup:
-    - !Alpine v3.0
-    - !Install [bc]
+    - !Alpine v3.15
 
   build-deps-with-version:
     setup:
@@ -93,8 +88,22 @@ containers:
 
 commands:
   echo-cmd: !Command
-    container: v31
+    container: v3.15
     run: [echo]
+
+  v3.15-calc: !Command
+    container: v3.15-calc
+    accepts-arguments: true
+    run: echo "$*" | bc
+
+  v37-calc: !Command
+    container: v37-calc
+    aliases:
+    - new-calc
+    - just-calc
+    - echo-cmd  # not really, conflicts with a command
+    accepts-arguments: true
+    run: echo "$*" | bc
 
   v34-calc: !Command
     group: "Old alpine commands"
@@ -114,31 +123,10 @@ commands:
     accepts-arguments: true
     run: echo "$*" | bc
 
-  v31-calc: !Command
-    group: "Old alpine commands"
-    container: v31-calc
-    accepts-arguments: true
-    run: echo "$*" | bc
-
-  v30-calc: !Command
-    group: "Old alpine commands"
-    container: v30-calc
-    accepts-arguments: true
-    run: echo "$*" | bc
-
   v33-tar: !Command
     group: "Old alpine commands"
     container: v33-tar
     run: [tar]
-
-  v37-calc: !Command
-    container: v37-calc
-    aliases:
-    - new-calc
-    - just-calc
-    - echo-cmd  # not really, conflicts with a command
-    accepts-arguments: true
-    run: echo "$*" | bc
 
   vagga-alpine: !Command
     container: vagga-alpine
