@@ -47,16 +47,33 @@ pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
     Ok(())
 }
 
-pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
+pub struct CapturedOutput {
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+}
+
+impl CapturedOutput {
+    fn new() -> Self {
+        Self {
+            stdout: Vec::with_capacity(1024),
+            stderr: Vec::with_capacity(1024),
+        }
+    }
+}
+
+pub fn capture_output(mut cmd: Command) -> Result<CapturedOutput, String> {
     cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
     info!("Running {}", cmd_show(&cmd));
     let mut child = cmd.spawn()
         .map_err(|e| format!("{}", e))?;
-    let mut buf = Vec::with_capacity(1024);
-    child.stdout.take().unwrap().read_to_end(&mut buf)
-        .map_err(|e| format!("Error reading from pipe: {}", e))?;
+    let mut output = CapturedOutput::new();
+    child.stdout.take().unwrap().read_to_end(&mut output.stdout)
+        .map_err(|e| format!("Error reading from stdout pipe: {}", e))?;
+    child.stderr.take().unwrap().read_to_end(&mut output.stderr)
+        .map_err(|e| format!("Error reading from stderr pipe: {}", e))?;
     child.wait().map_err(|e| format!("Error waiting for child: {}", e))?;
-    Ok(buf)
+    Ok(output)
 }
 
 pub fn cmd_debug(cmd: &Command) -> unshare::Printer {

@@ -2,9 +2,12 @@ use std::fs::File;
 use std::collections::HashSet;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
+use std::str;
 
 use failure::Error;
 use quire::validate as V;
+use capsule::download;
+use file_util::copy;
 #[cfg(feature="containers")]
 use builder::context::{Context};
 #[cfg(feature="containers")]
@@ -15,6 +18,10 @@ use builder::commands::generic::{run_command_at_env, capture_command};
 #[cfg(feature="containers")] use file_util::Dir;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
+const PIP_HOME: &str = "/tmp/pip-install";
+const PYTHON_PATH: &str = concatcp!("/tmp/non-existent:", PIP_HOME);
+
+const PIP_MIN_PYTHON_VERSION: (u8, u8, u8) = (3, 6, 0);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PipConfig {
@@ -130,6 +137,84 @@ pub fn scan_features(settings: &PipConfig, ver: u8, pkgs: &Vec<String>)
     return res;
 }
 
+fn python_executable(ctx: &Context, ver: u8) -> String {
+    ctx.pip_settings.python_exe.clone()
+    .unwrap_or(
+        (if ver == 2 {"python2"} else {"python3"})
+            .to_string()
+    )
+}
+
+fn python_version(ctx: &mut Context, ver: u8) -> Result<(u8, u8, u8), String> {
+    let py_version_output = capture_command(
+        ctx,
+        &[
+            python_executable(ctx, ver),
+            "--version".to_string(),
+        ],
+        &[]
+    )?;
+    let py_version_output = if ver == 2 {
+        py_version_output.stderr
+    } else {
+        py_version_output.stdout
+    };
+    parse_python_version(&str::from_utf8(py_version_output.as_ref()).unwrap())
+        // .map_err(|e| warn!("Can't get python version: {}", e)).ok();
+}
+
+fn parse_python_version(version_output: &str) -> Result<(u8, u8, u8), String> {
+    let version = match version_output.rsplit_once(' ') {
+        Some((_, v)) => v,
+        None => version_output,
+    };
+    let version = match version.split_once(|c: char| !c.is_digit(10) && c != '.') {
+        Some((v, _)) => v,
+        None => version,
+    };
+    let mut version_parts = version.splitn(3, '.');
+    let major = next_version_part(&mut version_parts, version_output)?;
+    let minor = next_version_part(&mut version_parts, version_output)?;
+    let patch = next_version_part(&mut version_parts, version_output)?;
+    Ok((major, minor, patch))
+}
+
+fn next_version_part<'a>(
+    version_parts: &mut impl Iterator<Item = &'a str>,
+    version_output: &str,
+) -> Result<u8, String> {
+    version_parts.next()
+        .ok_or(format!("Invalid python version: {:?}", version_output))?
+        .parse()
+        .map_err(|e| format!("{}: {:?}", e, version_output))
+}
+
+#[cfg(feature="containers")]
+pub fn bootstrap(ctx: &mut Context, ver: u8) -> Result<(), String> {
+    let args = vec!(
+        python_executable(ctx, ver),
+        "/tmp/get-pip.py".to_string(),
+        format!("--target={}", PIP_HOME),
+    );
+    let py_ver = python_version(ctx, ver)?;
+    let _get_pip_url;
+    let get_pip_url = if py_ver < PIP_MIN_PYTHON_VERSION {
+        _get_pip_url = format!("https://bootstrap.pypa.io/pip/{}.{}/get-pip.py", py_ver.0, py_ver.1);
+        &_get_pip_url
+    } else {
+        "https://bootstrap.pypa.io/get-pip.py"
+    };
+    let pip_inst = download::download_file(
+        &mut ctx.capsule,
+        &[get_pip_url],
+        None,
+        false
+    )?;
+    copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
+        .map_err(|e| format!("Error copying pip: {}", e))?;
+    run_command_at_env(ctx, &args, &Path::new("/work"), &[])
+}
+
 #[cfg(feature="containers")]
 fn pip_args(ctx: &mut Context, ver: u8) -> Vec<String> {
     let mut args = vec!(
@@ -174,7 +259,7 @@ pub fn pip_install(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     let mut pip_cli = pip_args(ctx, ver);
     pip_cli.extend(pkgs.clone().into_iter());
     run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
-        ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
+        ("PYTHONPATH", PYTHON_PATH)])
 }
 
 #[cfg(feature="containers")]
@@ -204,7 +289,7 @@ pub fn pip_requirements(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     pip_cli.push(reqtxt.to_str()
         .ok_or("Incorrect path for requirements file")?.to_string());
     run_command_at_env(ctx, &pip_cli, &Path::new("/work"), &[
-        ("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
+        ("PYTHONPATH", PYTHON_PATH)])
 }
 
 #[cfg(feature="containers")]
@@ -236,10 +321,10 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
-            ], &[("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
+            ], &[("PYTHONPATH", PYTHON_PATH)])
             .and_then(|out| {
                 File::create("/vagga/container/pip2-freeze.txt")
-                .and_then(|mut f| f.write_all(&out))
+                .and_then(|mut f| f.write_all(&out.stdout))
                 .map_err(|e| format!("Error dumping package list: {}", e))
             })
             .map_err(|e| warn!("Can't list pip packages: {}", e)).ok();
@@ -251,10 +336,10 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
-            ], &[("PYTHONPATH", "/tmp/non-existent:/tmp/pip-install")])
+            ], &[("PYTHONPATH", PYTHON_PATH)])
             .and_then(|out| {
                 File::create("/vagga/container/pip3-freeze.txt")
-                .and_then(|mut f| f.write_all(&out))
+                .and_then(|mut f| f.write_all(&out.stdout))
                 .map_err(|e| format!("Error dumping package list: {}", e))
             })
             .map_err(|e| warn!("Can't list pip packages: {}", e)).ok();
@@ -428,5 +513,18 @@ impl BuildStep for Py3Requirements {
     }
     fn is_dependent_on(&self) -> Option<&str> {
         None
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::parse_python_version;
+
+    #[test]
+    fn test_parse_python_version() {
+        assert_eq!(parse_python_version("3.9.5"), Ok((3, 9, 5)));
+        assert_eq!(parse_python_version("Python 3.9.5"), Ok((3, 9, 5)));
+        assert_eq!(parse_python_version("Python 3.11.0a2"), Ok((3, 11, 0)));
+        assert_eq!(parse_python_version("Python 3.11.0-rc1"), Ok((3, 11, 0)));
     }
 }

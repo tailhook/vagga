@@ -8,7 +8,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2-ubuntu)
-    [[ $link = ".roots/py2-ubuntu.4575a802/root" ]]
+    [[ $link = ".roots/py2-ubuntu.f97edeec/root" ]]
 }
 
 @test "py2: alpine pkg" {
@@ -26,7 +26,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2-git-ubuntu)
-    [[ $link = ".roots/py2-git-ubuntu.ebda7dbd/root" ]]
+    [[ $link = ".roots/py2-git-ubuntu.3bfa83a6/root" ]]
 }
 
 @test "py2: alpine git" {
@@ -44,7 +44,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py3-ubuntu)
-    [[ $link = ".roots/py3-ubuntu.ab1ac87f/root" ]]
+    [[ $link = ".roots/py3-ubuntu.db09bc7e/root" ]]
 }
 
 @test "py3: ubuntu py3.5" {
@@ -54,7 +54,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py35-ubuntu)
-    [[ $link = ".roots/py35-ubuntu.267b85b7/root" ]]
+    [[ $link = ".roots/py35-ubuntu.5d76cc91/root" ]]
 }
 
 @test "py3: ubuntu git" {
@@ -63,7 +63,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py3-git-ubuntu)
-    [[ $link = ".roots/py3-git-ubuntu.ce381ca9/root" ]]
+    [[ $link = ".roots/py3-git-ubuntu.53dd180a/root" ]]
 }
 
 @test "py2: ubuntu req.txt" {
@@ -72,7 +72,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/py2req-ubuntu)
-    [[ $link = ".roots/py2req-ubuntu.7d4edb08/root" ]]
+    [[ $link = ".roots/py2req-ubuntu.abeddcee/root" ]]
 }
 
 @test "py2: alpine req.txt" {
@@ -89,7 +89,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-ubuntu)
-    [[ $link = ".roots/py3req-https-ubuntu.cf364a3d/root" ]]
+    [[ $link = ".roots/py3req-https-ubuntu.39fc6dcd/root" ]]
 }
 
 @test "py3: alpine req-https.txt" {
@@ -97,7 +97,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-https-alpine)
-    [[ $link = ".roots/py3req-https-alpine.b11b6fe3/root" ]]
+    [[ $link = ".roots/py3req-https-alpine.fb29b883/root" ]]
 }
 
 @test "py3: container inheritance" {
@@ -105,7 +105,7 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/py3req-inherit)
-    [[ $link = ".roots/py3req-inherit.827dd4ed/root" ]]
+    [[ $link = ".roots/py3req-inherit.51b2cf8f/root" ]]
 }
 
 @test "pip: C dependencies caching" {
@@ -126,6 +126,7 @@ setup() {
 }
 
 @test "py3: recursive requirements files" {
+    echo '-r requirements.txt' > /work/tests/pip/include-short.txt
     run sh -c 'vagga _version_hash py3req-recursive-reqs -s'
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
