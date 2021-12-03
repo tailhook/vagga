@@ -13,7 +13,7 @@ containers:
       PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
       HOME: /work/target
     setup:
-    - !Ubuntu xenial
+    - !Ubuntu focal
     - !UbuntuUniverse
     - !Install [build-essential, ca-certificates, cmake, zlib1g-dev]
     - !Install [file]  # dependency of checkinstall (bug #46)
@@ -42,11 +42,11 @@ containers:
     environ:
       HOME: /work/target
     setup:
-    - !Ubuntu xenial
+    - !Ubuntu focal
     - !UbuntuUniverse
     - !Text
       /etc/apt/sources.list.d/arm.list: |
-        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports xenial universe
+        deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports focal universe
     - !Install
       - build-essential
       - git
@@ -67,7 +67,7 @@ containers:
 
   testbase:
     setup:
-    - !Ubuntu xenial
+    - !Ubuntu focal
     - !UbuntuUniverse
     - !BuildDeps [wget]
     - !Install [make, curl, zip, file, git]

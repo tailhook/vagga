@@ -6,6 +6,7 @@
 use std::env;
 use std::process::exit;
 
+extern crate digest_traits;
 extern crate sha2;
 extern crate blake2;
 extern crate typenum;
@@ -19,7 +20,6 @@ extern crate regex;
 extern crate scan_dir;
 extern crate docopt;
 extern crate humantime;
-extern crate digest_writer;
 extern crate itertools;
 extern crate serde;
 extern crate serde_json;

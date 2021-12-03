@@ -20,7 +20,8 @@ use container::uidmap::get_max_uidmap;
 use container::network::detect_local_dns;
 use super::super::config::Config;
 use super::super::container::nsutil::{set_namespace};
-use sha2::{Sha256, Digest as DTrait};
+use digest_traits::Digest;
+use sha2::Sha256;
 use file_util::Dir;
 use process_util::{set_uidmap, env_command, run_success, cmd_err, cmd_show};
 use digest::hex;
@@ -595,7 +596,7 @@ pub fn setup_container(link_net: &Path, link_uts: &Path, name: &str,
 {
     let eif = if name.as_bytes().len() > 14 {
         let mut hash = Sha256::new();
-        hash.input(name.as_bytes());
+        hash.update(name.as_bytes());
         format!("eh{:.12x}", hex(&hash))
     } else {
         name.to_string()
