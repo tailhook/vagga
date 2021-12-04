@@ -11,7 +11,7 @@ use std::os::unix::ffi::OsStrExt;
 
 use nix;
 use libc;
-use libc::{uid_t, gid_t, utime, utimbuf, time_t};
+use libc::{uid_t, gid_t, utime, utimbuf};
 use nix::fcntl::{flock, FlockArg};
 use digest_traits::Digest;
 use sha2::Sha256;
@@ -467,8 +467,8 @@ pub fn set_times<P: AsRef<Path>>(path: P, atime: i64, mtime: i64)
 {
     let filename = CString::new(path.as_ref().as_os_str().as_bytes()).unwrap();
     let utimes = utimbuf {
-        actime: atime as time_t,
-        modtime: mtime as time_t,
+        actime: atime,
+        modtime: mtime,
     };
     let rc = unsafe { utime(filename.as_ptr(), &utimes) };
     if rc != 0 {
