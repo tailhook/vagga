@@ -20,7 +20,7 @@ use builder::commands::generic::{run_command_at_env, capture_command};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const PIP_HOME: &str = "/tmp/pip-install";
-const PYTHON_PATH: &str = concatcp!("/tmp/non-existent:", PIP_HOME);
+const PYTHON_PATH: &str = PIP_HOME;
 
 const PIP_MIN_PYTHON_VERSION: (u8, u8, u8) = (3, 6, 0);
 
