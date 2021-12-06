@@ -37,7 +37,7 @@ quick-error = "1.2.0"
 docopt = "1.0.0"
 quire = "0.4.1"
 lazy_static = "1.0.0"
-dir-signature = { git="https://github.com/tailhook/dir-signature", rev="84192d3", optional=true }
+dir-signature = { git="https://github.com/tailhook/dir-signature", rev="fd6bf1b", optional=true }
 itertools = "0.7.8"
 git2 = { version="0.7.1", default-features=false, optional=true }
 tempfile = { version="3.0.2", optional=true }

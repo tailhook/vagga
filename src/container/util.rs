@@ -200,7 +200,7 @@ pub fn write_container_signature(cont_dir: &Path)
         .map_err(|e| format!("Can't write index: {}", e))?;
     v1::scan(Sig::new()
             .auto_threads()
-            .hash(HashType::blake2b_256())
+            .hash(HashType::blake3_256())
             .add_dir(cont_dir.join("root"), "/"),
         &mut BufWriter::new(index)
     ).map_err(|e| format!("Error indexing: {}", e))
@@ -260,7 +260,7 @@ pub fn check_signature(cont_dir: &Path)
     let mut scanner_config = Sig::new();
     scanner_config
         .auto_threads()
-        .hash(HashType::blake2b_256())
+        .hash(HashType::blake3_256())
         .add_dir(cont_dir.join("root"), "/");
     let mut real_ds_file = tempfile()
         .map_err(|e| CreateTempSignatureFile(e))?;
