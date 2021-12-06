@@ -12,7 +12,7 @@ use quire::validate as V;
 #[cfg(feature="containers")]
 use builder::context::Context;
 #[cfg(feature="containers")]
-use process_util::{CapturedOutput, capture_output, run_success, cmd_show};
+use process_util::{CaptureOutput, capture_output, run_success, cmd_show};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
 use launcher::network::create_isolated_network;
@@ -152,9 +152,9 @@ pub fn run_command(ctx: &mut Context, cmd: &[String])
 }
 
 #[cfg(feature="containers")]
-pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
-    env: &[(&str, &str)])
-    -> Result<CapturedOutput, String>
+pub fn capture_command<'x>(
+    ctx: &mut Context, cmdline: &'x[String], env: &[(&str, &str)], capture: CaptureOutput
+) -> Result<Vec<u8>, String>
 {
     let cmdpath = if cmdline[0][..].starts_with("/") {
         PathBuf::from(&cmdline[0])
@@ -172,7 +172,7 @@ pub fn capture_command<'x>(ctx: &mut Context, cmdline: &'x[String],
     for &(k, v) in env.iter() {
         cmd.env(k, v);
     }
-    capture_output(cmd)
+    capture_output(cmd, capture)
 }
 
 #[cfg(feature="containers")]

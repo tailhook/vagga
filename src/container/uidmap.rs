@@ -13,7 +13,7 @@ use libc::{uid_t, gid_t};
 use config::Range;
 use config::Settings;
 use self::Uidmap::*;
-use process_util::{env_path_find, capture_output};
+use process_util::{env_path_find, CaptureOutput, capture_output};
 
 #[derive(Clone)]
 pub enum Uidmap {
@@ -127,9 +127,9 @@ fn make_uidmap<F>(fun: F) -> Result<Uidmap, String>
         cmd.env("PATH", path);
     }
     cmd.stdin(Stdio::null()).stderr(Stdio::inherit());
-    let username = capture_output(cmd)
+    let username = capture_output(cmd, CaptureOutput::Stdout)
         .map_err(|e| format!("Error running `id -u -n`: {}", e))
-        .and_then(|out| from_utf8(&out.stdout).map(|x| x.trim().to_string())
+        .and_then(|out| from_utf8(&out).map(|x| x.trim().to_string())
                    .map_err(|e| format!("Can't decode username: {}", e)))?;
     let uid_map = read_id_map("/etc/subuid", &username, uid)
         .map_err(|e| error!("Error reading uidmap: {}", e));

@@ -16,6 +16,7 @@ use builder::packages;
 use builder::commands::generic::{run_command_at_env, capture_command};
 #[cfg(feature="containers")] use builder::distrib::Distribution;
 #[cfg(feature="containers")] use file_util::Dir;
+#[cfg(feature="containers")] use process_util::CaptureOutput;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const PIP_HOME: &str = "/tmp/pip-install";
@@ -146,21 +147,19 @@ fn python_executable(ctx: &Context, ver: u8) -> String {
 }
 
 fn python_version(ctx: &mut Context, ver: u8) -> Result<(u8, u8, u8), String> {
-    let py_version_output = capture_command(
+    let version_output = capture_command(
         ctx,
         &[
             python_executable(ctx, ver),
             "--version".to_string(),
         ],
-        &[]
+        &[],
+        if ver == 2 { CaptureOutput::Stderr } else { CaptureOutput::Stdout }
     )?;
-    let py_version_output = if ver == 2 {
-        py_version_output.stderr
-    } else {
-        py_version_output.stdout
-    };
-    parse_python_version(&str::from_utf8(py_version_output.as_ref()).unwrap())
-        // .map_err(|e| warn!("Can't get python version: {}", e)).ok();
+    parse_python_version(
+        &str::from_utf8(version_output.as_ref())
+            .map_err(|e| format!("Error parsing python version output: {}", e))?
+    )
 }
 
 fn parse_python_version(version_output: &str) -> Result<(u8, u8, u8), String> {
@@ -321,10 +320,10 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
-            ], &[("PYTHONPATH", PYTHON_PATH)])
+            ], &[("PYTHONPATH", PYTHON_PATH)], CaptureOutput::Stdout)
             .and_then(|out| {
                 File::create("/vagga/container/pip2-freeze.txt")
-                .and_then(|mut f| f.write_all(&out.stdout))
+                .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
             })
             .map_err(|e| warn!("Can't list pip packages: {}", e)).ok();
@@ -336,10 +335,10 @@ pub fn freeze(ctx: &mut Context) -> Result<(), String> {
                 "-m".to_string(),
                 "pip".to_string(),
                 "freeze".to_string(),
-            ], &[("PYTHONPATH", PYTHON_PATH)])
+            ], &[("PYTHONPATH", PYTHON_PATH)], CaptureOutput::Stdout)
             .and_then(|out| {
                 File::create("/vagga/container/pip3-freeze.txt")
-                .and_then(|mut f| f.write_all(&out.stdout))
+                .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
             })
             .map_err(|e| warn!("Can't list pip packages: {}", e)).ok();

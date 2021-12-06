@@ -12,7 +12,7 @@ use regex::Regex;
 #[cfg(feature="containers")] use capsule::packages as capsule;
 #[cfg(feature="containers")] use builder::packages;
 #[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::capture_output;
+#[cfg(feature="containers")] use process_util::{CaptureOutput, capture_output};
 #[cfg(feature="containers")] use builder::distrib::{Distribution, Named, DistroBox};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 use config::version::Version;
@@ -178,11 +178,11 @@ impl Distribution for Distro {
             .arg("--root").arg("/vagga/root")
             .arg("-vv")
             .arg("info");
-        capture_output(cmd)
+        capture_output(cmd, CaptureOutput::Stdout)
             .map_err(|e| format!("Error dumping package list: {}", e))
             .and_then(|out| {
                 File::create("/vagga/container/alpine-packages.txt")
-                .and_then(|mut f| f.write_all(&out.stdout))
+                .and_then(|mut f| f.write_all(&out))
                 .map_err(|e| format!("Error dumping package list: {}", e))
             })
             .map_err(|e| warn!("Can't list alpine packages: {}", e)).ok();
