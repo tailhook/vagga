@@ -85,6 +85,15 @@ containers:
     - !Env { CFLAGS: "-I/usr/include/libxml2 -I/usr/include/libxslt" }
     - !Py3Install [lxml]
 
+  pip-deps:
+    setup:
+    - !Ubuntu focal
+    # Fails with following error if setuptools version is not specified:
+    # error in anyjson setup command: use_2to3 is invalid
+    - !PipConfig
+      pip-deps: [setuptools<58]
+    - !Py3Install [anyjson==0.3.3]
+
 commands:
   pty-output: !Command
     container: py3-ubuntu

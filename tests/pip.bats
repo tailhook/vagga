@@ -120,7 +120,6 @@ setup() {
 @test "py3: pty works" {
     run vagga pty-output
     printf "%s\n" "${lines[@]}"
-    echo STATUS "$status"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = $'pty_copy\r' ]]
 }
@@ -140,4 +139,12 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
+}
+
+@test "py3: pip dependencies" {
+    run vagga _build pip-deps
+    printf "%s\n" "${lines[@]}"
+    [[ $status = 0 ]]
+    link=$(readlink .vagga/pip-deps)
+    [[ $link = ".roots/pip-deps.ff73d42f/root" ]]
 }
