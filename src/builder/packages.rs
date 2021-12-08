@@ -1,14 +1,10 @@
-use std::path::Path;
-
 use builder::commands::composer;
 use builder::commands::gem;
-use builder::commands::generic::run_command_at_env;
 use builder::commands::npm;
+use builder::commands::pip;
 use builder::context::Context;
 use builder::distrib::Distribution;
 use builder::error::StepError;
-use capsule::download;
-use file_util::copy;
 
 pub use self::Package::*;
 
@@ -40,7 +36,6 @@ pub enum Package {
 
     Git,
     Mercurial,
-
 }
 
 
@@ -50,20 +45,8 @@ fn generic_packages(ctx: &mut Context, features: Vec<Package>)
     let mut left = vec!();
     for i in features.into_iter() {
         match i {
-            PipPy2 | PipPy3 => {
-                let args = vec!(
-                    ctx.pip_settings.python_exe.clone()
-                    .unwrap_or((if i == PipPy2 {"python2"} else {"python3"})
-                               .to_string()),
-                    "/tmp/get-pip.py".to_string(),
-                    "--target=/tmp/pip-install".to_string(),
-                    );
-                let pip_inst = download::download_file(&mut ctx.capsule,
-                    &["https://bootstrap.pypa.io/get-pip.py"], None, false)?;
-                copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
-                    .map_err(|e| format!("Error copying pip: {}", e))?;
-                run_command_at_env(ctx, &args, &Path::new("/work"), &[])?;
-            }
+            PipPy2 => pip::bootstrap(ctx, 2)?,
+            PipPy3 => pip::bootstrap(ctx, 3)?,
             Composer => composer::bootstrap(ctx)?,
             Bundler => gem::setup_bundler(ctx)?,
             Yarn => npm::setup_yarn(ctx)?,

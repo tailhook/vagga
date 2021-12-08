@@ -17,7 +17,7 @@ use builder::commands::generic::{run_command, capture_command};
 #[cfg(feature="containers")] use builder::commands::generic::{command, run};
 #[cfg(feature="containers")] use capsule::download;
 #[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::capture_stdout;
+#[cfg(feature="containers")] use process_util::{CaptureOutput, capture_output};
 #[cfg(feature="containers")] use file_util;
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
@@ -404,8 +404,8 @@ fn ask_php_for_conf_d(ctx: &mut Context) -> Result<PathBuf, String> {
         .unwrap_or(DEFAULT_RUNTIME.to_owned());
 
     let args = [runtime_exe, "--ini".to_owned()];
-    let output = capture_command(ctx, &args, &[])
-        .and_then(|x| String::from_utf8(x)
+    let output = capture_command(ctx, &args, &[], CaptureOutput::Stdout)
+        .and_then(|out| String::from_utf8(out)
             .map_err(|e| format!("Error parsing command output: {}", e)))
         .map_err(|e| format!("Error reading command output: {}", e))?;
 
@@ -437,7 +437,7 @@ fn list_packages(ctx: &mut Context) -> Result<(), StepError> {
     let mut cmd = composer_cmd(ctx)?;
     cmd.arg("show");
 
-    capture_stdout(cmd)
+    capture_output(cmd, CaptureOutput::Stdout)
         .and_then(|out| {
             File::create("/vagga/container/composer-list.txt")
             .and_then(|mut f| f.write_all(&out))

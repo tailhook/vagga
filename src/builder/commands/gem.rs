@@ -16,7 +16,7 @@ use builder::distrib::Distribution;
 #[cfg(feature="containers")]
 use builder::commands::generic::{command, run};
 #[cfg(feature="containers")]
-use process_util::capture_stdout;
+use process_util::{CaptureOutput, capture_output};
 use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const DEFAULT_GEM_EXE: &'static str = "/usr/bin/gem";
@@ -100,8 +100,8 @@ fn gem_version(ctx: &mut Context) -> Result<f32, String> {
         "--version".to_owned(),
     ];
 
-    let gem_ver = capture_command(ctx, &args, &[])
-        .and_then(|x| String::from_utf8(x)
+    let gem_ver = capture_command(ctx, &args, &[], CaptureOutput::Stdout)
+        .and_then(|out| String::from_utf8(out)
             .map_err(|e| format!("Error parsing gem version: {}", e)))
         .map_err(|e| format!("Error getting gem version: {}", e))?;
 
@@ -125,8 +125,8 @@ fn gem_cache_dir(ctx: &mut Context) -> Result<PathBuf, String> {
         "gemdir".to_owned(),
     ];
 
-    let gem_dir = capture_command(ctx, &args, &[])
-        .and_then(|x| String::from_utf8(x)
+    let gem_dir = capture_command(ctx, &args, &[], CaptureOutput::Stdout)
+        .and_then(|out| String::from_utf8(out)
             .map_err(|e| format!("Error getting gem dir: {}", e)))?;
 
     Ok(Path::new(gem_dir.trim()).join("cache"))
@@ -304,7 +304,7 @@ pub fn list(ctx: &mut Context) -> Result<(), StepError> {
     cmd.arg("list");
     cmd.arg("--local");
 
-    capture_stdout(cmd)
+    capture_output(cmd, CaptureOutput::Stdout)
         .and_then(|out| {
             File::create("/vagga/container/gems-list.txt")
             .and_then(|mut f| f.write_all(&out))

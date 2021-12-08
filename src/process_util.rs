@@ -47,14 +47,29 @@ pub fn squash_stdio(cmd: &mut Command) -> Result<(), String> {
     Ok(())
 }
 
-pub fn capture_stdout(mut cmd: Command) -> Result<Vec<u8>, String> {
-    cmd.stdout(Stdio::piped());
+pub enum CaptureOutput {
+    Stdout,
+    Stderr,
+}
+
+pub fn capture_output(
+    mut cmd: Command, capture: CaptureOutput
+) -> Result<Vec<u8>, String> {
+    let pipe = Stdio::piped();
+    match capture {
+        CaptureOutput::Stdout => { cmd.stdout(pipe); },
+        CaptureOutput::Stderr => { cmd.stderr(pipe); },
+    }
     info!("Running {}", cmd_show(&cmd));
     let mut child = cmd.spawn()
         .map_err(|e| format!("{}", e))?;
     let mut buf = Vec::with_capacity(1024);
-    child.stdout.take().unwrap().read_to_end(&mut buf)
-        .map_err(|e| format!("Error reading from pipe: {}", e))?;
+    let output = match capture {
+        CaptureOutput::Stdout => child.stdout.take(),
+        CaptureOutput::Stderr => child.stderr.take(),
+    };
+    output.unwrap().read_to_end(&mut buf)
+        .map_err(|e| format!("Error reading from stdout pipe: {}", e))?;
     child.wait().map_err(|e| format!("Error waiting for child: {}", e))?;
     Ok(buf)
 }
