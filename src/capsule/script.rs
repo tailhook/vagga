@@ -7,11 +7,10 @@ use argparse::{ArgumentParser};
 use argparse::{List, Store, StoreOption, StoreTrue};
 use unshare::{Command};
 
-use capsule::Context;
-use capsule::packages::State;
-use capsule::download;
-use launcher::wrap::Wrapper;
-use process_util::{run_and_wait, convert_status};
+use crate::capsule::{Context, download};
+use crate::capsule::packages::State;
+use crate::launcher::wrap::Wrapper;
+use crate::process_util::{run_and_wait, convert_status};
 
 
 pub fn run_script(context: &Context, mut args: Vec<String>)

@@ -2,8 +2,8 @@ use std::io::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use capsule::Context;
-use launcher::build::build_container;
+use crate::capsule::Context;
+use crate::launcher::build::build_container;
 
 
 pub fn build_command(context: &Context, args: Vec<String>)

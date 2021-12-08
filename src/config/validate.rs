@@ -1,6 +1,6 @@
 use super::Config;
 use super::containers::Container;
-use build_step::Step;
+use crate::build_step::Step;
 
 fn find_name(name: &str, cont: &Container, cfg: &Config) -> Result<(), String>
 {

@@ -4,7 +4,7 @@ use std::io::{stdout, stderr, Write};
 use argparse::{ArgumentParser, Store, StoreOption, List};
 use unshare::Command;
 
-use process_util::{set_fake_uidmap, cmd_err};
+use crate::process_util::{set_fake_uidmap, cmd_err};
 
 fn run_as(args: Vec<String>) -> Result<i32, String> {
     let mut user_id: Option<u32> = None;

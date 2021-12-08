@@ -9,15 +9,18 @@ use quire::validate as V;
 #[cfg(feature="containers")] use unshare::{Stdio};
 #[cfg(feature="containers")] use scan_dir::ScanDir;
 
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-#[cfg(feature="containers")] use builder::commands::generic::{command, run, find_cmd};
-#[cfg(feature="containers")] use builder::commands::tarcmd::unpack_file;
-#[cfg(feature="containers")] use builder::context::{Context};
-#[cfg(feature="containers")] use builder::distrib::{Distribution, Named, DistroBox};
-#[cfg(feature="containers")] use builder::dns::revert_name_files;
-#[cfg(feature="containers")] use builder::packages;
-#[cfg(feature="containers")] use container::util::clean_dir;
-#[cfg(feature="containers")] use file_util::{Dir, Lock, copy, copy_utime, safe_remove};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
+use crate::{
+    builder::commands::generic::{command, run, find_cmd},
+    builder::commands::tarcmd::unpack_file,
+    builder::context::Context,
+    builder::distrib::{Distribution, Named, DistroBox},
+    builder::dns::revert_name_files,
+    builder::packages,
+    container::util::clean_dir,
+    file_util::{Dir, Lock, copy, copy_utime, safe_remove},
+};
 
 #[cfg(feature="containers")]
 use self::build::*;
@@ -869,7 +872,7 @@ mod build {
     use std::os::unix::fs::{PermissionsExt};
     use std::io::BufRead;
     use unshare::{Command};
-    use capsule::download::download_file;
+    use crate::capsule::download::download_file;
 
     use super::*;
 

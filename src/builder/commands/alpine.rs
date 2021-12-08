@@ -8,16 +8,15 @@ use quire::validate as V;
 use unshare::{Command, Stdio};
 use regex::Regex;
 
-#[cfg(feature="containers")] use builder::context::{Context};
-#[cfg(feature="containers")] use capsule::packages as capsule;
-#[cfg(feature="containers")] use builder::packages;
-#[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::{CaptureOutput, capture_output};
-#[cfg(feature="containers")] use builder::distrib::{Distribution, Named, DistroBox};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use config::version::Version;
-#[cfg(feature="containers")]
-use builder::dns::revert_name_files;
+#[cfg(feature="containers")] use crate::builder::context::{Context};
+#[cfg(feature="containers")] use crate::builder::distrib::{Distribution, Named, DistroBox};
+#[cfg(feature="containers")] use crate::builder::dns::revert_name_files;
+#[cfg(feature="containers")] use crate::builder::packages;
+#[cfg(feature="containers")] use crate::capsule::packages as capsule;
+#[cfg(feature="containers")] use crate::file_util::Dir;
+#[cfg(feature="containers")] use crate::process_util::{CaptureOutput, capture_output};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::config::version::Version;
 
 
 pub static LATEST_VERSION: &'static str = "v3.15";

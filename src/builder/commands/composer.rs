@@ -9,17 +9,17 @@ use regex::Regex;
 use serde_json::{Value as Json, from_reader};
 use quire::validate as V;
 
-#[cfg(feature="containers")] use builder::context::{Context};
-#[cfg(feature="containers")] use builder::packages;
 #[cfg(feature="containers")]
-use builder::commands::generic::{run_command, capture_command};
-#[cfg(feature="containers")] use builder::distrib::Distribution;
-#[cfg(feature="containers")] use builder::commands::generic::{command, run};
-#[cfg(feature="containers")] use capsule::download;
-#[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::{CaptureOutput, capture_output};
-#[cfg(feature="containers")] use file_util;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::{
+    builder::context::{Context},
+    builder::packages,
+    builder::commands::generic::{capture_command, command, run, run_command},
+    builder::distrib::Distribution,
+    capsule::download,
+    file_util::{self, Dir},
+    process_util::{CaptureOutput, capture_output},
+};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
 const DEFAULT_INCLUDE_PATH: &'static str = ".:/usr/local/lib/composer";

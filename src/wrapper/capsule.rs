@@ -7,13 +7,13 @@ use std::path::Path;
 use argparse::{ArgumentParser};
 use serde_json;
 
-use config::command::{CapsuleInfo, Run};
+use crate::config::command::{CapsuleInfo, Run};
+use crate::file_util::Dir;
+use crate::process_util::{run_and_wait, convert_status, copy_env_vars};
 
 use super::setup;
 use super::Wrapper;
 use super::util::{gen_command};
-use file_util::Dir;
-use process_util::{run_and_wait, convert_status, copy_env_vars};
 
 
 const BUSYBOX_COMMANDS: &'static [&'static str] = &[

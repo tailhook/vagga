@@ -11,27 +11,24 @@ use serde_json::{Value as Json, from_reader};
 use scan_dir;
 #[cfg(feature="containers")] use unshare::{Stdio};
 
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use builder::commands::generic::{command, run};
-#[cfg(feature="containers")]
-use builder::distrib::{Distribution, DistroBox};
-#[cfg(feature="containers")]
-use builder::commands::ubuntu;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-#[cfg(feature="containers")]
-use capsule::download::download_file;
-#[cfg(feature="containers")]
-use container::mount::unmount;
-#[cfg(feature="containers")]
-use container::root::temporary_change_root;
-#[cfg(feature="containers")]
-use container::util::clean_dir;
-#[cfg(feature="containers")]
-use file_util::{safe_ensure_dir, copy, force_symlink};
-#[cfg(feature="containers")]
-use builder::context::{Context};
-#[cfg(feature="containers")]
-use builder::packages;
+use crate::{
+    builder::{
+        commands::ubuntu,
+        commands::generic::{command, run},
+        context::Context,
+        distrib::{Distribution, DistroBox},
+        packages,
+    },
+    capsule::download::download_file,
+    container::{
+        root::temporary_change_root,
+        mount::unmount,
+        util::clean_dir,
+    },
+    file_util::{safe_ensure_dir, copy, force_symlink},
+};
 
 lazy_static! {
     static ref YARN_PATTERN: Regex = Regex::new(r#""[^"]+"|[^,]+"#).unwrap();

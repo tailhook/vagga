@@ -8,23 +8,21 @@ use quire::validate as V;
 use libmount::{BindMount, Remount};
 use quick_error::ResultExt;
 
-use config::read_config;
-use config::containers::Container as Cont;
-#[cfg(feature="containers")] use version::short_version;
-#[cfg(feature="containers")] use container::util::{copy_dir};
-#[cfg(feature="containers")] use file_util::{Dir, ShallowCopy};
-#[cfg(feature="containers")] use path_util::IterSelfAndParents;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::config::read_config;
+use crate::config::containers::Container as Cont;
+#[cfg(feature="containers")] use crate::version::short_version;
+#[cfg(feature="containers")] use crate::container::util::{copy_dir};
+#[cfg(feature="containers")] use crate::file_util::{Dir, ShallowCopy};
+#[cfg(feature="containers")] use crate::path_util::IterSelfAndParents;
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
-use builder::StepError as E;
+use crate::builder::StepError as E;
 #[cfg(feature="containers")]
-use builder::dns::revert_name_files;
+use crate::builder::dns::revert_name_files;
 #[cfg(feature="containers")]
-use builder::commands::copy::{create_path_filter, hash_path};
+use crate::builder::commands::copy::{create_path_filter, hash_file_content, hash_path};
 #[cfg(feature="containers")]
-use builder::commands::copy::{DEFAULT_ATIME, DEFAULT_MTIME};
-#[cfg(feature="containers")]
-use builder::commands::copy::{hash_file_content};
+use crate::builder::commands::copy::{DEFAULT_ATIME, DEFAULT_MTIME};
 
 // Build Steps
 #[derive(Debug, Serialize, Deserialize)]

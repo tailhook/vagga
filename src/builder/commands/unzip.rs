@@ -7,13 +7,13 @@ use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 use quire::validate as V;
 
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use builder::context::Context;
+use crate::builder::context::Context;
 #[cfg(feature="containers")]
-use capsule::download::maybe_download_and_check_hashsum;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::capsule::download::maybe_download_and_check_hashsum;
 #[cfg(feature="containers")]
-use file_util::{Dir, copy_stream};
+use crate::file_util::{Dir, copy_stream};
 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

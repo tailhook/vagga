@@ -1,6 +1,6 @@
 use quire::validate as V;
 
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 // Build Steps

@@ -13,22 +13,21 @@ use nix::unistd::getpid;
 use nix::sys::signal::Signal;
 use unshare::{Command, Child, Namespace, reap_zombies, Fd};
 
-use options::build_mode::{build_mode, BuildMode};
-use container::nsutil::{set_namespace, unshare_namespace};
-use config::command::{SuperviseInfo, Networking};
-use config::command::SuperviseMode::{wait_all_successful};
-use config::command::ChildCommand::{BridgeCommand};
-use tty_util::{TtyGuard};
-use super::network;
+use crate::container::nsutil::{set_namespace, unshare_namespace};
+use crate::config::command::{SuperviseInfo, Networking};
+use crate::config::command::SuperviseMode::{wait_all_successful};
+use crate::config::command::ChildCommand::{BridgeCommand};
+use crate::file_util::Dir;
+use crate::launcher::{Context, socket};
+use crate::launcher::options::{ArgError, parse_docopts};
+use crate::launcher::volumes::prepare_volumes;
+use crate::options::build_mode::{build_mode, BuildMode};
+use crate::process_util::{convert_status, send_signal, send_pg_signal};
+use crate::tty_util::{TtyGuard};
+
 use super::build::{build_container};
-use file_util::Dir;
-use process_util::{convert_status, send_signal, send_pg_signal};
+use super::network;
 use super::wrap::Wrapper;
-use launcher::volumes::prepare_volumes;
-use launcher::options::ArgError;
-use launcher::socket;
-use launcher::Context;
-use launcher::options::parse_docopts;
 
 
 const DEFAULT_DOCOPT: &'static str = "\

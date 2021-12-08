@@ -4,16 +4,16 @@ use argparse::{ArgumentParser};
 use argparse::{StoreTrue, List, StoreOption, Store};
 use unshare::{Command, Namespace};
 
-use options::build_mode::build_mode;
-use options::version_hash;
-use container::nsutil::{set_namespace};
-use process_util::{run_and_wait, convert_status};
+use crate::container::nsutil::{set_namespace};
+use crate::launcher::Context;
+use crate::launcher::volumes::prepare_volumes;
+use crate::options::build_mode::build_mode;
+use crate::options::version_hash;
+use crate::process_util::{run_and_wait, convert_status};
 
 use super::network;
 use super::build::{build_container};
 use super::wrap::Wrapper;
-use launcher::Context;
-use launcher::volumes::prepare_volumes;
 
 
 pub fn run_command(context: &Context, mut args: Vec<String>)

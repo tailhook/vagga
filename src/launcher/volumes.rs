@@ -1,7 +1,7 @@
-use config::volumes::SnapshotInfo;
-use config::volumes::Volume::{self, Container, Snapshot};
-use launcher::build::build_container;
-use launcher::Context;
+use crate::config::volumes::SnapshotInfo;
+use crate::config::volumes::Volume::{self, Container, Snapshot};
+use crate::launcher::build::build_container;
+use crate::launcher::Context;
 
 
 pub fn prepare_volumes<'x, I>(volumes: I, context: &Context)

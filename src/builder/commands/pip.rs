@@ -4,20 +4,24 @@ use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::str;
 
-use failure::Error;
 use quire::validate as V;
-use capsule::download;
-use file_util::copy;
+
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use builder::context::{Context};
+use crate::builder::commands::generic::{run_command_at_env, capture_command};
 #[cfg(feature="containers")]
-use builder::packages;
+use crate::builder::context::{Context};
 #[cfg(feature="containers")]
-use builder::commands::generic::{run_command_at_env, capture_command};
-#[cfg(feature="containers")] use builder::distrib::Distribution;
-#[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::CaptureOutput;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::builder::distrib::Distribution;
+#[cfg(feature="containers")]
+use crate::builder::packages;
+use crate::capsule::download;
+use crate::failure::Error;
+use crate::file_util::copy;
+#[cfg(feature="containers")]
+use crate::file_util::Dir;
+#[cfg(feature="containers")]
+use crate::process_util::CaptureOutput;
 
 const PIP_HOME: &str = "/tmp/pip-install";
 const PYTHON_PATH: &str = PIP_HOME;

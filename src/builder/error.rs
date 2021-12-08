@@ -8,9 +8,9 @@ use libmount;
 use path_filter;
 use git2;
 
-use build_step::BuildStep;
-use builder::packages::Package;
-use process_util::{cmd_debug};
+use crate::build_step::BuildStep;
+use crate::builder::packages::Package;
+use crate::process_util::cmd_debug;
 
 
 quick_error! {

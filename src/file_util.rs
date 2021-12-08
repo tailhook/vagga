@@ -16,8 +16,8 @@ use nix::fcntl::{flock, FlockArg};
 use digest_traits::Digest;
 use sha2::Sha256;
 
-use digest::hex;
-use path_util::ToCString;
+use crate::digest::hex;
+use crate::path_util::ToCString;
 
 pub struct Lock {
     file: fs::File,

@@ -5,9 +5,10 @@ use std::sync::Arc;
 
 use argparse::{ArgumentParser, Store, StoreOption, List};
 
+use crate::config::read_settings::{read_settings, MergedSettings};
+
 use super::config::{find_config_or_exit, Config, Settings};
 use super::config::command::MainCommand::{Command, Supervise, CapsuleCommand};
-use config::read_settings::{read_settings, MergedSettings};
 
 
 mod debug;

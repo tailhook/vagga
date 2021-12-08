@@ -3,8 +3,8 @@ use std::collections::BTreeMap;
 
 use unshare::{Command};
 
-use config::Container;
-use config::command::Run;
+use crate::config::Container;
+use crate::config::command::Run;
 
 
 pub fn find_cmd(cmd: &str, env: &BTreeMap<String, String>)

@@ -1,10 +1,8 @@
 use std::collections::HashSet;
 
-use config::volumes::Volume;
-use config::volumes::PersistentInfo;
-use config::command::MainCommand;
-use launcher::Context;
-use launcher::storage_dir;
+use crate::config::command::MainCommand;
+use crate::config::volumes::{PersistentInfo, Volume};
+use crate::launcher::{Context, storage_dir};
 
 
 fn _check_volumes<'x, I>(ctx: &Context, iter: I, result: &mut Vec<&'x String>)

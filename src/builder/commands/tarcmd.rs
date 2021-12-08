@@ -14,18 +14,15 @@ use std::u32;
 use quire::validate as V;
 
 #[cfg(feature="containers")]
-use capsule::download::{maybe_download_and_check_hashsum};
-#[cfg(feature="containers")]
-use container::mount::{unmount};
-#[cfg(feature="containers")]
-use builder::context::Context;
-#[cfg(feature="containers")]
-use builder::commands::generic::run_command_at;
-#[cfg(feature="containers")]
-use builder::dns::revert_name_files;
-#[cfg(feature="containers")]
-use file_util::{Dir, read_visible_entries, copy_stream, set_owner_group};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::{
+    build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard},
+    builder::commands::generic::run_command_at,
+    builder::context::Context,
+    builder::dns::revert_name_files,
+    capsule::download::{maybe_download_and_check_hashsum},
+    container::mount::{unmount},
+    file_util::{Dir, read_visible_entries, copy_stream, set_owner_group},
+};
 
 
 #[derive(Serialize, Deserialize, Debug)]

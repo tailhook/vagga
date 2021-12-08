@@ -2,14 +2,12 @@ use std::collections::HashMap;
 
 use unshare::{Command, Fd};
 
-use config::command::{CapsuleInfo};
-use process_util::{run_and_wait, convert_status};
+use crate::config::command::{CapsuleInfo};
+use crate::process_util::{run_and_wait, convert_status};
+use crate::launcher::options::{ArgError, parse_docopts};
+use crate::launcher::{Context, socket};
 use super::wrap::Wrapper;
 use super::network;
-use launcher::options::ArgError;
-use launcher::Context;
-use launcher::socket;
-use launcher::options::parse_docopts;
 
 
 const DEFAULT_DOCOPT: &'static str = "\

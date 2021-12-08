@@ -12,16 +12,16 @@ use quire::validate as V;
 use unshare::{Command, Stdio};
 
 #[cfg(feature="containers")]
-use builder::commands::subcontainer::GitSource;
+use crate::builder::commands::subcontainer::GitSource;
 #[cfg(feature="containers")]
-use capsule::packages as capsule;
+use crate::capsule::packages as capsule;
 #[cfg(feature="containers")]
-use builder::context::Context;
+use crate::builder::context::Context;
 #[cfg(feature="containers")]
-use builder::commands::generic::run_command_at;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::builder::commands::generic::run_command_at;
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use process_util::run_success;
+use crate::process_util::run_success;
 
 
 #[derive(Serialize, Deserialize, Debug)]

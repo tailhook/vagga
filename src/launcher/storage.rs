@@ -3,8 +3,8 @@ use std::io::{stdout, stderr, Write};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use file_util::{safe_ensure_dir, ensure_symlink};
-use config::read_settings::MergedSettings;
+use crate::file_util::{safe_ensure_dir, ensure_symlink};
+use crate::config::read_settings::MergedSettings;
 
 
 pub fn init_dir(settings: &MergedSettings, project_root: &Path,

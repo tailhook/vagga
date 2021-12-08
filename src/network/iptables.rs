@@ -3,10 +3,11 @@ use std::path::PathBuf;
 
 use unshare::{Command, Stdio, Namespace};
 
-use process_util::{env_path_find, cmd_show, cmd_err};
+use crate::container::nsutil::set_namespace;
+use crate::process_util::{env_path_find, cmd_show, cmd_err};
+
 use super::graphs::{Graph, NodeLinks};
 use super::graphs::NodeLinks::{Full, Isolate, DropSome};
-use super::super::container::nsutil::set_namespace;
 
 
 fn _rule<W: Write, S:AsRef<str>>(out: &mut W, data: S) -> Result<(), String> {

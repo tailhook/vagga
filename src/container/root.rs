@@ -5,7 +5,7 @@ use std::path::Path;
 use libc::chdir;
 use libc::{c_int, c_char};
 
-use path_util::ToCString;
+use crate::path_util::ToCString;
 
 
 extern {

@@ -12,7 +12,7 @@ use serde_json;
 use unshare::{Command, Stdio};
 use argparse::{ArgumentParser, Store, List};
 
-use process_util::{env_command, run_success};
+use crate::process_util::{env_command, run_success};
 
 fn has_interface(name: &str) -> Result<bool, String> {
     File::open(&Path::new("/proc/net/dev"))

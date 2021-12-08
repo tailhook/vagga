@@ -4,9 +4,9 @@ use std::os::unix::ffi::OsStrExt;
 
 use unshare::{Command, Namespace};
 
-use config::{Settings, Container, Range};
-use process_util::{set_uidmap, copy_env_vars};
-use container::uidmap::{get_max_uidmap, map_users};
+use crate::config::{Settings, Container, Range};
+use crate::container::uidmap::{get_max_uidmap, map_users};
+use crate::process_util::{set_uidmap, copy_env_vars};
 
 
 pub trait Wrapper {

@@ -9,15 +9,15 @@ use quire::ast::{Ast, Tag};
 use quire::validate as V;
 
 #[cfg(feature="containers")]
-use path_filter::{PathFilter, FilterError};
+use crate::path_filter::{PathFilter, FilterError};
 #[cfg(feature="containers")]
-use container::root::temporary_change_root;
+use crate::container::root::temporary_change_root;
 #[cfg(feature="containers")]
-use file_util::ShallowCopy;
+use crate::file_util::ShallowCopy;
 #[cfg(feature="containers")]
-use path_util::IterSelfAndParents;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use quick_error::ResultExt;
+use crate::path_util::IterSelfAndParents;
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::quick_error::ResultExt;
 
 
 const DEFAULT_UMASK: u32 = 0o002;

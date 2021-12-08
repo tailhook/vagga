@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use quire::{parse_config, parse_string, Options};
 use quire::validate as V;
 
-use config::Settings;
-use path_util::Expand;
+use crate::config::Settings;
+use crate::path_util::Expand;
 
 
 #[derive(PartialEq, Deserialize, Debug)]

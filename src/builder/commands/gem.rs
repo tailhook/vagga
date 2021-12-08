@@ -5,19 +5,17 @@ use std::io::{Read, Write, BufReader, BufRead};
 use regex::Regex;
 use quire::validate as V;
 
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use builder::context::Context;
+use crate::builder::commands::generic::{command, capture_command, run, run_command_at_env};
 #[cfg(feature="containers")]
-use builder::packages;
+use crate::builder::context::Context;
 #[cfg(feature="containers")]
-use builder::commands::generic::{capture_command, run_command_at_env};
+use crate::builder::distrib::Distribution;
 #[cfg(feature="containers")]
-use builder::distrib::Distribution;
+use crate::builder::packages;
 #[cfg(feature="containers")]
-use builder::commands::generic::{command, run};
-#[cfg(feature="containers")]
-use process_util::{CaptureOutput, capture_output};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::process_util::{CaptureOutput, capture_output};
 
 const DEFAULT_GEM_EXE: &'static str = "/usr/bin/gem";
 const BIN_DIR: &'static str = "/usr/local/bin";

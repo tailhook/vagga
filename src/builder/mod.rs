@@ -3,9 +3,9 @@ use std::default::Default;
 use std::path::Path;
 use rand;
 
-use config::find_config_or_exit;
-use config::{Config, Container, Settings};
-use argparse::{ArgumentParser, Store, StoreTrue};
+use crate::config::find_config_or_exit;
+use crate::config::{Config, Container, Settings};
+use crate::argparse::{ArgumentParser, Store, StoreTrue};
 
 #[cfg(feature="containers")]
 pub use self::guard::Guard;

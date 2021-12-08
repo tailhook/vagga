@@ -4,10 +4,9 @@ use std::io::{stdout, stderr};
 use unshare::{Command, Namespace};
 use argparse::{ArgumentParser, Store, List};
 
-use config::Config;
-use config::command::{Networking};
-use config::command::{MainCommand};
-use container::nsutil::set_namespace;
+use crate::config::Config;
+use crate::config::command::{MainCommand, Networking};
+use crate::container::nsutil::set_namespace;
 
 
 pub fn run_command_cmd(config: &Config, args: Vec<String>)

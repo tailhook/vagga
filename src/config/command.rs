@@ -7,10 +7,10 @@ use quire::{Error, ErrorCollector, Pos};
 use quire::ast::{Ast, Ast as A};
 use quire::ast::Tag::{NonSpecific, LocalTag};
 
-use config::Range;
-use super::volumes::{Volume, volume_validator};
+use crate::config::Range;
 #[cfg(feature="containers")]
-use launcher::system::SystemInfo;
+use crate::launcher::system::SystemInfo;
+use super::volumes::{Volume, volume_validator};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
 #[allow(non_camel_case_types)]

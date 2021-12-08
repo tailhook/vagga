@@ -2,11 +2,11 @@ use std::io::{self, stdout, stderr};
 use std::fs::{read_link};
 use std::env;
 use std::path::Path;
-use launcher::Context;
 
 use argparse::{ArgumentParser, StoreConst};
 
-use file_util::{safe_ensure_dir, force_symlink};
+use crate::launcher::Context;
+use crate::file_util::{safe_ensure_dir, force_symlink};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Which {

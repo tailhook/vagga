@@ -10,21 +10,18 @@ use std::path::{Path, PathBuf};
 use libc::pid_t;
 use libmount::{BindMount, Tmpfs, Remount};
 
-use config::{Container, Settings};
-use config::command::{CommandInfo, CapsuleInfo};
-use config::volumes::Volume;
-use config::volumes::Volume as V;
-use container::root::{change_root};
-use container::mount::{unmount, mount_system_dirs};
-use container::mount::{mount_proc, mount_dev, mount_run};
-use container::util::{hardlink_dir, clean_dir};
-use container::network::detect_local_dns;
-use config::read_settings::{MergedSettings};
-use process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
-use file_util::{Dir, safe_ensure_dir};
-use wrapper::snapshot::make_snapshot;
-use container::util::version_from_symlink;
-use storage_dir::sanitize;
+use crate::config::{Container, Settings};
+use crate::config::command::{CommandInfo, CapsuleInfo};
+use crate::config::read_settings::{MergedSettings};
+use crate::config::volumes::Volume;
+use crate::container::root::{change_root};
+use crate::container::mount::{mount_dev, mount_proc, mount_run,  mount_system_dirs, unmount};
+use crate::container::network::detect_local_dns;
+use crate::container::util::{clean_dir, hardlink_dir, version_from_symlink};
+use crate::file_util::{Dir, safe_ensure_dir};
+use crate::process_util::{DEFAULT_PATH, PROXY_ENV_VARS};
+use crate::storage_dir::sanitize;
+use crate::wrapper::snapshot::make_snapshot;
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -504,6 +501,8 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
     for (path, vol) in setup_info.volumes.iter() {
         let ref rel_path = path.strip_prefix("/").unwrap();
         let dest = tgtroot.join(rel_path);
+
+        use crate::config::volumes::Volume as V;
         match *vol {
             &V::Tmpfs(ref params) => {
                 Tmpfs::new(&dest)

@@ -4,10 +4,11 @@ use std::fs::{create_dir, File};
 use unshare::{Command};
 use libmount::Overlay;
 
-use process_util::convert_status;
+use crate::process_util::convert_status;
+use crate::wrapper::capsule;
+
 use super::Wrapper;
 use super::setup::setup_base_filesystem;
-use wrapper::capsule;
 
 
 pub fn run_interactive_build_shell(wrapper: &Wrapper) -> i32 {

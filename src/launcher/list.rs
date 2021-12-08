@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use argparse::{ArgumentParser, StoreTrue, StoreFalse};
 
-use config::Config;
+use crate::config::Config;
 
 
 pub fn print_list(config: &Config, mut args: Vec<String>)

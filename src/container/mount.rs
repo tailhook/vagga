@@ -8,8 +8,8 @@ use std::ptr::null;
 use libc::{c_ulong, c_int};
 use libmount::{BindMount, Tmpfs};
 
-use file_util::Dir;
-use path_util::ToCString;
+use crate::file_util::Dir;
+use crate::path_util::ToCString;
 
 // sys/mount.h
 static MS_RDONLY: c_ulong = 1;                /* Mount read-only.  */

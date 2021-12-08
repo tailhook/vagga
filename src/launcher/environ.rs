@@ -3,8 +3,8 @@ use std::collections::BTreeSet;
 
 use regex::{Regex, escape};
 
-use config::read_settings::MergedSettings;
-use failure::{Error, err_msg, ResultExt};
+use crate::config::read_settings::MergedSettings;
+use crate::failure::{Error, err_msg, ResultExt};
 
 
 fn patterns_to_regex(patterns: &BTreeSet<String>) -> Result<Regex, Error> {

@@ -9,13 +9,13 @@ use std::collections::BTreeMap;
 #[cfg(feature="containers")] use nix;
 use quire::validate as V;
 
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 #[cfg(feature="containers")]
-use builder::context::Context;
+use crate::builder::context::Context;
 #[cfg(feature="containers")]
-use process_util::{CaptureOutput, capture_output, run_success, cmd_show};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::launcher::network::create_isolated_network;
 #[cfg(feature="containers")]
-use launcher::network::create_isolated_network;
+use crate::process_util::{CaptureOutput, capture_output, run_success, cmd_show};
 
 // Build Steps
 #[derive(Debug, Serialize, Deserialize)]

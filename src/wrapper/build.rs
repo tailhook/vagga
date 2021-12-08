@@ -16,20 +16,22 @@ use unshare::{Command, Namespace, ExitStatus};
 use libmount::BindMount;
 use itertools::Itertools;
 
-use builder::context::Context;
-use builder::commands::tarcmd::unpack_file;
-use capsule::download::maybe_download_and_check_hashsum;
-use config::{Config, Container, Settings};
-use container::util::{clean_dir, hardlink_container_files};
-use container::util::write_container_signature;
-use container::util::{collect_container_dirs, collect_containers_from_storage};
-use container::mount::{unmount};
-use file_util::{Dir, Lock, copy, human_size};
-use process_util::{capture_fd3_status, copy_env_vars};
+use crate::build_step::Step;
+use crate::builder::context::Context;
+use crate::builder::commands::tarcmd::unpack_file;
+use crate::capsule::download::maybe_download_and_check_hashsum;
+use crate::config::{Config, Container, Settings};
+use crate::container::mount::unmount;
+use crate::container::util::{
+    clean_dir, collect_container_dirs, collect_containers_from_storage,
+    hardlink_container_files, write_container_signature,
+};
+use crate::file_util::{Dir, Lock, copy, human_size};
+use crate::options::version_hash::Options;
+use crate::process_util::{capture_fd3_status, copy_env_vars};
+
 use super::Wrapper;
 use super::setup;
-use build_step::Step;
-use options::version_hash::Options;
 
 
 struct ContainerInfo<'a> {

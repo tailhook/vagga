@@ -14,10 +14,10 @@ use std::sync::Arc;
 use unshare::Command;
 use libmount::BindMount;
 
-use config::settings::Settings;
-use process_util::{squash_stdio, run_success};
-use builder::commands::alpine::LATEST_VERSION;
-use file_util::Dir;
+use crate::config::settings::Settings;
+use crate::process_util::{squash_stdio, run_success};
+use crate::builder::commands::alpine::LATEST_VERSION;
+use crate::file_util::Dir;
 
 pub use self::Feature::*;
 

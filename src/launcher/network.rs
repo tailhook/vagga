@@ -9,22 +9,22 @@ use std::os::unix::io::AsRawFd;
 
 use argparse::{ArgumentParser};
 use argparse::{StoreTrue, StoreFalse};
+use digest_traits::Digest;
 use libc::{geteuid};
 use libmount::BindMount;
 use log::Level::Debug;
 use rand::{thread_rng, Rng};
 use serde_json;
+use sha2::Sha256;
 use unshare::{Command, Stdio, Fd, Namespace};
 
-use container::uidmap::get_max_uidmap;
-use container::network::detect_local_dns;
-use super::super::config::Config;
-use super::super::container::nsutil::{set_namespace};
-use digest_traits::Digest;
-use sha2::Sha256;
-use file_util::Dir;
-use process_util::{set_uidmap, env_command, run_success, cmd_err, cmd_show};
-use digest::hex;
+use crate::config::Config;
+use crate::container::uidmap::get_max_uidmap;
+use crate::container::network::detect_local_dns;
+use crate::container::nsutil::{set_namespace};
+use crate::digest::hex;
+use crate::file_util::Dir;
+use crate::process_util::{set_uidmap, env_command, run_success, cmd_err, cmd_show};
 
 static MAX_INTERFACES: u32 = 2048;
 

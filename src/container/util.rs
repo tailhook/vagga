@@ -15,8 +15,9 @@ use libc::{uid_t, gid_t};
 use tempfile::tempfile;
 use quick_error::ResultExt;
 
+use crate::file_util::{Dir, ShallowCopy};
+
 use super::root::temporary_change_root;
-use file_util::{Dir, ShallowCopy};
 
 quick_error!{
     #[derive(Debug)]
