@@ -1,6 +1,8 @@
 use std::rc::Rc;
 use std::fmt::Debug;
 
+use mopa::mopafy;
+
 // Convenient reexports
 pub use crate::version::{Error as VersionError};
 pub use crate::builder::{StepError, Guard};

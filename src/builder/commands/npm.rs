@@ -4,6 +4,8 @@ use std::fs::{self, File, remove_dir};
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
+use lazy_static::lazy_static;
+
 #[cfg(feature="containers")] use libmount::BindMount;
 use quire::validate as V;
 use regex::Regex;

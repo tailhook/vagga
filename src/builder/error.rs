@@ -7,6 +7,7 @@ use scan_dir;
 use libmount;
 use path_filter;
 use git2;
+use quick_error::quick_error;
 
 use crate::build_step::BuildStep;
 use crate::builder::packages::Package;

@@ -4,6 +4,7 @@ use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::str;
 
+use failure::Error;
 use quire::validate as V;
 
 use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
@@ -16,7 +17,6 @@ use crate::builder::distrib::Distribution;
 #[cfg(feature="containers")]
 use crate::builder::packages;
 use crate::capsule::download;
-use crate::failure::Error;
 use crate::file_util::copy;
 #[cfg(feature="containers")]
 use crate::file_util::Dir;

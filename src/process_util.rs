@@ -14,6 +14,8 @@ use unshare;
 use unshare::{Command, Stdio, Fd, ExitStatus, UidMap, GidMap, child_events};
 use signal::trap::Trap;
 
+use lazy_static::lazy_static;
+
 use crate::config::Settings;
 use crate::container::uidmap::{Uidmap, read_mapped_gids};
 use crate::tty_util::{TtyGuard};

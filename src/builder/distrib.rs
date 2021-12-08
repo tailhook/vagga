@@ -1,4 +1,4 @@
-use mopa::Any;
+use mopa::{Any, mopafy};
 
 use crate::builder::commands::alpine;
 use crate::builder::context::Context;

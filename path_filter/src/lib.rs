@@ -1,13 +1,9 @@
-extern crate globset;
-extern crate regex;
-extern crate walkdir;
-#[macro_use] extern crate quick_error;
-
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use globset::{Error as GlobError, GlobBuilder, GlobSet, GlobSetBuilder};
+use quick_error::quick_error;
 use regex::{Error as RegexError, Regex};
 use walkdir::{DirEntry, Error as WalkDirError, IntoIter as WalkDirIter};
 use walkdir::{WalkDir};

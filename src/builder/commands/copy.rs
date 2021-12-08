@@ -5,19 +5,19 @@ use std::os::unix::fs::{PermissionsExt, MetadataExt};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use libc::{uid_t, gid_t};
+#[cfg(feature="containers")]
+use path_filter::{PathFilter, FilterError};
+use quick_error::ResultExt;
 use quire::ast::{Ast, Tag};
 use quire::validate as V;
 
-#[cfg(feature="containers")]
-use crate::path_filter::{PathFilter, FilterError};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
 use crate::container::root::temporary_change_root;
 #[cfg(feature="containers")]
 use crate::file_util::ShallowCopy;
 #[cfg(feature="containers")]
 use crate::path_util::IterSelfAndParents;
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use crate::quick_error::ResultExt;
 
 
 const DEFAULT_UMASK: u32 = 0o002;

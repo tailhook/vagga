@@ -4,11 +4,11 @@ use std::fmt::{self, Write as WriteFmt};
 use std::path::{Path, PathBuf};
 use std::os::unix::ffi::OsStrExt;
 
+use blake2::Blake2b;
+use digest_traits::{Digest as DigestTrait, FixedOutput};
 use serde_json;
+use sha2::Sha256;
 
-use crate::digest_traits::{Digest as DigestTrait, FixedOutput};
-use crate::sha2::Sha256;
-use crate::blake2::Blake2b;
 use crate::config::Range;
 
 /// This is a wrapper that has convenience methods for hashing in vagga
