@@ -100,6 +100,14 @@ quick_error! {
             from()
             display("{}", err)
         }
+        DockerClientError(err: dkregistry::errors::Error) {
+            from()
+            display("{}", err)
+        }
+        DownloadDockerLayersErrors(errors: Vec<String>) {
+            from()
+            display("{:?}", errors)
+        }
     }
 }
 

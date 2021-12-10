@@ -1,0 +1,99 @@
+containers:
+  hello:
+    setup:
+    - !DockerImage
+      image: library/hello-world
+
+  python:
+    setup:
+    - !DockerImage
+      image: library/python
+      tag: 3.10-slim
+
+  java:
+    setup:
+    - !DockerImage openjdk:17.0.1-slim-buster
+
+  registry:
+    setup:
+    - !DockerImage registry:2.7.1
+    - !EnsureDir /var/lib/registry
+    volumes:
+      /var/lib/registry: !Persistent registry
+
+  buildah:
+    setup:
+    - !Ubuntu focal
+    - !UbuntuUniverse
+    - !Install [add-apt-key, ca-certificates]
+    - !Download
+      url: https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_20.04/Release.key
+      path: /tmp/Release.key
+    - !Sh apt-key add - < /tmp/Release.key
+    - !UbuntuRepo
+      url: http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/
+      suite: ""
+      components: ["/"]
+    - !Install [buildah, fuse-overlayfs, netcat]
+    - !Text
+      /etc/containers/registries.conf: |
+        unqualified-search-registries = ["docker.io"]
+    - !Sh |
+        sed -i 's|#mount_program.*|mount_program = "/usr/bin/fuse-overlayfs"|' /etc/containers/storage.conf
+    # FIXME
+    - !Sh |
+        rm -f /etc/resolv.conf
+        touch /etc/resolv.conf
+    - !EnsureDir /usr/lib/vagga
+    - !EnsureDir /var/lib/containers
+    - !EnsureDir /var/cache/containers
+    environ:
+      PATH: /usr/lib/vagga:/sbin:/bin:/usr/sbin:/usr/bin
+    volumes:
+      /usr/lib/vagga: !VaggaBin
+      /var/lib/containers: !Persistent buildah
+      /var/cache/containers: !Tmpfs
+      /var/tmp: !Tmpfs
+
+  test-image:
+    setup:
+    - !DockerImage localhost:5000/test
+
+commands:
+  hello: !Command
+    container: hello
+    run: [/hello]
+
+  zen: !Command
+    container: python
+    run: python -m this
+
+  buildah: !Command
+    container: buildah
+    run: [buildah]
+
+  build-test-image: !Command
+    container: buildah
+    run: |
+      set -eux
+
+      # By default it uses oci format which is not supported by dkregistry yet
+      buildah bud --format docker --layers -t localhost:5000/test:latest -f Dockerfile
+
+  push-and-build-test-image: !Supervise
+    children:
+      registry: !Command
+        container: registry
+        run: [/entrypoint.sh, /etc/docker/registry/config.yml]
+      build-and-push: !Command
+        container: buildah
+        run: |
+          set -eux
+
+          while ! nc -z localhost 5000; do
+            sleep 0.5
+          done
+          buildah push --tls-verify=false localhost:5000/test:latest
+
+          export RUST_LOG=dkregistry::v2=trace
+          vagga _build test-image

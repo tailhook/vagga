@@ -11,6 +11,10 @@ containers:
     environ: &rustenv
       LD_LIBRARY_PATH: /musl/lib/rustlib/x86_64-unknown-linux-musl/lib
       PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
+      HOME: /work/target
+      PKG_CONFIG_ALLOW_CROSS: 1
+      OPENSSL_STATIC: true
+      OPENSSL_DIR: /usr/lib/x86_64-linux-musl
     setup:
     - !Ubuntu focal
     - !UbuntuUniverse
@@ -29,6 +33,25 @@ containers:
     - !TarInstall
       url: "https://static.rust-lang.org/dist/rust-std-1.57.0-wasm32-unknown-unknown.tar.gz"
       script: "./install.sh --prefix=/usr --components=rust-std-wasm32-unknown-unknown"
+
+    # OpenSSL
+    # https://qiita.com/liubin/items/6c94f0b61f746c08b74c
+    - !Sh |
+        ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/x86_64-linux-musl/asm
+        ln -s /usr/include/asm-generic /usr/include/x86_64-linux-musl/asm-generic
+        ln -s /usr/include/linux /usr/include/x86_64-linux-musl/linux
+    - !TarInstall
+      url: https://github.com/openssl/openssl/archive/OpenSSL_1_1_1l.tar.gz
+      script: |
+        CC="musl-gcc -fPIE -pie" \
+          ./Configure no-shared no-async \
+          --prefix=/usr/lib/x86_64-linux-musl \
+          --openssldir=/usr/lib/x86_64-linux-musl/ssl \
+          linux-x86_64
+        make depend
+        make -j$(nproc)
+        make install_sw
+
     - &bulk !Tar
       url: "https://github.com/tailhook/bulk/releases/download/v0.4.9/bulk-v0.4.9.tar.gz"
       sha256: 23471a9986274bb4b7098c03e2eb7e1204171869b72c45385fcee1c64db2d111

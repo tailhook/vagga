@@ -33,6 +33,7 @@ pub mod commands {
     pub mod packaging;
     pub mod tarcmd;
     pub mod unzip;
+    pub mod docker;
 }
 #[cfg(feature="containers")] pub mod guard;
 #[cfg(feature="containers")] mod packages;

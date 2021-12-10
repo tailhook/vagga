@@ -126,6 +126,7 @@ define_commands! {
     composer::ComposerInstall,
     composer::ComposerDependencies,
     composer::ComposerConfig,
+    docker::DockerImage,
 }
 
 pub struct NameVisitor;
