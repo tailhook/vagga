@@ -146,5 +146,5 @@ setup() {
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/pip-deps)
-    [[ $link = ".roots/pip-deps.ff73d42f/root" ]]
+    [[ $link = ".roots/pip-deps.3c5031dd/root" ]]
 }

@@ -1452,10 +1452,10 @@ Python Commands
        interpreter (``python3.5``) or full path. Note, when this is set, the
        command will be called both for ``Py2*`` commands and ``Py3*`` commands.
 
-   pip-deps
-       (default ``[]``) List of pip dependencies. Allows to specify pip
-       dependency versions, for example ``setuptools<58``. Some old packages
-       cannot be installed with modern setuptools.
+   get-pip-args
+       (default ``[]``) List of ``get-pip`` arguments. Allows to specify custom
+       dependency versions for ``pip``, for example ``setuptools<58``. Some old
+       packages cannot be installed with modern setuptools.
 
    .. _pip help: https://pip.readthedocs.org/en/stable/reference/pip_install/
 
