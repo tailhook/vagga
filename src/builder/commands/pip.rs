@@ -34,6 +34,7 @@ pub struct PipConfig {
     pub install_python: bool,
     pub python_exe: Option<String>,
     pub allow_pre_releases: bool,
+    pub get_pip_args: Vec<String>,
 }
 
 impl PipConfig {
@@ -47,6 +48,7 @@ impl PipConfig {
         .member("python_exe", V::Scalar::new().optional())
         .member("install_python", V::Scalar::new().default(true))
         .member("allow_pre_releases", V::Scalar::new().default(false))
+        .member("get_pip_args", V::Sequence::new(V::Scalar::new()))
     }
 }
 
@@ -98,6 +100,7 @@ impl Default for PipConfig {
             install_python: true,
             python_exe: None,
             allow_pre_releases: false,
+            get_pip_args: Vec::new(),
         }
     }
 }
@@ -190,11 +193,12 @@ fn next_version_part<'a>(
 
 #[cfg(feature="containers")]
 pub fn bootstrap(ctx: &mut Context, ver: u8) -> Result<(), String> {
-    let args = vec!(
+    let mut args = vec!(
         python_executable(ctx, ver),
         "/tmp/get-pip.py".to_string(),
         format!("--target={}", PIP_HOME),
     );
+    args.extend_from_slice(&ctx.pip_settings.get_pip_args);
     let py_ver = python_version(ctx, ver)?;
     let _get_pip_url;
     let get_pip_url = if py_ver < PIP_MIN_PYTHON_VERSION {
@@ -362,6 +366,9 @@ impl BuildStep for PipConfig {
             hash.field("allow_pre_releases", self.allow_pre_releases);
         }
         hash.opt_field("python_exe", &self.python_exe);
+        if !self.get_pip_args.is_empty() {
+            hash.field("get_pip_args", &self.get_pip_args);
+        }
         Ok(())
     }
     #[cfg(feature="containers")]
