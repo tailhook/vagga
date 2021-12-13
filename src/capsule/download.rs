@@ -14,9 +14,9 @@ use unshare::{Command, Stdio};
 
 use crate::capsule::{Context, packages as capsule};
 use crate::capsule::packages::State;
-use crate::file_util::check_stream_hashsum;
-use crate::process_util::{cmd_show};
 use crate::digest::hex;
+use crate::file_util::check_stream_hashsum;
+use crate::process_util::cmd_show;
 
 
 pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>,

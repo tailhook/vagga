@@ -1,6 +1,3 @@
-extern crate globset;
-extern crate path_filter;
-
 use std::path::{Path, PathBuf};
 
 use crate::path_filter::PathFilter;

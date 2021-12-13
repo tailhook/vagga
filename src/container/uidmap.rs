@@ -11,7 +11,7 @@ use libc::{geteuid, getegid};
 use libc::{uid_t, gid_t};
 
 use crate::config::{Range, Settings};
-use crate::process_util::{env_path_find, CaptureOutput, capture_output};
+use crate::process_util::{capture_output, CaptureOutput, env_path_find};
 
 use self::Uidmap::*;
 

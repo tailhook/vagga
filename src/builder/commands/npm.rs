@@ -6,31 +6,29 @@ use std::collections::HashSet;
 
 use lazy_static::lazy_static;
 
-#[cfg(feature="containers")] use libmount::BindMount;
+#[cfg(feature="containers")]
+use libmount::BindMount;
 use quire::validate as V;
 use regex::Regex;
-use serde_json::{Value as Json, from_reader};
 use scan_dir;
-#[cfg(feature="containers")] use unshare::{Stdio};
+use serde_json::{Value as Json, from_reader};
+#[cfg(feature="containers")]
+use unshare::Stdio;
 
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
 use crate::{
-    builder::{
-        commands::ubuntu,
-        commands::generic::{command, run},
-        context::Context,
-        distrib::{Distribution, DistroBox},
-        packages,
-    },
+    builder::commands::ubuntu,
+    builder::commands::generic::{command, run},
+    builder::context::Context,
+    builder::distrib::{DistroBox, Distribution},
+    builder::packages,
     capsule::download::download_file,
-    container::{
-        root::temporary_change_root,
-        mount::unmount,
-        util::clean_dir,
-    },
-    file_util::{safe_ensure_dir, copy, force_symlink},
+    container::root::temporary_change_root,
+    container::mount::unmount,
+    container::util::clean_dir,
+    file_util::{copy, force_symlink, safe_ensure_dir},
 };
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 lazy_static! {
     static ref YARN_PATTERN: Regex = Regex::new(r#""[^"]+"|[^,]+"#).unwrap();

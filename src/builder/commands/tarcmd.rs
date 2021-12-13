@@ -6,11 +6,11 @@ use std::os::unix::fs::{PermissionsExt, symlink};
 use std::path::{Path, PathBuf};
 use std::u32;
 
-#[cfg(feature="containers")] use tar::Archive;
-#[cfg(feature="containers")] use flate2::read::GzDecoder;
-#[cfg(feature="containers")] use xz2::read::XzDecoder;
 #[cfg(feature="containers")] use bzip2::read::BzDecoder;
+#[cfg(feature="containers")] use flate2::read::GzDecoder;
 #[cfg(feature="containers")] use libmount::BindMount;
+#[cfg(feature="containers")] use tar::Archive;
+#[cfg(feature="containers")] use xz2::read::XzDecoder;
 use quire::validate as V;
 
 #[cfg(feature="containers")]

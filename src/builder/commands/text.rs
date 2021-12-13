@@ -6,7 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 
 use quire::validate as V;
 
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
 
 #[derive(Debug, Serialize, Deserialize)]

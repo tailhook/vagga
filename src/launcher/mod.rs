@@ -7,10 +7,10 @@ use std::os::unix::fs::MetadataExt;
 use libc::getuid;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
 
-use crate::options::build_mode::{build_mode, BuildMode};
 use crate::config::{Config, ConfigError, Settings, find_config};
 use crate::config::read_settings::{read_settings, MergedSettings};
 use crate::launcher::environ::set_initial_vaggaenv_vars;
+use crate::options::build_mode::{build_mode, BuildMode};
 
 mod list;
 mod integration;

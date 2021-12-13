@@ -11,9 +11,9 @@ use argparse::{ArgumentParser, PushConst, StoreTrue, StoreOption};
 use scan_dir::ScanDir;
 use humantime;
 
-use crate::container::util::clean_dir;
 use crate::config::command::MainCommand::{Supervise, Command, CapsuleCommand};
 use crate::config::volumes::Volume::Persistent;
+use crate::container::util::clean_dir;
 use crate::file_util::{read_visible_entries, Lock};
 use crate::wrapper::build::get_version_hash;
 

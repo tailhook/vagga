@@ -9,19 +9,15 @@ use quire::validate as V;
 
 use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use crate::builder::commands::generic::{run_command_at_env, capture_command};
-#[cfg(feature="containers")]
-use crate::builder::context::{Context};
-#[cfg(feature="containers")]
-use crate::builder::distrib::Distribution;
-#[cfg(feature="containers")]
-use crate::builder::packages;
-use crate::capsule::download;
-use crate::file_util::copy;
-#[cfg(feature="containers")]
-use crate::file_util::Dir;
-#[cfg(feature="containers")]
-use crate::process_util::CaptureOutput;
+use crate::{
+    builder::commands::generic::{capture_command, run_command_at_env},
+    builder::context::Context,
+    builder::distrib::Distribution,
+    builder::packages,
+    capsule::download,
+    file_util::{copy, Dir},
+    process_util::CaptureOutput,
+};
 
 const PIP_HOME: &str = "/tmp/pip-install";
 const PYTHON_PATH: &str = PIP_HOME;

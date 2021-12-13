@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use libmount::BindMount;
 
-use crate::container::util::clean_dir;
 use crate::config::{Config, Container, Settings};
+use crate::container::util::clean_dir;
 use crate::builder::commands::composer::ComposerConfig;
 use crate::builder::commands::gem::GemConfig;
 use crate::builder::commands::pip::PipConfig;
@@ -16,6 +16,7 @@ use crate::builder::commands::npm::NpmConfig;
 use crate::capsule;
 use crate::file_util::Dir;
 use crate::process_util::PROXY_ENV_VARS;
+
 use super::packages;
 use super::timer;
 

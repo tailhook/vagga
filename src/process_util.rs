@@ -17,7 +17,7 @@ use signal::trap::Trap;
 use lazy_static::lazy_static;
 
 use crate::config::Settings;
-use crate::container::uidmap::{Uidmap, read_mapped_gids};
+use crate::container::uidmap::{read_mapped_gids, Uidmap};
 use crate::tty_util::{TtyGuard};
 
 

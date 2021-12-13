@@ -503,6 +503,7 @@ pub fn setup_filesystem(setup_info: &SetupInfo, container_ver: &str)
         let dest = tgtroot.join(rel_path);
 
         use crate::config::volumes::Volume as V;
+
         match *vol {
             &V::Tmpfs(ref params) => {
                 Tmpfs::new(&dest)

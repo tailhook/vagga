@@ -2,16 +2,16 @@ use std::path::Path;
 use std::fs::remove_file;
 use std::collections::HashMap;
 
+use crate::build_step::BuildStep;
 use crate::builder::context::Context;
 use crate::builder::distrib::{Unknown,Distribution};
 use crate::builder::error::{Error};
 use crate::builder::commands::{composer, gem, npm, pip, dirs};
 use crate::builder::packages;
-use crate::build_step::BuildStep;
-use crate::container::util::{clean_dir, write_container_signature};
 use crate::container::mount::{
-    unmount, mount_system_dirs, mount_proc, mount_run, unmount_system_dirs
+    unmount, mount_system_dirs, mount_proc, mount_run, unmount_system_dirs,
 };
+use crate::container::util::{clean_dir, write_container_signature};
 use crate::file_util::{Dir, copy, truncate_file};
 use crate::path_util::IterSelfAndParents;
 

@@ -5,8 +5,8 @@ use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use libmount::{BindMount, Tmpfs};
 
 use crate::config::volumes::SnapshotInfo;
-use crate::container::mount::{unmount};
-use crate::container::util::{copy_dir};
+use crate::container::mount::unmount;
+use crate::container::util::copy_dir;
 use crate::file_util::Dir;
 
 

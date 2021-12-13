@@ -2,14 +2,9 @@ use std::io::{stdout, stderr};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use crate::container::util::{
-    check_signature,
-    collect_containers_from_storage,
-    collect_container_dirs,
-    hardlink_all_identical_files,
-    version_from_symlink,
-    write_container_signature,
-};
+use crate::container::util::{check_signature, collect_containers_from_storage};
+use crate::container::util::{collect_container_dirs, hardlink_all_identical_files};
+use crate::container::util::{version_from_symlink, write_container_signature};
 use crate::file_util::human_size;
 
 use super::{Wrapper, setup};

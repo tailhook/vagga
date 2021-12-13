@@ -3,23 +3,24 @@ use std::fs::{self, File};
 use std::io::{self, Write};
 use std::os::unix;
 
-#[cfg(feature="containers")] use unshare::{Command};
-use scan_dir::{self, ScanDir};
-use regex::Regex;
-use serde_json::{Value as Json, from_reader};
 use quire::validate as V;
+use regex::Regex;
+use scan_dir::{self, ScanDir};
+use serde_json::{Value as Json, from_reader};
+#[cfg(feature="containers")]
+use unshare::{Command};
 
 #[cfg(feature="containers")]
 use crate::{
-    builder::context::{Context},
+    builder::context::Context,
     builder::packages,
     builder::commands::generic::{capture_command, command, run, run_command},
     builder::distrib::Distribution,
     capsule::download,
     file_util::{self, Dir},
-    process_util::{CaptureOutput, capture_output},
+    process_util::{capture_output, CaptureOutput},
 };
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
 const DEFAULT_RUNTIME: &'static str = "/usr/bin/php";
 const DEFAULT_INCLUDE_PATH: &'static str = ".:/usr/local/lib/composer";

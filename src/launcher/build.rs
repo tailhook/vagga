@@ -16,6 +16,7 @@ pub fn build_container(context: &Context, name: &String, mode: BuildMode,
     -> Result<String, String>
 {
     use crate::options::build_mode::BuildMode::*;
+
     let ver = match mode {
         Normal => build_internal(context, name, &[], capsule)?,
         NoImage => build_internal(context, name,

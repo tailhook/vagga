@@ -11,13 +11,13 @@ use quick_error::ResultExt;
 use quire::ast::{Ast, Tag};
 use quire::validate as V;
 
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use crate::container::root::temporary_change_root;
-#[cfg(feature="containers")]
-use crate::file_util::ShallowCopy;
-#[cfg(feature="containers")]
-use crate::path_util::IterSelfAndParents;
+use crate::{
+    container::root::temporary_change_root,
+    file_util::ShallowCopy,
+    path_util::IterSelfAndParents,
+};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
 
 const DEFAULT_UMASK: u32 = 0o002;

@@ -5,12 +5,12 @@ use std::path::{Path, PathBuf};
 
 use quire::validate as V;
 
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
 use crate::{
-    container::util::{clean_dir},
+    container::util::clean_dir,
     file_util::Dir,
 };
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -8,10 +8,8 @@ use libc::pid_t;
 use argparse::{ArgumentParser, Store};
 
 use crate::config::command::{ChildCommand as CC, SuperviseInfo, CommandInfo, WriteMode};
-use crate::process_util::{
-    cmd_err, convert_status, copy_env_vars,
-    run_and_wait, set_fake_uidmap,
-};
+use crate::process_util::{cmd_err, convert_status, copy_env_vars};
+use crate::process_util::{run_and_wait, set_fake_uidmap};
 
 use super::{setup, Wrapper};
 use super::util::{gen_command, warn_if_data_container};

@@ -4,10 +4,10 @@ use std::fmt::Debug;
 use mopa::mopafy;
 
 // Convenient reexports
-pub use crate::version::{Error as VersionError};
-pub use crate::builder::{StepError, Guard};
+pub use crate::builder::{Guard, StepError};
 pub use crate::config::Config;
 pub use crate::digest::Digest;
+pub use crate::version::{Error as VersionError};
 
 #[derive(Clone, Debug)]
 pub struct Step(pub Rc<dyn BuildStep>);

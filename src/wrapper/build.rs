@@ -22,10 +22,8 @@ use crate::builder::commands::tarcmd::unpack_file;
 use crate::capsule::download::maybe_download_and_check_hashsum;
 use crate::config::{Config, Container, Settings};
 use crate::container::mount::unmount;
-use crate::container::util::{
-    clean_dir, collect_container_dirs, collect_containers_from_storage,
-    hardlink_container_files, write_container_signature,
-};
+use crate::container::util::{clean_dir, collect_container_dirs, collect_containers_from_storage};
+use crate::container::util::{hardlink_container_files, write_container_signature};
 use crate::file_util::{Dir, Lock, copy, human_size};
 use crate::options::version_hash::Options;
 use crate::process_util::{capture_fd3_status, copy_env_vars};

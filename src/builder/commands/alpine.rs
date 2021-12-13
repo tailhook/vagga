@@ -4,18 +4,21 @@ use std::fmt::{Write as WriteFmt};
 use std::path::Path;
 
 use quire::validate as V;
+use regex::Regex;
 #[cfg(feature="containers")]
 use unshare::{Command, Stdio};
-use regex::Regex;
 
-#[cfg(feature="containers")] use crate::builder::context::{Context};
-#[cfg(feature="containers")] use crate::builder::distrib::{Distribution, Named, DistroBox};
-#[cfg(feature="containers")] use crate::builder::dns::revert_name_files;
-#[cfg(feature="containers")] use crate::builder::packages;
-#[cfg(feature="containers")] use crate::capsule::packages as capsule;
-#[cfg(feature="containers")] use crate::file_util::Dir;
-#[cfg(feature="containers")] use crate::process_util::{CaptureOutput, capture_output};
-use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+#[cfg(feature="containers")]
+use crate::{
+    builder::context::Context,
+    builder::distrib::{Distribution, DistroBox, Named},
+    builder::dns::revert_name_files,
+    builder::packages,
+    capsule::packages as capsule,
+    file_util::Dir,
+    process_util::{capture_output, CaptureOutput},
+};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 use crate::config::version::Version;
 
 

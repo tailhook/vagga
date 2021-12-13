@@ -5,8 +5,8 @@ use std::path::Path;
 
 use argparse::{ArgumentParser, StoreConst};
 
+use crate::file_util::{force_symlink, safe_ensure_dir};
 use crate::launcher::Context;
-use crate::file_util::{safe_ensure_dir, force_symlink};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Which {
