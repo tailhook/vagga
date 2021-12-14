@@ -7,13 +7,12 @@ use std::str::FromStr;
 use libc::pid_t;
 use argparse::{ArgumentParser, Store};
 
-use super::super::config::command::{SuperviseInfo, CommandInfo, WriteMode};
-use super::super::config::command::ChildCommand as CC;
-use super::Wrapper;
+use crate::config::command::{ChildCommand as CC, SuperviseInfo, CommandInfo, WriteMode};
+use crate::process_util::{cmd_err, convert_status, copy_env_vars};
+use crate::process_util::{run_and_wait, set_fake_uidmap};
+
+use super::{setup, Wrapper};
 use super::util::{gen_command, warn_if_data_container};
-use super::setup;
-use process_util::{run_and_wait, convert_status, copy_env_vars};
-use process_util::{set_fake_uidmap, cmd_err};
 
 
 pub fn supervise_cmd(cname: &String, command: &SuperviseInfo,

@@ -10,12 +10,12 @@ use std::collections::BTreeMap;
 use quire::validate as V;
 
 #[cfg(feature="containers")]
-use builder::context::Context;
-#[cfg(feature="containers")]
-use process_util::{CaptureOutput, capture_output, run_success, cmd_show};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-#[cfg(feature="containers")]
-use launcher::network::create_isolated_network;
+use crate::{
+    builder::context::Context,
+    launcher::network::create_isolated_network,
+    process_util::{capture_output, CaptureOutput, cmd_show, run_success},
+};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
 // Build Steps
 #[derive(Debug, Serialize, Deserialize)]

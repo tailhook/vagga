@@ -4,34 +4,31 @@ use std::fs::{self, File, remove_dir};
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 
-#[cfg(feature="containers")] use libmount::BindMount;
-use quire::validate as V;
-use regex::Regex;
-use serde_json::{Value as Json, from_reader};
-use scan_dir;
-#[cfg(feature="containers")] use unshare::{Stdio};
+use lazy_static::lazy_static;
 
 #[cfg(feature="containers")]
-use builder::commands::generic::{command, run};
+use libmount::BindMount;
+use quire::validate as V;
+use regex::Regex;
+use scan_dir;
+use serde_json::{Value as Json, from_reader};
 #[cfg(feature="containers")]
-use builder::distrib::{Distribution, DistroBox};
+use unshare::Stdio;
+
 #[cfg(feature="containers")]
-use builder::commands::ubuntu;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-#[cfg(feature="containers")]
-use capsule::download::download_file;
-#[cfg(feature="containers")]
-use container::mount::unmount;
-#[cfg(feature="containers")]
-use container::root::temporary_change_root;
-#[cfg(feature="containers")]
-use container::util::clean_dir;
-#[cfg(feature="containers")]
-use file_util::{safe_ensure_dir, copy, force_symlink};
-#[cfg(feature="containers")]
-use builder::context::{Context};
-#[cfg(feature="containers")]
-use builder::packages;
+use crate::{
+    builder::commands::ubuntu,
+    builder::commands::generic::{command, run},
+    builder::context::Context,
+    builder::distrib::{DistroBox, Distribution},
+    builder::packages,
+    capsule::download::download_file,
+    container::root::temporary_change_root,
+    container::mount::unmount,
+    container::util::clean_dir,
+    file_util::{copy, force_symlink, safe_ensure_dir},
+};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 lazy_static! {
     static ref YARN_PATTERN: Regex = Regex::new(r#""[^"]+"|[^,]+"#).unwrap();

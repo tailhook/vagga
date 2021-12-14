@@ -1,5 +1,6 @@
-use file_util::copy;
 use std::fs::symlink_metadata;
+
+use crate::file_util::copy;
 
 /// Reverts resolv.conf and hosts files after they might be replaces by
 /// come container unpacking or copying

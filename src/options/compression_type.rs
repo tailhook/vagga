@@ -1,7 +1,7 @@
 use argparse::{ArgumentParser, StoreConst};
 
 #[cfg(feature="containers")]
-use capsule::packages as capsule;
+use crate::capsule::packages as capsule;
 
 
 #[derive(Clone, Copy, Debug)]

@@ -11,13 +11,13 @@ use std::io::{Write};
 use std::path::Path;
 use std::sync::Arc;
 
-use unshare::Command;
 use libmount::BindMount;
+use unshare::Command;
 
-use config::settings::Settings;
-use process_util::{squash_stdio, run_success};
-use builder::commands::alpine::LATEST_VERSION;
-use file_util::Dir;
+use crate::config::settings::Settings;
+use crate::builder::commands::alpine::LATEST_VERSION;
+use crate::file_util::Dir;
+use crate::process_util::{squash_stdio, run_success};
 
 pub use self::Feature::*;
 

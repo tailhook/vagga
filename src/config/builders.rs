@@ -1,13 +1,12 @@
 use std::fmt;
 use std::rc::Rc;
 
-use builder::commands as cmd;
 use quire::validate as V;
-use serde::de::{self, Deserializer, Deserialize};
+use serde::de::{self, Deserializer, Deserialize, EnumAccess, VariantAccess, Visitor};
 use serde::ser::{Serializer, Serialize};
-use serde::de::{VariantAccess, Visitor, EnumAccess};
 
-use build_step::{Step, BuildStep};
+use crate::build_step::{Step, BuildStep};
+use crate::builder::commands as cmd;
 
 macro_rules! define_commands {
     ($($module: ident :: $item: ident,)*) => {

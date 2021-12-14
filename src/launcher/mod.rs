@@ -7,10 +7,10 @@ use std::os::unix::fs::MetadataExt;
 use libc::getuid;
 use argparse::{ArgumentParser, Store, List, Collect, Print, StoreFalse, StoreTrue};
 
-use options::build_mode::{build_mode, BuildMode};
-use config::{Config, ConfigError, Settings, find_config};
-use config::read_settings::{read_settings, MergedSettings};
-use launcher::environ::set_initial_vaggaenv_vars;
+use crate::config::{Config, ConfigError, Settings, find_config};
+use crate::config::read_settings::{read_settings, MergedSettings};
+use crate::launcher::environ::set_initial_vaggaenv_vars;
+use crate::options::build_mode::{build_mode, BuildMode};
 
 mod list;
 mod integration;
@@ -210,7 +210,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
         args.insert(0, "vagga _network".to_string());
 
         #[cfg(feature="containers")]
-        return ::network::run(args);
+        return crate::network::run(args);
 
         #[cfg(not(feature="containers"))]
         {
@@ -361,7 +361,7 @@ pub fn run(input_args: Vec<String>) -> i32 {
         }
         #[cfg(feature="containers")]
         "_capsule" => {
-            ::capsule::run_command(&context, args)
+            crate::capsule::run_command(&context, args)
         }
         #[cfg(feature="containers")]
         _ => {

@@ -4,18 +4,19 @@ use std::io::{stdout, stderr};
 use argparse::{ArgumentParser, Store, StoreTrue};
 use unshare::{Command, Namespace};
 
-use launcher::Context;
-use launcher::wrap::Wrapper;
-use options::build_mode::BuildMode;
-use process_util::{capture_fd3, copy_env_vars, squash_stdio};
-use container::util::version_from_symlink;
+use crate::container::util::version_from_symlink;
+use crate::launcher::Context;
+use crate::launcher::wrap::Wrapper;
+use crate::options::build_mode::BuildMode;
+use crate::process_util::{capture_fd3, copy_env_vars, squash_stdio};
 
 
 pub fn build_container(context: &Context, name: &String, mode: BuildMode,
     capsule: bool)
     -> Result<String, String>
 {
-    use options::build_mode::BuildMode::*;
+    use crate::options::build_mode::BuildMode::*;
+
     let ver = match mode {
         Normal => build_internal(context, name, &[], capsule)?,
         NoImage => build_internal(context, name,

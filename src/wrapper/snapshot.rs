@@ -4,10 +4,10 @@ use std::os::unix::fs::{MetadataExt, PermissionsExt};
 
 use libmount::{BindMount, Tmpfs};
 
-use config::volumes::SnapshotInfo;
-use file_util::Dir;
-use container::mount::{unmount};
-use container::util::{copy_dir};
+use crate::config::volumes::SnapshotInfo;
+use crate::container::mount::unmount;
+use crate::container::util::copy_dir;
+use crate::file_util::Dir;
 
 
 pub fn make_snapshot(src: &Path, dest: &Path, info: &SnapshotInfo)

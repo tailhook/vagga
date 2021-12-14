@@ -3,7 +3,7 @@ use std::io::{stdout, stderr};
 use argparse::{ArgumentParser, StoreTrue};
 use serde_json;
 
-use config::Config;
+use crate::config::Config;
 
 
 pub fn dump_config(config: &Config, mut args: Vec<String>)

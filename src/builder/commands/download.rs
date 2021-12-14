@@ -3,7 +3,13 @@ use std::fs::{set_permissions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 
 use quire::validate as V;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+
+#[cfg(feature="containers")]
+use crate::{
+    capsule::download::maybe_download_and_check_hashsum,
+    file_util::copy,
+};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,9 +50,6 @@ impl BuildStep for Download {
     fn build(&self, guard: &mut Guard, build: bool)
         -> Result<(), StepError>
     {
-        use capsule::download::maybe_download_and_check_hashsum;
-        use file_util::copy;
-
         if build {
             let fpath = PathBuf::from("/vagga/root")
                 .join(self.path.strip_prefix("/").unwrap());

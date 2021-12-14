@@ -1,10 +1,10 @@
-use builder::commands::composer;
-use builder::commands::gem;
-use builder::commands::npm;
-use builder::commands::pip;
-use builder::context::Context;
-use builder::distrib::Distribution;
-use builder::error::StepError;
+use crate::builder::commands::composer;
+use crate::builder::commands::gem;
+use crate::builder::commands::npm;
+use crate::builder::commands::pip;
+use crate::builder::context::Context;
+use crate::builder::distrib::Distribution;
+use crate::builder::error::StepError;
 
 pub use self::Package::*;
 

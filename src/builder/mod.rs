@@ -1,16 +1,18 @@
 use std::io::{stdout, stderr};
 use std::default::Default;
 use std::path::Path;
+
+use argparse::{ArgumentParser, Store, StoreTrue};
 use rand;
 
-use config::find_config_or_exit;
-use config::{Config, Container, Settings};
-use argparse::{ArgumentParser, Store, StoreTrue};
+use crate::config::{Config, Container, find_config_or_exit, Settings};
+
 
 #[cfg(feature="containers")]
-pub use self::guard::Guard;
-#[cfg(feature="containers")]
-pub use self::error::StepError;
+pub use self::{
+    guard::Guard,
+    error::StepError,
+};
 
 #[cfg(feature="containers")]
 pub mod context;

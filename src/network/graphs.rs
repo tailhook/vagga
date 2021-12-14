@@ -4,9 +4,9 @@ use std::collections::{HashSet, HashMap};
 
 use argparse::{ArgumentParser, List};
 
-use config::Config;
-use config::command::{Networking};
-use config::command::{MainCommand};
+use crate::config::Config;
+use crate::config::command::{MainCommand, Networking};
+
 use self::NodeLinks::*;
 
 

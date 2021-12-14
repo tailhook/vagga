@@ -1,11 +1,13 @@
 use std::rc::Rc;
 use std::fmt::Debug;
 
+use mopa::mopafy;
+
 // Convenient reexports
-pub use version::{Error as VersionError};
-pub use builder::{StepError, Guard};
-pub use config::Config;
-pub use digest::Digest;
+pub use crate::builder::{Guard, StepError};
+pub use crate::config::Config;
+pub use crate::digest::Digest;
+pub use crate::version::{Error as VersionError};
 
 #[derive(Clone, Debug)]
 pub struct Step(pub Rc<dyn BuildStep>);

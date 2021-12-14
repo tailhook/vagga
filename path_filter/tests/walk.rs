@@ -1,9 +1,6 @@
-extern crate globset;
-extern crate path_filter;
-
 use std::path::{Path, PathBuf};
 
-use path_filter::PathFilter;
+use crate::path_filter::PathFilter;
 
 
 fn glob_paths(rules: &[&str]) -> Vec<PathBuf> {

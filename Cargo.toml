@@ -2,6 +2,7 @@
 name = "vagga"
 version = "0.8.1"
 authors = ["Paul Colomiets"]
+edition = "2021"
 
 [workspace]
 members = ["path_filter"]

@@ -1,8 +1,6 @@
-use config::command::{MainCommand, CommandInfo, SuperviseInfo, CapsuleInfo};
-use launcher::prerequisites;
-use launcher::system;
-use launcher::{supervisor, simple, capsule};
-use launcher::Context;
+use crate::config::command::{MainCommand, CommandInfo, SuperviseInfo, CapsuleInfo};
+use crate::launcher::{Context, prerequisites};
+use crate::launcher::{capsule, simple, supervisor, system};
 
 
 enum Args<'a> {
@@ -52,7 +50,7 @@ fn run_commands(context: &Context, commands: Vec<String>,
     if context.prerequisites {
         commands = prerequisites::scan(context, commands);
     }
-    use launcher::options::ArgError::*;
+
     let mut all_args = Vec::new();
     let last_cmd = commands.len() -1;
     let mut last_cmd_args = Some(last_command_args);
@@ -71,6 +69,9 @@ fn run_commands(context: &Context, commands: Vec<String>,
                         Run vagga without arguments to see the list.", cmd)),
         };
         system::check(&cinfo.system(), context)?;
+
+        use crate::launcher::options::ArgError::*;
+
         let arg = match *cinfo {
             MainCommand::Command(ref info) => {
                 let a = match simple::parse_args(info, context, cmd, args) {

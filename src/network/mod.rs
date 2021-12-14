@@ -3,8 +3,8 @@ use std::path::Path;
 
 use argparse::{ArgumentParser, Store, List};
 
-use config::Config;
-use super::config::find_config_or_exit;
+use crate::config::{Config, find_config_or_exit};
+
 use self::iptables::apply_graph;
 
 mod graphs;

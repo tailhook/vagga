@@ -13,10 +13,11 @@ use dir_signature::v1::{Entry, EntryKind, Hashes, Parser, ParseError};
 use dir_signature::v1::merge::FileMergeBuilder;
 use libc::{uid_t, gid_t};
 use tempfile::tempfile;
-use quick_error::ResultExt;
+use quick_error::{quick_error, ResultExt};
+
+use crate::file_util::{Dir, ShallowCopy};
 
 use super::root::temporary_change_root;
-use file_util::{Dir, ShallowCopy};
 
 quick_error!{
     #[derive(Debug)]

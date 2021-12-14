@@ -3,13 +3,12 @@ use std::collections::{BTreeMap, HashSet};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use config::Config;
-use config::command::MainCommand;
-use config::containers::Container;
+use crate::config::Config;
+use crate::config::command::MainCommand;
+use crate::config::containers::Container;
 
-use launcher::{Context, run};
-use launcher::user;
-use launcher::list;
+use crate::launcher::{Context, run};
+use crate::launcher::{list, user};
 
 
 #[derive(PartialEq, Eq, Hash)]

@@ -1,8 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 
-use launcher::Context;
-use storage_dir::sanitize;
+use crate::launcher::Context;
+use crate::storage_dir::sanitize;
 
 
 pub fn get_base(ctx: &Context) -> Option<PathBuf> {

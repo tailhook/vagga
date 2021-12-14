@@ -2,16 +2,15 @@ use std::collections::HashMap;
 
 use unshare::{Command, Fd};
 
-use config::command::{CommandInfo, WriteMode};
-use process_util::{run_and_wait, convert_status};
+use crate::config::command::{CommandInfo, WriteMode};
+use crate::launcher::{Context, socket};
+use crate::launcher::options::{ArgError, parse_docopts};
+use crate::launcher::volumes::prepare_volumes;
+use crate::process_util::{run_and_wait, convert_status};
+
 use super::build::{build_container};
-use super::wrap::Wrapper;
 use super::network;
-use launcher::volumes::prepare_volumes;
-use launcher::options::ArgError;
-use launcher::Context;
-use launcher::socket;
-use launcher::options::parse_docopts;
+use super::wrap::Wrapper;
 
 
 const DEFAULT_DOCOPT: &'static str = "\

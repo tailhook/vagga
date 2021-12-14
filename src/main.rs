@@ -6,45 +6,9 @@
 use std::env;
 use std::process::exit;
 
-extern crate digest_traits;
-extern crate sha2;
-extern crate blake2;
-extern crate typenum;
-extern crate libc;
-extern crate nix;
-extern crate rand;
-extern crate env_logger;
-extern crate argparse;
-extern crate quire;
-extern crate regex;
-extern crate scan_dir;
-extern crate docopt;
-extern crate humantime;
-extern crate itertools;
-extern crate serde;
-extern crate serde_json;
-extern crate resolv_conf;
 #[macro_use] extern crate failure;
-#[macro_use] extern crate matches;
-#[macro_use] extern crate mopa;
 #[macro_use] extern crate log;
-#[macro_use] extern crate quick_error;
-#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate serde_derive;
-
-#[cfg(feature="containers")] extern crate tempfile;
-#[cfg(feature="containers")] extern crate git2;
-#[cfg(feature="containers")] extern crate bzip2;
-#[cfg(feature="containers")] extern crate signal;
-#[cfg(feature="containers")] extern crate tar;
-#[cfg(feature="containers")] extern crate zip;
-#[cfg(feature="containers")] extern crate xz2;
-#[cfg(feature="containers")] extern crate net2;
-#[cfg(feature="containers")] extern crate dir_signature;
-#[cfg(feature="containers")] extern crate flate2;
-#[cfg(feature="containers")] extern crate libmount;
-#[cfg(feature="containers")] extern crate path_filter;
-#[cfg(feature="containers")] extern crate unshare;
 
 #[cfg(feature="containers")] #[macro_use] mod macros;
 mod config;

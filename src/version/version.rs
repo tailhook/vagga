@@ -1,6 +1,7 @@
-use config::{Config, Container};
+use crate::config::{Config, Container};
+use crate::build_step::{BuildStep, Digest};
+
 use super::error::Error;
-use build_step::{BuildStep, Digest};
 
 
 #[cfg(feature="containers")]

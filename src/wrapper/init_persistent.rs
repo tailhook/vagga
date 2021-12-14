@@ -5,10 +5,10 @@ use std::os::unix::io::RawFd;
 use nix::fcntl;
 use libc::{open, renameat};
 
-use config::volumes::PersistentInfo;
-use file_util::{Lock, Dir};
-use container::util::clean_dir;
-use path_util::ToCString;
+use crate::config::volumes::PersistentInfo;
+use crate::file_util::{Lock, Dir};
+use crate::container::util::clean_dir;
+use crate::path_util::ToCString;
 
 
 pub trait Guard {

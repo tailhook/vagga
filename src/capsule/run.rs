@@ -4,10 +4,10 @@ use argparse::{ArgumentParser};
 use argparse::{List, Store};
 use unshare::{Command};
 
-use capsule::Context;
-use launcher::wrap::Wrapper;
-use launcher::build::build_container;
-use process_util::{run_and_wait, convert_status};
+use crate::capsule::Context;
+use crate::launcher::build::build_container;
+use crate::launcher::wrap::Wrapper;
+use crate::process_util::{run_and_wait, convert_status};
 
 
 pub fn run_command(context: &Context, mut args: Vec<String>)

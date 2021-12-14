@@ -12,12 +12,11 @@ use digest_traits::Digest;
 use sha2::Sha256;
 use unshare::{Command, Stdio};
 
-use capsule::Context;
-use capsule::packages as capsule;
-use capsule::packages::State;
-use file_util::check_stream_hashsum;
-use process_util::{cmd_show};
-use digest::hex;
+use crate::capsule::{Context, packages as capsule};
+use crate::capsule::packages::State;
+use crate::digest::hex;
+use crate::file_util::check_stream_hashsum;
+use crate::process_util::cmd_show;
 
 
 pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>,

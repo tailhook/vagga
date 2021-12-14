@@ -6,9 +6,7 @@ use std::os::unix::io::FromRawFd;
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use config::find_config_or_exit;
-use config::Settings;
-
+use crate::config::{find_config_or_exit, Settings};
 
 mod version;
 mod error;

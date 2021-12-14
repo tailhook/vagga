@@ -8,12 +8,12 @@ use zip::ZipArchive;
 use quire::validate as V;
 
 #[cfg(feature="containers")]
-use builder::context::Context;
-#[cfg(feature="containers")]
-use capsule::download::maybe_download_and_check_hashsum;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-#[cfg(feature="containers")]
-use file_util::{Dir, copy_stream};
+use crate::{
+    builder::context::Context,
+    capsule::download::maybe_download_and_check_hashsum,
+    file_util::{copy_stream, Dir},
+};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

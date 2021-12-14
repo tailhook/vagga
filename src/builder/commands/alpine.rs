@@ -4,20 +4,22 @@ use std::fmt::{Write as WriteFmt};
 use std::path::Path;
 
 use quire::validate as V;
+use regex::Regex;
 #[cfg(feature="containers")]
 use unshare::{Command, Stdio};
-use regex::Regex;
 
-#[cfg(feature="containers")] use builder::context::{Context};
-#[cfg(feature="containers")] use capsule::packages as capsule;
-#[cfg(feature="containers")] use builder::packages;
-#[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::{CaptureOutput, capture_output};
-#[cfg(feature="containers")] use builder::distrib::{Distribution, Named, DistroBox};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-use config::version::Version;
 #[cfg(feature="containers")]
-use builder::dns::revert_name_files;
+use crate::{
+    builder::context::Context,
+    builder::distrib::{Distribution, DistroBox, Named},
+    builder::dns::revert_name_files,
+    builder::packages,
+    capsule::packages as capsule,
+    file_util::Dir,
+    process_util::{capture_output, CaptureOutput},
+};
+use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
+use crate::config::version::Version;
 
 
 pub static LATEST_VERSION: &'static str = "v3.15";

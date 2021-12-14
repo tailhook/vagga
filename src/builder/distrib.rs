@@ -1,9 +1,9 @@
-use mopa::Any;
+use mopa::{Any, mopafy};
 
-use builder::context::Context;
-use builder::commands::alpine;
-use builder::error::StepError;
-use builder::packages;
+use crate::builder::commands::alpine;
+use crate::builder::context::Context;
+use crate::builder::error::StepError;
+use crate::builder::packages;
 
 
 /// This returns the same as Distribution::name but is separate trait because

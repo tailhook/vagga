@@ -1,15 +1,16 @@
 use std::io;
 use std::fs::remove_file;
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 use quire::validate as V;
 
-use std::path::{Path, PathBuf};
 #[cfg(feature="containers")]
-use container::util::{clean_dir};
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
-#[cfg(feature="containers")]
-use file_util::Dir;
+use crate::{
+    container::util::clean_dir,
+    file_util::Dir,
+};
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 
 
 #[derive(Debug, Serialize, Deserialize)]

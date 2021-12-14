@@ -6,18 +6,18 @@ use std::str;
 
 use failure::Error;
 use quire::validate as V;
-use capsule::download;
-use file_util::copy;
+
+use crate::build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
 #[cfg(feature="containers")]
-use builder::context::{Context};
-#[cfg(feature="containers")]
-use builder::packages;
-#[cfg(feature="containers")]
-use builder::commands::generic::{run_command_at_env, capture_command};
-#[cfg(feature="containers")] use builder::distrib::Distribution;
-#[cfg(feature="containers")] use file_util::Dir;
-#[cfg(feature="containers")] use process_util::CaptureOutput;
-use build_step::{BuildStep, VersionError, StepError, Digest, Config, Guard};
+use crate::{
+    builder::commands::generic::{capture_command, run_command_at_env},
+    builder::context::Context,
+    builder::distrib::Distribution,
+    builder::packages,
+    capsule::download,
+    file_util::{copy, Dir},
+    process_util::CaptureOutput,
+};
 
 const PIP_HOME: &str = "/tmp/pip-install";
 const PYTHON_PATH: &str = PIP_HOME;

@@ -7,15 +7,13 @@ use std::str::FromStr;
 use libc::pid_t;
 use argparse::{ArgumentParser};
 
-use config::volumes::{Volume, PersistentInfo};
-use config::command::{CommandInfo, WriteMode, Run};
+use crate::config::command::{CommandInfo, Run, WriteMode};
+use crate::config::volumes::{PersistentInfo, Volume};
+use crate::process_util::{convert_status, copy_env_vars, run_and_wait, set_fake_uidmap};
+use crate::wrapper::init_persistent::{Guard, PersistentVolumeGuard};
 
-use super::setup;
-use super::Wrapper;
+use super::{setup, Wrapper};
 use super::util::{gen_command, warn_if_data_container};
-use process_util::{run_and_wait, convert_status, copy_env_vars};
-use process_util::{set_fake_uidmap};
-use wrapper::init_persistent::{Guard, PersistentVolumeGuard};
 
 
 pub fn commandline_cmd(cmd_name: &str, command: &CommandInfo,
