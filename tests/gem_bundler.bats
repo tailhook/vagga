@@ -80,7 +80,7 @@ teardown() {
     [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/cuba-3.9.3 ]]
     [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/fpm-1.14.1 ]]
     link=$(readlink .vagga/bundle-alpine-no-dev)
-    [[ $link = ".roots/bundle-alpine-no-dev.47d4da43/root" ]]
+    [[ $link = ".roots/bundle-alpine-no-dev.2c2c49cc/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle" {
@@ -101,7 +101,7 @@ teardown() {
     [[ -d .vagga/bundle-ubuntu-no-dev/var/lib/gems/2.7.0/gems/cuba-3.9.3 ]]
     [[ ! -d .vagga/bundle-ubuntu-no-dev/var/lib/gems/2.7.0/gems/fpm-1.14.1 ]]
     link=$(readlink .vagga/bundle-ubuntu-no-dev)
-    [[ $link = ".roots/bundle-ubuntu-no-dev.b224ee75/root" ]]
+    [[ $link = ".roots/bundle-ubuntu-no-dev.27f89c59/root" ]]
 }
 
 @test "gem/bundler: GemBundle invalid trust_policy" {
