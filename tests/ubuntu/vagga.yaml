@@ -27,23 +27,25 @@ containers:
     - !BuildDeps [bc=1.06.95-9build1]
     - !Sh echo "631 * 761" | bc
 
-  artful-universe:
+  ubuntu-universe:
     setup:
-    - !UbuntuRelease { codename: artful }
+    - !Ubuntu focal
     - !UbuntuUniverse
     - !Install [cowsay]
 
   ppa:
     setup:
     - !Ubuntu trusty
-    - !AptTrust keys: [C7917B12]
+    - !AptTrust keys:
+      - 136221EE520DDFAF0A905689B9316A7BC7917B12
     - !UbuntuPPA chris-lea/redis-server
     - !Install [redis-tools]
 
   ppa_bionic:
     setup:
     - !Ubuntu bionic
-    - !AptTrust keys: [C7917B12]
+    - !AptTrust keys:
+      - 136221EE520DDFAF0A905689B9316A7BC7917B12
     - !UbuntuPPA chris-lea/redis-server
     - !Install [redis-tools]
 

@@ -1,12 +1,12 @@
 containers:
 
-  artful:
+  ubuntu-release:
     setup:
-    - !UbuntuRelease { codename: artful }
+    - !UbuntuRelease { codename: impish }
 
-  artful-derive:
+  ubuntu-release-derive:
     setup:
-    - !Container artful
+    - !Container ubuntu-release
     - !Install [bc]
 
   trusty-calc:
@@ -22,20 +22,20 @@ containers:
 
 commands:
   echo-cmd: !Command
-    container: artful
+    container: ubuntu-release
     run: [echo]
 
   echo-shell: !Command
-    container: artful
+    container: ubuntu-release
     run: echo
 
   echo-shell-arg: !Command
-    container: artful
+    container: ubuntu-release
     accepts-arguments: true
     run: echo "$@"
 
-  artful-derived-calc: !Command
-    container: artful-derive
+  derived-calc: !Command
+    container: ubuntu-release-derive
     accepts-arguments: true
     run: echo "$*" | bc
 
