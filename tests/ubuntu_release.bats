@@ -3,9 +3,9 @@ setup() {
 }
 
 @test "UbuntuRelease builds" {
-    vagga _build artful
-    link=$(readlink .vagga/artful)
-    [[ $link = ".roots/artful.212ec8d8/root" ]]
+    vagga _build ubuntu-release
+    link=$(readlink .vagga/ubuntu-release)
+    [[ $link = ".roots/ubuntu-release.a4152474/root" ]]
 }
 
 @test "Run echo command in ubuntu release" {
@@ -58,13 +58,13 @@ setup() {
     [[ $link = ".roots/xenial-url.a3ad230f/root" ]]
 }
 
-@test "ubuntu_release: Run artful bc in ubuntu derived from release" {
-    run vagga artful-derived-calc 100*24
+@test "ubuntu_release: Run bc in ubuntu derived from release" {
+    run vagga derived-calc 100*24
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
-    link=$(readlink .vagga/artful-derive)
-    [[ $link = ".roots/artful-derive.65a0da07/root" ]]
+    link=$(readlink .vagga/ubuntu-release-derive)
+    [[ $link = ".roots/ubuntu-release-derive.ad41cc8a/root" ]]
 }
 
 @test "Run trusty bc in ubuntu release" {
@@ -77,21 +77,21 @@ setup() {
 }
 
 @test "Test VAGGAENV_* vars in ubuntu release" {
-    VAGGAENV_TESTVAR=testvalue run vagga _run artful printenv TESTVAR
+    VAGGAENV_TESTVAR=testvalue run vagga _run ubuntu-release printenv TESTVAR
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = testvalue ]]
 }
 
 @test "Test set env in ubuntu release" {
-    run vagga --environ TESTVAR=1value1 _run artful printenv TESTVAR
+    run vagga --environ TESTVAR=1value1 _run ubuntu-release printenv TESTVAR
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = 1value1 ]]
 }
 
 @test "Test propagate env in ubuntu release" {
-    TESTVAR=2value2 run vagga --use-env TESTVAR _run artful printenv TESTVAR
+    TESTVAR=2value2 run vagga --use-env TESTVAR _run ubuntu-release printenv TESTVAR
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output = 2value2 ]]

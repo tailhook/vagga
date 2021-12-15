@@ -92,14 +92,14 @@ setup() {
     [[ $status = 124 ]]
 }
 
-@test "Test artful universe" {
-    run vagga _build artful-universe
+@test "Test focal universe" {
+    run vagga _build ubuntu-universe
     printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
-    link=$(readlink .vagga/artful-universe)
-    [[ $link = ".roots/artful-universe.6c8e0ae6/root" ]]
+    link=$(readlink .vagga/ubuntu-universe)
+    [[ $link = ".roots/ubuntu-universe.cf089a9f/root" ]]
 
-    run vagga _run artful-universe /usr/games/cowsay "Have you mooed today?"
+    run vagga _run ubuntu-universe /usr/games/cowsay "Have you mooed today?"
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Have you mooed today?"* ]]
@@ -145,7 +145,7 @@ setup() {
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/ppa)
-    [[ $link = ".roots/ppa.0148c3ff/root" ]]
+    [[ $link = ".roots/ppa.ff590a0f/root" ]]
 }
 
 @test "ubuntu: install from ppa in bionic" {
@@ -156,7 +156,7 @@ setup() {
     [[ $output != "" ]]
     link=$(readlink .vagga/ppa_bionic)
     printf "Container link $link"
-    [[ $link = ".roots/ppa_bionic.40375668/root" ]]
+    [[ $link = ".roots/ppa_bionic.85fbff22/root" ]]
 }
 
 @test "ubuntu: UbuntuRepo minimal" {
