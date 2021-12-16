@@ -45,6 +45,7 @@ setup() {
     [[ $output = *"Will clean and build it locally"* ]]
 }
 
+# TODO: Move the test inside a nested container
 @test "image: push & pull" {
     container_dir="alpine.375a2970"
     image_name="${container_dir}.tar.xz"
