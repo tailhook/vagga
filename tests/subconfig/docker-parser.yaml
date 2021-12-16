@@ -1,6 +1,6 @@
 setup:
-- !Alpine v3.4
-- !Install [python]
+- !Alpine v3.15
+- !Install [python3]
 - !Depends Dockerfile
 - !Depends docker2vagga.py
-- !Sh 'python ./docker2vagga.py > /vagga.yaml'
+- !Sh 'python3 ./docker2vagga.py > /vagga.yaml'
