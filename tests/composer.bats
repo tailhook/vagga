@@ -52,13 +52,13 @@ teardown() {
     [[ $link = ".roots/php-ubuntu-trusty.6f3ec930/root" ]]
 }
 
-@test "composer: php ubuntu precise" {
-    run vagga _run php-ubuntu-precise tester .
+@test "composer: php ubuntu focal" {
+    run vagga _run php-ubuntu-focal tester .
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "No tests found" ]]
-    link=$(readlink .vagga/php-ubuntu-precise)
-    [[ $link = ".roots/php-ubuntu-precise.d34c18db/root" ]]
+    link=$(readlink .vagga/php-ubuntu-focal)
+    [[ $link = ".roots/php-ubuntu-focal.00877c3c/root" ]]
 }
 
 @test "composer: php alpine 3.5" {
@@ -82,7 +82,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer 1.3.0" ]]
 
     link=$(readlink .vagga/php-alpine-3_5-php7)
-    [[ $link = ".roots/php-alpine-3_5-php7.6dd390c2/root" ]]
+    [[ $link = ".roots/php-alpine-3_5-php7.8147eafd/root" ]]
 }
 
 @test "composer: php alpine 3.4" {
