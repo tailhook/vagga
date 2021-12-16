@@ -317,11 +317,13 @@ commands:
       second-line: !Command
         container: busybox
         run: |
+          sleep 0.1
           echo $VAGGAOPT_FIRST
       first-line: !Command
         container: busybox
         run: |
           echo $VAGGAOPT_SECOND
+          sleep 0.2
 
   cmdargs: !Command
     description: Test of arg parsing
