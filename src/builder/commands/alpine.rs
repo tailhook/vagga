@@ -139,7 +139,7 @@ impl Distribution for Distro {
                 unsupp.push(*i);
                 continue;
             }
-            if let Some(lst) = self.system_deps(*i) {
+            if let Some(lst) = self.system_deps(*i)? {
                 for i in lst.into_iter() {
                     let istr = i.to_string();
                     ctx.build_deps.remove(&istr);
@@ -283,8 +283,11 @@ impl Distro {
         }
     }
 
-    fn system_deps(&self, pkg: packages::Package) -> Option<Vec<&'static str>> {
-        match pkg {
+    fn system_deps(
+        &self, pkg: packages::Package
+    ) -> Result<Option<Vec<&'static str>>, StepError> {
+        let version = Version(&self.version);
+        let deps = match pkg {
             packages::BuildEssential => Some(vec!()),
             packages::Https => Some(vec!()),
             // Python
@@ -297,9 +300,15 @@ impl Distro {
             // Node.js
             packages::NodeJs => Some(vec!("nodejs")),
             packages::NodeJsDev => Some(vec!()),
-            packages::Npm if Version(&self.version) < Version("v3.6")
-            => Some(vec!("nodejs")),
-            packages::Npm => Some(vec!("nodejs", "nodejs-npm")),
+            // packages::Npm if version < Version("v3.6") => Some(vec!("nodejs")),
+            // packages::Npm if version < Version("v3.8") => Some(vec!("nodejs", "nodejs-npm")),
+            packages::Npm if version < Version("v3.9") => {
+                // npm fails with segmentation fault on Alpine prior 3.9
+                // See: https://github.com/nodejs/docker-node/issues/813
+                error!("Alpine {} does not support npm", self.version);
+                return Err(StepError::UnsupportedFeatures(vec!(packages::Npm)))
+            },
+            packages::Npm => Some(vec!("nodejs", "npm")),
             packages::Yarn => None,
             // PHP
             packages::Php => Some(self.php_system_deps()),
@@ -312,7 +321,8 @@ impl Distro {
             // VCS
             packages::Git => Some(vec!()),
             packages::Mercurial => Some(vec!()),
-        }
+        };
+        Ok(deps)
     }
 }
 

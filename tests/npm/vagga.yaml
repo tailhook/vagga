@@ -16,7 +16,7 @@ containers:
 
   pkg-alpine:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.9
     - !NpmInstall [resolve-cli]
 
   git:
@@ -30,17 +30,17 @@ containers:
 
   git-alpine:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.9
     - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]
 
   npm-deps:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.9
     - !NpmDependencies { dev: false }
 
   npm-dev-deps:
     setup:
-    - !Alpine v3.4
+    - !Alpine v3.9
     - !NpmDependencies
 
   pkg-alpine-36:
