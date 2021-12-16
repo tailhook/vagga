@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
 
-gem 'cuba', '3.5.0'
+gem 'cuba', '3.9.3'
 
-gem 'rake', '11.1.1', group: :development
+gem 'fpm', '1.14.1', group: :development

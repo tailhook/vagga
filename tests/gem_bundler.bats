@@ -26,80 +26,82 @@ teardown() {
     [[ $link = ".roots/pkg-alpine-no-update-gem.ecca9ae2/root" ]]
 }
 
-@test "gem/bundler: ubuntu trusty pkg" {
-    run vagga _run pkg-ubuntu-trusty rake --version
+@test "gem/bundler: ubuntu focal pkg" {
+    run vagga _run pkg-ubuntu-focal fpm --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
-    link=$(readlink .vagga/pkg-ubuntu-trusty)
-    [[ $link = ".roots/pkg-ubuntu-trusty.a7fda1d0/root" ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
+    link=$(readlink .vagga/pkg-ubuntu-focal)
+    [[ $link = ".roots/pkg-ubuntu-focal.476ebe37/root" ]]
 }
 
-@test "gem/bundler: ubuntu trusty pkg no update gem" {
-    run vagga _run pkg-ubuntu-trusty-no-update-gem rake --version
+@test "gem/bundler: ubuntu focal pkg no update gem" {
+    run vagga _run pkg-ubuntu-focal-no-update-gem fpm --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
-    link=$(readlink .vagga/pkg-ubuntu-trusty-no-update-gem)
-    [[ $link = ".roots/pkg-ubuntu-trusty-no-update-gem.df99a46b/root" ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
+    link=$(readlink .vagga/pkg-ubuntu-focal-no-update-gem)
+    [[ $link = ".roots/pkg-ubuntu-focal-no-update-gem.8639e43f/root" ]]
 }
 
-@test "gem/bundler: ubuntu precise pkg" {
-    run vagga _run pkg-ubuntu-precise rake --version
+@test "gem/bundler: ubuntu bionic pkg" {
+    run vagga _run pkg-ubuntu-bionic fpm --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "rake, version 10.5.0" ]]
-    link=$(readlink .vagga/pkg-ubuntu-precise)
-    [[ $link = ".roots/pkg-ubuntu-precise.6f53261c/root" ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
+    link=$(readlink .vagga/pkg-ubuntu-bionic)
+    [[ $link = ".roots/pkg-ubuntu-bionic.9927a372/root" ]]
 }
 
-@test "gem/bundler: ubuntu precise pkg no update gem" {
-    run vagga _run pkg-ubuntu-precise-no-update-gem rake --version
+@test "gem/bundler: ubuntu bionic pkg no update gem" {
+    run vagga _run pkg-ubuntu-bionic-no-update-gem fpm --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "rake, version 10.5.0" ]]
-    link=$(readlink .vagga/pkg-ubuntu-precise-no-update-gem)
-    [[ $link = ".roots/pkg-ubuntu-precise-no-update-gem.193c4b9d/root" ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
+    link=$(readlink .vagga/pkg-ubuntu-bionic-no-update-gem)
+    [[ $link = ".roots/pkg-ubuntu-bionic-no-update-gem.c8a1d390/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle" {
-    run vagga _run bundle-alpine rake --version
+    run vagga _run bundle-alpine fpm --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
-    [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.3.0/gems/cuba-3.5.0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
+    [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.3.0/gems/cuba-3.9.3 ]]
+    [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.3.0/gems/fpm-1.14.1 ]]
     link=$(readlink .vagga/bundle-alpine)
-    [[ $link = ".roots/bundle-alpine.f5a177ef/root" ]]
+    [[ $link = ".roots/bundle-alpine.47d4da43/root" ]]
 }
 
 @test "gem/bundler: alpine GemBundle without dev" {
     run vagga _build bundle-alpine-no-dev
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/cuba-3.5.0 ]]
-    [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/rake-11.1.1 ]]
+    [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/cuba-3.9.3 ]]
+    [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/fpm-1.14.1 ]]
     link=$(readlink .vagga/bundle-alpine-no-dev)
-    [[ $link = ".roots/bundle-alpine-no-dev.f5a177ef/root" ]]
+    [[ $link = ".roots/bundle-alpine-no-dev.2c2c49cc/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle" {
-    run vagga _run bundle-ubuntu rake --version
+    run vagga _run bundle-ubuntu fpm --version
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
-    [[ -d .vagga/bundle-ubuntu/usr/lib/ruby/gems/1.9.1/gems/cuba-3.5.0 ]]
+    [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
+    [[ -d .vagga/bundle-ubuntu/var/lib/gems/2.7.0/gems/cuba-3.9.3 ]]
+    [[ -d .vagga/bundle-ubuntu/var/lib/gems/2.7.0/gems/fpm-1.14.1 ]]
     link=$(readlink .vagga/bundle-ubuntu)
-    [[ $link = ".roots/bundle-ubuntu.b9dbe811/root" ]]
+    [[ $link = ".roots/bundle-ubuntu.b224ee75/root" ]]
 }
 
 @test "gem/bundler: ubuntu GemBundle without dev" {
     run vagga _build bundle-ubuntu-no-dev
     printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
-    [[ -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/cuba-3.5.0 ]]
-    [[ ! -d .vagga/bundle-ubuntu-no-dev/usr/lib/ruby/gems/1.9.1/gems/rake-11.1.1 ]]
+    [[ -d .vagga/bundle-ubuntu-no-dev/var/lib/gems/2.7.0/gems/cuba-3.9.3 ]]
+    [[ ! -d .vagga/bundle-ubuntu-no-dev/var/lib/gems/2.7.0/gems/fpm-1.14.1 ]]
     link=$(readlink .vagga/bundle-ubuntu-no-dev)
-    [[ $link = ".roots/bundle-ubuntu-no-dev.b9dbe811/root" ]]
+    [[ $link = ".roots/bundle-ubuntu-no-dev.27f89c59/root" ]]
 }
 
 @test "gem/bundler: GemBundle invalid trust_policy" {

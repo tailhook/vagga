@@ -11,29 +11,29 @@ containers:
       update_gem: false
     - !GemInstall [rake:11.1.1]
 
-  pkg-ubuntu-trusty:
+  pkg-ubuntu-focal:
     setup:
-    - !Ubuntu trusty
-    - !GemInstall [rake:11.1.1]
+    - !Ubuntu focal
+    - !GemInstall [fpm:1.14.1]
 
-  pkg-ubuntu-trusty-no-update-gem:
+  pkg-ubuntu-focal-no-update-gem:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu focal
     - !GemConfig
       update_gem: false
-    - !GemInstall [rake, "-v", 11.1.1]
+    - !GemInstall [fpm, "-v", 1.14.1]
 
-  pkg-ubuntu-precise:
+  pkg-ubuntu-bionic:
     setup:
-    - !Ubuntu precise
-    - !GemInstall [rake:10.5.0]
+    - !Ubuntu bionic
+    - !GemInstall [fpm:1.14.1]
 
-  pkg-ubuntu-precise-no-update-gem:
+  pkg-ubuntu-bionic-no-update-gem:
     setup:
-    - !Ubuntu precise
+    - !Ubuntu bionic
     - !GemConfig
       update_gem: false
-    - !GemInstall [rake, "-v", 10.5.0]
+    - !GemInstall [fpm, "-v", 1.14.1]
 
   bundle-alpine:
     setup:
@@ -48,12 +48,12 @@ containers:
 
   bundle-ubuntu:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu focal
     - !GemBundle
 
   bundle-ubuntu-no-dev:
     setup:
-    - !Ubuntu trusty
+    - !Ubuntu focal
     - !GemBundle
       without: [development]
 

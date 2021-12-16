@@ -389,6 +389,12 @@ impl BuildStep for GemBundle {
             hash.field("line", line);
         }
 
+        if !self.without.is_empty() {
+            hash.field("without", &self.without);
+        }
+
+        hash.opt_field("trust_policy", &self.trust_policy);
+
         Ok(())
     }
     #[cfg(feature="containers")]

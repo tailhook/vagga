@@ -10,4 +10,4 @@ DEPENDENCIES
   rake (>= 11.1.0)
 
 BUNDLED WITH
-   1.11.2
+   2.2.33
