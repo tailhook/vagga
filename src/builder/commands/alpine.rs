@@ -305,7 +305,7 @@ impl Distro {
             packages::Npm if version < Version("v3.9") => {
                 // npm fails with segmentation fault on Alpine prior 3.9
                 // See: https://github.com/nodejs/docker-node/issues/813
-                error!("Alpine {} does not support npm", self.version);
+                error!("Vagga does not support npm on Alpine {} (use >= v3.9)", self.version);
                 return Err(StepError::UnsupportedFeatures(vec!(packages::Npm)))
             },
             packages::Npm => Some(vec!("nodejs", "npm")),
