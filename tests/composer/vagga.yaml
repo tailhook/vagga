@@ -97,6 +97,8 @@ containers:
       - php7-pdo
       - php7-dom
       - php7-zip
+      - php7-iconv
+      - php7-mbstring
     - !ComposerConfig
       install_runtime: false
       runtime_exe: /usr/bin/php7

@@ -133,7 +133,7 @@ teardown() {
     [[ ${lines[${#lines[@]}-1]} = "Laravel Installer version 1.3.0" ]]
 
     link=$(readlink .vagga/php-composer-deps-alpine-3_5-php7)
-    [[ $link = ".roots/php-composer-deps-alpine-3_5-php7.757fec76/root" ]]
+    [[ $link = ".roots/php-composer-deps-alpine-3_5-php7.4cbe8516/root" ]]
 }
 
 @test "composer: php ComposerDependencies alpine 3.4" {
