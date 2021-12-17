@@ -88,5 +88,5 @@ setup() {
     run vagga _run pkg-alpine-36 resolve .
     printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
-    [[ $output = *"Alpine v3.6 does not support npm"* ]]
+    [[ $output = *"Vagga does not support npm on Alpine v3.6 (use >= v3.9)"* ]]
 }
