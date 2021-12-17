@@ -1,6 +1,6 @@
 containers:
   alpine:
-    image-cache-url: http://localhost:8000/images/${container_name}.${short_hash}.tar.xz
+    image-cache-url: http://localhost:10080/images/${container_name}.${short_hash}.tar.xz
     setup:
     - !Alpine v3.4
     - !Install [bc]
@@ -46,7 +46,7 @@ containers:
             proxy_temp_path /var/lib/nginx/proxy_temp 1 2;
 
             server {
-                listen 8000 default_server;
+                listen 10080 default_server;
 
                 access_log /var/log/nginx/access.log;
 

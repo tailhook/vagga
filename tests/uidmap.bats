@@ -21,7 +21,7 @@ setup() {
 @test "uidmap: Bad subuid" {
     echo user:0:65535 > /tmp/subuid
     echo root:x:0:0::/root:/bin/sh > /tmp/passwd
-    echo user:x:1000:100::/home/user:/bin/sh >> /tmp/passwd
+    echo user:!:1000:100::/home/user:/bin/sh >> /tmp/passwd
     mount --bind /tmp/passwd /etc/passwd
     mount --bind /tmp/subuid /etc/subuid
     run su user -c "vagga --ignore-owner-check _clean"
@@ -36,7 +36,7 @@ setup() {
 @test "uidmap: Bad subgid" {
     echo user:0:65536 > /tmp/subgid
     echo root:x:0:0::/root:/bin/sh > /tmp/passwd
-    echo user:x:1000:100::/home/user:/bin/sh >> /tmp/passwd
+    echo user:!:1000:100::/home/user:/bin/sh >> /tmp/passwd
     mount --bind /tmp/passwd /etc/passwd
     mount --bind /tmp/subgid /etc/subgid
     run su user -c "vagga --ignore-owner-check _build too-much-uids"
