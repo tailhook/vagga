@@ -4,18 +4,15 @@ setup() {
 
 @test "copy: directory" {
     run vagga _build dir-copy
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/dir-copy)
     [[ $link = ".roots/dir-copy.781a47c8/root" ]]
 
     run vagga test-dir
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "world file sub" ]]
 
     run vagga _run dir-copy /var/dir/exe.sh
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = "Hello!" ]]
 
@@ -35,7 +32,6 @@ setup() {
     [[ $link = ".roots/file-copy.7ad83313/root" ]]
 
     run vagga test-file
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[@]} = "data" ]]
 
@@ -44,7 +40,6 @@ setup() {
 
 @test "copy: non work" {
     run vagga _build copy-non-work
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-non-work)
     [[ $link = ".roots/copy-non-work.5d99d983/root" ]]
@@ -55,7 +50,6 @@ setup() {
 
 @test "copy: non work preserve permissions" {
     run vagga _build copy-non-work-preserve-perms
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-non-work-preserve-perms)
     [[ $link = ".roots/copy-non-work-preserve-perms.0a69e70c/root" ]]
@@ -68,7 +62,6 @@ setup() {
 
 @test "copy: with umask" {
     run vagga _build copy-umask
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-umask)
     [[ $link = ".roots/copy-umask.98755219/root" ]]
@@ -85,7 +78,6 @@ setup() {
     chmod -R o-rwx dir
 
     run vagga _build copy-preserve-perms
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-preserve-perms)
     [[ $link = ".roots/copy-preserve-perms.ce6b370a/root" ]]
@@ -99,13 +91,11 @@ setup() {
 
 @test "copy: clean _unused (non-existent)" {
     run vagga _clean --unused
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
 }
 
 @test "copy: include regex" {
     run vagga _build copy-with-include
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/copy-with-include)
     [[ $link = ".roots/copy-with-include.c7333188/root" ]]
     [[ -f ".vagga/copy-with-include/dir/hello" ]]
@@ -117,7 +107,6 @@ setup() {
 
 @test "copy: glob rules" {
     run vagga _build copy-glob-rules
-    printf "%s\n" "${lines[@]}"
     root=".vagga/copy-glob-rules"
     link=$(readlink $root)
     [[ $link = ".roots/copy-glob-rules.c7333188/root" ]]
@@ -130,7 +119,6 @@ setup() {
 
 @test "copy: glob rules with inverse" {
     run vagga _build copy-glob-rules-inverse
-    printf "%s\n" "${lines[@]}"
     root=".vagga/copy-glob-rules-inverse"
     link=$(readlink $root)
     [[ $link = ".roots/copy-glob-rules-inverse.981e78a1/root" ]]
@@ -141,7 +129,6 @@ setup() {
 
 @test "copy: glob no include rules" {
     run vagga _build copy-glob-no-include-rules
-    printf "%s\n" "${lines[@]}"
     root=".vagga/copy-glob-no-include-rules"
     link=$(readlink $root)
     [[ $link = ".roots/copy-glob-no-include-rules.ee039a4f/root" ]]
@@ -155,29 +142,24 @@ setup() {
 
 @test "depends: include regex" {
     run vagga _version_hash --short depends-with-include
-    printf "%s\n" "${lines[@]}"
     [[ $output = "375d1004" ]]
 
     chmod 0755 dir/subdir
     run vagga _version_hash --short depends-with-include
-    printf "%s\n" "${lines[@]}"
     [[ $output = "375d1004" ]]
 }
 
 @test "depends: glob rules" {
     run vagga _version_hash --short depends-glob-rules
-    printf "%s\n" "${lines[@]}"
     [[ $output = "375d1004" ]]
 
     chmod 0755 dir/subdir
     run vagga _version_hash --short depends-glob-rules
-    printf "%s\n" "${lines[@]}"
     [[ $output = "375d1004" ]]
 }
 
 @test "copy: preserve times" {
     run vagga _build copy-preserve-times
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/copy-preserve-times)
     [[ $link = ".roots/copy-preserve-times.6ca4b065/root" ]]

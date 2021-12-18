@@ -4,7 +4,6 @@ setup() {
 
 @test "inheritance: Deep container" {
     run vagga py
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/pythonic)
     [[ $link = ".roots/pythonic.db184093/root" ]]
@@ -12,7 +11,6 @@ setup() {
 
 @test "inheritance: Run echo command" {
     run vagga echo hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
 #    [[ $output = hello ]]
     [[ ${lines[${#lines[@]}-1]} = hello ]]
@@ -22,7 +20,6 @@ setup() {
 
 @test "inheritance: Run bc" {
     run vagga calc 100*24
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/calc)
@@ -31,7 +28,6 @@ setup() {
 
 @test "inheritance: Inherit from container with deep structure" {
     run vagga deep-cat
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
     link=$(readlink .vagga/sub)
@@ -40,14 +36,12 @@ setup() {
 
 @test "inheritance: Test hardlink copy of the deep structure" {
     run vagga deep-cat-copy
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
 }
 
 @test "inheritance: Build mount" {
     run vagga hello-mount
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellomount)
@@ -56,7 +50,6 @@ setup() {
 
 @test "inheritance: Build copy from mount" {
     run vagga hello-copy-from-mount
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopyfrommount)
@@ -65,7 +58,6 @@ setup() {
 
 @test "inheritance: Build copy" {
     run vagga hello-copy
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopy)
@@ -74,7 +66,6 @@ setup() {
 
 @test "inheritance: Build copy contenthash" {
     run vagga hello-copy-ch
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopy-contenthash)
@@ -83,17 +74,14 @@ setup() {
 
 @test "inheritance: Build copy rules" {
     run vagga hello-copy-rules
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopy-rules)
-    printf "link: %s\n" "$link"
     [[ $link = ".roots/hellocopy-rules.1c88be7f/root" ]]
 }
 
 @test "inheritance: Build copy file" {
     run vagga hello-copy-file
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopyfile)
@@ -102,7 +90,6 @@ setup() {
 
 @test "inheritance: Build copy file with contenthash" {
     run vagga hello-copy-file-ch
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello World!" ]]
     link=$(readlink .vagga/hellocopyfile-contenthash)
@@ -111,7 +98,6 @@ setup() {
 
 @test "inheritance: Deep inheritance" {
     run vagga ok
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "10" ]]
     link=$(readlink .vagga/c10)

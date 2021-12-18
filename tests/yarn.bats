@@ -13,16 +13,13 @@ setup() {
 END
     # don't check bin installations, because recent yarn have them broken
     run vagga resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     run vagga _build pkg
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/pkg)
     [[ $link = ".roots/pkg.dfb332bf/root" ]]
 
     run vagga stat /usr/lib/node_modules/classnames
-    printf "%s\n" "${lines[@]}"
     [[ $status = 1 ]]
 
     cat <<END > package.json
@@ -37,7 +34,6 @@ END
 }
 END
     run vagga stat /usr/lib/node_modules/classnames
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-7]} = "  File: /usr/lib/node_modules/classnames" ]]
     link=$(readlink .vagga/pkg)
@@ -61,7 +57,6 @@ END
 }
 END
     run vagga version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.0.1" ]]
     link=$(readlink .vagga/version)

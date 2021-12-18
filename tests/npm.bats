@@ -4,7 +4,6 @@ setup() {
 
 @test "npm: default pkg" {
     run vagga _run pkg resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg)
@@ -13,27 +12,22 @@ setup() {
 
 @test "npm: bionic pkg" {
     run vagga _run pkg-bionic resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-bionic)
-    printf "Link:  %s" "$link"
     [[ $link = ".roots/pkg-bionic.75d76405/root" ]]
 }
 
 @test "npm: xenial pkg" {
     run vagga _run pkg-xenial resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-xenial)
-    printf "Link:  %s" "$link"
     [[ $link = ".roots/pkg-xenial.f8666b62/root" ]]
 }
 
 @test "npm: alpine pkg" {
     run vagga _run pkg-alpine resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/pkg-alpine)
@@ -42,7 +36,6 @@ setup() {
 
 @test "npm: default git" {
     run vagga _run git resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git)
@@ -51,7 +44,6 @@ setup() {
 
 @test "npm: ubuntu git" {
     run vagga _run git-ubuntu resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-ubuntu)
@@ -60,7 +52,6 @@ setup() {
 
 @test "npm: alpine git" {
     run vagga _run git-alpine resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-alpine)
@@ -69,7 +60,6 @@ setup() {
 
 @test "npm: NpmDependencies" {
     run vagga _run npm-deps resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 124 ]]  # no resolve but has classnames --v
     [[ -f .vagga/npm-deps/usr/lib/node_modules/classnames/index.js ]]
     link=$(readlink .vagga/npm-deps)
@@ -77,7 +67,6 @@ setup() {
 }
 @test "npm: NpmDependencies dev" {
     run vagga _run npm-dev-deps resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/npm-dev-deps)
@@ -86,7 +75,6 @@ setup() {
 
 @test "npm: unsupported alpine version" {
     run vagga _run pkg-alpine-36 resolve .
-    printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
     [[ $output = *"Vagga does not support npm on Alpine v3.6 (use >= v3.9)"* ]]
 }

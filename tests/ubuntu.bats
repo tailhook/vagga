@@ -16,54 +16,45 @@ setup() {
 
 @test "Run echo command" {
     run vagga echo-cmd hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = hello ]]
     run vagga echo-cmd world
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = world ]]
 }
 
 @test "Run echo shell" {
     run vagga echo-shell
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = "" ]]
     run vagga echo-shell hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 122 ]]
     [[ $output =~ "Unexpected argument" ]]
 }
 
 @test "Run echo shell with arguments" {
     run vagga echo-shell-arg
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = "" ]]
     run vagga echo-shell-arg hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = "hello" ]]
 }
 
 @test "Run absent command" {
     run vagga test something
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 121 ]]
     [[ $output =~ 'Command "test" not found and is not an alias' ]]
 }
 
 @test "Check arch support" {
     run vagga check-arch
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = i386 ]]
 }
 
 @test "Run trusty bc" {
     run vagga trusty-calc 100*24
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
     link=$(readlink .vagga/trusty-calc)
@@ -72,7 +63,6 @@ setup() {
 
 @test "Run xenial bc" {
     run vagga xenial-calc 23*7+3
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
     link=$(readlink .vagga/xenial-calc)
@@ -81,26 +71,22 @@ setup() {
 
 @test "Test BuildDeps with version" {
     run vagga _build build-deps-with-version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"480191"* ]]
     link=$(readlink .vagga/build-deps-with-version)
     [[ $link = ".roots/build-deps-with-version.293fcc59/root" ]]
 
     run vagga _run build-deps-with-version bc
-    printf "%s\n" "${lines[@]}"
     [[ $status = 124 ]]
 }
 
 @test "Test focal universe" {
     run vagga _build ubuntu-universe
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     link=$(readlink .vagga/ubuntu-universe)
     [[ $link = ".roots/ubuntu-universe.cf089a9f/root" ]]
 
     run vagga _run ubuntu-universe /usr/games/cowsay "Have you mooed today?"
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Have you mooed today?"* ]]
 }
@@ -131,7 +117,6 @@ setup() {
 
 @test "ubuntu: builddeps needed for other packages" {
     run vagga checkinstall -v
-    printf "%s\n" "${lines[@]}"
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/dependency-conflict)
@@ -140,8 +125,6 @@ setup() {
 
 @test "ubuntu: install from ppa" {
     run vagga _run ppa redis-cli --version
-    printf "%s\n" "${lines[@]}"
-    printf "Status: %d\n" "$status"
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/ppa)
@@ -150,18 +133,14 @@ setup() {
 
 @test "ubuntu: install from ppa in bionic" {
     run vagga _run ppa_bionic redis-cli --version
-    printf "%s\n" "${lines[@]}"
-    printf "Status: %d\n" "$status"
     [[ $status -eq 0 ]]
     [[ $output != "" ]]
     link=$(readlink .vagga/ppa_bionic)
-    printf "Container link $link"
     [[ $link = ".roots/ppa_bionic.85fbff22/root" ]]
 }
 
 @test "ubuntu: UbuntuRepo minimal" {
     run vagga _build ubuntu-repo-minimal
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ubuntu-repo-minimal)
     [[ $link = ".roots/ubuntu-repo-minimal.4c867b7a/root" ]]
 
@@ -169,14 +148,12 @@ setup() {
     [[ $repo_line = *" xenial universe" ]]
 
     run vagga _run ubuntu-repo-minimal /usr/games/cowsay "Have you mooed today?"
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Have you mooed today?"* ]]
 }
 
 @test "ubuntu: UbuntuRepo full" {
     run vagga _build ubuntu-repo-full
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ubuntu-repo-full)
     [[ $link = ".roots/ubuntu-repo-full.71fe190e/root" ]]
 
@@ -184,14 +161,12 @@ setup() {
     [[ $repo_line = "deb [trusted=yes] http://ubuntu.zerogw.com vagga main" ]]
 
     run vagga _run ubuntu-repo-full vagga --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = "v0.8.1" ]]
 }
 
 @test "ubuntu: UbuntuRepo https" {
     run vagga _build ubuntu-repo-https-sub
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ubuntu-repo-https-sub)
     [[ $link = ".roots/ubuntu-repo-https-sub.e23819c1/root" ]]
 
@@ -199,14 +174,12 @@ setup() {
     [[ $repo_line = "deb https://deb.nodesource.com/node_5.x xenial main" ]]
 
     run vagga _run ubuntu-repo-https-sub node --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = "v5."* ]]
 }
 
 @test "ubuntu: Repo simple" {
     run vagga _build repo-simple
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/repo-simple)
     [[ $link = ".roots/repo-simple.382949ab/root" ]]
 
@@ -214,13 +187,11 @@ setup() {
     [[ $repo_line = *" xenial universe" ]]
 
     run vagga _run repo-simple banner Wonderful
-    printf "%s\n" "${lines[@]}"
     [[ $output = "#     #"* ]]
 }
 
 @test "ubuntu: Repo with suite" {
     run vagga _build repo-with-suite
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/repo-with-suite)
     [[ $link = ".roots/repo-with-suite.31742766/root" ]]
 
@@ -228,12 +199,10 @@ setup() {
     [[ $repo_line = *" xenial universe" ]]
 
     run vagga _run repo-with-suite banner Wonderful
-    printf "%s\n" "${lines[@]}"
     [[ $output = "#     #"* ]]
 }
 
 @test "ubuntu trusty: faketime" {
     run vagga _build faketime
-    printf "%s\n" "${lines[@]}"
     [[ $output != *"shm_open:"* ]]
 }
