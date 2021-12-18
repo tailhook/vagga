@@ -205,8 +205,7 @@ commands:
       export VAGGA_SETTINGS="
         cache-dir: /work/tmp/cache
         ubuntu-mirror: $UBUNTU_MIRROR
-        alpine-mirror: $ALPINE_MIRROR
-        push-image-script: "'curl -T ${image_path} http://localhost:10080/upload/images/${container_name}.${short_hash}.tar.xz'
+        alpine-mirror: $ALPINE_MIRROR"
       if [ -n "$*" ]; then
         bats "$@"
       else

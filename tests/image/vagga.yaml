@@ -1,20 +1,28 @@
 containers:
-  alpine:
-    image-cache-url: http://localhost:10080/images/${container_name}.${short_hash}.tar.xz
+  image:
+    image-cache-url: http://localhost:8080/images/${container_name}.${short_hash}.tar.xz
     setup:
-    - !Alpine v3.4
-    - !Install [bc]
-    - !Sh mkdir -p /var/lib/nobody
+    - !EnsureDir /var/lib
     - !Text
-      /var/lib/someone: Who am I?
-    - !Sh chown -R nobody:nobody /var/lib/nobody /var/lib/someone
+      /var/lib/question.txt: To be or not to be?
+
+  test-pull:
+    volumes:
+      /usr/lib/vagga: !VaggaBin
+    environ:
+      PATH: /usr/lib/vagga:/sbin:/bin:/usr/sbin:/usr/bin
+    setup:
+    - !Alpine v3.15
+    - !Install [gawk, netcat-openbsd, curl]
+    - !EnsureDir /usr/lib/vagga
 
   nginx:
     volumes:
       /var/lib/nginx/client_temp: !Tmpfs {}
       /var/lib/nginx/proxy_temp: !Tmpfs {}
       /var/lib/nginx/tmp: !Tmpfs {size: 10M}
-      /var/log/nginx: !BindRW /work/nginx/logs
+      /var/log/nginx: !Persistent nginx-logs
+      /var/www/images: !Persistent images
       /work/images: !Tmpfs {size: 100M}
     setup:
     - !Alpine v3.4
@@ -25,6 +33,7 @@ containers:
     - !EnsureDir /var/lib/nginx/proxy_temp
     - !EnsureDir /var/lib/nginx/tmp
     - !EnsureDir /var/log/nginx
+    - !EnsureDir /var/www/images
     - !Text
       /etc/nginx/nginx.conf: |
         daemon off;
@@ -46,15 +55,15 @@ containers:
             proxy_temp_path /var/lib/nginx/proxy_temp 1 2;
 
             server {
-                listen 10080 default_server;
+                listen 8080 default_server;
 
                 access_log /var/log/nginx/access.log;
 
                 location /upload/images/ {
-                    alias /work/images/;
+                    alias /var/www/images/;
 
                     client_max_body_size 1g;
-                    client_body_temp_path /work/images/;
+                    client_body_temp_path /var/www/images/;
 
                     dav_methods PUT DELETE MKCOL COPY MOVE;
 
@@ -63,12 +72,45 @@ containers:
                 }
 
                 location /images/ {
-                    alias /work/images/;
+                    alias /var/www/images/;
                 }
             }
         }
 
 commands:
+  pack-image: !Command
+    container: test-pull
+    description: Cache xz capsule dependency
+    run: |
+      vagga _pack_image image -J > /dev/null
+
+  test-push-and-pull: !Supervise
+    options: |
+      Usage: vagga test-push-and-pull [options] <container>
+
+      Options:
+        <container>  Target container
+    children:
+      nginx: !Command
+        container: nginx
+        run: nginx
+      test: !Command
+        container: test-pull
+        environ:
+          VAGGA_SETTINGS: |
+            push-image-script: 'curl -T ${image_path} http://localhost:8080/upload/images/${container_name}.${short_hash}.tar.xz'
+        run: |
+          for i in $(awk 'BEGIN { for ( i=0; i<60; i++ ) { print i; } }'); do
+            sleep 0.5
+            if nc -vz localhost 8080; then
+              break
+            fi
+          done
+
+          vagga _push_image $VAGGAOPT_CONTAINER
+          rm -rf .vagga/$VAGGAOPT_CONTAINER .vagga/.roots/$VAGGAOPT_CONTAINER.*
+          vagga _build $VAGGAOPT_CONTAINER
+
   nginx: !Command
     description: Run nginx
     container: nginx
