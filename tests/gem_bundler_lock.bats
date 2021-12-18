@@ -9,10 +9,8 @@ teardown() {
 
 @test "gem/bundler_lock: GemBundle lock" {
     run vagga _run bundle-lock rake --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.0" ]]
     link=$(readlink .vagga/bundle-lock)
-    printf "link: %s\n" "$link"
     [[ $link = ".roots/bundle-lock.fe593b9a/root" ]]
 }

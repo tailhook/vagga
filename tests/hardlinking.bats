@@ -10,13 +10,11 @@ setup() {
     "
 
     run vagga _build hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello)
     [[ $link = ".roots/hello.0ae0aab6/root" ]]
 
     run vagga _build hello-and-bye
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
     [[ $link = ".roots/hello-and-bye.84b3175b/root" ]]
@@ -25,7 +23,6 @@ setup() {
 
     sed -i 's/!/?/' .vagga/hello/etc/hello.txt
     run vagga _build --force hello-and-bye
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
     [[ $link = ".roots/hello-and-bye.84b3175b/root" ]]
@@ -48,7 +45,6 @@ setup() {
     cd /work/tests/hardlinking/project-1
     rm -rf .vagga
     run vagga _build hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello)
     [[ $link = ".lnk/.roots/hello.0ae0aab6/root" ]]
@@ -56,7 +52,6 @@ setup() {
     cd /work/tests/hardlinking/project-2
     rm -rf .vagga
     run vagga _build hello-and-bye
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
     [[ $link = ".lnk/.roots/hello-and-bye.84b3175b/root" ]]
@@ -66,24 +61,20 @@ setup() {
 @test "_hardlink cmd" {
     rm -rf .vagga
     run vagga _build hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello)
     [[ $link = ".roots/hello.0ae0aab6/root" ]]
 
     run vagga _hardlink
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Found and linked 0"* ]]
 
     run vagga _build hello-and-bye
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
     [[ $link = ".roots/hello-and-bye.84b3175b/root" ]]
 
     run vagga _hardlink
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Found and linked 3 (12B) identical files"* ]]
 
@@ -96,7 +87,6 @@ setup() {
     sed -i 's/!/?/' .vagga/hello/etc/hello.txt
     vagga _build --force hello-and-bye
     run vagga _hardlink
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
     [[ $link = ".roots/hello-and-bye.84b3175b/root" ]]
@@ -115,32 +105,27 @@ setup() {
     cd /work/tests/hardlinking/project-1
     rm -rf .vagga
     run vagga _build --force hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello)
     [[ $link = ".lnk/.roots/hello.0ae0aab6/root" ]]
 
     run vagga _build --force hi
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hi)
     [[ $link = ".lnk/.roots/hi.079e4655/root" ]]
 
     run vagga _hardlink --global
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Found and linked 2 (0B) identical files"* ]]
 
     cd /work/tests/hardlinking/project-2
     rm -rf .vagga
     run vagga _build --force hello-and-bye
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/hello-and-bye)
     [[ $link = ".lnk/.roots/hello-and-bye.84b3175b/root" ]]
 
     run vagga _hardlink --global
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = *"Found and linked 3 (12B) identical files"* ]]
 }
@@ -151,7 +136,6 @@ setup() {
     vagga _hardlink
 
     run vagga _verify hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
 
     echo "Hi!" > .vagga/hello-and-bye/etc/hello.txt
@@ -159,13 +143,11 @@ setup() {
     rm .vagga/hello-and-bye/etc/bye.txt
 
     run vagga _verify hello-and-bye
-    printf "%s\n" "${lines[@]}"
     [[ $status = 1 ]]
     [[ $output = *"Container is corrupted"* ]]
     [[ $output = *"Missing"*"/etc/bye.txt"*"Extra"*"/etc/bonjour.txt"*"Corrupted"*"/etc/hello.txt" ]]
 
     run vagga _verify hello
-    printf "%s\n" "${lines[@]}"
     [[ $status = 1 ]]
     [[ $output = *"Container is corrupted"* ]]
     [[ $output = *"Corrupted"*"/etc/hello.txt"* ]]

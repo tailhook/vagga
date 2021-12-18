@@ -10,30 +10,24 @@ setup() {
     vagga _pack_image image -f .vagga/images/image.tar.bz2 -j
     vagga _pack_image image -f .vagga/images/image.tar.xz -J
     run file .vagga/images/image.tar
-    printf "%s\n" "${lines[@]}"
     image_tar_hashsum=$(sha256sum .vagga/images/image.tar | cut -d " " -f 1)
     [[ $output = *"image.tar: POSIX tar archive (GNU)"* ]]
     run tar -tf .vagga/images/image.tar
     [[ $output = *"/var/lib/question.txt"* ]]
     run file .vagga/images/image.tar.gz
-    printf "%s\n" "${lines[@]}"
     image_targz_hashsum=$(sha256sum .vagga/images/image.tar.gz | cut -d " " -f 1)
     [[ $output = *"image.tar.gz: gzip compressed data"* ]]
     run file .vagga/images/image.tar.bz2
-    printf "%s\n" "${lines[@]}"
     [[ $output = *"image.tar.bz2: bzip2 compressed data"* ]]
     run file .vagga/images/image.tar.xz
-    printf "%s\n" "${lines[@]}"
     [[ $output = *"image.tar.xz: XZ compressed data"* ]]
 
     vagga _pack_image image > .vagga/images/image-stdout.tar
     vagga _pack_image image -z > .vagga/images/image-stdout.tgz
     run file .vagga/images/image-stdout.tar
-    printf "%s\n" "${lines[@]}"
     [[ $output = *"image-stdout.tar: POSIX tar archive (GNU)"* ]]
     [[ $(sha256sum .vagga/images/image-stdout.tar | cut -d " " -f 1) = $image_tar_hashsum ]]
     run file .vagga/images/image-stdout.tgz
-    printf "%s\n" "${lines[@]}"
     [[ $output = *"image-stdout.tgz: gzip compressed data"* ]]
     [[ $(sha256sum .vagga/images/image-stdout.tgz | cut -d " " -f 1) = $image_targz_hashsum ]]
 }

@@ -4,7 +4,6 @@ setup() {
 
 @test "generic: The Text tag works" {
     run vagga _run text cat /etc/shakespeare
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/text)
     [[ $link = ".roots/text.efc9a869/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
@@ -13,33 +12,26 @@ setup() {
 
 @test "generic: Snapshot volume works" {
     run vagga _run moretext cat /etc/shakespeare
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 
     run vagga replace-shake
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-1]} = "nope" ]]
 
     run vagga _run moretext cat /etc/shakespeare
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 
     run vagga _build snapshot-check-mode
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     run vagga _run snapshot-check-mode stat -c "%a %U" /home/hemingway
-    printf "%s\n" "${lines[@]}"
     [[ $output = "700 hemingway" ]]
     run vagga _run snapshot-check-mode stat -c "%a %U" /home/hemingway/quote.txt
-    printf "%s\n" "${lines[@]}"
     [[ $output = "644 root" ]]
 }
 
 @test "generic: Snapshot from container" {
     run vagga _run snapshot-container cat /etc/shakespeare
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
@@ -47,20 +39,17 @@ setup() {
 @test "generic: Overriding container volumes" {
     rm -f etc/shakespeare
     run vagga override-volumes
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-1]} = "yeah" ]]
     [[ $(cat etc/shakespeare) = "yeah" ]]
 
     rm -f etc/shakespeare
     run vagga override-volumes-supervise
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "yeah" ]]
     [[ $(cat etc/shakespeare) = "yeah" ]]
 }
 
 @test "generic: The CacheDirs tag works" {
     run vagga _run cache_dirs echo ok
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/cache_dirs)
     [[ $link = ".roots/cache_dirs.2090f8c2/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
@@ -68,7 +57,6 @@ setup() {
 
 @test "generic: The EnsureDir tag works" {
     run vagga _run ensure_dir echo ok
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/ensure_dir)
     [[ $link = ".roots/ensure_dir.998c9d5b/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "ok" ]]
@@ -79,7 +67,6 @@ setup() {
 
 @test "generic: Remove step" {
     run vagga _build remove
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/remove)
     [[ $link = ".roots/remove.2257142d/root" ]]
 
@@ -88,7 +75,6 @@ setup() {
 
 @test "generic: The data-dirs option works" {
     run vagga _build data-container
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/data-container)
     [[ $link = ".roots/data-container.e6da9e30/root" ]]
     [[ -d ".vagga/data-container/etc" ]]
@@ -106,7 +92,6 @@ setup() {
 
 @test "generic: The supervise command works" {
     run vagga two-lines
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ $link = ".roots/busybox.d304a005/root" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
@@ -115,7 +100,6 @@ setup() {
 
 @test "generic: The supervise wait-all-successful command works" {
     run vagga wait-all
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ $link = ".roots/busybox.d304a005/root" ]]
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
@@ -124,7 +108,6 @@ setup() {
 
 @test "generic: The supervise fail-fast works" {
     run vagga one-kills-another
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-4]} = "hello" ]]
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
@@ -133,44 +116,37 @@ setup() {
 
 @test "generic: The supervise --only" {
     run vagga two-lines --only first-line
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
 
     run vagga two-lines --only second-line
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
 @test "generic: The supervice --only with tags" {
     run sh -c 'vagga tagged --only first_and_third | sort'
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
     [[ ${lines[${#lines[@]}-1]} = "hello" ]]
 
     run sh -c "vagga tagged --only first_and_second | sort"
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
 
     run sh -c "vagga tagged --only third_only | sort"
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-1]} = ":)" ]]
 }
 
 @test "generic: The supervice --only mixed" {
     run sh -c 'vagga tagged --only first first_and_second  | sort'
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
 
     run vagga tagged --only third first_and_second
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-4]} = "hello" ]]
     [[ ${lines[${#lines[@]}-3]} = "world" ]]
@@ -179,29 +155,24 @@ setup() {
 
 @test "generic: The supervise --exclude" {
     run vagga two-lines --exclude second-line
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
 
     run vagga two-lines --exclude first-line
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
 
 @test "generic: The supervice --exclude with tags" {
     run vagga tagged --exclude first_and_third
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 
     run vagga tagged --exclude first_and_second
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
 
     run vagga tagged --exclude third_only
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-3]} = "hello" ]]
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
@@ -209,12 +180,10 @@ setup() {
 
 @test "generic: The supervice --exclude mixed" {
     run vagga tagged --exclude first first_and_second
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = ":)" ]]
 
     run vagga tagged --exclude first_and_third third_only
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/busybox)
     [[ ${lines[${#lines[@]}-2]} = "world" ]]
 }
@@ -222,7 +191,6 @@ setup() {
 @test "generic: isolated Command" {
     vagga _build busybox
     run vagga isolated-command
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
 }
@@ -230,7 +198,6 @@ setup() {
 @test "generic: isolated _run" {
     vagga _build busybox
     run vagga --no-network _run busybox ip link
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
 }
@@ -238,7 +205,6 @@ setup() {
 @test "generic: isolated Supervise" {
     vagga _build busybox
     run vagga isolated-supervise
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
 }
@@ -246,34 +212,29 @@ setup() {
 @test "generic: Supervise with --isolate-network option" {
     vagga _build busybox
     run vagga --no-net not-isolated-supervise
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(echo "$output" | grep "^[0-9]*:" | wc -l) = 1 ]]
 }
 
 @test "generic: proxy forwards into build" {
     ftp_proxy=ftp://test.server run vagga _build --force printenv
-    printf "%s\n" "${lines[@]}"
     [[ $(printf "%s\n" "${lines[@]}" | grep '^ftp_proxy') = \
         "ftp_proxy=ftp://test.server" ]]
 }
 
 @test "generic: proxy forwards into the run" {
     ftp_proxy=ftp://test.server run vagga --no-build _run printenv env
-    printf "%s\n" "${lines[@]}"
     [[ $(printf "%s\n" "${lines[@]}" | grep '^ftp_proxy') = \
         "ftp_proxy=ftp://test.server" ]]
 }
 
 @test "generic: check for environment variable name validity" {
     run vagga -e key=value printenv
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = 'Error propagating environment: Environment variable name (for option `-e`/`--use-env`) can'"'"'t contain equals `=` character. To set key-value pair use `-E`/`--environ` option' ]]
 }
 
 @test "generic: unpack local tar" {
     run vagga vagga --version
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/vagga)
     [[ ${lines[${#lines[@]}-1]} = 'v0.4.0' ]]
     [[ $link = ".roots/vagga.03319fd2/root" ]]
@@ -281,7 +242,6 @@ setup() {
 
 @test "generic: download broken file" {
     run vagga _build download-broken-file
-    printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
     [[ $output = *"Hashsum mismatch"* ]]
 }
@@ -293,7 +253,6 @@ setup() {
     tar czf tmp.tar.gz tmp/test
 
     run vagga _build tar-no-intermediate-dir
-    printf "%s\n" "${lines[@]}"
     root=".vagga/tar-no-intermediate-dir"
     link=$(readlink "${root}")
     [[ $link = ".roots/tar-no-intermediate-dir.f5b7e571/root" ]]
@@ -310,7 +269,6 @@ setup() {
     tar czf tmp.tar.gz tmp
 
     run vagga _build sys-dirs
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/sys-dirs)
     [[ $link = ".roots/sys-dirs.e66f72fd/root" ]]
     [[ $(stat -c "%a" ".vagga/sys-dirs/dev") = "755" ]]
@@ -325,7 +283,6 @@ setup() {
 
 @test "generic: test system dirs when building container" {
     run vagga _build build-sys-dirs
-    printf "%s\n" "${lines[@]}"
     [[ $output = *"/dev "* ]]
     [[ $output = *"/proc "* ]]
     [[ $output = *"/sys "* ]]
@@ -341,7 +298,6 @@ setup() {
     rm -f $cached_file
 
     run vagga _build unzip-local
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-local)
     [[ $link = ".roots/unzip-local.9579aef7/root" ]]
     [[ $(cat .vagga/unzip-local/root/test/1/dir/file.txt) = "Hello" ]]
@@ -364,7 +320,6 @@ setup() {
     [[ ! -f $cached_file ]]
 
     run vagga _build unzip-downloaded
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/unzip-downloaded)
     [[ $link = ".roots/unzip-downloaded.fae32fd7/root" ]]
     [[ $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) = "Hello" ]]
@@ -372,13 +327,11 @@ setup() {
     [[ -f $cached_file ]]
 
     run vagga _build unzip-no-subdir
-    printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
     [[ $output = *'./dir" is not found in archive'* ]]
     [[ -f test-file.zip ]]
 
     run vagga _build unzip-mismatch-hashsum
-    printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
     [[ $output = *"Hashsum mismatch: expected 12345678 but was ${hash}"* ]]
     [[ -f test-file.zip ]]
@@ -388,26 +341,22 @@ setup() {
 
 @test "generic: Container volume works" {
     run vagga snoop
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "Sir, in my heart there was a kind of fighting" ]]
     [[ ${lines[${#lines[@]}-1]} = "That would not let me sleep." ]]
 }
 
 @test "generic: The vagga -m works" {
     run vagga -m hello world
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-1]} = "helloworld!" ]]
 }
 
 @test "generic: Hello from fake user" {
     run vagga fake-user
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-1]} = "uid=1(bin) gid=0(root)" ]]
 }
 
 @test "generic: RunAs" {
     run vagga _build run-as
-    printf "%s\n" "${lines[@]}"
     link=$(readlink ".vagga/run-as")
     [[ $link = ".roots/run-as.b0a77478/root" ]]
 
@@ -431,7 +380,6 @@ setup() {
 
 @test "generic: isolated RunAs" {
     run vagga _build isolated-run-as
-    printf "%s\n" "${lines[@]}"
     root=".vagga/isolated-run-as"
     link=$(readlink "${root}")
     [[ $link = ".roots/isolated-run-as.832bc83e/root" ]]
@@ -447,7 +395,6 @@ setup() {
 
 @test "generic: isolated RunAs with external user" {
     run vagga _build isolated-run-as-with-external-uid
-    printf "%s\n" "${lines[@]}"
     root=".vagga/isolated-run-as-with-external-uid"
     link=$(readlink "${root}")
     [[ $link = ".roots/isolated-run-as-with-external-uid.59a8d2d6/root" ]]
@@ -458,19 +405,15 @@ setup() {
 @test "generic: Tmpfs Subdirs" {
     vagga _build tmpfs-subdirs
     run vagga _run tmpfs-subdirs stat -c "%A" /tmp
-    printf "%s\n", "${lines[@]}"
     [[ $output = "drwxrwxrwt" ]]
     run vagga _run tmpfs-subdirs stat -c "%A" /tmp/x
-    printf "%s\n", "${lines[@]}"
     [[ $output = "drwxr-xr-x" ]]
     run vagga _run tmpfs-subdirs stat -c "%A" /tmp/y
-    printf "%s\n", "${lines[@]}"
     [[ $output = "drwx------" ]]
 }
 
 @test "generic: Path precedence" {
     run vagga _run path-precedence hello
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/path-precedence)
     [[ $link = ".roots/path-precedence.e2636a55/root" ]]
     [[ ${lines[${#lines[@]}-1]} = "Hello world!" ]]
@@ -478,7 +421,6 @@ setup() {
 
 @test "generic: Environ precedence" {
     run vagga _build environ
-    printf "%s\n" "${lines[@]}"
     link=$(readlink .vagga/environ)
     [[ $link = ".roots/environ.d304a005/root" ]]
 
@@ -516,19 +458,16 @@ site_settings:
 
 @test "generic: Argument parsing for supervise" {
     run sh -c 'vagga args -Fhello --second "world"  | sort'
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "hello" ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
 
     run sh -c 'vagga args --first=x --second="y" | sort'
-    printf "%s\n" "${lines[@]}"
     [[ ${lines[${#lines[@]}-2]} = "x" ]]
     [[ ${lines[${#lines[@]}-1]} = "y" ]]
 }
 
 @test "generic: Argument parsing for normal command" {
     run vagga cmdargs -vvvv --verbose
-    printf "%s\n" "${lines[@]}"
     # ensure arguments is not passed directly
     [[ ${lines[${#lines[@]}-2]} = "Args:" ]]
     [[ ${lines[${#lines[@]}-1]} = "Verbosity: 5" ]]
@@ -536,33 +475,27 @@ site_settings:
 
 @test "generic: Help with 'options'" {
     run vagga cmdargs --help
-    printf "%s\n" "${lines[@]}"
     [[ "$status" -eq 0 ]]
 
     run vagga args --help
-    printf "%s\n" "${lines[@]}"
     [[ "$status" -eq 0 ]]
 }
 
 @test "generic: Bad arguments for command with 'options'" {
     run vagga args --bad-arg
-    printf "%s\n" "${lines[@]}"
     [[ "$status" -eq 121 ]]
     [[ ${lines[${#lines[@]}-2]} = "Unknown flag: '--bad-arg'" ]]
     [[ ${lines[${#lines[@]}-1]} = "Usage: vagga args [options]" ]]
 
     run vagga cmdargs --bad-arg
-    printf "%s\n" "${lines[@]}"
     [[ "$status" -eq 121 ]]
     [[ ${lines[${#lines[@]}-1]} = "Usage: vagga cmdargs [options]" ]]
 
     run vagga args extra-arg
-    printf "%s\n" "${lines[@]}"
     [[ "$status" -eq 121 ]]
     [[ ${lines[${#lines[@]}-1]} = "Usage: vagga args [options]" ]]
 
     run vagga cmdargs extra-arg
-    printf "%s\n" "${lines[@]}"
     [[ "$status" -eq 121 ]]
     [[ ${lines[${#lines[@]}-1]} = "Usage: vagga cmdargs [options]" ]]
 }
@@ -577,7 +510,6 @@ site_settings:
     cd ..
     umount tmp
     rm -rf tmp
-    printf "%s\n" "${lines[@]}"
     [[ $status = 1 ]]
     # check there is no "Failed to remount readonly root" warning
     [[ $output != *"Failed to remount"* ]]
@@ -586,7 +518,6 @@ site_settings:
 
 @test "generic: resolv-file-path & hosts-file-path" {
     run vagga _build resolv-conf-and-hosts
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/resolv-conf-and-hosts)
     [[ $link = ".roots/resolv-conf-and-hosts.57222830/root" ]]
@@ -598,14 +529,12 @@ site_settings:
     [[ $hosts_link = "/state/hosts" ]]
 
     run vagga _run resolv-conf-and-hosts cat /state/resolv.conf
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(cat /etc/resolv.conf) = $output ]]
 }
 
 @test "generic: alternate shell (bash)" {
     run vagga bash-shell
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = '\"hello\"' ]]
 }

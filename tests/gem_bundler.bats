@@ -10,7 +10,6 @@ teardown() {
 
 @test "gem/bundler: alpine pkg" {
     run vagga _run pkg-alpine rake --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine)
@@ -19,7 +18,6 @@ teardown() {
 
 @test "gem/bundler: alpine pkg no update gem" {
     run vagga _run pkg-alpine-no-update-gem rake --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "rake, version 11.1.1" ]]
     link=$(readlink .vagga/pkg-alpine-no-update-gem)
@@ -28,7 +26,6 @@ teardown() {
 
 @test "gem/bundler: ubuntu focal pkg" {
     run vagga _run pkg-ubuntu-focal fpm --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
     link=$(readlink .vagga/pkg-ubuntu-focal)
@@ -37,7 +34,6 @@ teardown() {
 
 @test "gem/bundler: ubuntu focal pkg no update gem" {
     run vagga _run pkg-ubuntu-focal-no-update-gem fpm --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
     link=$(readlink .vagga/pkg-ubuntu-focal-no-update-gem)
@@ -46,7 +42,6 @@ teardown() {
 
 @test "gem/bundler: ubuntu bionic pkg" {
     run vagga _run pkg-ubuntu-bionic fpm --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
     link=$(readlink .vagga/pkg-ubuntu-bionic)
@@ -55,7 +50,6 @@ teardown() {
 
 @test "gem/bundler: ubuntu bionic pkg no update gem" {
     run vagga _run pkg-ubuntu-bionic-no-update-gem fpm --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
     link=$(readlink .vagga/pkg-ubuntu-bionic-no-update-gem)
@@ -64,7 +58,6 @@ teardown() {
 
 @test "gem/bundler: alpine GemBundle" {
     run vagga _run bundle-alpine fpm --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
     [[ -d .vagga/bundle-alpine/usr/lib/ruby/gems/2.3.0/gems/cuba-3.9.3 ]]
@@ -75,7 +68,6 @@ teardown() {
 
 @test "gem/bundler: alpine GemBundle without dev" {
     run vagga _build bundle-alpine-no-dev
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/cuba-3.9.3 ]]
     [[ ! -d .vagga/bundle-alpine-no-dev/usr/lib/ruby/gems/2.3.0/gems/fpm-1.14.1 ]]
@@ -85,7 +77,6 @@ teardown() {
 
 @test "gem/bundler: ubuntu GemBundle" {
     run vagga _run bundle-ubuntu fpm --version
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "1.14.1" ]]
     [[ -d .vagga/bundle-ubuntu/var/lib/gems/2.7.0/gems/cuba-3.9.3 ]]
@@ -96,7 +87,6 @@ teardown() {
 
 @test "gem/bundler: ubuntu GemBundle without dev" {
     run vagga _build bundle-ubuntu-no-dev
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ -d .vagga/bundle-ubuntu-no-dev/var/lib/gems/2.7.0/gems/cuba-3.9.3 ]]
     [[ ! -d .vagga/bundle-ubuntu-no-dev/var/lib/gems/2.7.0/gems/fpm-1.14.1 ]]
@@ -106,7 +96,6 @@ teardown() {
 
 @test "gem/bundler: GemBundle invalid trust_policy" {
     run vagga _build bundle-invalid-trust-policy
-    printf "%s\n" "${lines[@]}"
     [[ $status = 121 ]]
     [[ $output = *"Value of 'GemBundle.trust_policy' must be 'LowSecurity', 'MediumSecurity' or 'HighSecurity', 'invalid' given"* ]]
 }

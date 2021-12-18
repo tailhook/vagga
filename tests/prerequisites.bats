@@ -5,7 +5,6 @@ setup() {
 
 @test "prerequisites: One prerequisite" {
     run vagga two
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[0]} = "one" ]]
     [[ ${lines[1]} = "two" ]]
@@ -13,7 +12,6 @@ setup() {
 
 @test "prerequisites: Collapsing prerequisites" {
     run vagga four
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[0]} = "one" ]]
     [[ ${lines[1]} = "two" ]]
@@ -23,7 +21,6 @@ setup() {
 
 @test "prerequisites: Force order" {
     run vagga -m three two four
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[0]} = "one" ]]
     [[ ${lines[1]} = "three" ]]
@@ -33,7 +30,6 @@ setup() {
 
 @test "prerequisites: Check persistent volume init" {
     run vagga persistent
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "world" ]]
 }

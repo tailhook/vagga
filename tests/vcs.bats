@@ -4,7 +4,6 @@ setup() {
 
 @test "vcs: urp from git checkout" {
     run vagga urp-git -Q key=val http://example.com
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/git)
@@ -13,7 +12,6 @@ setup() {
 
 @test "vcs: install from git checkout" {
     run vagga urp-git-install -Q key=val http://example.com
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = http://example.com?key=val ]]
     link=$(readlink .vagga/git-install)
@@ -31,11 +29,9 @@ setup() {
     git describe
 
     run vagga _build git-describe-no-file
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
 
     run vagga _build git-describe
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     link=$(readlink .vagga/git-describe)
     [[ $link = ".roots/git-describe.022317fb/root" ]]
@@ -47,7 +43,6 @@ setup() {
     git describe
 
     run vagga _build git-describe
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     new_link=$(readlink .vagga/git-describe)
     [[ $link != $new_link ]]
@@ -59,7 +54,6 @@ setup() {
     git describe
 
     run vagga _build git-describe-pattern
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $(cat .vagga/git-describe-pattern/version.txt) = "v0.0.1-2-"* ]]
 }

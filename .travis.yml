@@ -47,7 +47,7 @@ script:
         vagga \
           -E UBUNTU_MIRROR=http://mirrors.us.kernel.org/ubuntu/ \
           -E ALPINE_MIRROR=http://mirrors.gigenet.com/alpinelinux/ \
-          test tests/$test.bats --tap
+          test tests/$test.bats --tap --verbose-run --trace
       fi
     done
   else

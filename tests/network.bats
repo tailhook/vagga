@@ -8,7 +8,6 @@ setup() {
     sleep 0.05
     run vagga connect
     kill %1
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[0]} = "hello world!" ]]
 }
@@ -18,7 +17,6 @@ setup() {
     sleep 0.05
     run vagga connect
     kill %1
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ ${lines[0]} = "hello world!" ]]
 }

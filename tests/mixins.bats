@@ -5,7 +5,6 @@ setup() {
 @test "mixins: Runs original command" {
     run vagga _build alpine
     run vagga top
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = top ]]
 }
@@ -13,7 +12,6 @@ setup() {
 @test "mixins: Overrides command" {
     run vagga _build alpine
     run vagga overrides
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = overrides ]]
 }
@@ -21,7 +19,6 @@ setup() {
 @test "mixins: Overrides in the middle" {
     run vagga _build alpine
     run vagga m1x
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = m2 ]]
 }
@@ -29,7 +26,6 @@ setup() {
 @test "mixins: Mixin command 1" {
     run vagga _build alpine
     run vagga m1
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = m1 ]]
 }
@@ -37,7 +33,6 @@ setup() {
 @test "mixins: Mixin command 2" {
     run vagga _build alpine
     run vagga m2
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output = m2 ]]
 }
@@ -45,7 +40,6 @@ setup() {
 @test "mixins: List is correct" {
     run vagga _build alpine
     run vagga _list
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ "${lines[0]}" = "m1                  " ]]
     [[ "${lines[1]}" = "m1x                 " ]]
@@ -57,7 +51,6 @@ setup() {
 @test "mixins: Minimum version warning" {
     cd ../mixins_version
     run vagga _build test
-    printf "%s\n" "${lines[@]}"
     [[ $status = 0 ]]
     [[ $output != *"UnknownBuildStep"* ]]
     [[ $output = *"Please upgrade vagga"* ]]
