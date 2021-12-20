@@ -2,13 +2,13 @@ setup() {
     cd /work/tests/ubuntu_release
 }
 
-@test "UbuntuRelease builds" {
+@test "ubuntu-release: UbuntuRelease builds" {
     vagga _build ubuntu-release
     link=$(readlink .vagga/ubuntu-release)
     [[ $link = ".roots/ubuntu-release.a4152474/root" ]]
 }
 
-@test "Run echo command in ubuntu release" {
+@test "ubuntu-release: echo command in ubuntu release" {
     run vagga echo-cmd hello
     [[ $status = 0 ]]
     [[ $output = hello ]]
@@ -17,7 +17,7 @@ setup() {
     [[ $output = world ]]
 }
 
-@test "Run echo shell in ubuntu release" {
+@test "ubuntu-release: echo shell in ubuntu release" {
     run vagga echo-shell
     [[ $status = 0 ]]
     [[ $output = "" ]]
@@ -26,7 +26,7 @@ setup() {
     [[ $output =~ "Unexpected argument" ]]
 }
 
-@test "Run echo shell with arguments in ubuntu release" {
+@test "ubuntu-release: echo shell with arguments in ubuntu release" {
     run vagga echo-shell-arg
     [[ $status = 0 ]]
     [[ $output = "" ]]
@@ -35,13 +35,13 @@ setup() {
     [[ $output = "hello" ]]
 }
 
-@test "Run absent command in ubuntu release" {
+@test "ubuntu-release: absent command in ubuntu release" {
     run vagga test something
     [[ $status -eq 121 ]]
     [[ $output =~ 'Command "test" not found and is not an alias' ]]
 }
 
-@test "ubuntu_release: Run bc in xenial by url" {
+@test "ubuntu-release: bc in xenial by url" {
     run vagga xenial-calc 17*11
     link=$(readlink .vagga/xenial-url)
     echo "Container: $link"
@@ -50,7 +50,7 @@ setup() {
     [[ $link = ".roots/xenial-url.a3ad230f/root" ]]
 }
 
-@test "ubuntu_release: Run bc in ubuntu derived from release" {
+@test "ubuntu-release: bc in ubuntu derived from release" {
     run vagga derived-calc 100*24
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
@@ -58,7 +58,7 @@ setup() {
     [[ $link = ".roots/ubuntu-release-derive.ad41cc8a/root" ]]
 }
 
-@test "Run trusty bc in ubuntu release" {
+@test "ubuntu-release: trusty bc in ubuntu release" {
     run vagga trusty-calc 23*7+3
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
@@ -66,13 +66,13 @@ setup() {
     [[ $link = ".roots/trusty-calc.22dbaca2/root" ]]
 }
 
-@test "Test VAGGAENV_* vars in ubuntu release" {
+@test "ubuntu-release: VAGGAENV_* vars in ubuntu release" {
     VAGGAENV_TESTVAR=testvalue run vagga _run ubuntu-release printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = testvalue ]]
 }
 
-@test "Test set env in ubuntu release" {
+@test "ubuntu-release: set env in ubuntu release" {
     run vagga --environ TESTVAR=1value1 _run ubuntu-release printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = 1value1 ]]

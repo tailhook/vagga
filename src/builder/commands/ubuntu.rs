@@ -1229,16 +1229,20 @@ mod build {
         pub fn find(codename: &str, arch: &str) -> Option<EMDParams> {
             match (codename, arch) {
                 ("xenial", "amd64") |
-                ("artful", "amd64") |
-                ("bionic", "amd64")
+                ("bionic", "amd64") |
+                ("focal", "amd64") |
+                ("hirsute", "amd64") |
+                ("impish", "amd64")
                 => Some(EMDParams {
                     needs_universe: false,
                     package: "libeatmydata1",
                     preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
                 }),
                 ("xenial", "i386") |
-                ("artful", "i386") |
-                ("bionic", "i386")
+                ("bionic", "i386") |
+                ("focal", "i386") |
+                ("hirsute", "i386") |
+                ("impish", "i386")
                 => Some(EMDParams {
                     needs_universe: false,
                     package: "libeatmydata1",
