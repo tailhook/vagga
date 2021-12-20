@@ -1,11 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::collections::btree_map::Entry;
 use std::default::Default;
 use std::env;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use libmount::BindMount;
+use libmount::{BindMount, Overlay};
 
 use crate::config::{Config, Container, Settings};
 use crate::container::util::clean_dir;
@@ -20,6 +21,10 @@ use crate::process_util::PROXY_ENV_VARS;
 use super::packages;
 use super::timer;
 
+pub struct CachedDir {
+    pub src: PathBuf,
+    pub overlay_dir: Option<PathBuf>,
+}
 
 pub struct Context<'a> {
     pub config: &'a Config,
@@ -29,7 +34,7 @@ pub struct Context<'a> {
     pub empty_dirs: BTreeSet<PathBuf>,
     pub remove_paths: BTreeSet<PathBuf>,
     pub mounted: Vec<PathBuf>,
-    pub cache_dirs: BTreeMap<PathBuf, String>,
+    pub cache_dirs: BTreeMap<PathBuf, CachedDir>,
     pub environ: BTreeMap<String, String>,
 
     /// String that identifies binary API version
@@ -112,26 +117,102 @@ impl<'a> Context<'a> {
         };
     }
 
-    pub fn add_cache_dir(&mut self, path: &Path, name: String)
+    pub fn add_cache_dir(&mut self, path: &Path, name: &str)
         -> Result<(), String>
     {
+        let entry = match self.cache_dirs.entry(path.to_path_buf()) {
+            Entry::Vacant(entry) => entry,
+            Entry::Occupied(_) => return Ok(()),
+        };
+
+        let cache_dir = Path::new("/vagga/cache").join(&name);
+        if !cache_dir.exists() {
+            try_msg!(
+                Dir::new(&cache_dir).create(),
+                "Error creating cache dir: {err}"
+            );
+        }
+
         let path = path.strip_prefix("/")
             .map_err(|_| format!("cache_dir must be absolute: {:?}", path))?;
-        if self.cache_dirs.insert(path.to_path_buf(), name.clone()).is_none() {
-            let cache_dir = Path::new("/vagga/cache").join(&name);
-            if !cache_dir.exists() {
-                try_msg!(Dir::new(&cache_dir).create(),
-                     "Error creating cache dir: {err}");
-            }
-            let path = Path::new("/vagga/root").join(path);
-            try_msg!(Dir::new(&path).recursive(true).create(),
-                 "Error creating cache dir: {err}");
-            clean_dir(&path, false)?;
-            try_msg!(BindMount::new(&cache_dir, &path).mount(),
-                "mount cache dir: {err}");
-            self.mounted.push(path);
+        let path = Path::new("/vagga/root").join(path);
+        try_msg!(
+            Dir::new(&path).recursive(true).create(),
+            "Error creating cache dir: {err}"
+        );
+        clean_dir(&path, false)?;
+
+        try_msg!(
+            BindMount::new(&cache_dir, &path).mount(),
+            "mount cache dir: {err}"
+        );
+
+        self.mounted.push(path);
+        entry.insert(CachedDir { src: cache_dir, overlay_dir: None });
+        Ok(())
+    }
+
+    pub fn add_cache_dir_overlay(&mut self, path: &Path, name: &str)
+        -> Result<(), String>
+    {
+        let entry = match self.cache_dirs.entry(path.to_path_buf()) {
+            Entry::Vacant(entry) => entry,
+            Entry::Occupied(_) => return Ok(()),
+        };
+
+        let overlay_dir = Path::new("/vagga/container").join(name);
+        let work_dir = overlay_dir.join("work");
+        let upper_dir = overlay_dir.join("upper");
+        try_msg!(
+            Dir::new(&work_dir).recursive(true).create(),
+            "Error creating cache work dir: {err}"
+        );
+        try_msg!(
+            Dir::new(&upper_dir).recursive(true).create(),
+            "Error creating cache upper dir: {err}"
+        );
+
+        let cache_dir = Path::new("/vagga/cache").join(&name);
+        if !cache_dir.exists() {
+            try_msg!(
+                Dir::new(&cache_dir).create(),
+                "Error creating cache dir: {err}"
+            );
         }
-        return Ok(());
+
+        let path = path.strip_prefix("/")
+            .map_err(|_| format!("cache_dir must be absolute: {:?}", path))?;
+        let path = Path::new("/vagga/root").join(path);
+        try_msg!(
+            Dir::new(&path).recursive(true).create(),
+            "Error creating cache dir: {err}"
+        );
+        clean_dir(&path, false)?;
+
+        try_msg!(
+            Overlay::writable(
+                vec!(cache_dir.as_path()).into_iter(),
+                &upper_dir,
+                &work_dir,
+                path.as_path(),
+            )
+            .mount(),
+            "mount cache dir: {err}"
+        );
+
+        self.mounted.push(path);
+        entry.insert(CachedDir { src: cache_dir, overlay_dir: Some(overlay_dir) });
+        Ok(())
+    }
+
+    pub fn get_cached_dir(&self, path: &Path) -> Option<&CachedDir> {
+        self.cache_dirs.get(path)
+    }
+
+    pub fn is_cached_dir_overlay(&self, path: &Path) -> bool {
+        self.get_cached_dir(path)
+            .and_then(|d| d.overlay_dir.as_ref())
+            .is_none()
     }
 
     pub fn add_remove_path(&mut self, path: &Path)

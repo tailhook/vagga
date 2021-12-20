@@ -176,8 +176,7 @@ pub fn npm_install(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     pkgs: &Vec<String>)
     -> Result<(), StepError>
 {
-    ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
-                           "npm-cache".to_string())?;
+    ctx.add_cache_dir(Path::new("/tmp/npm-cache"), "npm-cache")?;
     let features = scan_features(&ctx.npm_settings, pkgs);
     packages::ensure_packages(distro, ctx, &features)?;
     if !ctx.npm_configured {
@@ -249,8 +248,7 @@ pub fn npm_deps(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
     info: &NpmDependencies)
     -> Result<(), StepError>
 {
-    ctx.add_cache_dir(Path::new("/tmp/npm-cache"),
-                           "npm-cache".to_string())?;
+    ctx.add_cache_dir(Path::new("/tmp/npm-cache"), "npm-cache")?;
     let mut features = scan_features(&ctx.npm_settings, &Vec::new());
 
     let json = File::open(&Path::new("/work").join(&info.file))
@@ -539,8 +537,7 @@ impl BuildStep for YarnDependencies {
         if build {
             let base_dir = Path::new("/work").join(&self.dir);
 
-            guard.ctx.add_cache_dir(Path::new("/tmp/yarn-cache"),
-                                    "yarn-cache".to_string())?;
+            guard.ctx.add_cache_dir(Path::new("/tmp/yarn-cache"), "yarn-cache")?;
             let features = yarn_scan_features(
                 &guard.ctx.npm_settings, &Vec::new());
             packages::ensure_packages(

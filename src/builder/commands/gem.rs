@@ -264,7 +264,7 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     }
 
     let gem_cache = gem_cache_dir(ctx)?;
-    ctx.add_cache_dir(&gem_cache, "gems-cache".to_string())?;
+    ctx.add_cache_dir(&gem_cache, "gems-cache")?;
 
     Ok(())
 }

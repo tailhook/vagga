@@ -183,7 +183,7 @@ impl BuildStep for CacheDirs {
         -> Result<(), StepError>
     {
         for (k, v) in self.0.iter() {
-            guard.ctx.add_cache_dir(k, v.clone())?;
+            guard.ctx.add_cache_dir(k, &v)?;
         }
         Ok(())
     }

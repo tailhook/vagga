@@ -4,7 +4,7 @@ setup() {
 
 teardown() {
     cd /work/tests/composer
-    if [ -f composer.lock ]; then rm composer.lock; fi
+    rm -f composer.lock
 }
 
 # test composer is available in PATH and removed after container is built
