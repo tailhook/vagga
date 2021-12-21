@@ -3,6 +3,8 @@ use std::ffi::CString;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
 
 // TODO(tailhook) probably get rid of this after migrating to unshare crate
 pub trait ToCString {
@@ -68,4 +70,13 @@ impl IterSelfAndParents for Path {
             path: self,
         }
     }
+}
+
+pub fn tmp_filename(name: &str) -> String {
+    let prefix: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(6)
+        .map(char::from)
+        .collect();
+    format!(".{}-{}", prefix, name)
 }

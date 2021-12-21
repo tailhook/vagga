@@ -20,6 +20,7 @@ use crate::{
     builder::packages,
     container::util::clean_dir,
     file_util::{Dir, Lock, copy, copy_utime, safe_remove},
+    path_util::tmp_filename,
 };
 use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
@@ -648,9 +649,6 @@ impl Distro {
 
     #[cfg(feature="containers")]
     fn copy_apt_archives_to_cache(&self, overlay_dir: &Path, cache_dir: &Path) -> io::Result<()> {
-        use rand::{thread_rng, Rng};
-        use rand::distributions::Alphanumeric;
-
         let cache_dir = cache_dir.join("archives");
         Dir::new(&cache_dir).create()?;
 
@@ -663,12 +661,7 @@ impl Distro {
                 if !name.ends_with(".deb") { continue }
                 if !entry.file_type()?.is_file() { continue }
                 let src = entry.path();
-                let tmp_prefix: String = thread_rng()
-                    .sample_iter(&Alphanumeric)
-                    .take(6)
-                    .map(char::from)
-                    .collect();
-                let tmp = cache_dir.join(format!(".{}-{}.part", tmp_prefix, name));
+                let tmp = cache_dir.join(tmp_filename(&format!("{}.part", name)));
                 let dst = cache_dir.join(name);
                 if !dst.exists() {
                     // Cannot rename without copying due to "Cross-device link (os error 18)"

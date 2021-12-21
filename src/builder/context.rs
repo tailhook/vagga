@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::collections::btree_map::Entry;
 use std::default::Default;
 use std::env;
 use std::fs::File;
@@ -120,10 +119,9 @@ impl<'a> Context<'a> {
     pub fn add_cache_dir(&mut self, path: &Path, name: &str)
         -> Result<(), String>
     {
-        let entry = match self.cache_dirs.entry(path.to_path_buf()) {
-            Entry::Vacant(entry) => entry,
-            Entry::Occupied(_) => return Ok(()),
-        };
+        if self.cache_dirs.contains_key(path) {
+            return Ok(());
+        }
 
         let cache_dir = Path::new("/vagga/cache").join(&name);
         if !cache_dir.exists() {
@@ -133,32 +131,33 @@ impl<'a> Context<'a> {
             );
         }
 
-        let path = path.strip_prefix("/")
-            .map_err(|_| format!("cache_dir must be absolute: {:?}", path))?;
-        let path = Path::new("/vagga/root").join(path);
+        let tgt_path = Self::cache_target_path(path)?;
         try_msg!(
-            Dir::new(&path).recursive(true).create(),
+            Dir::new(&tgt_path).recursive(true).create(),
             "Error creating cache dir: {err}"
         );
-        clean_dir(&path, false)?;
+        clean_dir(&tgt_path, false)?;
 
         try_msg!(
-            BindMount::new(&cache_dir, &path).mount(),
+            BindMount::new(&cache_dir, &tgt_path).mount(),
             "mount cache dir: {err}"
         );
+        debug!("Cache mounted: {:?} -> {:?}", &cache_dir, &tgt_path);
 
-        self.mounted.push(path);
-        entry.insert(CachedDir { src: cache_dir, overlay_dir: None });
+        self.mounted.push(tgt_path);
+        self.cache_dirs.insert(
+            path.to_path_buf(),
+            CachedDir { src: cache_dir, overlay_dir: None }
+        );
         Ok(())
     }
 
     pub fn add_cache_dir_overlay(&mut self, path: &Path, name: &str)
         -> Result<(), String>
     {
-        let entry = match self.cache_dirs.entry(path.to_path_buf()) {
-            Entry::Vacant(entry) => entry,
-            Entry::Occupied(_) => return Ok(()),
-        };
+        if self.cache_dirs.contains_key(path) {
+            return Ok(());
+        }
 
         let overlay_dir = Path::new("/vagga/container").join(name);
         let work_dir = overlay_dir.join("work");
@@ -180,29 +179,37 @@ impl<'a> Context<'a> {
             );
         }
 
-        let path = path.strip_prefix("/")
-            .map_err(|_| format!("cache_dir must be absolute: {:?}", path))?;
-        let path = Path::new("/vagga/root").join(path);
+        let tgt_path = Self::cache_target_path(path)?;
         try_msg!(
-            Dir::new(&path).recursive(true).create(),
+            Dir::new(&tgt_path).recursive(true).create(),
             "Error creating cache dir: {err}"
         );
-        clean_dir(&path, false)?;
+        clean_dir(&tgt_path, false)?;
 
         try_msg!(
             Overlay::writable(
                 vec!(cache_dir.as_path()).into_iter(),
                 &upper_dir,
                 &work_dir,
-                path.as_path(),
+                tgt_path.as_path(),
             )
             .mount(),
             "mount cache dir: {err}"
         );
+        debug!("Cache mounted: {:?} -> {:?}", &cache_dir, &tgt_path);
 
-        self.mounted.push(path);
-        entry.insert(CachedDir { src: cache_dir, overlay_dir: Some(overlay_dir) });
+        self.mounted.push(tgt_path);
+        self.cache_dirs.insert(
+            path.to_path_buf(),
+            CachedDir { src: cache_dir, overlay_dir: Some(overlay_dir) }
+        );
         Ok(())
+    }
+
+    fn cache_target_path(path: &Path) -> Result<PathBuf, String> {
+        let rel_path = path.strip_prefix("/")
+            .map_err(|_| format!("cache_dir must be absolute: {:?}", path))?;
+        Ok(Path::new("/vagga/root").join(rel_path))
     }
 
     pub fn get_cached_dir(&self, path: &Path) -> Option<&CachedDir> {
@@ -212,7 +219,7 @@ impl<'a> Context<'a> {
     pub fn is_cached_dir_overlay(&self, path: &Path) -> bool {
         self.get_cached_dir(path)
             .and_then(|d| d.overlay_dir.as_ref())
-            .is_none()
+            .is_some()
     }
 
     pub fn add_remove_path(&mut self, path: &Path)
