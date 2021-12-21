@@ -94,10 +94,12 @@ impl<'a> Guard<'a> {
         unmount(&Path::new("/vagga/root/run"))?;
         unmount_system_dirs()?;
 
-        try_msg!(
-            remove_dir_all("/vagga/container/cache"),
-            "Error when removing containers cache directory: {err}"
-        );
+        if Path::new("/vagga/container/cache").exists() {
+            try_msg!(
+                remove_dir_all("/vagga/container/cache"),
+                "Error when removing containers cache directory: {err}"
+            );
+        }
 
         // Truncate resolv.conf and hosts files
         truncate_file("/vagga/root/etc/resolv.conf")?;
