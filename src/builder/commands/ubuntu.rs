@@ -316,8 +316,8 @@ impl Distribution for Distro {
             .map_err(|e| warn!("Can't list debian packages: {}", e)).ok();
 
         if let Some(cached_dir) = ctx.get_cached_dir(&APT_CACHE) {
-            if let Some(overlay_dir) = cached_dir.overlay_dir.as_ref() {
-                self.copy_apt_archives_to_cache(overlay_dir, cached_dir.src.as_path())
+            if let Some(diff_dir) = cached_dir.diff.as_ref() {
+                self.copy_apt_archives_to_cache(diff_dir, cached_dir.src.as_path())
                     .map_err(|e|
                         error!("error when copying archives to cache: {}. Ignored", e)
                     )
@@ -648,11 +648,11 @@ impl Distro {
     }
 
     #[cfg(feature="containers")]
-    fn copy_apt_archives_to_cache(&self, overlay_dir: &Path, cache_dir: &Path) -> io::Result<()> {
+    fn copy_apt_archives_to_cache(&self, diff_dir: &Path, cache_dir: &Path) -> io::Result<()> {
         let cache_dir = cache_dir.join("archives");
         Dir::new(&cache_dir).create()?;
 
-        let archives_dir = overlay_dir.join("upper/archives");
+        let archives_dir = diff_dir.join("archives");
         if !archives_dir.exists() {
             return Ok(());
         }
@@ -675,7 +675,7 @@ impl Distro {
             .map_err(|x| io::Error::new(io::ErrorKind::Other, x))
             .and_then(|x| x)?;
 
-        remove_dir_all(overlay_dir)
+        remove_dir_all(diff_dir)
     }
 
     #[cfg(feature="containers")]

@@ -22,7 +22,7 @@ use super::timer;
 
 pub struct CachedDir {
     pub src: PathBuf,
-    pub overlay_dir: Option<PathBuf>,
+    pub diff: Option<PathBuf>,
 }
 
 pub struct Context<'a> {
@@ -147,7 +147,7 @@ impl<'a> Context<'a> {
         self.mounted.push(tgt_path);
         self.cache_dirs.insert(
             path.to_path_buf(),
-            CachedDir { src: cache_dir, overlay_dir: None }
+            CachedDir { src: cache_dir, diff: None }
         );
         Ok(())
     }
@@ -161,14 +161,14 @@ impl<'a> Context<'a> {
 
         let overlay_dir = Path::new("/vagga/container/cache").join(name);
         let work_dir = overlay_dir.join("work");
-        let upper_dir = overlay_dir.join("upper");
+        let diff_dir = overlay_dir.join("diff");
         try_msg!(
             Dir::new(&work_dir).recursive(true).create(),
             "Error creating cache work dir: {err}"
         );
         try_msg!(
-            Dir::new(&upper_dir).recursive(true).create(),
-            "Error creating cache upper dir: {err}"
+            Dir::new(&diff_dir).recursive(true).create(),
+            "Error creating cache diff dir: {err}"
         );
 
         let cache_dir = Path::new("/vagga/cache").join(&name);
@@ -189,7 +189,7 @@ impl<'a> Context<'a> {
         try_msg!(
             Overlay::writable(
                 vec!(cache_dir.as_path()).into_iter(),
-                &upper_dir,
+                &diff_dir,
                 &work_dir,
                 tgt_path.as_path(),
             )
@@ -201,7 +201,7 @@ impl<'a> Context<'a> {
         self.mounted.push(tgt_path);
         self.cache_dirs.insert(
             path.to_path_buf(),
-            CachedDir { src: cache_dir, overlay_dir: Some(overlay_dir) }
+            CachedDir { src: cache_dir, diff: Some(diff_dir) }
         );
         Ok(())
     }
@@ -218,7 +218,7 @@ impl<'a> Context<'a> {
 
     pub fn is_cached_dir_overlay(&self, path: &Path) -> bool {
         self.get_cached_dir(path)
-            .and_then(|d| d.overlay_dir.as_ref())
+            .and_then(|d| d.diff.as_ref())
             .is_some()
     }
 
