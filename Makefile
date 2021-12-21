@@ -29,7 +29,7 @@ vagga-release:
 
 vagga-build-test:
 	cargo build --target=x86_64-unknown-linux-musl --profile=test
-	cp --remove-destination target/x86_64-unknown-linux-musl/release/vagga .
+	cp --remove-destination target/x86_64-unknown-linux-musl/debug/vagga .
 
 downloads: apk busybox alpine-keys.apk
 

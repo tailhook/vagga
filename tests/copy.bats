@@ -1,4 +1,6 @@
 setup() {
+    load '/bats/bats-support/load.bash'
+    load '/bats/bats-assert/load.bash'
     cd /work/tests/copy
 }
 
@@ -87,6 +89,23 @@ setup() {
     [[ $(stat -c "%a" ".vagga/copy-preserve-perms/dir/exe.sh") = "770" ]]
     [[ $(stat -c "%a" ".vagga/copy-preserve-perms/dir/subdir") = "770" ]]
     [[ $(stat -c "%a" ".vagga/copy-preserve-perms/dir/subdir/file") = "660" ]]
+}
+
+@test "copy: set owner" {
+    run vagga --version
+
+    run vagga _build copy-set-owner
+    assert_success
+    link=$(readlink .vagga/copy-set-owner)
+    [[ $link = ".roots/copy-set-owner.e4b743de/root" ]]
+
+    container_dir=".vagga/copy-set-owner"
+    run stat -c "%u:%g" "$container_dir/dir"
+    assert_output "1:2"
+    run stat -c "%u:%g" "$container_dir/dir/hello"
+    assert_output "1:2"
+    run stat -c "%u:%g" "$container_dir/dir/subdir/file"
+    assert_output "1:2"
 }
 
 @test "copy: clean _unused (non-existent)" {
