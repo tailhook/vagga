@@ -660,7 +660,6 @@ impl Distro {
 
                 let dst = cache_dir.join(name);
                 if !dst.exists() {
-                    // Cannot rename without copying due to "Cross-device link (os error 18)"
                     FileCopy::new(&entry.path(), &dst)
                         .atomic(true)
                         .time(CopyTimePolicy::Preserve)
@@ -1135,7 +1134,7 @@ mod build {
         // TODO: Fallback only on mount error
         if ctx.add_cache_dir_overlay(&APT_CACHE, APT_CACHE_NAME).is_err() {
             ctx.add_cache_dir(&APT_CACHE, APT_CACHE_NAME)
-                .map_err(|e| format!("{}", e))?;
+                .map_err(|e| format!("Error mounting apt cache: {}", e))?;
         }
         Ok(())
     }
