@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::fs::remove_file;
+use std::fs::{remove_dir_all, remove_file};
 use std::collections::HashMap;
 
 use crate::build_step::BuildStep;
@@ -93,6 +93,11 @@ impl<'a> Guard<'a> {
         }
         unmount(&Path::new("/vagga/root/run"))?;
         unmount_system_dirs()?;
+
+        try_msg!(
+            remove_dir_all("/vagga/container/cache"),
+            "Error when removing containers cache directory: {err}"
+        );
 
         // Truncate resolv.conf and hosts files
         truncate_file("/vagga/root/etc/resolv.conf")?;

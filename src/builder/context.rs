@@ -142,7 +142,7 @@ impl<'a> Context<'a> {
             BindMount::new(&cache_dir, &tgt_path).mount(),
             "mount cache dir: {err}"
         );
-        debug!("Cache mounted: {:?} -> {:?}", &cache_dir, &tgt_path);
+        debug!("Cache mounted (bind): {:?} -> {:?}", &cache_dir, &tgt_path);
 
         self.mounted.push(tgt_path);
         self.cache_dirs.insert(
@@ -159,7 +159,7 @@ impl<'a> Context<'a> {
             return Ok(());
         }
 
-        let overlay_dir = Path::new("/vagga/container").join(name);
+        let overlay_dir = Path::new("/vagga/container/cache").join(name);
         let work_dir = overlay_dir.join("work");
         let upper_dir = overlay_dir.join("upper");
         try_msg!(
@@ -196,7 +196,7 @@ impl<'a> Context<'a> {
             .mount(),
             "mount cache dir: {err}"
         );
-        debug!("Cache mounted: {:?} -> {:?}", &cache_dir, &tgt_path);
+        debug!("Cache mounted (overlay): {:?} -> {:?}", &cache_dir, &tgt_path);
 
         self.mounted.push(tgt_path);
         self.cache_dirs.insert(
