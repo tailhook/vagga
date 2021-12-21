@@ -19,8 +19,7 @@ use crate::{
     builder::dns::revert_name_files,
     builder::packages,
     container::util::clean_dir,
-    file_util::{Dir, Lock, copy, copy_utime, safe_remove},
-    path_util::tmp_filename,
+    file_util::{CopyTimePolicy, Dir, FileCopy, Lock, safe_remove},
 };
 use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
@@ -615,11 +614,10 @@ impl Distro {
         Dir::new(dir).recursive(true).create()?;
         ScanDir::files().read(&cache_dir, |iter| {
             for (entry, name) in iter {
-                let tmpname = dir.join(format!(".tmp.{}", name));
-                let src = entry.path();
-                copy(&src, &tmpname)?;
-                copy_utime(&src, &tmpname)?;
-                rename(&tmpname, dir.join(&name))?;
+                FileCopy::new(&entry.path(), &dir.join(&name))
+                    .atomic(true)
+                    .time(CopyTimePolicy::Preserve)
+                    .copy()?;
             }
             Ok(())
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
@@ -637,11 +635,10 @@ impl Distro {
         ScanDir::files().read("/vagga/root/var/lib/apt/lists", |iter| {
             for (entry, name) in iter {
                 if name == "lock" { continue };
-                let tmpname = cache_dir.join(format!(".tmp.{}", name));
-                let src = entry.path();
-                copy(&src, &tmpname)?;
-                copy_utime(&src, &tmpname)?;
-                rename(tmpname, cache_dir.join(name))?;
+                FileCopy::new(&entry.path(), &cache_dir.join(name))
+                    .atomic(true)
+                    .time(CopyTimePolicy::Preserve)
+                    .copy()?;
             }
             Ok(())
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
@@ -660,14 +657,14 @@ impl Distro {
             for (entry, name) in iter {
                 if !name.ends_with(".deb") { continue }
                 if !entry.file_type()?.is_file() { continue }
-                let src = entry.path();
-                let tmp = cache_dir.join(tmp_filename(&format!("{}.part", name)));
+
                 let dst = cache_dir.join(name);
                 if !dst.exists() {
                     // Cannot rename without copying due to "Cross-device link (os error 18)"
-                    copy(&src, &tmp)?;
-                    copy_utime(&src, &tmp)?;
-                    rename(tmp, dst)?;
+                    FileCopy::new(&entry.path(), &dst)
+                        .atomic(true)
+                        .time(CopyTimePolicy::Preserve)
+                        .copy()?;
                 }
             }
             Ok(())

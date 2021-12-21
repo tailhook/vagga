@@ -2,7 +2,7 @@ use std::io;
 use std::io::{Read, Write, Error};
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::fs::Metadata;
+use std::fs::{Metadata, rename};
 use std::ffi::CString;
 use std::time::{Instant, Duration};
 use std::os::unix::fs::{PermissionsExt, MetadataExt, symlink};
@@ -17,7 +17,7 @@ use digest_traits::Digest;
 use sha2::Sha256;
 
 use crate::digest::hex;
-use crate::path_util::ToCString;
+use crate::path_util::{tmp_file_name, ToCString};
 
 pub struct Lock {
     file: fs::File,
@@ -160,15 +160,140 @@ pub fn ensure_symlink(target: &Path, linkpath: &Path) -> Result<(), io::Error>
     }
 }
 
+pub enum CopyPolicy<T> {
+    None,
+    Preserve,
+    Set(T),
+}
+
+impl<T> From<Option<T>> for CopyPolicy<T> {
+    fn from(v: Option<T>) -> Self {
+        match v {
+            Some(v) => CopyPolicy::Set(v),
+            None => CopyPolicy::None,
+        }
+    }
+}
+
+pub type CopyModePolicy = CopyPolicy<u32>;
+
+pub type CopyOwnerPolicy = CopyPolicy<(u32, u32)>;
+
+pub type CopyTimePolicy = CopyPolicy<(i64, i64)>;
+
+pub struct FileCopy<'s, 'd> {
+    src: &'s Path,
+    dst: &'d Path,
+    mode: CopyModePolicy,
+    owner: CopyOwnerPolicy,
+    time: CopyTimePolicy,
+    atomic: bool,
+}
+
+impl<'s, 'd> FileCopy<'s, 'd> {
+    pub fn new(src: &'s Path, dst: &'d Path) -> Self {
+        Self {
+            src,
+            dst,
+            mode: CopyPolicy::None,
+            owner: CopyPolicy::None,
+            time: CopyPolicy::None,
+            atomic: false,
+        }
+    }
+
+    pub fn time<T: Into<CopyTimePolicy>>(&mut self, time: T) -> &mut Self {
+        self.time = time.into();
+        self
+    }
+
+    pub fn owner<T: Into<CopyOwnerPolicy>>(&mut self, owner: T) -> &mut Self {
+        self.owner = owner.into();
+        self
+    }
+
+    pub fn mode<T: Into<CopyModePolicy>>(&mut self, mode: T) -> &mut Self {
+        self.mode = mode.into();
+        self
+    }
+
+    pub fn atomic(&mut self, atomic: bool) -> &mut Self {
+        self.atomic = atomic;
+        self
+    }
+
+    pub fn copy(&self) -> io::Result<()> {
+        let _dst;
+        let dst = if self.atomic {
+            let name = match self.dst.file_name() {
+                Some(name) => name,
+                None => return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Cannot detect file name of {:?}", &self.dst)
+                )),
+            };
+            let dst_dir = match self.dst.parent() {
+                Some(dir) => dir,
+                None => return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Cannot detect destination directory of {:?}", &self.dst)
+                )),
+            };
+            _dst = dst_dir.join(tmp_file_name(name));
+            _dst.as_path()
+        } else {
+            self.dst
+        };
+
+        let (mode, src_stat) = match self.mode {
+            CopyModePolicy::None => (None, None),
+            CopyModePolicy::Preserve => {
+                let src_stat = self.src.symlink_metadata()?;
+                (Some(src_stat.mode()), Some(src_stat))
+            },
+            CopyModePolicy::Set(mode) => {
+                (Some(mode), None)
+            },
+        };
+
+        _copy(&self.src, dst, mode)?;
+
+        let src_stat = match self.owner {
+            CopyOwnerPolicy::None => None,
+            CopyOwnerPolicy::Preserve => {
+                let src_stat = src_stat
+                    .map_or_else(|| self.src.symlink_metadata(), Ok)?;
+                set_owner_group(dst, src_stat.uid(), src_stat.gid())?;
+                Some(src_stat)
+            },
+            CopyOwnerPolicy::Set((uid, gid)) => {
+                set_owner_group(dst, uid, gid)?;
+                None
+            },
+        };
+        match self.time {
+            CopyTimePolicy::None => {},
+            CopyTimePolicy::Preserve => {
+                let src_stat = src_stat
+                    .map_or_else(|| self.src.symlink_metadata(), Ok)?;
+                set_times(dst, src_stat.atime(), src_stat.mtime())?;
+            },
+            CopyTimePolicy::Set((atime, mtime)) => {
+                set_times(dst, atime, mtime)?;
+            },
+        }
+
+        if self.atomic {
+            rename(dst, self.dst)?;
+        }
+
+        Ok(())
+    }
+}
+
 pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<()>
 {
     _copy(from.as_ref(), to.as_ref(), None)
-}
-
-pub fn copy_with_mode<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q, mode: u32)
-    -> io::Result<()>
-{
-    _copy(from.as_ref(), to.as_ref(), Some(mode))
 }
 
 fn _copy(from: &Path, to: &Path, mode: Option<u32>) -> io::Result<()> {
@@ -310,12 +435,6 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
     }
 }
 
-enum CopyTimePolicy {
-    None,
-    Preserve,
-    Set(i64, i64),
-}
-
 /// Shallow copy of file/dir/symlink
 ///
 /// The owner_uid/owner_gid parameters optionally override the owner
@@ -377,7 +496,7 @@ impl<'s, 'm, 'd> ShallowCopy<'s, 'm, 'd> {
     pub fn times(&mut self, atime: i64, mtime: i64)
         -> &mut ShallowCopy<'s, 'm, 'd>
     {
-        self.time_policy = CopyTimePolicy::Set(atime, mtime);
+        self.time_policy = CopyTimePolicy::Set((atime, mtime));
         self
     }
 
@@ -433,34 +552,25 @@ fn shallow_copy(src: &Path, src_stat: Option<&Metadata>, dest: &Path,
             owner_uid.unwrap_or(src_stat.uid()),
             owner_gid.unwrap_or(src_stat.gid()))?;
     } else {
-        match mode {
-            Some(mode) => copy_with_mode(src, dest, mode)?,
-            None => copy(src, dest)?,
-        }
-        set_owner_group(dest,
-            owner_uid.unwrap_or(src_stat.uid()),
-            owner_gid.unwrap_or(src_stat.gid()))?;
+        FileCopy::new(src, dest)
+            .mode(mode)
+            .owner(CopyOwnerPolicy::Set((
+                owner_uid.unwrap_or(src_stat.uid()),
+                owner_gid.unwrap_or(src_stat.gid())
+            )))
+            .copy()?;
         match *time_policy {
             CopyTimePolicy::None => {},
             CopyTimePolicy::Preserve => {
                 set_times(dest, src_stat.atime(), src_stat.mtime())?;
             },
-            CopyTimePolicy::Set(atime, mtime) => {
+            CopyTimePolicy::Set((atime, mtime)) => {
                 set_times(dest, atime, mtime)?;
             },
         }
     }
     Ok(!is_dir)
 }
-
-pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
-    -> io::Result<()>
-{
-    let metadata = fs::metadata(from.as_ref())?;
-    set_times(to, metadata.atime(), metadata.mtime())?;
-    Ok(())
-}
-
 
 pub fn set_times<P: AsRef<Path>>(path: P, atime: i64, mtime: i64)
     -> io::Result<()>

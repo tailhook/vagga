@@ -1,5 +1,5 @@
 use std::env;
-use std::ffi::CString;
+use std::ffi::{CString, OsStr, OsString};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
@@ -72,11 +72,13 @@ impl IterSelfAndParents for Path {
     }
 }
 
-pub fn tmp_filename(name: &str) -> String {
+pub fn tmp_file_name<T: AsRef<OsStr>>(name: T) -> OsString {
     let prefix: String = thread_rng()
         .sample_iter(&Alphanumeric)
         .take(6)
         .map(char::from)
         .collect();
-    format!(".{}-{}", prefix, name)
+    let mut file_name = OsString::from(format!(".tmp.{}-", prefix));
+    file_name.push(name.as_ref());
+    file_name
 }
