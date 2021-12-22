@@ -17,12 +17,18 @@ with-docker: downloads
 
 release: downloads vagga-release
 
+build-test: downloads vagga-build-test
+
 vagga:
 	cargo build --target=x86_64-unknown-linux-musl
 	cp --remove-destination target/x86_64-unknown-linux-musl/debug/vagga .
 
 vagga-release:
 	cargo build --target=x86_64-unknown-linux-musl --release
+	cp --remove-destination target/x86_64-unknown-linux-musl/release/vagga .
+
+vagga-build-test:
+	cargo build --target=x86_64-unknown-linux-musl --profile=test
 	cp --remove-destination target/x86_64-unknown-linux-musl/release/vagga .
 
 downloads: apk busybox alpine-keys.apk
