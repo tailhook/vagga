@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - ci
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 500
+      - name: Install musl-tools
+        run: "sudo apt-get install musl-tools"
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: x86_64-unknown-linux-musl
+          default: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Cache multiple paths
+        uses: actions/cache@v2
+        with:
+          path: |
+            tmp/cache
+          key: vagga-cache-v1
+      - run: |
+          make release  # slower build, faster tests
+          ./vagga -eUBUNTU_MIRROR test
+        env:
+          UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
+

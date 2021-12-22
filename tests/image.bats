@@ -1,4 +1,6 @@
 setup() {
+    load '/bats/bats-support/load.bash'
+    load '/bats/bats-assert/load.bash'
     cd /work/tests/image
 }
 
@@ -42,16 +44,16 @@ setup() {
 
     rm -rf .vagga/$container_name .vagga/.roots/$container_name.*
     run vagga _build $container_name
-    [[ $status = 0 ]]
-    [[ $output = *"Will clean and build it locally"* ]]
+    assert_success
+    assert_output --partial "Will clean and build it locally"
 
     # Pack image to cache capsule's dependencies so then
     # we will be able to run test inside an isolated network environment
     run vagga pack-image
-    [[ $status = 0 ]]
+    assert_success
 
     run vagga --isolate-network test-push-and-pull $container_name
-    [[ $status = 0 ]]
+    assert_success
 
     run cat .vagga/.volumes/nginx-logs/access.log
     access_log_output=${output}
@@ -61,5 +63,5 @@ setup() {
     [[ $(readlink .vagga/$container_name) = ".roots/${container_dir}/root" ]]
 
     run cat .vagga/image/var/lib/question.txt
-    [[ $output = "To be or not to be?" ]]
+    assert_output "To be or not to be?"
 }
