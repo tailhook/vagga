@@ -23,7 +23,6 @@ containers:
       /var/lib/nginx/tmp: !Tmpfs {size: 10M}
       /var/log/nginx: !Persistent nginx-logs
       /var/www/images: !Persistent images
-      /work/images: !Tmpfs {size: 100M}
     setup:
     - !Alpine v3.4
     - !Install [nginx]

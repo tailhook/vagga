@@ -57,10 +57,10 @@ setup() {
 
     run cat .vagga/.volumes/nginx-logs/access.log
     access_log_output=${output}
-    assert [[ ${access_log_output} = *"PUT /upload/images/${image_file_name} HTTP/1.1\" 201"* ]]
-    assert [[ ${access_log_output} = *"GET /images/${image_file_name} HTTP/1.1\" 200"* ]]
+    [[ ${access_log_output} = *"PUT /upload/images/${image_file_name} HTTP/1.1\" 201"* ]]
+    [[ ${access_log_output} = *"GET /images/${image_file_name} HTTP/1.1\" 200"* ]]
 
-    assert [[ $(readlink .vagga/$container_name) = ".roots/${container_dir}/root" ]]
+    [[ $(readlink .vagga/$container_name) = ".roots/${container_dir}/root" ]]
 
     run cat .vagga/image/var/lib/question.txt
     assert_output "To be or not to be?"
