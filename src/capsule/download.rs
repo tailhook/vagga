@@ -15,7 +15,7 @@ use unshare::{Command, Stdio};
 use crate::capsule::{Context, packages as capsule};
 use crate::capsule::packages::State;
 use crate::digest::hex;
-use crate::file_util::check_stream_hashsum;
+use crate::file_util::{check_stream_hashsum, Lock};
 use crate::process_util::cmd_show;
 
 
@@ -49,61 +49,81 @@ pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>,
     if !refresh && filename.exists() {
         return Ok(filename);
     }
-    let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
-    if https {
-        capsule::ensure(state, &[capsule::Https])?;
-    }
-    for url in urls {
-        let url = url.as_ref();
-        info!("Downloading image {} -> {:?}", url, filename);
-        let tmpfilename = filename.with_file_name(name.clone() + ".part");
-        let mut cmd = Command::new(
-            if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
-        cmd.stdin(Stdio::null());
-        if !https {
-            cmd.arg("wget");
-        }
-        cmd.arg("-O");
-        cmd.arg(&tmpfilename);
-        cmd.arg(url);
 
-        debug!("Running: {}", cmd_show(&cmd));
-        match cmd.status() {
-            Ok(st) if st.success() => {
-                if let Some(ref sha256) = sha256 {
-                    let mut tmpfile = try_msg!(File::open(&tmpfilename),
+    let lockfile = dir.join(&format!("{}.lock", &name));
+    {
+        let _lock = Lock::exclusive_wait(
+            &lockfile,
+            &format!("Another process are downloading the file: {:?}. Waiting", lockfile)
+        )
+            .map_err(|e| format!("Error when waiting a lock to download {:?}: {}", urlpath, e));
+        if filename.exists() {
+            return Ok(filename);
+        }
+
+        let https = urls.iter().any(|x| x.as_ref().starts_with("https:"));
+        if https {
+            capsule::ensure(state, &[capsule::Https])?;
+        }
+        for url in urls {
+            let url = url.as_ref();
+            info!("Downloading image {} -> {:?}", url, filename);
+            let tmpfilename = filename.with_file_name(name.clone() + ".part");
+            let mut cmd = Command::new(
+                if https { "/usr/bin/wget" } else { "/vagga/bin/busybox" });
+            cmd.stdin(Stdio::null());
+            if !https {
+                cmd.arg("wget");
+            }
+            cmd.arg("-O");
+            cmd.arg(&tmpfilename);
+            cmd.arg(url);
+
+            debug!("Running: {}", cmd_show(&cmd));
+            match cmd.status() {
+                Ok(st) if st.success() => {
+                    if let Some(ref sha256) = sha256 {
+                        let mut tmpfile = try_msg!(File::open(&tmpfilename),
                                             "Cannot open archive: {err}");
-                    if let Err(e) = check_stream_hashsum(&mut tmpfile, sha256) {
-                        remove_file(&filename)
-                            .map_err(|e| error!(
+                        if let Err(e) = check_stream_hashsum(&mut tmpfile, sha256) {
+                            remove_file(&filename)
+                                .map_err(|e| error!(
                                 "Error unlinking cache file: {}", e)).ok();
-                        error!("Bad hashsum of {:?}", url);
-                        return Err(e);
+                            error!("Bad hashsum of {:?}", url);
+                            return Err(e);
+                        }
                     }
+                    rename(&tmpfilename, &filename)
+                        .map_err(|e| format!("Error moving file: {}", e))?;
+                    return Ok(filename);
                 }
-                rename(&tmpfilename, &filename)
-                    .map_err(|e| format!("Error moving file: {}", e))?;
-                return Ok(filename);
-            }
-            Ok(val) => {
-                match remove_file(&tmpfilename) {
-                    Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
-                        // Assume we got 404 and download have not even started
-                        continue;
+                Ok(val) => {
+                    match remove_file(&tmpfilename) {
+                        Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                            // Assume we got 404 and download have not even started
+                            continue;
+                        }
+                        Err(e) => {
+                            error!("Error unlinking cache file: {}", e);
+                        }
+                        Ok(_) => {}
                     }
-                    Err(e) => {
-                        error!("Error unlinking cache file: {}", e);
-                    }
-                    Ok(_) => {}
+                    error!("Error downloading {:?}, wget {:?}", url, val);
+                    continue;
                 }
-                error!("Error downloading {:?}, wget {:?}", url, val);
-                continue;
-            }
-            Err(x) => {
-                return Err(format!("Error starting wget: {}", x));
+                Err(x) => {
+                    return Err(format!("Error starting wget: {}", x));
+                }
             }
         }
     }
+
+    match remove_file(&lockfile) {
+        Ok(_) => {}
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+        Err(e) => return Err(format!("Error when removing lock file: {}", e))
+    }
+
     return Err(format!("Error downloading file {:?} from {:?}",
         filename, urls.iter().map(|x| x.as_ref()).collect::<Vec<_>>()));
 }
