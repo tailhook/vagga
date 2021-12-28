@@ -41,7 +41,6 @@ jobs:
             -j 8 \
             --no-parallelize-within-files \
             --verbose-run \
-            --trace \
             tests
         env:
           UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
