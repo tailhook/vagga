@@ -192,6 +192,7 @@ trait ResolveCopyPolicy<T: Copy>: Into<CopyPolicy<T>> + Copy {
 #[derive(Clone, Copy)]
 pub enum CopyModePolicy {
     None,
+    // Preserve,
     Set(u32),
 }
 
@@ -206,6 +207,7 @@ impl From<CopyModePolicy> for CopyPolicy<u32> {
         use CopyModePolicy::*;
         match p {
             None => Self::None,
+            // Preserve => Self::Preserve,
             Set(mode) => Self::Set(mode),
         }
     }
@@ -222,44 +224,33 @@ impl From<Option<u32>> for CopyModePolicy {
 
 #[derive(Clone, Copy)]
 pub enum CopyOwnerPolicy {
-    Preserve,
-    Set(u32),
+    None,
+    // Preserve,
+    Set(u32, u32),
 }
 
-impl From<Option<u32>> for CopyOwnerPolicy {
-    fn from(v: Option<u32>) -> Self {
+impl From<Option<(u32, u32)>> for CopyOwnerPolicy {
+    fn from(v: Option<(u32, u32)>) -> Self {
         match v {
-            Some(v) => Self::Set(v),
-            None => Self::Preserve,
+            Some((uid, gid)) => Self::Set(uid, gid),
+            None => Self::None,
         }
     }
 }
 
-#[derive(Clone, Copy)]
-enum CopyOwnerPolicyWrapper {
-    Uid(CopyOwnerPolicy),
-    Gid(CopyOwnerPolicy),
-}
-
-impl ResolveCopyPolicy<u32> for CopyOwnerPolicyWrapper {
-    fn metadata_value(&self, stat: &Metadata) -> u32 {
-        match self {
-            Self::Uid(_) => stat.uid(),
-            Self::Gid(_) => stat.gid(),
-        }
+impl ResolveCopyPolicy<(u32, u32)> for CopyOwnerPolicy {
+    fn metadata_value(&self, stat: &Metadata) -> (u32, u32) {
+        (stat.uid(), stat.gid())
     }
 }
 
-impl From<CopyOwnerPolicyWrapper> for CopyPolicy<u32> {
-    fn from(p: CopyOwnerPolicyWrapper) -> Self {
-        use CopyOwnerPolicyWrapper::*;
-        let policy = match p {
-            Uid(p) => p,
-            Gid(p) => p,
-        };
-        match policy {
-            CopyOwnerPolicy::Preserve => Self::Preserve,
-            CopyOwnerPolicy::Set(id) => Self::Set(id),
+impl From<CopyOwnerPolicy> for CopyPolicy<(u32, u32)> {
+    fn from(p: CopyOwnerPolicy) -> Self {
+        use CopyOwnerPolicy::*;
+        match p {
+            None => Self::None,
+            // Preserve => Self::Preserve,
+            Set(uid, gid) => Self::Set((uid, gid)),
         }
     }
 }
@@ -293,8 +284,7 @@ pub struct FileCopy<'s, 'd> {
     dst: &'d Path,
     src_stat: Option<&'s Metadata>,
     mode: CopyModePolicy,
-    owner_uid: CopyOwnerPolicyWrapper,
-    owner_gid: CopyOwnerPolicyWrapper,
+    owner: CopyOwnerPolicy,
     time: CopyTimePolicy,
     atomic: bool,
 }
@@ -306,8 +296,7 @@ impl<'s, 'd> FileCopy<'s, 'd> {
             dst,
             src_stat: None,
             mode: CopyModePolicy::None,
-            owner_uid: CopyOwnerPolicyWrapper::Uid(CopyOwnerPolicy::Preserve),
-            owner_gid: CopyOwnerPolicyWrapper::Gid(CopyOwnerPolicy::Preserve),
+            owner: CopyOwnerPolicy::None,
             time: CopyTimePolicy::None,
             atomic: false,
         }
@@ -323,13 +312,8 @@ impl<'s, 'd> FileCopy<'s, 'd> {
         self
     }
 
-    pub fn owner_uid<T: Into<CopyOwnerPolicy>>(&mut self, owner: T) -> &mut Self {
-        self.owner_uid = CopyOwnerPolicyWrapper::Uid(owner.into());
-        self
-    }
-
-    pub fn owner_gid<T: Into<CopyOwnerPolicy>>(&mut self, owner: T) -> &mut Self {
-        self.owner_gid = CopyOwnerPolicyWrapper::Gid(owner.into());
+    pub fn owner<T: Into<CopyOwnerPolicy>>(&mut self, owner: T) -> &mut Self {
+        self.owner = owner.into();
         self
     }
 
@@ -371,13 +355,12 @@ impl<'s, 'd> FileCopy<'s, 'd> {
         )?;
         _copy(&self.src, dst, mode)?;
 
-        let (uid, src_stat) = self.owner_uid.resolve(
+        let (owner, src_stat) = self.owner.resolve(
             self.src, src_stat.as_ref().or(self.src_stat)
         )?;
-        let (gid, src_stat) = self.owner_gid.resolve(
-            self.src, src_stat.as_ref().or(self.src_stat)
-        )?;
-        set_owner_group(dst, uid.expect("Owner uid"), gid.expect("Owner gid"))?;
+        if let Some((uid, gid)) = owner {
+            set_owner_group(dst, uid, gid)?;
+        }
 
         let (time, _) = self.time.resolve(
             self.src, src_stat.as_ref().or(self.src_stat)
@@ -659,8 +642,10 @@ fn shallow_copy(src: &Path, src_stat: Option<&Metadata>, dest: &Path,
             .src_stat(src_stat)
             .mode(mode)
             .time(time_policy)
-            .owner_uid(owner_uid)
-            .owner_gid(owner_gid)
+            .owner(CopyOwnerPolicy::Set(
+                owner_uid.unwrap_or(src_stat.uid()),
+                owner_gid.unwrap_or(src_stat.gid()),
+            ))
             .copy()?;
     }
     Ok(!is_dir)
