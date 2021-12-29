@@ -313,6 +313,11 @@ impl<'s, 'd> FileCopy<'s, 'd> {
         }
     }
 
+    pub fn src_stat(&mut self, src_stat: &'s Metadata) -> &mut Self {
+        self.src_stat = Some(src_stat);
+        self
+    }
+
     pub fn time<T: Into<CopyTimePolicy>>(&mut self, time: T) -> &mut Self {
         self.time = time.into();
         self
@@ -651,6 +656,7 @@ fn shallow_copy(src: &Path, src_stat: Option<&Metadata>, dest: &Path,
             owner_gid.unwrap_or(src_stat.gid()))?;
     } else {
         FileCopy::new(src, dest)
+            .src_stat(src_stat)
             .mode(mode)
             .time(time_policy)
             .owner_uid(owner_uid)
