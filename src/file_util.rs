@@ -192,7 +192,6 @@ trait ResolveCopyPolicy<T: Copy>: Into<CopyPolicy<T>> + Copy {
 #[derive(Clone, Copy)]
 pub enum CopyModePolicy {
     None,
-    // Preserve,
     Set(u32),
 }
 
@@ -207,7 +206,6 @@ impl From<CopyModePolicy> for CopyPolicy<u32> {
         use CopyModePolicy::*;
         match p {
             None => Self::None,
-            // Preserve => Self::Preserve,
             Set(mode) => Self::Set(mode),
         }
     }
@@ -225,7 +223,6 @@ impl From<Option<u32>> for CopyModePolicy {
 #[derive(Clone, Copy)]
 pub enum CopyOwnerPolicy {
     None,
-    // Preserve,
     Set(u32, u32),
 }
 
@@ -249,7 +246,6 @@ impl From<CopyOwnerPolicy> for CopyPolicy<(u32, u32)> {
         use CopyOwnerPolicy::*;
         match p {
             None => Self::None,
-            // Preserve => Self::Preserve,
             Set(uid, gid) => Self::Set((uid, gid)),
         }
     }
