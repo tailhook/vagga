@@ -1,5 +1,5 @@
 use std::io;
-use std::io::{Read, Write, Error};
+use std::io::{Read, Write, Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::fs::{Metadata, rename};
@@ -18,10 +18,6 @@ use sha2::Sha256;
 
 use crate::digest::hex;
 use crate::path_util::{tmp_file_name, ToCString};
-
-pub struct Lock {
-    file: fs::File,
-}
 
 pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let mut res = vec!();
@@ -420,54 +416,72 @@ pub fn copy_stream(reader: &mut dyn Read, writer: &mut dyn Write)
     Ok(())
 }
 
+pub struct Lock {
+    file: fs::File,
+    path: PathBuf,
+    cleanup: bool,
+}
+
 impl Lock {
-    pub fn exclusive<P: AsRef<Path>>(p: P) -> Result<Lock, Error> {
-        let f = fs::File::create(p)?;
-        flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock)
-            .map_err(|e| match e {
-                nix::Error::Sys(code) => Error::from_raw_os_error(code as i32),
-                nix::Error::InvalidUtf8 => unreachable!(),
-                nix::Error::InvalidPath => unreachable!(),
-                nix::Error::UnsupportedOperation => panic!("Can't flock"),
-            })?;
+    fn lock(path: &Path, arg: FlockArg) -> Result<fs::File, Error> {
+        loop {
+            let file = fs::File::create(path)?;
+            let stat1 = file.metadata()?;
+            flock(file.as_raw_fd(), arg)
+                .map_err(|e| match e {
+                    nix::Error::Sys(code) => Error::from_raw_os_error(code as i32),
+                    nix::Error::InvalidUtf8 => unreachable!(),
+                    nix::Error::InvalidPath => unreachable!(),
+                    nix::Error::UnsupportedOperation => panic!("Can't flock"),
+                })?;
+            // Ensure lock file was not deleted or recreated by another process
+            // between create and flock calls
+            let stat2 = match path.metadata() {
+                Ok(s) => s,
+                Err(e) if e.kind() == ErrorKind::NotFound => continue,
+                Err(e) => return Err(e),
+            };
+            if stat1.ino() != stat2.ino() {
+                continue;
+            }
+            return Ok(file);
+        }
+    }
+
+    pub fn exclusive<P: AsRef<Path>>(path: P) -> Result<Lock, Error> {
+        let path = path.as_ref();
+        let file = Self::lock(path, FlockArg::LockExclusiveNonblock)?;
         Ok(Lock {
-            file: f,
+            file,
+            path: path.to_path_buf(),
+            cleanup: false,
         })
     }
-    pub fn exclusive_wait<P: AsRef<Path>>(path: P, message: &str)
-        -> Result<Lock, Error>
+
+    pub fn exclusive_wait<P: AsRef<Path>>(
+        path: P, cleanup: bool, message: &str
+    ) -> Result<Lock, Error>
     {
-        let f = fs::File::create(path)?;
-        match flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock) {
-            Ok(()) => {}
-            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+        let path = path.as_ref();
+        let file = match Self::lock(path, FlockArg::LockExclusiveNonblock) {
+            Ok(file) => file,
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {
                 warn!("{}", message);
                 let lock_start = Instant::now();
-                flock(f.as_raw_fd(), FlockArg::LockExclusive)
-                    .map_err(|e| match e {
-                        nix::Error::Sys(code) => {
-                            Error::from_raw_os_error(code as i32)
-                        },
-                        nix::Error::InvalidUtf8 => unreachable!(),
-                        nix::Error::InvalidPath => unreachable!(),
-                        nix::Error::UnsupportedOperation
-                        => panic!("Can't flock"),
-                    })?;
+                let file = Self::lock(path, FlockArg::LockExclusive)?;
                 let elapsed = lock_start.elapsed();
                 if elapsed > Duration::new(5, 0) {
                     warn!("Lock was held {} seconds. Proceeding...",
                         elapsed.as_secs());
                 }
+                file
             }
-            Err(nix::Error::Sys(code)) => {
-                return Err(Error::from_raw_os_error(code as i32))
-            }
-            Err(nix::Error::InvalidPath) => unreachable!(),
-            Err(nix::Error::InvalidUtf8) => unreachable!(),
-            Err(nix::Error::UnsupportedOperation) => panic!("Can't flock"),
-        }
+            Err(e) => return Err(e),
+        };
         Ok(Lock {
-            file: f,
+            file,
+            path: path.to_path_buf(),
+            cleanup,
         })
     }
 }
@@ -475,6 +489,11 @@ impl Lock {
 
 impl Drop for Lock {
     fn drop(&mut self) {
+        if self.cleanup {
+            safe_remove(&self.path)
+                .map_err(|e| error!("Couldn't delete lock file: {}", e))
+                .ok();
+        }
         flock(self.file.as_raw_fd(), FlockArg::Unlock)
             .map_err(|e| error!("Couldn't unlock file: {:?}", e)).ok();
     }

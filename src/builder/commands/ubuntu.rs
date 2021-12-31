@@ -1174,6 +1174,7 @@ mod build {
         if enabled {
             Lock::exclusive_wait(
                 Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
+                false,
                 "Another build process is executing `apt-get install` command \
                  against the same apt cache. Waiting ...")
             .map(Some)

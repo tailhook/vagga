@@ -54,6 +54,7 @@ pub fn download_file<S>(state: &mut State, urls: &[S], sha256: Option<String>,
     {
         let _lock = Lock::exclusive_wait(
             &lockfile,
+            true,
             &format!("Another process are downloading the file: {:?}. Waiting", lockfile)
         )
             .map_err(|e| format!("Error when waiting a lock to download {:?}: {}", urlpath, e));
