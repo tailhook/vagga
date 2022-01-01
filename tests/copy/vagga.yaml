@@ -96,6 +96,13 @@ containers:
       source: /work/dir
       path: /dir
       preserve-times: true
+  copy-set-owner:
+    setup:
+    - !Copy
+      source: /work/dir
+      path: /dir
+      owner-uid: 1
+      owner-gid: 2
   depends-with-include:
     setup:
     - !Depends

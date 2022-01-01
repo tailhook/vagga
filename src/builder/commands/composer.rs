@@ -203,11 +203,9 @@ pub fn composer_dependencies(distro: &mut Box<dyn Distribution>,
 
 #[cfg(feature="containers")]
 pub fn configure(ctx: &mut Context) -> Result<(), String> {
-    ctx.add_cache_dir(Path::new(COMPOSER_CACHE),
-                           "composer-cache".to_string())?;
+    ctx.add_cache_dir(Path::new(COMPOSER_CACHE), "composer-cache")?;
 
-    ctx.add_cache_dir(Path::new(COMPOSER_SELF_CACHE),
-                           "composer-self-cache".to_owned())?;
+    ctx.add_cache_dir(Path::new(COMPOSER_SELF_CACHE), "composer-self-cache")?;
 
     let vendor_dir = ctx.composer_settings.vendor_dir.as_ref()
         .map(|p| p.to_string_lossy().into_owned())

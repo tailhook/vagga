@@ -2,19 +2,30 @@ setup() {
     cd /work/tests/ubuntu
 }
 
-@test "Ubuntu builds" {
+@test "ubuntu: builds" {
     vagga _build trusty
     link=$(readlink .vagga/trusty)
     [[ $link = ".roots/trusty.f0e3d303/root" ]]
 }
 
-@test "Ubuntu i386 builds" {
+@test "ubuntu: i386 builds" {
     vagga _build xenial-i386
     link=$(readlink .vagga/xenial-i386)
     [[ $link = ".roots/xenial-i386.30fb2ea2/root" ]]
 }
 
-@test "Run echo command" {
+@test "ubuntu: apt cache" {
+    fortune_pkgs="/work/tmp/cache/apt-cache/archives/fortune-mod_*.deb"
+    rm -f $fortune_pkgs
+    [[ $(ls -l $fortune_pkgs | wc -l) = "0" ]]
+
+    run vagga _build apt-cache
+    [[ $status = 0 ]]
+    [[ $(readlink .vagga/apt-cache) = ".roots/apt-cache.835afa14/root" ]]
+    [[ $(ls -l $fortune_pkgs | wc -l) = "1" ]]
+}
+
+@test "ubuntu: run echo command" {
     run vagga echo-cmd hello
     [[ $status = 0 ]]
     [[ $output = hello ]]
@@ -23,7 +34,7 @@ setup() {
     [[ $output = world ]]
 }
 
-@test "Run echo shell" {
+@test "ubuntu: run echo shell" {
     run vagga echo-shell
     [[ $status = 0 ]]
     [[ $output = "" ]]
@@ -32,7 +43,7 @@ setup() {
     [[ $output =~ "Unexpected argument" ]]
 }
 
-@test "Run echo shell with arguments" {
+@test "ubuntu: run echo shell with arguments" {
     run vagga echo-shell-arg
     [[ $status = 0 ]]
     [[ $output = "" ]]
@@ -41,19 +52,19 @@ setup() {
     [[ $output = "hello" ]]
 }
 
-@test "Run absent command" {
+@test "ubuntu: run absent command" {
     run vagga test something
     [[ $status -eq 121 ]]
     [[ $output =~ 'Command "test" not found and is not an alias' ]]
 }
 
-@test "Check arch support" {
+@test "ubuntu: check arch support" {
     run vagga check-arch
     [[ $status = 0 ]]
     [[ $output = i386 ]]
 }
 
-@test "Run trusty bc" {
+@test "ubuntu: run trusty bc" {
     run vagga trusty-calc 100*24
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
@@ -61,7 +72,7 @@ setup() {
     [[ $link = ".roots/trusty-calc.010798c2/root" ]]
 }
 
-@test "Run xenial bc" {
+@test "ubuntu: run xenial bc" {
     run vagga xenial-calc 23*7+3
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "164" ]]
@@ -69,7 +80,7 @@ setup() {
     [[ $link = ".roots/xenial-calc.321f6a11/root" ]]
 }
 
-@test "Test BuildDeps with version" {
+@test "ubuntu: BuildDeps with version" {
     run vagga _build build-deps-with-version
     [[ $status = 0 ]]
     [[ $output = *"480191"* ]]
@@ -80,7 +91,7 @@ setup() {
     [[ $status = 124 ]]
 }
 
-@test "Test focal universe" {
+@test "ubuntu: focal universe" {
     run vagga _build ubuntu-universe
     [[ $status -eq 0 ]]
     link=$(readlink .vagga/ubuntu-universe)
@@ -91,25 +102,25 @@ setup() {
     [[ $output = *"Have you mooed today?"* ]]
 }
 
-@test "Test VAGGAENV_* vars" {
+@test "ubuntu: VAGGAENV_* vars" {
     VAGGAENV_TESTVAR=testvalue run vagga _run trusty printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = testvalue ]]
 }
 
-@test "Test set env" {
+@test "ubuntu: set env" {
     run vagga --environ TESTVAR=1value1 _run trusty printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = 1value1 ]]
 }
 
-@test "Test propagate env" {
+@test "ubuntu: propagate env" {
     TESTVAR=2value2 run vagga --use-env TESTVAR _run trusty printenv TESTVAR
     [[ $status -eq 0 ]]
     [[ $output = 2value2 ]]
 }
 
-@test "The chfn just works (i.e. a no-op)" {
+@test "ubuntu: the chfn just works (i.e. a no-op)" {
     run vagga rename-me
     [[ $status -eq 0 ]]
     [[ $output = "" ]]

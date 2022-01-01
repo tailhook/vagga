@@ -387,8 +387,7 @@ pub fn configure(distro: &mut Box<dyn Distribution>, ctx: &mut Context,
         apk_update: true,
     })?;
     ctx.binary_ident = format!("{}-alpine-{}", ctx.binary_ident, ver);
-    ctx.add_cache_dir(Path::new("/etc/apk/cache"),
-                           "alpine-cache".to_string())?;
+    ctx.add_cache_dir(Path::new("/etc/apk/cache"), "alpine-cache")?;
     ctx.environ.insert("LANG".to_string(),
                        "en_US.UTF-8".to_string());
     ctx.environ.insert("PATH".to_string(),

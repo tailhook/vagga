@@ -70,7 +70,7 @@ containers:
     - !Ubuntu focal
     - !UbuntuUniverse
     - !BuildDeps [wget]
-    - !Install [make, curl, zip, file, git]
+    - !Install [make, curl, zip, file, git, parallel]
     - !Sh |
         set -ex
         cd /tmp
@@ -210,6 +210,7 @@ commands:
       export HOME=/work/tmp/home
       mkdir -p $HOME /work/tmp/cache || true
       export VAGGA_SETTINGS="
+        build-lock-wait: true
         cache-dir: /work/tmp/cache
         ubuntu-mirror: $UBUNTU_MIRROR
         alpine-mirror: $ALPINE_MIRROR"

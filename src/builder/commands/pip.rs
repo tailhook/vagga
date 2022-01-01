@@ -301,12 +301,11 @@ pub fn configure(ctx: &mut Context) -> Result<(), String> {
     try_msg!(Dir::new(&cache_root).recursive(true).create(),
          "Error creating cache dir {d:?}: {err}", d=cache_root);
 
-    ctx.add_cache_dir(Path::new("/tmp/pip-cache/http"),
-                           "pip-cache-http".to_string())?;
+    ctx.add_cache_dir(Path::new("/tmp/pip-cache/http"), "pip-cache-http")?;
 
     if ctx.pip_settings.cache_wheels {
         let cache_dir = format!("pip-cache-wheels-{}", ctx.binary_ident);
-        ctx.add_cache_dir(Path::new("/tmp/pip-cache/wheels"), cache_dir)?;
+        ctx.add_cache_dir(Path::new("/tmp/pip-cache/wheels"), &cache_dir)?;
     } // else just write files in tmp
 
     ctx.environ.insert("PIP_CACHE_DIR".to_string(),

@@ -1,8 +1,10 @@
 use std::env;
-use std::ffi::CString;
+use std::ffi::{CString, OsStr, OsString};
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
 
 // TODO(tailhook) probably get rid of this after migrating to unshare crate
 pub trait ToCString {
@@ -68,4 +70,15 @@ impl IterSelfAndParents for Path {
             path: self,
         }
     }
+}
+
+pub fn tmp_file_name<T: AsRef<OsStr>>(name: T) -> OsString {
+    let prefix: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(6)
+        .map(char::from)
+        .collect();
+    let mut file_name = OsString::from(format!(".tmp.{}-", prefix));
+    file_name.push(name.as_ref());
+    file_name
 }

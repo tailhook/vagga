@@ -1,4 +1,4 @@
-use std::fs::{rename, set_permissions, Permissions};
+use std::fs::{remove_dir_all, rename, set_permissions, Permissions};
 use std::os::unix::fs::{symlink};
 use std::fs::File;
 use std::io::{self, BufReader, Write};
@@ -8,6 +8,7 @@ use std::ffi::OsStr;
 #[cfg(feature="containers")] use scan_dir::ScanDir;
 #[cfg(feature="containers")] use unshare::Stdio;
 use quire::validate as V;
+use lazy_static::lazy_static;
 
 #[cfg(feature="containers")]
 use crate::{
@@ -18,12 +19,17 @@ use crate::{
     builder::dns::revert_name_files,
     builder::packages,
     container::util::clean_dir,
-    file_util::{Dir, Lock, copy, copy_utime, safe_remove},
+    file_util::{CopyTimePolicy, Dir, FileCopy, Lock, safe_remove},
 };
 use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
 #[cfg(feature="containers")]
 use self::build::*;
+
+lazy_static! {
+    static ref APT_CACHE: &'static Path = Path::new("/var/cache/apt");
+}
+const APT_CACHE_NAME: &str = "apt-cache";
 
 // Build Steps
 #[derive(Debug, Serialize, Deserialize)]
@@ -292,7 +298,10 @@ impl Distribution for Distro {
         cmd.arg("autoremove").arg("-y");
 
         {
-            let _lock = apt_get_lock(!ctx.settings.ubuntu_skip_locking);
+            let _lock = apt_get_lock(
+                !ctx.settings.ubuntu_skip_locking &&
+                !ctx.is_cached_dir_overlay(&APT_CACHE)
+            );
             run(cmd)?;
         }
 
@@ -304,6 +313,16 @@ impl Distribution for Distro {
         cmd.stdout(Stdio::from_file(output));
         run(cmd)
             .map_err(|e| warn!("Can't list debian packages: {}", e)).ok();
+
+        if let Some(cached_dir) = ctx.get_cached_dir(&APT_CACHE) {
+            if let Some(diff_dir) = cached_dir.diff.as_ref() {
+                self.copy_apt_archives_to_cache(diff_dir, cached_dir.src.as_path())
+                    .map_err(|e|
+                        error!("error when copying archives to cache: {}. Ignored", e)
+                    )
+                    .ok();
+            }
+        }
 
         self.copy_apt_lists_to_cache()
             .map_err(|e| error!("error when caching apt-lists: {}. Ignored.",
@@ -595,11 +614,10 @@ impl Distro {
         Dir::new(dir).recursive(true).create()?;
         ScanDir::files().read(&cache_dir, |iter| {
             for (entry, name) in iter {
-                let tmpname = dir.join(format!(".tmp.{}", name));
-                let src = entry.path();
-                copy(&src, &tmpname)?;
-                copy_utime(&src, &tmpname)?;
-                rename(&tmpname, dir.join(&name))?;
+                FileCopy::new(&entry.path(), &dir.join(&name))
+                    .atomic(true)
+                    .time(CopyTimePolicy::Preserve)
+                    .copy()?;
             }
             Ok(())
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
@@ -617,15 +635,45 @@ impl Distro {
         ScanDir::files().read("/vagga/root/var/lib/apt/lists", |iter| {
             for (entry, name) in iter {
                 if name == "lock" { continue };
-                let tmpname = cache_dir.join(format!(".tmp.{}", name));
-                let src = entry.path();
-                copy(&src, &tmpname)?;
-                copy_utime(&src, &tmpname)?;
-                rename(tmpname, cache_dir.join(name))?;
+                FileCopy::new(&entry.path(), &cache_dir.join(name))
+                    .atomic(true)
+                    .time(CopyTimePolicy::Preserve)
+                    .copy()?;
             }
             Ok(())
         }).map_err(|x| io::Error::new(io::ErrorKind::Other, x)).and_then(|x| x)
     }
+
+    #[cfg(feature="containers")]
+    fn copy_apt_archives_to_cache(&self, diff_dir: &Path, cache_dir: &Path) -> io::Result<()> {
+        let cache_dir = cache_dir.join("archives");
+        Dir::new(&cache_dir).create()?;
+
+        let archives_dir = diff_dir.join("archives");
+        if !archives_dir.exists() {
+            return Ok(());
+        }
+        ScanDir::files().read(&archives_dir, |iter| {
+            for (entry, name) in iter {
+                if !name.ends_with(".deb") { continue }
+                if !entry.file_type()?.is_file() { continue }
+
+                let dst = cache_dir.join(name);
+                if !dst.exists() {
+                    FileCopy::new(&entry.path(), &dst)
+                        .atomic(true)
+                        .time(CopyTimePolicy::Preserve)
+                        .copy()?;
+                }
+            }
+            Ok(())
+        })
+            .map_err(|x| io::Error::new(io::ErrorKind::Other, x))
+            .and_then(|x| x)?;
+
+        remove_dir_all(diff_dir)
+    }
+
     #[cfg(feature="containers")]
     fn ensure_eat_my_data(&mut self, ctx: &mut Context)
         -> Result<(), StepError>
@@ -1057,7 +1105,7 @@ mod build {
     {
         guard.distro.set(Distro {
             eatmydata: if config.eatmydata { EatMyData::Need } else { EatMyData::No },
-            config: config,
+            config,
             codename: None, // unknown yet
             apt_update: true,
             apt_https: AptHttps::No,
@@ -1069,8 +1117,7 @@ mod build {
     }
 
     pub fn configure_common(ctx: &mut Context) -> Result<(), StepError> {
-        ctx.add_cache_dir(Path::new("/var/cache/apt"),
-                               "apt-cache".to_string())?;
+        init_apt_cache(ctx)?;
         ctx.environ.insert("DEBIAN_FRONTEND".to_string(),
                            "noninteractive".to_string());
         ctx.environ.insert("LANG".to_string(),
@@ -1080,6 +1127,15 @@ mod build {
                             /usr/sbin:/usr/bin:/sbin:/bin:\
                             /usr/games:/usr/local/games\
                             ".to_string());
+        Ok(())
+    }
+
+    fn init_apt_cache(ctx: &mut Context) -> Result<(), StepError> {
+        // TODO: Fallback only on mount error
+        if ctx.add_cache_dir_overlay(&APT_CACHE, APT_CACHE_NAME).is_err() {
+            ctx.add_cache_dir(&APT_CACHE, APT_CACHE_NAME)
+                .map_err(|e| format!("Error mounting apt cache: {}", e))?;
+        }
         Ok(())
     }
 
@@ -1118,6 +1174,7 @@ mod build {
         if enabled {
             Lock::exclusive_wait(
                 Path::new("/vagga/root/var/cache/apt/apt-get-install.lock"),
+                false,
                 "Another build process is executing `apt-get install` command \
                  against the same apt cache. Waiting ...")
             .map(Some)
@@ -1160,7 +1217,10 @@ mod build {
         cmd.arg("-y");
         cmd.args(packages);
 
-        let _lock = apt_get_lock(!ctx.settings.ubuntu_skip_locking)?;
+        let _lock = apt_get_lock(
+            !ctx.settings.ubuntu_skip_locking &&
+            !ctx.is_cached_dir_overlay(&APT_CACHE)
+        )?;
         run(cmd)
     }
 

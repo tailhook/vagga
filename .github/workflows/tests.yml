@@ -37,7 +37,11 @@ jobs:
           key: vagga-cache-v1
       - run: |
           make release  # slower build, faster tests
-          ./vagga -eUBUNTU_MIRROR test
+          ./vagga -eUBUNTU_MIRROR test \
+            -j 8 \
+            --no-parallelize-within-files \
+            --verbose-run \
+            tests
         env:
           UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
 

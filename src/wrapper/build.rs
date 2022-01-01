@@ -326,6 +326,7 @@ fn _build_container(cont_info: &ContainerInfo, wrapper: &Wrapper)
         format!("{}.lock", build_dir_name));
     let mut _lock_guard = if wrapper.settings.build_lock_wait {
         Lock::exclusive_wait(&lock_name,
+            false,
             &format!("Other process is doing a build ({}). Waiting...",
                     build_dir_name))
         .map_err(|e| format!("Can't lock container build ({}). \

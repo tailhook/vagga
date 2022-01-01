@@ -1,8 +1,8 @@
 use std::io;
-use std::io::{Read, Write, Error};
+use std::io::{Read, Write, Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::fs::Metadata;
+use std::fs::{Metadata, rename};
 use std::ffi::CString;
 use std::time::{Instant, Duration};
 use std::os::unix::fs::{PermissionsExt, MetadataExt, symlink};
@@ -17,11 +17,7 @@ use digest_traits::Digest;
 use sha2::Sha256;
 
 use crate::digest::hex;
-use crate::path_util::ToCString;
-
-pub struct Lock {
-    file: fs::File,
-}
+use crate::path_util::{tmp_file_name, ToCString};
 
 pub fn read_visible_entries(dir: &Path) -> Result<Vec<PathBuf>, Error> {
     let mut res = vec!();
@@ -160,15 +156,222 @@ pub fn ensure_symlink(target: &Path, linkpath: &Path) -> Result<(), io::Error>
     }
 }
 
+#[derive(Clone, Copy)]
+enum CopyPolicy<T: Copy> {
+    None,
+    Preserve,
+    Set(T),
+}
+
+trait ResolveCopyPolicy<T: Copy>: Into<CopyPolicy<T>> + Copy {
+    fn metadata_value(&self, stat: &Metadata) -> T;
+
+    fn resolve(
+        &self, src: &Path, src_stat: Option<&Metadata>
+    ) -> io::Result<(Option<T>, Option<Metadata>)> {
+        match (*self).into() {
+            CopyPolicy::None => Ok((None, None)),
+            CopyPolicy::Preserve => {
+                match src_stat {
+                    Some(s) => Ok((Some(self.metadata_value(&s)), None)),
+                    None => {
+                        let stat = src.symlink_metadata()?;
+                        Ok((Some(self.metadata_value(&stat)), Some(stat)))
+                    },
+                }
+            }
+            CopyPolicy::Set(v) => Ok((Some(v), None)),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum CopyModePolicy {
+    None,
+    Set(u32),
+}
+
+impl ResolveCopyPolicy<u32> for CopyModePolicy {
+    fn metadata_value(&self, stat: &Metadata) -> u32 {
+        stat.mode()
+    }
+}
+
+impl From<CopyModePolicy> for CopyPolicy<u32> {
+    fn from(p: CopyModePolicy) -> Self {
+        use CopyModePolicy::*;
+        match p {
+            None => Self::None,
+            Set(mode) => Self::Set(mode),
+        }
+    }
+}
+
+impl From<Option<u32>> for CopyModePolicy {
+    fn from(v: Option<u32>) -> Self {
+        match v {
+            Some(v) => CopyModePolicy::Set(v),
+            None => CopyModePolicy::None,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum CopyOwnerPolicy {
+    None,
+    Set(u32, u32),
+}
+
+impl From<Option<(u32, u32)>> for CopyOwnerPolicy {
+    fn from(v: Option<(u32, u32)>) -> Self {
+        match v {
+            Some((uid, gid)) => Self::Set(uid, gid),
+            None => Self::None,
+        }
+    }
+}
+
+impl ResolveCopyPolicy<(u32, u32)> for CopyOwnerPolicy {
+    fn metadata_value(&self, stat: &Metadata) -> (u32, u32) {
+        (stat.uid(), stat.gid())
+    }
+}
+
+impl From<CopyOwnerPolicy> for CopyPolicy<(u32, u32)> {
+    fn from(p: CopyOwnerPolicy) -> Self {
+        use CopyOwnerPolicy::*;
+        match p {
+            None => Self::None,
+            Set(uid, gid) => Self::Set((uid, gid)),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum CopyTimePolicy {
+    None,
+    Preserve,
+    Set { atime: i64, mtime: i64 }
+}
+
+impl ResolveCopyPolicy<(i64, i64)> for CopyTimePolicy {
+    fn metadata_value(&self, stat: &Metadata) -> (i64, i64) {
+        (stat.atime(), stat.mtime())
+    }
+}
+
+impl From<CopyTimePolicy> for CopyPolicy<(i64, i64)> {
+    fn from(p: CopyTimePolicy) -> Self {
+        use CopyTimePolicy::*;
+        match p {
+            None => Self::None,
+            Preserve => Self::Preserve,
+            Set { atime, mtime } => Self::Set((atime, mtime)),
+        }
+    }
+}
+
+pub struct FileCopy<'s, 'd> {
+    src: &'s Path,
+    dst: &'d Path,
+    src_stat: Option<&'s Metadata>,
+    mode: CopyModePolicy,
+    owner: CopyOwnerPolicy,
+    time: CopyTimePolicy,
+    atomic: bool,
+}
+
+impl<'s, 'd> FileCopy<'s, 'd> {
+    pub fn new(src: &'s Path, dst: &'d Path) -> Self {
+        Self {
+            src,
+            dst,
+            src_stat: None,
+            mode: CopyModePolicy::None,
+            owner: CopyOwnerPolicy::None,
+            time: CopyTimePolicy::None,
+            atomic: false,
+        }
+    }
+
+    pub fn src_stat(&mut self, src_stat: &'s Metadata) -> &mut Self {
+        self.src_stat = Some(src_stat);
+        self
+    }
+
+    pub fn time<T: Into<CopyTimePolicy>>(&mut self, time: T) -> &mut Self {
+        self.time = time.into();
+        self
+    }
+
+    pub fn owner<T: Into<CopyOwnerPolicy>>(&mut self, owner: T) -> &mut Self {
+        self.owner = owner.into();
+        self
+    }
+
+    pub fn mode<T: Into<CopyModePolicy>>(&mut self, mode: T) -> &mut Self {
+        self.mode = mode.into();
+        self
+    }
+
+    pub fn atomic(&mut self, atomic: bool) -> &mut Self {
+        self.atomic = atomic;
+        self
+    }
+
+    pub fn copy(&self) -> io::Result<()> {
+        let _dst;
+        let dst = if self.atomic {
+            let name = match self.dst.file_name() {
+                Some(name) => name,
+                None => return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Cannot detect file name of {:?}", &self.dst)
+                )),
+            };
+            let dst_dir = match self.dst.parent() {
+                Some(dir) => dir,
+                None => return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Cannot detect destination directory of {:?}", &self.dst)
+                )),
+            };
+            _dst = dst_dir.join(tmp_file_name(name));
+            _dst.as_path()
+        } else {
+            self.dst
+        };
+
+        let (mode, src_stat) = self.mode.resolve(
+            self.src, self.src_stat
+        )?;
+        _copy(&self.src, dst, mode)?;
+
+        let (owner, src_stat) = self.owner.resolve(
+            self.src, src_stat.as_ref().or(self.src_stat)
+        )?;
+        if let Some((uid, gid)) = owner {
+            set_owner_group(dst, uid, gid)?;
+        }
+
+        let (time, _) = self.time.resolve(
+            self.src, src_stat.as_ref().or(self.src_stat)
+        )?;
+        if let Some((atime, mtime)) = time {
+            set_times(dst, atime, mtime)?;
+        }
+
+        if self.atomic {
+            rename(dst, self.dst)?;
+        }
+
+        Ok(())
+    }
+}
+
 pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<()>
 {
     _copy(from.as_ref(), to.as_ref(), None)
-}
-
-pub fn copy_with_mode<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q, mode: u32)
-    -> io::Result<()>
-{
-    _copy(from.as_ref(), to.as_ref(), Some(mode))
 }
 
 fn _copy(from: &Path, to: &Path, mode: Option<u32>) -> io::Result<()> {
@@ -213,54 +416,72 @@ pub fn copy_stream(reader: &mut dyn Read, writer: &mut dyn Write)
     Ok(())
 }
 
+pub struct Lock {
+    file: fs::File,
+    path: PathBuf,
+    cleanup: bool,
+}
+
 impl Lock {
-    pub fn exclusive<P: AsRef<Path>>(p: P) -> Result<Lock, Error> {
-        let f = fs::File::create(p)?;
-        flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock)
-            .map_err(|e| match e {
-                nix::Error::Sys(code) => Error::from_raw_os_error(code as i32),
-                nix::Error::InvalidUtf8 => unreachable!(),
-                nix::Error::InvalidPath => unreachable!(),
-                nix::Error::UnsupportedOperation => panic!("Can't flock"),
-            })?;
+    fn lock(path: &Path, arg: FlockArg) -> Result<fs::File, Error> {
+        loop {
+            let file = fs::File::create(path)?;
+            let stat1 = file.metadata()?;
+            flock(file.as_raw_fd(), arg)
+                .map_err(|e| match e {
+                    nix::Error::Sys(code) => Error::from_raw_os_error(code as i32),
+                    nix::Error::InvalidUtf8 => unreachable!(),
+                    nix::Error::InvalidPath => unreachable!(),
+                    nix::Error::UnsupportedOperation => panic!("Can't flock"),
+                })?;
+            // Ensure lock file was not deleted or recreated by another process
+            // between create and flock calls
+            let stat2 = match path.metadata() {
+                Ok(s) => s,
+                Err(e) if e.kind() == ErrorKind::NotFound => continue,
+                Err(e) => return Err(e),
+            };
+            if stat1.ino() != stat2.ino() {
+                continue;
+            }
+            return Ok(file);
+        }
+    }
+
+    pub fn exclusive<P: AsRef<Path>>(path: P) -> Result<Lock, Error> {
+        let path = path.as_ref();
+        let file = Self::lock(path, FlockArg::LockExclusiveNonblock)?;
         Ok(Lock {
-            file: f,
+            file,
+            path: path.to_path_buf(),
+            cleanup: false,
         })
     }
-    pub fn exclusive_wait<P: AsRef<Path>>(path: P, message: &str)
-        -> Result<Lock, Error>
+
+    pub fn exclusive_wait<P: AsRef<Path>>(
+        path: P, cleanup: bool, message: &str
+    ) -> Result<Lock, Error>
     {
-        let f = fs::File::create(path)?;
-        match flock(f.as_raw_fd(), FlockArg::LockExclusiveNonblock) {
-            Ok(()) => {}
-            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => {
+        let path = path.as_ref();
+        let file = match Self::lock(path, FlockArg::LockExclusiveNonblock) {
+            Ok(file) => file,
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {
                 warn!("{}", message);
                 let lock_start = Instant::now();
-                flock(f.as_raw_fd(), FlockArg::LockExclusive)
-                    .map_err(|e| match e {
-                        nix::Error::Sys(code) => {
-                            Error::from_raw_os_error(code as i32)
-                        },
-                        nix::Error::InvalidUtf8 => unreachable!(),
-                        nix::Error::InvalidPath => unreachable!(),
-                        nix::Error::UnsupportedOperation
-                        => panic!("Can't flock"),
-                    })?;
+                let file = Self::lock(path, FlockArg::LockExclusive)?;
                 let elapsed = lock_start.elapsed();
                 if elapsed > Duration::new(5, 0) {
                     warn!("Lock was held {} seconds. Proceeding...",
                         elapsed.as_secs());
                 }
+                file
             }
-            Err(nix::Error::Sys(code)) => {
-                return Err(Error::from_raw_os_error(code as i32))
-            }
-            Err(nix::Error::InvalidPath) => unreachable!(),
-            Err(nix::Error::InvalidUtf8) => unreachable!(),
-            Err(nix::Error::UnsupportedOperation) => panic!("Can't flock"),
-        }
+            Err(e) => return Err(e),
+        };
         Ok(Lock {
-            file: f,
+            file,
+            path: path.to_path_buf(),
+            cleanup,
         })
     }
 }
@@ -268,6 +489,11 @@ impl Lock {
 
 impl Drop for Lock {
     fn drop(&mut self) {
+        if self.cleanup {
+            safe_remove(&self.path)
+                .map_err(|e| error!("Couldn't delete lock file: {}", e))
+                .ok();
+        }
         flock(self.file.as_raw_fd(), FlockArg::Unlock)
             .map_err(|e| error!("Couldn't unlock file: {:?}", e)).ok();
     }
@@ -308,12 +534,6 @@ pub fn set_owner_group(target: &Path, uid: uid_t, gid: gid_t)
     } else {
         Ok(())
     }
-}
-
-enum CopyTimePolicy {
-    None,
-    Preserve,
-    Set(i64, i64),
 }
 
 /// Shallow copy of file/dir/symlink
@@ -377,7 +597,7 @@ impl<'s, 'm, 'd> ShallowCopy<'s, 'm, 'd> {
     pub fn times(&mut self, atime: i64, mtime: i64)
         -> &mut ShallowCopy<'s, 'm, 'd>
     {
-        self.time_policy = CopyTimePolicy::Set(atime, mtime);
+        self.time_policy = CopyTimePolicy::Set { atime, mtime };
         self
     }
 
@@ -389,13 +609,13 @@ impl<'s, 'm, 'd> ShallowCopy<'s, 'm, 'd> {
 
     pub fn copy(&self) -> io::Result<bool> {
         shallow_copy(self.src, self.src_stat, self.dst,
-            self.owner_uid, self.owner_gid, self.mode, &self.time_policy)
+            self.owner_uid, self.owner_gid, self.mode, self.time_policy)
     }
 }
 
 fn shallow_copy(src: &Path, src_stat: Option<&Metadata>, dest: &Path,
     owner_uid: Option<uid_t>, owner_gid: Option<gid_t>,
-    mode: Option<u32>, time_policy: &CopyTimePolicy)
+    mode: Option<u32>, time_policy: CopyTimePolicy)
     -> Result<bool, io::Error>
 {
     let _src_stat;
@@ -433,34 +653,18 @@ fn shallow_copy(src: &Path, src_stat: Option<&Metadata>, dest: &Path,
             owner_uid.unwrap_or(src_stat.uid()),
             owner_gid.unwrap_or(src_stat.gid()))?;
     } else {
-        match mode {
-            Some(mode) => copy_with_mode(src, dest, mode)?,
-            None => copy(src, dest)?,
-        }
-        set_owner_group(dest,
-            owner_uid.unwrap_or(src_stat.uid()),
-            owner_gid.unwrap_or(src_stat.gid()))?;
-        match *time_policy {
-            CopyTimePolicy::None => {},
-            CopyTimePolicy::Preserve => {
-                set_times(dest, src_stat.atime(), src_stat.mtime())?;
-            },
-            CopyTimePolicy::Set(atime, mtime) => {
-                set_times(dest, atime, mtime)?;
-            },
-        }
+        FileCopy::new(src, dest)
+            .src_stat(src_stat)
+            .mode(mode)
+            .time(time_policy)
+            .owner(CopyOwnerPolicy::Set(
+                owner_uid.unwrap_or(src_stat.uid()),
+                owner_gid.unwrap_or(src_stat.gid()),
+            ))
+            .copy()?;
     }
     Ok(!is_dir)
 }
-
-pub fn copy_utime<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q)
-    -> io::Result<()>
-{
-    let metadata = fs::metadata(from.as_ref())?;
-    set_times(to, metadata.atime(), metadata.mtime())?;
-    Ok(())
-}
-
 
 pub fn set_times<P: AsRef<Path>>(path: P, atime: i64, mtime: i64)
     -> io::Result<()>

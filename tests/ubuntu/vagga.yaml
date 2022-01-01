@@ -21,6 +21,12 @@ containers:
     - !Ubuntu xenial
     - !Install [bc]
 
+  apt-cache:
+    setup:
+    - !Ubuntu focal
+    - !UbuntuUniverse
+    - !Install [fortune]
+
   build-deps-with-version:
     setup:
     - !Ubuntu xenial
