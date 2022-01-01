@@ -279,26 +279,11 @@ containers:
 
 commands:
   two-lines: !Supervise
-    children:
-      second-line: !Command
-        container: busybox
-        run: |
-          sleep 0.05
-          echo world
-          sleep 0.05
-      first-line: !Command
-        container: busybox
-        run: |
-          echo hello
-          sleep 0.1
-
-  wait-all: !Supervise
     mode: wait-all-successful
     children:
       second-line: !Command
         container: busybox
         run: |
-          sleep 0.1
           echo world
       first-line: !Command
         container: busybox
@@ -307,6 +292,7 @@ commands:
 
   args: !Supervise
     description: Test of arg parsing
+    mode: wait-all-successful
     options: |
       Usage: vagga args [options]
 
@@ -317,13 +303,11 @@ commands:
       second-line: !Command
         container: busybox
         run: |
-          sleep 0.1
           echo $VAGGAOPT_FIRST
       first-line: !Command
         container: busybox
         run: |
           echo $VAGGAOPT_SECOND
-          sleep 0.2
 
   cmdargs: !Command
     description: Test of arg parsing
@@ -338,42 +322,52 @@ commands:
       echo Verbosity: "$VAGGAOPT_VERBOSE"
 
   tagged: !Supervise
+    mode: wait-all-successful
     children:
       first: !Command
         container: busybox
         tags: [first_and_second, first_and_third]
         run: |
           echo hello
-          sleep 0.2
       second: !Command
         container: busybox
         tags: [first_and_second]
         run: |
-          sleep 0.05
           echo world
-          sleep 0.15
       third: !Command
         container: busybox
         tags: [first_and_third, third_only]
         run: |
-          sleep 0.1
           echo ":)"
-          sleep 0.1
 
   one-kills-another: !Supervise
+    options: |
+      Usage: vagga one-kills-another [options]
+
+      Options:
+        --exit-code <code>  First process exit code
     children:
       dying: !Command
         container: busybox
+        volumes:
+          /srv: !Persistent fail-fast
         run: |
           echo hello
-          sleep 0.1
           echo world
+          while [ ! -f /srv/hanging.child ]; do
+            sleep 0.1
+          done
+          rm -f /srv/hanging.child
+          exit ${VAGGAOPT_EXIT_CODE:-0}
       hanging: !Command
         container: busybox
+        volumes:
+          /srv: !Persistent fail-fast
         run: |
-          echo hello
-          sleep 1
-          echo world
+          echo ":)"
+          touch /srv/hanging.child
+          sleep 60
+          echo ":("
 
   isolated-command: !Command
     container: busybox
