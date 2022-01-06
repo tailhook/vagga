@@ -1,17 +1,23 @@
 setup() {
+    load '/bats/bats-support/load.bash'
+    load '/bats/bats-assert/load.bash'
     cd /work/tests/ubuntu
 }
 
 @test "ubuntu: builds" {
-    vagga _build trusty
+    run env RUST_LOG=info vagga _build --force trusty
+    assert_success
     link=$(readlink .vagga/trusty)
-    [[ $link = ".roots/trusty.f0e3d303/root" ]]
+    assert_equal $link ".roots/trusty.010798c2/root"
+    assert_line -p "Eatmydata activated"
 }
 
 @test "ubuntu: i386 builds" {
-    vagga _build xenial-i386
+    run env RUST_LOG=info vagga _build --force xenial-i386
+    assert_success
     link=$(readlink .vagga/xenial-i386)
-    [[ $link = ".roots/xenial-i386.30fb2ea2/root" ]]
+    assert_equal $link ".roots/xenial-i386.30fb2ea2/root"
+    assert_line -p "Eatmydata activated"
 }
 
 @test "ubuntu: apt cache" {
@@ -68,8 +74,8 @@ setup() {
     run vagga trusty-calc 100*24
     [[ $status -eq 0 ]]
     [[ ${lines[${#lines[@]}-1]} = "2400" ]]
-    link=$(readlink .vagga/trusty-calc)
-    [[ $link = ".roots/trusty-calc.010798c2/root" ]]
+    link=$(readlink .vagga/trusty)
+    [[ $link = ".roots/trusty.010798c2/root" ]]
 }
 
 @test "ubuntu: run xenial bc" {
@@ -92,10 +98,11 @@ setup() {
 }
 
 @test "ubuntu: focal universe" {
-    run vagga _build ubuntu-universe
-    [[ $status -eq 0 ]]
+    run env RUST_LOG=info vagga _build --force ubuntu-universe
+    assert_success
     link=$(readlink .vagga/ubuntu-universe)
-    [[ $link = ".roots/ubuntu-universe.cf089a9f/root" ]]
+    assert_equal $link ".roots/ubuntu-universe.cf089a9f/root"
+    assert_line -p "Eatmydata activated"
 
     run vagga _run ubuntu-universe /usr/games/cowsay "Have you mooed today?"
     [[ $status = 0 ]]

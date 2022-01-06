@@ -1,11 +1,15 @@
 setup() {
+    load '/bats/bats-support/load.bash'
+    load '/bats/bats-assert/load.bash'
     cd /work/tests/ubuntu_release
 }
 
-@test "ubuntu-release: UbuntuRelease builds" {
-    vagga _build ubuntu-release
+@test "ubuntu-release: builds" {
+    run env RUST_LOG=info vagga _build --force ubuntu-release
+    assert_success
     link=$(readlink .vagga/ubuntu-release)
-    [[ $link = ".roots/ubuntu-release.a4152474/root" ]]
+    assert_equal $link ".roots/ubuntu-release.a4152474/root"
+    assert_line -p "Eatmydata activated"
 }
 
 @test "ubuntu-release: echo command in ubuntu release" {

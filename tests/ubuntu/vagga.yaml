@@ -1,9 +1,5 @@
 containers:
 
-  trusty:
-    setup:
-    - !Ubuntu trusty
-
   xenial-i386:
     setup:
     - !UbuntuRelease
@@ -11,7 +7,7 @@ containers:
       arch: i386
     - !Install [bc]
 
-  trusty-calc:
+  trusty:
     setup:
     - !Ubuntu trusty
     - !Install [bc]
@@ -135,7 +131,7 @@ commands:
     run: dpkg --print-architecture
 
   trusty-calc: !Command
-    container: trusty-calc
+    container: trusty
     accepts-arguments: true
     run: echo "$*" | bc
 
