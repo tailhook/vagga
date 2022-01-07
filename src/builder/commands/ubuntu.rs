@@ -694,7 +694,10 @@ impl Distro {
                 if let Ok(()) = apt_get_install(ctx, &[params.package], &EatMyData::No) {
                     self.eatmydata = params.find(ctx);
                 } else {
-                    warn!("Could not install {} package", params.package);
+                    warn!(
+                        "Could not install {} package. The build may be slower than usual",
+                        params.package
+                    );
                 }
             } else {
                 info!("Unsupported distribution for eatmydata. Ignoring");
@@ -1255,7 +1258,7 @@ mod build {
                 }
             }
 
-            Err(format!("Could not find libeatmydata dynamic library"))
+            Err(format!("Could not find libeatmydata.so dynamic library"))
         }
     }
 }
