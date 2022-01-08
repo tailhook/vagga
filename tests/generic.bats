@@ -7,14 +7,14 @@ setup() {
 @test "generic: The Text tag works" {
     run vagga _run text cat /etc/shakespeare
     link=$(readlink .vagga/text)
-    assert_equal $link ".roots/text.efc9a869/root"
+    assert_equal "$link" ".roots/text.efc9a869/root"
     assert_line "Sir, in my heart there was a kind of fighting"
     assert_line "That would not let me sleep."
 }
 
 @test "generic: Snapshot volume works" {
     run vagga _run moretext cat /etc/shakespeare
-    assert_equal $(readlink .vagga/moretext) ".roots/moretext.efc9a869/root"
+    assert_equal "$(readlink .vagga/moretext)" ".roots/moretext.efc9a869/root"
     assert_line "Sir, in my heart there was a kind of fighting"
     assert_line "That would not let me sleep."
 
@@ -36,7 +36,8 @@ setup() {
 
 @test "generic: Snapshot from container" {
     run vagga _run snapshot-container cat /etc/shakespeare
-    assert_equal $(readlink .vagga/snapshot-container) ".roots/snapshot-container.d304a005/root"
+    link=$(readlink .vagga/snapshot-container)
+    assert_equal "$link" ".roots/snapshot-container.d304a005/root"
     assert_line "Sir, in my heart there was a kind of fighting"
     assert_line "That would not let me sleep."
 }
@@ -58,14 +59,14 @@ setup() {
 @test "generic: The CacheDirs tag works" {
     run vagga _run cache_dirs echo "hello world"
     link=$(readlink .vagga/cache_dirs)
-    assert_equal $link ".roots/cache_dirs.2090f8c2/root"
+    assert_equal "$link" ".roots/cache_dirs.2090f8c2/root"
     assert_line "hello world"
 }
 
 @test "generic: The EnsureDir tag works" {
     run vagga _run ensure_dir echo "hello world"
     link=$(readlink .vagga/ensure_dir)
-    assert_equal $link ".roots/ensure_dir.998c9d5b/root"
+    assert_equal "$link" ".roots/ensure_dir.998c9d5b/root"
     assert_line "hello world"
     assert [ -d ".vagga/ensure_dir/var/lib/mount_point/subdir" ]
     assert_output -p "\"/var/lib/mount_point/subdir\" directory is in the volume: \"/var/lib/mount_point\""
@@ -75,15 +76,15 @@ setup() {
 @test "generic: Remove step" {
     run vagga _build remove
     link=$(readlink .vagga/remove)
-    assert_equal $link ".roots/remove.2257142d/root"
+    assert_equal "$link" ".roots/remove.2257142d/root"
 
-    assert_equal $(ls -1 .vagga/remove/opt/ | wc -l) "0"
+    assert_equal "$(ls -1 .vagga/remove/opt/ | wc -l)" "0"
 }
 
 @test "generic: The data-dirs option works" {
     run vagga _build data-container
     link=$(readlink .vagga/data-container)
-    assert_equal $link ".roots/data-container.e6da9e30/root"
+    assert_equal "$link" ".roots/data-container.e6da9e30/root"
     assert [ -d ".vagga/data-container/etc" ]
     assert [ -f ".vagga/data-container/etc/passwd" ]
     assert [ -d ".vagga/data-container/var" ]
@@ -91,17 +92,17 @@ setup() {
     assert [ -d ".vagga/data-container/var/local" ]
     assert [ -f ".vagga/data-container/var/local/hello.txt" ]
     assert [ ! -f ".vagga/data-container/var/local/bye.txt" ]
-    assert_equal $(ls -1 ".vagga/data-container/" | wc -l) "2"
-    assert_equal $(ls -1 ".vagga/data-container/var" | wc -l) "2"
-    assert_equal $(ls -1 ".vagga/data-container/var/lib" | wc -l) "3"
-    assert_equal $(ls -1 ".vagga/data-container/var/local" | wc -l) "1"
+    assert_equal "$(ls -1 ".vagga/data-container/" | wc -l)" "2"
+    assert_equal "$(ls -1 ".vagga/data-container/var" | wc -l)" "2"
+    assert_equal "$(ls -1 ".vagga/data-container/var/lib" | wc -l)" "3"
+    assert_equal "$(ls -1 ".vagga/data-container/var/local" | wc -l)" "1"
 }
 
 @test "generic: The supervise command works" {
     run vagga two-lines
     assert_success
     link=$(readlink .vagga/busybox)
-    assert_equal $link ".roots/busybox.d304a005/root"
+    assert_equal "$link" ".roots/busybox.d304a005/root"
     assert_line "hello"
     assert_line "world"
 }
@@ -117,7 +118,7 @@ setup() {
 
 @test "generic: The supervise fail-fast with exit code" {
     run vagga one-kills-another --exit-code 1
-    assert_equal $status 1
+    assert_equal "$status" 1
     assert_line "hello"
     assert_line "world"
     assert_line ":)"
@@ -217,28 +218,28 @@ setup() {
     vagga _build busybox
     run vagga isolated-command
     assert_success
-    assert_equal $(echo "$output" | grep "^[0-9]*:" | wc -l) "1"
+    assert_equal "$(echo "$output" | grep "^[0-9]*:" | wc -l)" "1"
 }
 
 @test "generic: isolated _run" {
     vagga _build busybox
     run vagga --no-network _run busybox ip link
     assert_success
-    assert_equal $(echo "$output" | grep "^[0-9]*:" | wc -l) "1"
+    assert_equal "$(echo "$output" | grep "^[0-9]*:" | wc -l)" "1"
 }
 
 @test "generic: isolated Supervise" {
     vagga _build busybox
     run vagga isolated-supervise
     assert_success
-    assert_equal $(echo "$output" | grep "^[0-9]*:" | wc -l) "1"
+    assert_equal "$(echo "$output" | grep "^[0-9]*:" | wc -l)" "1"
 }
 
 @test "generic: Supervise with --isolate-network option" {
     vagga _build busybox
     run vagga --no-net not-isolated-supervise
     assert_success
-    assert_equal $(echo "$output" | grep "^[0-9]*:" | wc -l) "1"
+    assert_equal "$(echo "$output" | grep "^[0-9]*:" | wc -l)" "1"
 }
 
 @test "generic: proxy forwards into build" {
@@ -259,13 +260,13 @@ setup() {
 @test "generic: unpack local tar" {
     run vagga vagga --version
     link=$(readlink .vagga/vagga)
-    assert_equal $link ".roots/vagga.03319fd2/root"
+    assert_equal "$link" ".roots/vagga.03319fd2/root"
     assert_line 'v0.4.0'
 }
 
 @test "generic: download broken file" {
     run vagga _build download-broken-file
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line -p "Hashsum mismatch:"
 }
 
@@ -278,12 +279,12 @@ setup() {
     run vagga _build tar-no-intermediate-dir
     root=".vagga/tar-no-intermediate-dir"
     link=$(readlink "${root}")
-    assert_equal $link ".roots/tar-no-intermediate-dir.f5b7e571/root"
+    assert_equal "$link" ".roots/tar-no-intermediate-dir.f5b7e571/root"
 
     assert [ -d "${root}/opt/tmp/test" ]
-    assert_equal $(stat -c "%a" "${root}/opt") "755"
-    assert_equal $(stat -c "%a" "${root}/opt/tmp") "755"
-    assert_equal $(stat -c "%a" "${root}/opt/tmp/test") "775"
+    assert_equal "$(stat -c "%a" "${root}/opt")" "755"
+    assert_equal "$(stat -c "%a" "${root}/opt/tmp")" "755"
+    assert_equal "$(stat -c "%a" "${root}/opt/tmp/test")" "775"
 }
 
 @test "generic: test system dirs" {
@@ -293,15 +294,15 @@ setup() {
 
     run vagga _build sys-dirs
     link=$(readlink .vagga/sys-dirs)
-    assert_equal $link ".roots/sys-dirs.e66f72fd/root"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/dev") "755"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/etc") "755"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/proc") "755"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/run") "755"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/sys") "755"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/tmp") "1777"
-    assert_equal $(stat -c "%a" ".vagga/sys-dirs/work") "755"
-    assert_equal $(ls -1 ".vagga/sys-dirs/" | wc -l) "7"
+    assert_equal "$link" ".roots/sys-dirs.e66f72fd/root"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/dev")" "755"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/etc")" "755"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/proc")" "755"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/run")" "755"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/sys")" "755"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/tmp")" "1777"
+    assert_equal "$(stat -c "%a" ".vagga/sys-dirs/work")" "755"
+    assert_equal "$(ls -1 ".vagga/sys-dirs/" | wc -l)" "7"
 }
 
 @test "generic: test system dirs when building container" {
@@ -322,40 +323,40 @@ setup() {
 
     run vagga _build unzip-local
     link=$(readlink .vagga/unzip-local)
-    assert_equal $link ".roots/unzip-local.9579aef7/root"
-    assert_equal $(cat .vagga/unzip-local/root/test/1/dir/file.txt) "Hello"
-    assert_equal $(cat .vagga/unzip-local/root/test/1/dir/file2.txt) "2"
+    assert_equal "$link" ".roots/unzip-local.9579aef7/root"
+    assert_equal "$(cat .vagga/unzip-local/root/test/1/dir/file.txt)" "Hello"
+    assert_equal "$(cat .vagga/unzip-local/root/test/1/dir/file2.txt)" "2"
     assert [ -x .vagga/unzip-local/root/test/1/install.sh ]
-    assert_equal $(cat .vagga/unzip-local/root/test/2/dir/file.txt) "Hello"
-    assert_equal $(cat .vagga/unzip-local/root/test/2/dir/file2.txt) "2"
+    assert_equal "$(cat .vagga/unzip-local/root/test/2/dir/file.txt)" "Hello"
+    assert_equal "$(cat .vagga/unzip-local/root/test/2/dir/file2.txt)" "2"
     assert [ -x .vagga/unzip-local/root/test/2/install.sh ]
-    assert_equal $(cat .vagga/unzip-local/root/test/3/dir/file.txt) "Hello"
-    assert_equal $(cat .vagga/unzip-local/root/test/3/dir/file2.txt) "2"
+    assert_equal "$(cat .vagga/unzip-local/root/test/3/dir/file.txt)" "Hello"
+    assert_equal "$(cat .vagga/unzip-local/root/test/3/dir/file2.txt)" "2"
     assert [ -x .vagga/unzip-local/root/test/3/install.sh ]
-    assert_equal $(cat .vagga/unzip-local/root/test/4/file.txt) "Hello"
-    assert_equal $(cat .vagga/unzip-local/root/test/4/file2.txt) "2"
+    assert_equal "$(cat .vagga/unzip-local/root/test/4/file.txt)" "Hello"
+    assert_equal "$(cat .vagga/unzip-local/root/test/4/file2.txt)" "2"
     assert [ ! -d .vagga/unzip-local/root/configs/4/dir ]
     assert [ ! -f .vagga/unzip-local/root/test/4/install.sh ]
-    assert_equal $(cat .vagga/unzip-local/root/test/5/file.txt) "Hello"
-    assert_equal $(cat .vagga/unzip-local/root/test/5/file2.txt) "2"
+    assert_equal "$(cat .vagga/unzip-local/root/test/5/file.txt)" "Hello"
+    assert_equal "$(cat .vagga/unzip-local/root/test/5/file2.txt)" "2"
     assert [ ! -d .vagga/unzip-local/root/configs/5/dir ]
     assert [ ! -f .vagga/unzip-local/root/test/5/install.sh ]
     assert [ ! -f $cached_file ]
 
     run vagga _build unzip-downloaded
     link=$(readlink .vagga/unzip-downloaded)
-    assert_equal $link ".roots/unzip-downloaded.fae32fd7/root"
-    assert_equal $(cat .vagga/unzip-downloaded/root/test/dir/file.txt) "Hello"
-    assert_equal $(cat .vagga/unzip-downloaded/root/test/dir/file2.txt) "2"
+    assert_equal "$link" ".roots/unzip-downloaded.fae32fd7/root"
+    assert_equal "$(cat .vagga/unzip-downloaded/root/test/dir/file.txt)" "Hello"
+    assert_equal "$(cat .vagga/unzip-downloaded/root/test/dir/file2.txt)" "2"
     assert [ -f $cached_file ]
 
     run vagga _build unzip-no-subdir
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line -p './dir" is not found in archive'
     assert [ -f test-file.zip ]
 
     run vagga _build unzip-mismatch-hashsum
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line -p "Hashsum mismatch: expected 12345678 but was ${hash}"
     assert [ -f test-file.zip ]
 
@@ -384,7 +385,7 @@ setup() {
 @test "generic: RunAs" {
     run vagga _build run-as
     link=$(readlink ".vagga/run-as")
-    assert_equal $link ".roots/run-as.b0a77478/root"
+    assert_equal "$link" ".roots/run-as.b0a77478/root"
 
     assert_equal "$(cat .vagga/run-as/ids-11)" "uid=1 gid=1"
     assert_equal "$(cat .vagga/run-as/ids-10)" "uid=1 gid=0"
@@ -408,12 +409,12 @@ setup() {
     run vagga _build isolated-run-as
     root=".vagga/isolated-run-as"
     link=$(readlink "${root}")
-    assert_equal $link ".roots/isolated-run-as.832bc83e/root"
+    assert_equal "$link" ".roots/isolated-run-as.832bc83e/root"
 
     run cat "${root}/var/ip-addr-isolated.out"
     assert_line -p "inet 127.0.0.1/8"
     assert_line -p "inet 127.254.254.254/8"
-    assert_equal $(cat "${root}/var/ip-link-isolated.out" | wc -l) "2"
+    assert_equal "$(cat "${root}/var/ip-link-isolated.out" | wc -l)" "2"
 
     run cat "${root}/var/ip-addr.out"
     assert_line -p "inet 127.0.0.1/8"
@@ -424,9 +425,9 @@ setup() {
     run vagga _build isolated-run-as-with-external-uid
     root=".vagga/isolated-run-as-with-external-uid"
     link=$(readlink "${root}")
-    assert_equal $link ".roots/isolated-run-as-with-external-uid.59a8d2d6/root"
+    assert_equal "$link" ".roots/isolated-run-as-with-external-uid.59a8d2d6/root"
 
-    assert_equal $(cat "${root}/var/ip-link-isolated.out" | wc -l) "2"
+    assert_equal "$(cat "${root}/var/ip-link-isolated.out" | wc -l)" "2"
 }
 
 @test "generic: Tmpfs Subdirs" {
@@ -442,14 +443,14 @@ setup() {
 @test "generic: Path precedence" {
     run vagga _run path-precedence hello
     link=$(readlink .vagga/path-precedence)
-    assert_equal $link ".roots/path-precedence.e2636a55/root"
+    assert_equal "$link" ".roots/path-precedence.e2636a55/root"
     assert_line "Hello world!"
 }
 
 @test "generic: Environ precedence" {
     run vagga _build environ
     link=$(readlink .vagga/environ)
-    assert_equal $link ".roots/environ.d304a005/root"
+    assert_equal "$link" ".roots/environ.d304a005/root"
 
     run vagga _run environ env
     assert_line "EDITOR=vi"
@@ -524,20 +525,20 @@ site_settings:
 
 @test "generic: Bad arguments for command with 'options'" {
     run vagga args --bad-arg
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line "Unknown flag: '--bad-arg'"
     assert_line "Usage: vagga args [options]"
 
     run vagga cmdargs --bad-arg
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line "Usage: vagga cmdargs [options]"
 
     run vagga args extra-arg
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line "Usage: vagga args [options]"
 
     run vagga cmdargs extra-arg
-    assert_equal $status 121
+    assert_equal "$status" 121
     assert_line "Usage: vagga cmdargs [options]"
 }
 
@@ -548,7 +549,7 @@ site_settings:
     cd tmp
     mkdir -p home
     run vagga check-remount-options
-    assert_equal $status 1
+    assert_equal "$status" 1
     cd ..
     umount tmp
     rm -rf tmp
@@ -561,13 +562,13 @@ site_settings:
     run vagga _build resolv-conf-and-hosts
     assert_success
     link=$(readlink .vagga/resolv-conf-and-hosts)
-    assert_equal $link ".roots/resolv-conf-and-hosts.57222830/root"
-    assert_equal $(cat .vagga/resolv-conf-and-hosts/state/resolv.conf) ""
-    assert_equal $(cat .vagga/resolv-conf-and-hosts/state/hosts) ""
+    assert_equal "$link" ".roots/resolv-conf-and-hosts.57222830/root"
+    assert_equal "$(cat .vagga/resolv-conf-and-hosts/state/resolv.conf)" ""
+    assert_equal "$(cat .vagga/resolv-conf-and-hosts/state/hosts)" ""
     resolv_link=$(readlink .vagga/resolv-conf-and-hosts/etc/resolv.conf)
     hosts_link=$(readlink .vagga/resolv-conf-and-hosts/etc/hosts)
-    assert_equal $resolv_link "/state/resolv.conf"
-    assert_equal $hosts_link "/state/hosts"
+    assert_equal "$resolv_link" "/state/resolv.conf"
+    assert_equal "$hosts_link" "/state/hosts"
 
     run vagga _run resolv-conf-and-hosts cat /state/resolv.conf
     assert_success
