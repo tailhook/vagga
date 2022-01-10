@@ -132,6 +132,18 @@ commands:
     container: rust-musl
     run: [make, build-test]
 
+  make-release-ci: !Command
+    description: Build vagga with optimizations
+    prerequisites: [_mk-cargo-dir]
+    container: rust-musl
+    volumes:
+      /work/target/.cargo: !BindRW /volumes/cargo
+    run: [make, release]
+
+  _mk-cargo-dir: !Command
+    container: rust-musl
+    run: mkdir -p target/.cargo
+
   make-arm: !Command
     description: Cross-compile vagga for arm
     container: musleabihf

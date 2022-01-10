@@ -20,28 +20,34 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 500
-      - name: Install musl-tools
-        run: "sudo apt-get install musl-tools"
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-unknown-linux-musl
-          default: true
+
+      - name: Install vagga
+        run: |
+          echo 'deb [arch=amd64 trusted=yes] https://ubuntu.zerogw.com vagga-testing main' | \
+            sudo tee /etc/apt/sources.list.d/vagga.list
+          sudo apt-get update
+          sudo apt-get install -y vagga
+
       - uses: Swatinem/rust-cache@v1
-      - name: Cache multiple paths
+
+      - name: Vagga tests cache
         uses: actions/cache@v2
         with:
           path: |
             tmp/cache
           key: vagga-cache-v1
-      - run: |
-          make release  # slower build, faster tests
+
+      - name: Build and run tests
+        env:
+          UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
+        run: |
+          export VAGGA_SETTINGS="
+            cache-dir: ${GITHUB_WORKSPACE}/tmp/cache
+            external-volumes:
+              cargo: ${HOME}/.cargo"
+          vagga make-release-ci
           ./vagga -eUBUNTU_MIRROR test \
-            -j 8 \
+            -j 4 \
             --no-parallelize-within-files \
             --verbose-run \
             tests
-        env:
-          UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
-
