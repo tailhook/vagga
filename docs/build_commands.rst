@@ -341,7 +341,7 @@ it's usually perfectly okay if you only use node to build static scripts.
 The following ``npm`` features are supported:
 
 * Specify ``package@version`` to install specific version **(recommended)**
-* Use ``git://`` url for the package. In this case git will be installed for
+* Use ``git+https://`` url for the package. In this case git will be installed for
   the duration of the build automatically
 * Bare ``package_name`` (should be used only for one-off environments)
 

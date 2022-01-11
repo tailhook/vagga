@@ -70,13 +70,13 @@ containers:
     - !Ubuntu focal
     - !UbuntuUniverse
     - !BuildDeps [wget]
-    - !Install [make, curl, zip, file, git, parallel]
+    - !Install [make, curl, zip, file, git, ca-certificates, parallel]
     - !Sh |
         set -ex
         cd /tmp
-        git clone git://github.com/bats-core/bats-core
-        git clone git://github.com/bats-core/bats-support.git /bats/bats-support
-        git clone git://github.com/bats-core/bats-assert.git /bats/bats-assert
+        git clone --depth=1 https://github.com/bats-core/bats-core.git
+        git clone --depth=1 https://github.com/bats-core/bats-support.git /bats/bats-support
+        git clone --depth=1 https://github.com/bats-core/bats-assert.git /bats/bats-assert
         cd bats-core
         ./install.sh /usr
 

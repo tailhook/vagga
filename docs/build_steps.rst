@@ -551,7 +551,7 @@ Generic Commands
         - !Alpine v3.5
         - !Install [python3]
         - !Git
-          url: git://github.com/tailhook/injections
+          url: https://github.com/tailhook/injections.git
           path: /usr/lib/python3.5/site-packages/injections
 
    (the example above is actually a bad idea, many python packages will work
@@ -588,7 +588,7 @@ Generic Commands
         - !Alpine v3.5
         - !Install [python, py-setuptools]
         - !GitInstall
-          url: git://github.com/tailhook/injections
+          url: https://github.com/tailhook/injections.git
           script: python setup.py install
 
    Options:
