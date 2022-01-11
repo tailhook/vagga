@@ -45,6 +45,7 @@ jobs:
             cache-dir: ${GITHUB_WORKSPACE}/tmp/cache
             external-volumes:
               cargo: ${HOME}/.cargo"
+          echo "$VAGGA_SETTINGS"
           vagga make-release-ci
           ./vagga -eUBUNTU_MIRROR test \
             -j 4 \
