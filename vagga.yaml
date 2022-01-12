@@ -11,7 +11,6 @@ containers:
     environ: &rustenv
       LD_LIBRARY_PATH: /musl/lib/rustlib/x86_64-unknown-linux-musl/lib
       PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
-      HOME: /work/target
     setup:
     - !Ubuntu focal
     - !UbuntuUniverse
@@ -34,13 +33,14 @@ containers:
       url: "https://github.com/tailhook/bulk/releases/download/v0.4.9/bulk-v0.4.9.tar.gz"
       sha256: 23471a9986274bb4b7098c03e2eb7e1204171869b72c45385fcee1c64db2d111
       path: /
+    - !EnsureDir /root/.cargo
 
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
+    volumes:
+      /root/.cargo: !CacheDir cargo
 
   musleabihf:
-    environ:
-      HOME: /work/target
     setup:
     - !Ubuntu focal
     - !UbuntuUniverse
@@ -64,6 +64,9 @@ containers:
       url: "https://static.rust-lang.org/dist/rust-std-1.57.0-arm-unknown-linux-musleabihf.tar.gz"
       script: "./install.sh --prefix=/usr \
                --components=rust-std-arm-unknown-linux-musleabihf"
+    - !EnsureDir /root/.cargo
+    volumes:
+      /root/.cargo: !CacheDir cargo
 
   testbase:
     setup:
@@ -74,9 +77,9 @@ containers:
     - !Sh |
         set -ex
         cd /tmp
-        git clone --depth=1 https://github.com/bats-core/bats-core.git
-        git clone --depth=1 https://github.com/bats-core/bats-support.git /bats/bats-support
-        git clone --depth=1 https://github.com/bats-core/bats-assert.git /bats/bats-assert
+        git clone --depth=1 https://github.com/bats-core/bats-core
+        git clone --depth=1 https://github.com/bats-core/bats-support /bats/bats-support
+        git clone --depth=1 https://github.com/bats-core/bats-assert /bats/bats-assert
         cd bats-core
         ./install.sh /usr
 
@@ -131,18 +134,6 @@ commands:
     description: Build vagga for tests
     container: rust-musl
     run: [make, build-test]
-
-  make-release-ci: !Command
-    description: Build vagga with optimizations
-    prerequisites: [_mk-cargo-dir]
-    container: rust-musl
-    volumes:
-      /work/target/.cargo: !BindRW /volumes/cargo
-    run: [make, release]
-
-  _mk-cargo-dir: !Command
-    container: rust-musl
-    run: mkdir -p target/.cargo
 
   make-arm: !Command
     description: Cross-compile vagga for arm

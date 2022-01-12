@@ -16,6 +16,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+    env:
+      VAGGA_CACHE: ~/.vagga/.cache
+      UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
     steps:
       - uses: actions/checkout@v2
         with:
@@ -28,25 +31,47 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y vagga
 
-      - uses: Swatinem/rust-cache@v1
+      - name: Prepare variables
+        run: |
+          echo "VAGGA_CACHE_HASH=$(vagga _version_hash --short rust-musl)" >> $GITHUB_ENV
+          echo "VAGGA_CACHE_DIR=${VAGGA_CACHE/#\~/$HOME}" >> $GITHUB_ENV
 
-      - name: Vagga tests cache
+      - name: Vagga settings
+        run: |
+          set -eux
+          echo "\
+          cache-dir: ${VAGGA_CACHE}
+          ubuntu-mirror: ${UBUNTU_MIRROR}
+          " > ~/.vagga.yaml
+
+          mkdir -p ${VAGGA_CACHE_DIR}
+
+      - name: Vagga cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ${{ env.VAGGA_CACHE }}
+            !${{ env.VAGGA_CACHE }}/cargo/registry/src
+          key: vagga-v1-${{ runner.os }}-${{ env.VAGGA_CACHE_HASH }}
+
+      - name: Build cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            target
+          key: build-v1-${{ runner.os }}-${{ env.VAGGA_CACHE_HASH }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Tests cache
         uses: actions/cache@v2
         with:
           path: |
             tmp/cache
-          key: vagga-cache-v1
+          key: tests-v1-${{ runner.os }}
 
       - name: Build and run tests
-        env:
-          UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
         run: |
-          export VAGGA_SETTINGS="
-            cache-dir: ${GITHUB_WORKSPACE}/tmp/cache
-            external-volumes:
-              cargo: ${HOME}/.cargo"
-          echo "$VAGGA_SETTINGS"
-          vagga make-release-ci
+          set -eux
+          vagga make-release
           ./vagga -eUBUNTU_MIRROR test \
             -j 4 \
             --no-parallelize-within-files \
