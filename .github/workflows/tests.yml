@@ -61,6 +61,9 @@ jobs:
             target
           key: build-v1-${{ runner.os }}-${{ env.VAGGA_CACHE_HASH }}-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Build
+        run: vagga make-release
+
       - name: Tests cache
         uses: actions/cache@v2
         with:
@@ -68,10 +71,8 @@ jobs:
             tmp/cache
           key: tests-v1-${{ runner.os }}
 
-      - name: Build and run tests
+      - name: Run tests
         run: |
-          set -eux
-          vagga make-release
           ./vagga -eUBUNTU_MIRROR test \
             -j 4 \
             --no-parallelize-within-files \
