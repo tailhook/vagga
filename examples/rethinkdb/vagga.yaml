@@ -25,7 +25,7 @@ containers:
     - !Install
       - python          # for node-gyp
       - netcat-openbsd  # to check when rethinkdb is ready
-    - !NpmInstall [git://github.com/rethinkdb/rethinkdb-example-nodejs-chat.git]
+    - !NpmInstall [https://github.com/rethinkdb/rethinkdb-example-nodejs-chat.git]
 
 commands:
 

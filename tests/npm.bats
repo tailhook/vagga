@@ -39,7 +39,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git)
-    [[ $link = ".roots/git.8b42a947/root" ]]
+    [[ $link = ".roots/git.08dbe730/root" ]]
 }
 
 @test "npm: ubuntu git" {
@@ -47,7 +47,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-ubuntu)
-    [[ $link = ".roots/git-ubuntu.035d58ac/root" ]]
+    [[ $link = ".roots/git-ubuntu.c90283eb/root" ]]
 }
 
 @test "npm: alpine git" {
@@ -55,7 +55,7 @@ setup() {
     [[ $status = 0 ]]
     [[ ${lines[${#lines[@]}-1]} = /work ]]
     link=$(readlink .vagga/git-alpine)
-    [[ $link = ".roots/git-alpine.0445ebc1/root" ]]
+    [[ $link = ".roots/git-alpine.25ca09cf/root" ]]
 }
 
 @test "npm: NpmDependencies" {

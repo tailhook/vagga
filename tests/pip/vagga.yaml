@@ -14,13 +14,13 @@ containers:
     setup:
     - !Ubuntu xenial
     - !Py2Install [appdirs, pyparsing, packaging, six, setuptools,
-                   "git+git://github.com/jdp/urp"]
+                   "git+https://github.com/jdp/urp"]
 
   py2-git-alpine:
     setup:
     - !Alpine v3.4
     - !Py2Install [appdirs, pyparsing, packaging, six, setuptools,
-                   "git+git://github.com/jdp/urp"]
+                   "git+https://github.com/jdp/urp"]
 
   py3-ubuntu:
     setup:
@@ -40,7 +40,7 @@ containers:
     setup:
     - !Ubuntu xenial
     - !Py3Install [appdirs, pyparsing, packaging, six, setuptools,
-                   "git+git://github.com/jdp/urp"]
+                   "git+https://github.com/jdp/urp"]
 
   py2req-ubuntu:
     setup:

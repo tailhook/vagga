@@ -168,6 +168,9 @@ pub fn parse_feature(info: &str, features: &mut Vec<packages::Package>) {
     // a version number for NpmDependencies. That's how npm works.
     if info[..].starts_with("git://") {
         features.push(packages::Git);
+    } else if info[..].starts_with("git+https://") {
+        features.push(packages::Git);
+        features.push(packages::Https);
     } // TODO(tailhook) implement whole a lot of other npm version kinds
 }
 

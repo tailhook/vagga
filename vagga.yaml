@@ -11,7 +11,6 @@ containers:
     environ: &rustenv
       LD_LIBRARY_PATH: /musl/lib/rustlib/x86_64-unknown-linux-musl/lib
       PATH: /musl/bin:/usr/local/bin:/usr/bin:/bin
-      HOME: /work/target
     setup:
     - !Ubuntu focal
     - !UbuntuUniverse
@@ -34,13 +33,14 @@ containers:
       url: "https://github.com/tailhook/bulk/releases/download/v0.4.9/bulk-v0.4.9.tar.gz"
       sha256: 23471a9986274bb4b7098c03e2eb7e1204171869b72c45385fcee1c64db2d111
       path: /
+    - !EnsureDir /root/.cargo
 
     # For packaging
     - !Install [make, checkinstall, git, uidmap, wget, gcc, libc6-dev, ca-certificates]
+    volumes:
+      /root/.cargo: !CacheDir cargo
 
   musleabihf:
-    environ:
-      HOME: /work/target
     setup:
     - !Ubuntu focal
     - !UbuntuUniverse
@@ -64,19 +64,22 @@ containers:
       url: "https://static.rust-lang.org/dist/rust-std-1.57.0-arm-unknown-linux-musleabihf.tar.gz"
       script: "./install.sh --prefix=/usr \
                --components=rust-std-arm-unknown-linux-musleabihf"
+    - !EnsureDir /root/.cargo
+    volumes:
+      /root/.cargo: !CacheDir cargo
 
   testbase:
     setup:
     - !Ubuntu focal
     - !UbuntuUniverse
     - !BuildDeps [wget]
-    - !Install [make, curl, zip, file, git, parallel]
+    - !Install [make, curl, zip, file, git, ca-certificates, parallel]
     - !Sh |
         set -ex
         cd /tmp
-        git clone git://github.com/bats-core/bats-core
-        git clone git://github.com/bats-core/bats-support.git /bats/bats-support
-        git clone git://github.com/bats-core/bats-assert.git /bats/bats-assert
+        git clone --depth=1 https://github.com/bats-core/bats-core
+        git clone --depth=1 https://github.com/bats-core/bats-support /bats/bats-support
+        git clone --depth=1 https://github.com/bats-core/bats-assert /bats/bats-assert
         cd bats-core
         ./install.sh /usr
 

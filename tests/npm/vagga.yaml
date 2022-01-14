@@ -21,17 +21,17 @@ containers:
 
   git:
     setup:
-    - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]
+    - !NpmInstall ["git+https://github.com/Witcher42/resolve-cli"]
 
   git-ubuntu:
     setup:
     - !Ubuntu trusty
-    - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]
+    - !NpmInstall ["git+https://github.com/Witcher42/resolve-cli"]
 
   git-alpine:
     setup:
     - !Alpine v3.9
-    - !NpmInstall ["git://github.com/Witcher42/resolve-cli"]
+    - !NpmInstall ["git+https://github.com/Witcher42/resolve-cli"]
 
   npm-deps:
     setup:

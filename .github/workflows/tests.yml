@@ -16,32 +16,65 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+    env:
+      VAGGA_CACHE: ~/.vagga/.cache
+      UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 500
-      - name: Install musl-tools
-        run: "sudo apt-get install musl-tools"
-      - uses: actions-rs/toolchain@v1
+
+      - name: Install vagga
+        run: |
+          echo 'deb [arch=amd64 trusted=yes] https://ubuntu.zerogw.com vagga-testing main' | \
+            sudo tee /etc/apt/sources.list.d/vagga.list
+          sudo apt-get update
+          sudo apt-get install -y vagga
+
+      - name: Prepare variables
+        run: |
+          echo "VAGGA_CACHE_HASH=$(vagga _version_hash --short rust-musl)" >> $GITHUB_ENV
+          echo "VAGGA_CACHE_DIR=${VAGGA_CACHE/#\~/$HOME}" >> $GITHUB_ENV
+
+      - name: Vagga settings
+        run: |
+          set -eux
+          echo "\
+          cache-dir: ${VAGGA_CACHE}
+          ubuntu-mirror: ${UBUNTU_MIRROR}
+          " > ~/.vagga.yaml
+
+          mkdir -p ${VAGGA_CACHE_DIR}
+
+      - name: Vagga cache
+        uses: actions/cache@v2
         with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-unknown-linux-musl
-          default: true
-      - uses: Swatinem/rust-cache@v1
-      - name: Cache multiple paths
+          path: |
+            ${{ env.VAGGA_CACHE }}
+            !${{ env.VAGGA_CACHE }}/cargo/registry/src
+          key: vagga-v1-${{ runner.os }}-${{ env.VAGGA_CACHE_HASH }}
+
+      - name: Build cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            target
+          key: build-v1-${{ runner.os }}-${{ env.VAGGA_CACHE_HASH }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build
+        run: vagga make-release
+
+      - name: Tests cache
         uses: actions/cache@v2
         with:
           path: |
             tmp/cache
-          key: vagga-cache-v1
-      - run: |
-          make release  # slower build, faster tests
+          key: tests-v1-${{ runner.os }}
+
+      - name: Run tests
+        run: |
           ./vagga -eUBUNTU_MIRROR test \
-            -j 8 \
+            -j 4 \
             --no-parallelize-within-files \
             --verbose-run \
             tests
-        env:
-          UBUNTU_MIRROR: http://mirrors.us.kernel.org/ubuntu/
-
