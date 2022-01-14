@@ -691,13 +691,16 @@ impl Distro {
                 }
 
                 apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
-                if let Ok(()) = apt_get_install(ctx, &[params.package], &EatMyData::No) {
-                    self.eatmydata = params.find(ctx);
-                } else {
-                    warn!(
-                        "Could not install {} package. The build may be slower than usual",
-                        params.package
-                    );
+
+                match apt_get_install(ctx, &[params.package], &EatMyData::No) {
+                    Ok(()) => self.eatmydata = params.find(ctx),
+                    Err(e) => {
+                        warn!(
+                            "Could not install {} package. The build may be slower than usual. \
+                            Cause: {}",
+                            params.package, e
+                        );
+                    }
                 }
             } else {
                 info!("Unsupported distribution for eatmydata. Ignoring");
