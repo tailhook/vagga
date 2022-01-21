@@ -35,10 +35,10 @@ const APT_CACHE_NAME: &str = "apt-cache";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Ubuntu(String);
 
+#[derive(Debug)]
 struct EMDParams {
     needs_universe: bool,
     package: &'static str,
-    preload: &'static str,
 }
 
 impl Ubuntu {
@@ -136,7 +136,7 @@ enum AptHttps {
 enum EatMyData {
     No,
     Need,
-    Preload(&'static str),
+    Preload(String),
 }
 
 #[derive(Debug)]
@@ -221,7 +221,7 @@ impl Distribution for Distro {
                     Ignored.", e)).ok();
                 self.has_indices = true;
             }
-            self.ensure_eat_my_data(ctx)?;
+            self.ensure_basic_packages(ctx, &[])?;
             // may be already updated by eatmydata
             apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
         }
@@ -675,57 +675,44 @@ impl Distro {
     }
 
     #[cfg(feature="containers")]
-    fn ensure_eat_my_data(&mut self, ctx: &mut Context)
+    fn ensure_basic_packages(&mut self, ctx: &mut Context, extra_packages: &[&str])
         -> Result<(), StepError>
     {
         if self.eatmydata == EatMyData::Need {
             self.ensure_codename(ctx)?;
-            let eatmy = EMDParams::find(
-                self.codename.as_ref().unwrap(), &self.config.arch);
-            if let Some(ref params) = eatmy {
+            let eatmy = EMDParams::new(
+                self.codename.as_ref().unwrap(), &self.config.arch
+            );
+            if let Some(params) = eatmy {
                 if params.needs_universe {
                     debug!("Add Universe for eat my data");
                     self.enable_universe()?;
                     self.add_universe(ctx)?;
                 }
+
                 apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
-                apt_get_install(ctx, &[params.package], &EatMyData::No)?;
-                self.eatmydata = EatMyData::Preload(params.preload);
+
+                match apt_get_install(ctx, &[params.package], &EatMyData::No) {
+                    Ok(()) => self.eatmydata = params.find(ctx),
+                    Err(e) => {
+                        warn!(
+                            "Could not install {} package. The build may be slower than usual. \
+                            Cause: {}",
+                            params.package, e
+                        );
+                    }
+                }
             } else {
                 info!("Unsupported distribution for eatmydata. Ignoring");
                 self.eatmydata = EatMyData::No;
             }
         }
-        Ok(())
-    }
-    #[cfg(feature="containers")]
-    fn ensure_locales(&mut self, ctx: &mut Context)
-        -> Result<(), StepError>
-    {
-        if self.eatmydata == EatMyData::Need {
-            self.ensure_codename(ctx)?;
-            let eatmy = EMDParams::find(
-                self.codename.as_ref().unwrap(), &self.config.arch);
-            if let Some(ref params) = eatmy {
-                if params.needs_universe {
-                    debug!("Add Universe for eat my data");
-                    self.enable_universe()?;
-                    self.add_universe(ctx)?;
-                }
-                apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
-                apt_get_install(ctx, &[params.package, "locales"],
-                                &EatMyData::No)?;
-                self.eatmydata = EatMyData::Preload(params.preload);
-            } else {
-                info!("Unsupported distribution for eatmydata. Ignoring");
-                self.eatmydata = EatMyData::No;
-                apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
-                apt_get_install(ctx, &["locales"], &self.eatmydata)?;
-            }
-        } else {
+
+        if !extra_packages.is_empty() {
             apt_get_update::<&str>(ctx, &[], &mut self.apt_update)?;
-            apt_get_install(ctx, &["locales"], &self.eatmydata)?;
+            apt_get_install(ctx, &extra_packages, &self.eatmydata)?;
         }
+
         Ok(())
     }
 }
@@ -807,7 +794,7 @@ impl BuildStep for UbuntuPPA {
                 // Need to install eatmydata before installing https
                 // transport because latter takes ~ 100 seconds without
                 // libeatmydata
-                u.ensure_eat_my_data(ctx)?;
+                u.ensure_basic_packages(ctx, &[])?;
                 u.add_ubuntu_ppa(ctx, &self.0)
             })?;
         }
@@ -875,7 +862,7 @@ impl BuildStep for UbuntuRepo {
                 // Need to install eatmydata before installing https
                 // transport because latter takes ~ 100 seconds without
                 // libeatmydata
-                u.ensure_eat_my_data(ctx)?;
+                u.ensure_basic_packages(ctx, &[])?;
                 u.add_debian_repo(ctx, &self)?;
                 Ok(())
             })?;
@@ -921,8 +908,10 @@ mod build {
     use std::os::unix::fs::PermissionsExt;
 
     use unshare::Command;
+    use crate::builder::commands::generic::capture_command;
 
     use crate::capsule::download::download_file;
+    use crate::process_util::CaptureOutput;
 
     use super::*;
 
@@ -1075,7 +1064,7 @@ mod build {
         set_sources_list(ctx, distro)?;
 
         if find_cmd(ctx, "locale-gen").is_err() {
-            distro.ensure_locales(ctx)?;
+            distro.ensure_basic_packages(ctx, &["locales"])?;
         }
 
         let mut cmd = command(ctx, "locale-gen")?;
@@ -1186,7 +1175,7 @@ mod build {
     }
 
     pub(in super) fn eat_my_data(cmd: &mut Command, ctx: &Context, emd: &EatMyData) {
-        if let EatMyData::Preload(preload) = *emd {
+        if let EatMyData::Preload(preload) = emd {
             match ctx.environ.get("LD_PRELOAD") {
                 None => {
                     cmd.env("LD_PRELOAD", preload);
@@ -1226,37 +1215,53 @@ mod build {
 
 
     impl EMDParams {
-        pub fn find(codename: &str, arch: &str) -> Option<EMDParams> {
+        pub fn new(codename: &str, arch: &str) -> Option<EMDParams> {
             match (codename, arch) {
-                ("xenial", "amd64") |
-                ("artful", "amd64") |
-                ("bionic", "amd64")
-                => Some(EMDParams {
-                    needs_universe: false,
-                    package: "libeatmydata1",
-                    preload: "/usr/lib/x86_64-linux-gnu/libeatmydata.so",
-                }),
-                ("xenial", "i386") |
-                ("artful", "i386") |
-                ("bionic", "i386")
-                => Some(EMDParams {
-                    needs_universe: false,
-                    package: "libeatmydata1",
-                    preload: "/usr/lib/i386-linux-gnu/libeatmydata.so",
-                }),
-                ("trusty", _) => Some(EMDParams {
-                    needs_universe: true,
-                    package: "eatmydata",
-                    preload: "/usr/lib/libeatmydata/libeatmydata.so",
-                }),
+                ("trusty", _) |
                 ("precise", _) => Some(EMDParams {
                     needs_universe: true,
                     package: "eatmydata",
-                    preload: "/usr/lib/libeatmydata/libeatmydata.so",
                 }),
-                _ => None,
+                _ => Some(EMDParams {
+                    needs_universe: false,
+                    package: "libeatmydata1"
+                }),
             }
         }
-    }
 
+        pub fn find(&self, ctx: &mut Context) -> EatMyData {
+            self._find(ctx)
+                .map_or_else(
+                    |e| {
+                        warn!("{}", e);
+                        EatMyData::No
+                    },
+                    |p| {
+                        info!("Eatmydata activated: {}", p);
+                        EatMyData::Preload(p)
+                    }
+                )
+        }
+
+        pub fn _find(&self, ctx: &mut Context) -> Result<String, String> {
+            let emd_pkg_output = capture_command(
+                ctx,
+                &["/usr/bin/dpkg-query".to_string(), "-L".to_string(), self.package.to_string()],
+                &[],
+                CaptureOutput::Stdout
+            )
+                .map_err(|e| format!("Error fetching {} package content: {}", self.package, e))?;
+            let emd_pkg_output = String::from_utf8(emd_pkg_output)
+                .map_err(|e| format!("Cannot decode dpkg-query output to utf-8: {}", e))?;
+
+            for emd_pkg_content_file in emd_pkg_output.lines() {
+                let emd_pkg_content_file = emd_pkg_content_file.trim();
+                if emd_pkg_content_file.ends_with("/libeatmydata.so") {
+                    return Ok(emd_pkg_content_file.to_string());
+                }
+            }
+
+            Err(format!("Could not find libeatmydata.so dynamic library"))
+        }
+    }
 }
