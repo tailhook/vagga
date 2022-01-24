@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::fs::{remove_dir_all, remove_file};
+use std::fs::{remove_dir_all, remove_file, symlink_metadata};
 use std::collections::HashMap;
 
 use crate::build_step::BuildStep;
@@ -198,7 +198,11 @@ fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
                 remove_all_except(path, keep_rel_paths)?;
             },
             None => {
-                if path.is_dir() {
+                let file_type = try_msg!(
+                    symlink_metadata(path),
+                    "Error querying file metadata: {path:?}: {err}", path=path
+                ).file_type();
+                if file_type.is_dir() {
                     try_msg!(clean_dir(path, true),
                         "Error cleaning dir {path:?}: {err}",
                         path=path);

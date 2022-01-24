@@ -78,13 +78,21 @@ containers:
     - !Remove /opt/test_dir
     - !Remove /opt/test_symlink
 
-  data-container:
+  data-container-alpine:
     setup:
     - !Alpine v3.4
     - !Text
       /var/local/hello.txt: Hello world!
     - !Sh ln -s /var/local/hello.txt /var/local/bye.txt
     data-dirs: [/etc, /var/lib, /var/lib/apk, /var/local/hello.txt]
+
+  data-container-ubuntu:
+    setup:
+    - !Ubuntu focal
+    - !Text
+      /var/local/hello.txt: Hello world!
+    - !Sh ln -s /var/local/hello.txt /var/local/bye.txt
+    data-dirs: [/etc, /var/lib, /var/lib/apt, /var/local/hello.txt]
 
   busybox:
     setup:
