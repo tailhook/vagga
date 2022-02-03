@@ -81,21 +81,40 @@ setup() {
     assert_equal "$(ls -1 .vagga/remove/opt/ | wc -l)" "0"
 }
 
-@test "generic: The data-dirs option works" {
-    run vagga _build data-container
-    link=$(readlink .vagga/data-container)
-    assert_equal "$link" ".roots/data-container.e6da9e30/root"
-    assert [ -d ".vagga/data-container/etc" ]
-    assert [ -f ".vagga/data-container/etc/passwd" ]
-    assert [ -d ".vagga/data-container/var" ]
-    assert [ -d ".vagga/data-container/var/lib" ]
-    assert [ -d ".vagga/data-container/var/local" ]
-    assert [ -f ".vagga/data-container/var/local/hello.txt" ]
-    assert [ ! -f ".vagga/data-container/var/local/bye.txt" ]
-    assert_equal "$(ls -1 ".vagga/data-container/" | wc -l)" "2"
-    assert_equal "$(ls -1 ".vagga/data-container/var" | wc -l)" "2"
-    assert_equal "$(ls -1 ".vagga/data-container/var/lib" | wc -l)" "3"
-    assert_equal "$(ls -1 ".vagga/data-container/var/local" | wc -l)" "1"
+@test "generic: data-dirs alpine" {
+    run vagga _build data-container-alpine
+    container_path=.vagga/data-container-alpine
+    link=$(readlink $container_path)
+    assert_equal "$link" ".roots/data-container-alpine.e6da9e30/root"
+    assert [ -d "$container_path/etc" ]
+    assert [ -f "$container_path/etc/passwd" ]
+    assert [ -d "$container_path/var" ]
+    assert [ -d "$container_path/var/lib" ]
+    assert [ -d "$container_path/var/local" ]
+    assert [ -f "$container_path/var/local/hello.txt" ]
+    assert [ ! -f "$container_path/var/local/bye.txt" ]
+    assert_equal "$(ls -1 "$container_path/" | wc -l)" "2"
+    assert_equal "$(ls -1 "$container_path/var" | wc -l)" "2"
+    assert_equal "$(ls -1 "$container_path/var/lib" | wc -l)" "3"
+    assert_equal "$(ls -1 "$container_path/var/local" | wc -l)" "1"
+}
+
+@test "generic: data-dirs ubuntu" {
+    run vagga _build data-container-ubuntu
+    container_path=.vagga/data-container-ubuntu
+    link=$(readlink $container_path)
+    assert_equal "$link" ".roots/data-container-ubuntu.ee7a0504/root"
+    assert [ -d "$container_path/etc" ]
+    assert [ -f "$container_path/etc/passwd" ]
+    assert [ -d "$container_path/var" ]
+    assert [ -d "$container_path/var/lib" ]
+    assert [ -d "$container_path/var/local" ]
+    assert [ -f "$container_path/var/local/hello.txt" ]
+    assert [ ! -f "$container_path/var/local/bye.txt" ]
+    assert_equal "$(ls -1 "$container_path/" | wc -l)" "2"
+    assert_equal "$(ls -1 "$container_path/var" | wc -l)" "2"
+    assert_equal "$(ls -1 "$container_path/var/lib" | wc -l)" "5"
+    assert_equal "$(ls -1 "$container_path/var/local" | wc -l)" "1"
 }
 
 @test "generic: The supervise command works" {
