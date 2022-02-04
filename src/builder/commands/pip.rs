@@ -22,8 +22,6 @@ use crate::{
 const PIP_HOME: &str = "/tmp/pip-install";
 const PYTHON_PATH: &str = PIP_HOME;
 
-const PIP_MIN_PYTHON_VERSION: (u8, u8, u8) = (3, 6, 0);
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PipConfig {
     pub find_links: Vec<String>,
@@ -200,19 +198,19 @@ pub fn bootstrap(ctx: &mut Context, ver: u8) -> Result<(), String> {
     );
     args.extend_from_slice(&ctx.pip_settings.get_pip_args);
     let py_ver = python_version(ctx, ver)?;
-    let _get_pip_url;
-    let get_pip_url = if py_ver < PIP_MIN_PYTHON_VERSION {
-        _get_pip_url = format!("https://bootstrap.pypa.io/pip/{}.{}/get-pip.py", py_ver.0, py_ver.1);
-        &_get_pip_url
-    } else {
-        "https://bootstrap.pypa.io/get-pip.py"
+    let get_pip_url = format!("https://bootstrap.pypa.io/pip/{}.{}/get-pip.py", py_ver.0, py_ver.1);
+    // TODO: Structured downloading file error
+    let pip_inst = match download::download_file(
+        &mut ctx.capsule, &[get_pip_url], None, false
+    ) {
+        Ok(get_pip_path) => get_pip_path,
+        Err(_) => {
+            let get_pip_default_url = "https://bootstrap.pypa.io/get-pip.py";
+            download::download_file(
+                &mut ctx.capsule,&[get_pip_default_url], None, false
+            )?
+        }
     };
-    let pip_inst = download::download_file(
-        &mut ctx.capsule,
-        &[get_pip_url],
-        None,
-        false
-    )?;
     copy(&pip_inst, &Path::new("/vagga/root/tmp/get-pip.py"))
         .map_err(|e| format!("Error copying pip: {}", e))?;
     run_command_at_env(ctx, &args, &Path::new("/work"), &[])
