@@ -39,7 +39,7 @@ const DEFAULT_IMAGE_NAMESPACE: &str = "library";
 const DEFAULT_IMAGE_TAG: &str = "latest";
 
 const DOCKER_LAYERS_CACHE_PATH: &str = "/vagga/cache/docker-layers";
-const DOCKER_LAYERS_DOWNLOAD_CONCURRENCY: usize = 4;
+const DOCKER_LAYERS_DOWNLOAD_CONCURRENCY: usize = 2;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DockerImage {
@@ -125,35 +125,42 @@ impl BuildStep for DockerImage {
 
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool) -> Result<(), StepError> {
-        let insecure = self.insecure.unwrap_or_else(|| {
+        let insecure = self.insecure.unwrap_or_else(||
             is_insecure_registry(&self.registry, &guard.ctx.settings.docker_insecure_registries)
-        });
+        );
         if !insecure {
             capsule::ensure(&mut guard.ctx.capsule, &[capsule::Https])?;
         }
         Dir::new(DOCKER_LAYERS_CACHE_PATH)
             .recursive(true)
             .create()
-            .expect("Docker layers cache dir");
-        let layer_paths = tokio::runtime::Builder::new_current_thread()
+            .map_err(|e|
+                format!("Cannot create docker layers cache directory: {}", e)
+            )?;
+        let dst_path = Path::new("/vagga/root").join(&self.path.strip_prefix("/").unwrap());
+        tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .expect("Tokio runtime")
-            .block_on(download_image(&self.registry, insecure, &self.image, &self.tag))
-            .expect("Downloaded layers");
-        let dst_path = Path::new("/vagga/root").join(&self.path.strip_prefix("/").unwrap());
-        for layer_path in layer_paths.iter() {
-            TarCmd::new(layer_path, &dst_path)
-                .preserve_owner(true)
-                .entry_handler(whiteout_entry_handler)
-                .unpack()?;
-        }
+            .map_err(|e| format!("Error creating tokio runtime: {}", e))?
+            .block_on(download_and_unpack_image(
+                &self.registry, insecure, &self.image, &self.tag, &dst_path
+            ))?;
         Ok(())
     }
 
     fn is_dependent_on(&self) -> Option<&str> {
         None
     }
+}
+
+fn is_insecure_registry(
+    registry: &str, insecure_registries: &HashSet<String>
+) -> bool {
+    let registry_host = match registry.split_once(':') {
+        Some((host, _port)) => host,
+        None => registry,
+    };
+    insecure_registries.contains(registry_host)
 }
 
 /// See:
@@ -195,16 +202,10 @@ fn whiteout_entry_handler(entry: &Entry<Box<dyn Read>>, dst_path: &Path) -> Resu
     Ok(false)
 }
 
-fn is_insecure_registry(registry: &str, insecure_registries: &HashSet<String>) -> bool {
-    let registry_url = url::Url::parse(&format!("http://{}", registry)).unwrap();
-    let registry_host = registry_url.domain().unwrap();
-    insecure_registries.contains(registry_host)
-}
-
 #[cfg(feature="containers")]
-async fn download_image(
-    registry: &str, insecure: bool, image: &str, tag: &str
-) -> Result<Vec<PathBuf>, StepError> {
+async fn download_and_unpack_image(
+    registry: &str, insecure: bool, image: &str, tag: &str, dst_path: &Path
+) -> Result<(), StepError> {
     let auth_scope = format!("repository:{}:pull", image);
     let client = build_client(registry, insecure, &[&auth_scope]).await?;
 
@@ -216,22 +217,55 @@ async fn download_image(
     let layers_download_semaphore = Arc::new(
         Semaphore::new(DOCKER_LAYERS_DOWNLOAD_CONCURRENCY)
     );
-    let layers_futures = layers_digests.iter()
-        .map(|digest| {
-            let image = image.to_string();
-            let digest = digest.clone();
-            let client = client.clone();
-            let sem = layers_download_semaphore.clone();
-            tokio::spawn(async move {
-                if let Ok(_guard) = sem.acquire().await {
-                    info!("Downloading docker layer: {}", &digest);
-                    download_blob(&client, &image, &digest).await
-                } else {
-                    panic!("Semaphore was closed unexpectedly")
+
+    use tokio::sync::oneshot;
+
+    let mut layers_futures = vec!();
+    let mut unpack_channels = vec!();
+    for digest in &layers_digests {
+        let image = image.to_string();
+        let digest = digest.clone();
+        let client = client.clone();
+        let sem = layers_download_semaphore.clone();
+        let (tx, rx) = oneshot::channel();
+        unpack_channels.push(rx);
+        let download_future = tokio::spawn(async move {
+            if let Ok(_guard) = sem.acquire().await {
+                println!("Downloading docker layer: {}", &digest);
+                match download_blob(&client, &image, &digest).await {
+                    Ok(layer_path) => {
+                        if let Err(_) = tx.send((digest.clone(), layer_path)) {
+                            return Err(format!("Error sending downloaded layer"));
+                        }
+                        Ok(())
+                    }
+                    Err(e) => Err(e)
                 }
-            })
-        })
-        .collect::<Vec<_>>();
+            } else {
+                panic!("Semaphore was closed unexpectedly")
+            }
+        });
+        layers_futures.push(download_future);
+    }
+
+    let dst_path = dst_path.to_path_buf();
+    let unpack_future = tokio::spawn(async move {
+        for ch in unpack_channels {
+            match ch.await {
+                Ok((digest, layer_path)) => {
+                    let dst_path = dst_path.clone();
+                    if let Err(e) = unpack_layer(digest, layer_path, dst_path).await {
+                        return Err(e);
+                    }
+                }
+                Err(e) => return Err(
+                    format!("Error waiting downloaded layer: {}", e)
+                ),
+            }
+        }
+        Ok(())
+    });
+
     let mut layers_paths = vec!();
     let mut layers_errors = vec!();
     for layer_res in futures::future::join_all(layers_futures).await.into_iter() {
@@ -241,11 +275,30 @@ async fn download_image(
             Err(join_err) => layers_errors.push(format!("{}", join_err)),
         }
     }
+
+    unpack_future.await
+        .map_err(|e| format!("Error waiting unpack future: {}", e))??;
+
     if !layers_errors.is_empty() {
         Err(layers_errors.into())
     } else {
-        Ok(layers_paths)
+        Ok(())
     }
+}
+
+async fn unpack_layer(
+    digest: String, layer_path: PathBuf, dst_path: PathBuf
+) -> Result<(), String> {
+    let unpack_future_res = tokio::task::spawn_blocking(move || {
+        println!("Unpacking docker layer: {}", digest);
+        TarCmd::new(&layer_path, &dst_path)
+            .preserve_owner(true)
+            .entry_handler(whiteout_entry_handler)
+            .unpack()
+    }).await;
+    unpack_future_res
+        .map_err(|e| format!("Error waiting a unpack layer future: {}", e))?
+        .map_err(|e| format!("Error unpacking docker layer: {}", e))
 }
 
 #[cfg(feature="containers")]
@@ -271,7 +324,9 @@ async fn build_client(
 async fn download_blob(
     client: &RegistryClient, image: &str, layer_digest: &str
 ) -> Result<PathBuf, String> {
-    let digest = layer_digest.split_once(':').unwrap().1;
+    let digest = layer_digest.split_once(':')
+        .ok_or(format!("Invalid layer digest: {}", layer_digest))?
+        .1;
     let short_digest = &digest[..12];
 
     let layers_cache = Path::new(DOCKER_LAYERS_CACHE_PATH);
@@ -298,11 +353,11 @@ async fn download_blob(
 
                     println!("Downloading docker blob: {}", &short_digest);
                     let mut blob_stream = client.get_blob_stream(image, layer_digest).await
-                        .expect("Get blob response");
+                        .map_err(|e| format!("Error getting docker blob response: {}", e))?;
                     let mut blob_file = tokio::fs::File::create(&blob_tmp_path).await
-                        .expect("Create layer file");
+                        .map_err(|e| format!("Cannot create layer file: {}", e))?;
                     while let Some(chunk) = blob_stream.next().await {
-                        let chunk = chunk.expect("Layer chunk");
+                        let chunk = chunk.map_err(|e| format!("Error fetching layer chunk: {}", e))?;
                         blob_file.write_all(&chunk).await
                             .map_err(|e| format!("Cannot write blob file: {}", e))?;
                     }
