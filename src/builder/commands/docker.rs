@@ -16,8 +16,9 @@ use tar::{Entry, EntryType};
 #[cfg(feature="containers")]
 use tokio::{
     io::AsyncWriteExt,
-    sync::Semaphore,
+    sync::{oneshot, Semaphore},
 };
+
 
 #[cfg(feature="containers")]
 use quire::{
@@ -218,65 +219,79 @@ async fn download_and_unpack_image(
         Semaphore::new(DOCKER_LAYERS_DOWNLOAD_CONCURRENCY)
     );
 
-    use tokio::sync::oneshot;
-
-    let mut layers_futures = vec!();
-    let mut unpack_channels = vec!();
-    for digest in &layers_digests {
-        let image = image.to_string();
-        let digest = digest.clone();
-        let client = client.clone();
-        let sem = layers_download_semaphore.clone();
+    let mut downloaded_layer_txs = vec!();
+    let mut downloaded_layer_rxs = vec!();
+    for _ in &layers_digests {
         let (tx, rx) = oneshot::channel();
-        unpack_channels.push(rx);
-        let download_future = tokio::spawn(async move {
-            if let Ok(_guard) = sem.acquire().await {
-                println!("Downloading docker layer: {}", &digest);
-                match download_blob(&client, &image, &digest).await {
-                    Ok(layer_path) => {
-                        if let Err(_) = tx.send((digest.clone(), layer_path)) {
-                            return Err(format!("Error sending downloaded layer"));
-                        }
-                        Ok(())
-                    }
-                    Err(e) => Err(e)
-                }
-            } else {
-                panic!("Semaphore was closed unexpectedly")
-            }
-        });
-        layers_futures.push(download_future);
+        downloaded_layer_rxs.push(rx);
+        downloaded_layer_txs.push(tx);
     }
 
     let dst_path = dst_path.to_path_buf();
-    let unpack_future = tokio::spawn(async move {
-        for ch in unpack_channels {
-            match ch.await {
+    let unpack_task = tokio::spawn(async move {
+        for layer_ch in downloaded_layer_rxs {
+            match layer_ch.await {
                 Ok((digest, layer_path)) => {
                     let dst_path = dst_path.clone();
                     if let Err(e) = unpack_layer(digest, layer_path, dst_path).await {
                         return Err(e);
                     }
                 }
-                Err(e) => return Err(
-                    format!("Error waiting downloaded layer: {}", e)
-                ),
+                Err(_) => {
+                    // Channel is dropped when download task was cancelled
+                },
             }
         }
         Ok(())
     });
 
-    let mut layers_paths = vec!();
+    let mut layers_tasks = vec!();
+    for (digest, tx) in layers_digests.iter().zip(downloaded_layer_txs.into_iter()) {
+        let image = image.to_string();
+        let digest = digest.clone();
+        let client = client.clone();
+        let sem = layers_download_semaphore.clone();
+        let download_task = tokio::spawn(async move {
+            if let Ok(_guard) = sem.acquire().await {
+                match download_blob(&client, &image, &digest).await {
+                    Ok(layer_path) => {
+                        // Unpack task may be cancelled so ignore sending errors
+                        tx.send((digest.clone(), layer_path)).ok();
+                        Ok(())
+                    }
+                    Err(e) => {
+                        Err(e)
+                    }
+                }
+            } else {
+                panic!("Semaphore was closed unexpectedly")
+            }
+        });
+        layers_tasks.push(download_task);
+    }
+
     let mut layers_errors = vec!();
-    for layer_res in futures::future::join_all(layers_futures).await.into_iter() {
-        match layer_res {
-            Ok(Ok(layer)) => layers_paths.push(layer),
-            Ok(Err(client_err)) => layers_errors.push(client_err),
-            Err(join_err) => layers_errors.push(format!("{}", join_err)),
+    let mut canceling = false;
+    for download_layer_future in layers_tasks.into_iter() {
+        if canceling {
+            download_layer_future.abort();
+        }
+        match download_layer_future.await {
+            Ok(Ok(_)) => {},
+            Ok(Err(client_err)) => {
+                canceling = true;
+                unpack_task.abort();
+                layers_errors.push(client_err)
+            },
+            Err(join_err) => {
+                if !join_err.is_cancelled() {
+                    layers_errors.push(format!("{}", join_err))
+                }
+            },
         }
     }
 
-    unpack_future.await
+    unpack_task.await
         .map_err(|e| format!("Error waiting unpack future: {}", e))??;
 
     if !layers_errors.is_empty() {
@@ -351,7 +366,7 @@ async fn download_blob(
                     let blob_tmp_file_name = format!(".{}.tmp", &blob_file_name);
                     let blob_tmp_path = layers_cache.join(&blob_tmp_file_name);
 
-                    println!("Downloading docker blob: {}", &short_digest);
+                    println!("Downloading docker layer: {}", &layer_digest);
                     let mut blob_stream = client.get_blob_stream(image, layer_digest).await
                         .map_err(|e| format!("Error getting docker blob response: {}", e))?;
                     let mut blob_file = tokio::fs::File::create(&blob_tmp_path).await

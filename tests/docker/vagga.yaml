@@ -95,5 +95,4 @@ commands:
           done
           buildah push --tls-verify=false localhost:5000/test:latest
 
-          export RUST_LOG=dkregistry::v2=trace
           vagga _build test-image
