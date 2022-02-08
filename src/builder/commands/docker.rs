@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashSet};
-use std::fs::{remove_dir_all, remove_file};
 use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -31,7 +30,7 @@ use crate::{
     builder::commands::tarcmd::TarCmd,
     capsule::packages as capsule,
     container::util::clean_dir,
-    file_util::{Dir, Lock},
+    file_util::{Dir, Lock, safe_remove},
 };
 use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
@@ -189,13 +188,8 @@ fn whiteout_entry_handler(entry: &Entry<Box<dyn Read>>, dst_path: &Path) -> Resu
         } else {
             let mut whiteout_path = dir.to_path_buf();
             whiteout_path.push(whiteout);
-            if whiteout_path.is_dir() {
-                remove_dir_all(&whiteout_path)
-                    .map_err(|e| format!("Cannot remove directory: {}", e))?;
-            } else {
-                remove_file(whiteout_path)
-                    .map_err(|e| format!("Cannot delete file: {}", e))?;
-            }
+            safe_remove(&whiteout_path)
+                .map_err(|e| format!("Cannot remove {:?} path: {}", &whiteout_path, e))?;
         }
         return Ok(true);
     }
@@ -308,6 +302,7 @@ async fn unpack_layer(
         println!("Unpacking docker layer: {}", digest);
         TarCmd::new(&layer_path, &dst_path)
             .preserve_owner(true)
+            .override_entries(true)
             .entry_handler(whiteout_entry_handler)
             .unpack()
     }).await;

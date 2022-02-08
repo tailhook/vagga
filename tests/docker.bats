@@ -52,4 +52,8 @@ setup() {
     [[ ! -e .vagga/test-image/will-be-deleted ]]
     [[ -f .vagga/test-image/test/vagga.yaml ]]
     [[ ! -e .vagga/test-image/test/Dockerfile ]]
+    assert_equal "$(cat .vagga/test-image/hello.txt)" "Hello world!"
+    [[ -L .vagga/test-image/hi.txt ]]
+    assert_equal "$(cat .vagga/test-image/hi.txt)" "Hello world!"
+    [[ -f .vagga/test-image/empty ]]
 }

@@ -10,7 +10,11 @@ use std::path::{Path, PathBuf};
 #[cfg(feature="containers")] use libmount::BindMount;
 #[cfg(feature="containers")] use tar::Archive;
 #[cfg(feature="containers")] use xz2::read::XzDecoder;
+
 use quire::validate as V;
+
+#[cfg(feature="containers")]
+use tar::Entry;
 
 #[cfg(feature="containers")]
 use crate::{
@@ -20,7 +24,7 @@ use crate::{
     builder::dns::revert_name_files,
     capsule::download::{maybe_download_and_check_hashsum},
     container::mount::{unmount},
-    file_util::{Dir, read_visible_entries, copy_stream, set_owner_group},
+    file_util::{Dir, read_visible_entries, copy_stream, safe_remove, set_owner_group},
 };
 
 
@@ -70,18 +74,19 @@ pub struct TarCmd<'a> {
     includes: &'a[&'a Path],
     excludes: &'a[&'a Path],
     preserve_owner: bool,
+    override_entries: bool,
     entry_handler: fn(&Entry<Box<dyn Read>>, &Path) -> Result<bool, String>,
 }
 
 const DEFAULT_TAR_INCLUDES: &[&Path] = &[];
 const DEFAULT_TAR_EXCLUDES: &[&Path] = &[];
 
-use tar::Entry;
-
+#[cfg(feature="containers")]
 fn dummy_entry_handler(_entry: &Entry<Box<dyn Read>>, _dst_path: &Path) -> Result<bool, String> {
     Ok(false)
 }
 
+#[cfg(feature="containers")]
 impl<'a> TarCmd<'a> {
     pub fn new(archive: &'a Path, target_dir: &'a Path) -> Self {
         Self {
@@ -90,6 +95,7 @@ impl<'a> TarCmd<'a> {
             includes: DEFAULT_TAR_INCLUDES,
             excludes: DEFAULT_TAR_EXCLUDES,
             preserve_owner: false,
+            override_entries: false,
             entry_handler: dummy_entry_handler,
         }
     }
@@ -109,6 +115,11 @@ impl<'a> TarCmd<'a> {
         self
     }
 
+    pub fn override_entries(mut self, override_entries: bool) -> Self {
+        self.override_entries = override_entries;
+        self
+    }
+
     pub fn entry_handler(
         self,
         entry_handler: fn(&Entry<Box<dyn Read>>, &Path) -> Result<bool, String>
@@ -119,6 +130,7 @@ impl<'a> TarCmd<'a> {
             includes: self.includes,
             excludes: self.excludes,
             preserve_owner: self.preserve_owner,
+            override_entries: self.override_entries,
             entry_handler,
         }
     }
@@ -187,6 +199,19 @@ impl<'a> TarCmd<'a> {
             use tar::EntryType::*;
             match entry {
                 Directory => {
+                    if self.override_entries {
+                        match path.symlink_metadata() {
+                            Ok(stat) if stat.is_dir() => {}
+                            Ok(_) => {
+                                safe_remove(&path)
+                                    .map_err(|e| format!("Cannot remove {:?} path: {}", &path, e))?;
+                            }
+                            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+                            Err(e) => {
+                                return Err(format!("Cannot stat {:?} path: {}", &path, e));
+                            }
+                        }
+                    }
                     let mode = src.header().mode().map_err(&read_err)?;
                     let mut dir_builder = Dir::new(&path);
                     dir_builder.recursive(true).mode(mode);
@@ -196,6 +221,11 @@ impl<'a> TarCmd<'a> {
                     dir_builder.create().map_err(&write_err)?;
                 }
                 Regular => {
+                    if self.override_entries {
+                        safe_remove(&path)
+                            .map_err(|e| format!("Cannot remove {:?} path: {}", &path, e))?;
+                    }
+                    // TODO: Should we allow truncate a file here?
                     let mut dest = match File::create(&path) {
                         Ok(x) => x,
                         Err(e) => {
@@ -224,6 +254,10 @@ impl<'a> TarCmd<'a> {
                     }
                 }
                 Symlink => {
+                    if self.override_entries {
+                        safe_remove(&path)
+                            .map_err(|e| format!("Cannot remove {:?} path: {}", &path, e))?;
+                    }
                     let src = src.link_name().map_err(&read_err)?
                         .ok_or(format!("Error unpacking {:?}, broken symlink", path))?;
                     match symlink(&src, &path) {

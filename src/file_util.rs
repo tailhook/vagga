@@ -684,7 +684,13 @@ pub fn set_times<P: AsRef<Path>>(path: P, atime: i64, mtime: i64)
 pub fn safe_remove<P: AsRef<Path>>(path: P) -> io::Result<()> {
     let path = path.as_ref();
     path.symlink_metadata()
-        .and_then(|_| fs::remove_file(path))
+        .and_then(|stat| {
+            if stat.is_dir() {
+                fs::remove_dir_all(path)
+            } else {
+                fs::remove_file(path)
+            }
+        })
         .or_else(|e| {
             if e.kind() == io::ErrorKind::NotFound {
                 Ok(())
