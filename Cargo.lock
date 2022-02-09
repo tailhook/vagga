@@ -336,7 +336,7 @@ dependencies = [
 [[package]]
 name = "dkregistry"
 version = "0.5.1-alpha.0"
-source = "git+https://github.com/anti-social/dkregistry-rs?rev=1bfac75#1bfac756be72db994682f621ebb38dce464f21cf"
+source = "git+https://github.com/anti-social/dkregistry-rs?rev=6c132c4#6c132c43002c52081d666d821c49e4a97f58ac55"
 dependencies = [
  "async-stream",
  "base64",
