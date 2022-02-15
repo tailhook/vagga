@@ -324,3 +324,7 @@ not to do so.
    (default ``[localhost]``) A list of docker insecure registries.
    ``localhost`` is always considered as insecure.
 
+.. opt:: docker-registry-aliases
+
+   (default ``{docker.io: index.docker.io}``) A mapping of docker registry aliases.
+   Alias for ``docker.io`` is always added to the aliases mapping.

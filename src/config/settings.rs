@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use libc::{uid_t, gid_t};
 use serde_json;
@@ -30,6 +30,7 @@ pub struct Settings {
     pub disable_auto_clean: bool,
     pub storage_subdir_from_env_var: Option<String>,
     pub docker_insecure_registries: HashSet<String>,
+    pub docker_registry_aliases: HashMap<String, String>,
 }
 
 impl Settings {

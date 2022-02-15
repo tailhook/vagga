@@ -34,7 +34,7 @@ use crate::{
 };
 use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
-const DEFAULT_REGISTRY_HOST: &str = "index.docker.io";
+pub const DEFAULT_REGISTRY_HOST: &str = "index.docker.io";
 const DEFAULT_IMAGE_NAMESPACE: &str = "library";
 const DEFAULT_IMAGE_TAG: &str = "latest";
 
@@ -124,8 +124,20 @@ impl BuildStep for DockerImage {
 
     #[cfg(feature="containers")]
     fn build(&self, guard: &mut Guard, _build: bool) -> Result<(), StepError> {
+        let registry = if let Some(registry) = guard.ctx.settings.docker_registry_aliases.get(&self.registry) {
+            registry
+        } else {
+            &self.registry
+        };
+        let _image;
+        let image = if registry == DEFAULT_REGISTRY_HOST && !self.image.contains("/") {
+            _image = format!("library/{}", &self.image);
+            &_image
+        } else {
+            &self.image
+        };
         let insecure = self.insecure.unwrap_or_else(||
-            is_insecure_registry(&self.registry, &guard.ctx.settings.docker_insecure_registries)
+            is_insecure_registry(registry, &guard.ctx.settings.docker_insecure_registries)
         );
         if !insecure {
             capsule::ensure(&mut guard.ctx.capsule, &[capsule::Https])?;
@@ -142,7 +154,7 @@ impl BuildStep for DockerImage {
             .build()
             .map_err(|e| format!("Error creating tokio runtime: {}", e))?
             .block_on(download_and_unpack_image(
-                &self.registry, insecure, &self.image, &self.tag, &dst_path
+                registry, insecure, image, &self.tag, &dst_path
             ))?;
         Ok(())
     }
