@@ -15,7 +15,7 @@ use tar::{Entry, EntryType};
 #[cfg(feature="containers")]
 use tokio::{
     io::AsyncWriteExt,
-    sync::{oneshot, Semaphore},
+    sync::oneshot,
 };
 
 
@@ -39,7 +39,6 @@ const DEFAULT_IMAGE_NAMESPACE: &str = "library";
 const DEFAULT_IMAGE_TAG: &str = "latest";
 
 const DOCKER_LAYERS_CACHE_PATH: &str = "/vagga/cache/docker-layers";
-const DOCKER_LAYERS_DOWNLOAD_CONCURRENCY: usize = 2;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DockerImage {
@@ -209,10 +208,6 @@ async fn download_and_unpack_image(
 
     let layers_digests = manifest.layers_digests(None)?;
 
-    let layers_download_semaphore = Arc::new(
-        Semaphore::new(DOCKER_LAYERS_DOWNLOAD_CONCURRENCY)
-    );
-
     let mut downloaded_layer_txs = vec!();
     let mut downloaded_layer_rxs = vec!();
     for _ in &layers_digests {
@@ -232,66 +227,52 @@ async fn download_and_unpack_image(
                     }
                 }
                 Err(_) => {
-                    // Channel is dropped when download task was cancelled
+                    // Channel is dropped if download task is cancelled
                 },
             }
         }
         Ok(())
     });
 
-    let mut layers_tasks = vec!();
-    for (digest, tx) in layers_digests.iter().zip(downloaded_layer_txs.into_iter()) {
-        let image = image.to_string();
-        let digest = digest.clone();
-        let client = client.clone();
-        let sem = layers_download_semaphore.clone();
-        let download_task = tokio::spawn(async move {
-            if let Ok(_guard) = sem.acquire().await {
-                match download_blob(&client, &image, &digest).await {
-                    Ok(layer_path) => {
-                        // Unpack task may be cancelled so ignore sending errors
-                        tx.send((digest.clone(), layer_path)).ok();
-                        Ok(())
-                    }
-                    Err(e) => {
-                        Err(e)
-                    }
+    let image = image.to_string();
+    let download_task = tokio::spawn(async move {
+        for (digest, tx) in layers_digests.iter().zip(downloaded_layer_txs.into_iter()) {
+            let digest = digest.clone();
+            let client = client.clone();
+            match download_blob(&client, &image, &digest).await {
+                Ok(layer_path) => {
+                    // Unpack task may be cancelled so ignore sending errors
+                    tx.send((digest.clone(), layer_path)).ok();
                 }
-            } else {
-                panic!("Semaphore was closed unexpectedly")
+                Err(e) => {
+                    return Err(e);
+                }
             }
-        });
-        layers_tasks.push(download_task);
-    }
-
-    let mut layers_errors = vec!();
-    let mut canceling = false;
-    for download_layer_future in layers_tasks.into_iter() {
-        if canceling {
-            download_layer_future.abort();
         }
-        match download_layer_future.await {
-            Ok(Ok(_)) => {},
-            Ok(Err(client_err)) => {
-                canceling = true;
-                unpack_task.abort();
-                layers_errors.push(client_err)
-            },
-            Err(join_err) => {
-                if !join_err.is_cancelled() {
-                    layers_errors.push(format!("{}", join_err))
-                }
-            },
-        }
-    }
-
-    unpack_task.await
-        .map_err(|e| format!("Error waiting unpack future: {}", e))??;
-
-    if !layers_errors.is_empty() {
-        Err(layers_errors.into())
-    } else {
         Ok(())
+    });
+
+    match download_task.await {
+        Ok(Ok(_)) => {},
+        Ok(Err(client_err)) => {
+            unpack_task.abort();
+            return Err(client_err.into());
+        },
+        Err(join_err) => {
+            unpack_task.abort();
+            return Err(
+                format!("Error waiting a download layers task: {}", join_err).into()
+            );
+        },
+    }
+
+    match unpack_task.await {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(unpack_err)) => Err(unpack_err.into()),
+        Err(join_err) if join_err.is_cancelled() => Ok(()),
+        Err(join_err) => Err(
+            format!("Error waiting an unpack layers task: {}", join_err).into()
+        ),
     }
 }
 
@@ -307,7 +288,7 @@ async fn unpack_layer(
             .unpack()
     }).await;
     unpack_future_res
-        .map_err(|e| format!("Error waiting a unpack layer future: {}", e))?
+        .map_err(|e| format!("Error waiting an unpack layer future: {}", e))?
         .map_err(|e| format!("Error unpacking docker layer: {}", e))
 }
 
