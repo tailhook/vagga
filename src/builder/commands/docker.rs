@@ -34,7 +34,7 @@ use crate::{
 };
 use crate::build_step::{BuildStep, Config, Digest, Guard, StepError, VersionError};
 
-const DEFAULT_REGISTRY_HOST: &str = "registry-1.docker.io";
+const DEFAULT_REGISTRY_HOST: &str = "index.docker.io";
 const DEFAULT_IMAGE_NAMESPACE: &str = "library";
 const DEFAULT_IMAGE_TAG: &str = "latest";
 
