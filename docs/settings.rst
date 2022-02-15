@@ -319,5 +319,8 @@ not to do so.
    being built simultaneously. It makes little sense to enable it on
    a workstation.
 
+.. opt:: docker-insecure-registries
 
+   (default ``[localhost]``) A list of docker insecure registries.
+   ``localhost`` is always considered as insecure.
 
