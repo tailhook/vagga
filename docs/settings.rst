@@ -321,7 +321,8 @@ not to do so.
 
 .. opt:: docker-insecure-registries
 
-   (default ``[localhost]``) A list of docker insecure registries.
+   (default ``[localhost]``) A list of docker insecure registries. An insecure
+   registry works using only an unencrypted ``http`` protocol.
    ``localhost`` is always considered as insecure.
 
 .. opt:: docker-registry-aliases
