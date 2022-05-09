@@ -279,7 +279,7 @@ impl<'a> TarCmd<'a> {
                 }
                 Link => {
                     let link = src.link_name().map_err(&read_err)?
-                        .ok_or(format!("Error unpacking {:?}, broken symlink", path))?;
+                        .ok_or(format!("Error unpacking {:?}, broken hardlink", path))?;
                     let link = if link.is_absolute() {
                         link.strip_prefix("/").unwrap()
                     } else {
@@ -294,6 +294,10 @@ impl<'a> TarCmd<'a> {
             let write_err = |e| {
                 format!("Error hardlinking {:?} - {:?}: {}", &src, &dst, e)
             };
+            if self.override_entries {
+                safe_remove(&dst)
+                    .map_err(|e| format!("Cannot remove {:?} path: {}", &dst, e))?;
+            }
             match hard_link(&src, &dst) {
                 Ok(_) => {},
                 Err(e) => {

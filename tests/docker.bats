@@ -55,5 +55,7 @@ setup() {
     assert_equal "$(cat .vagga/test-image/hello.txt)" "Hello world!"
     [[ -L .vagga/test-image/hi.txt ]]
     assert_equal "$(cat .vagga/test-image/hi.txt)" "Hello world!"
+    assert_equal "$(cat .vagga/test-image/see-you.txt)" "Bye-bye!"
+    assert_equal "$(stat -c '%i' .vagga/test-image/see-you.txt)" "$(stat -c '%i' .vagga/test-image/bye-bye.txt)"
     [[ -f .vagga/test-image/empty ]]
 }
