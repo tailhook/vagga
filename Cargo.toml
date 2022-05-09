@@ -51,9 +51,10 @@ serde_json = "1.0.2"
 serde_derive = "1.0.11"
 failure = "0.1.1"
 resolv-conf = "0.6.0"
-dkregistry = { git="https://github.com/anti-social/dkregistry-rs", rev="6c132c4" }
+dkregistry = { git="https://github.com/anti-social/dkregistry-rs", rev="e720262" }
 tokio = { version = "1", features = ["full"] }
 futures = "0.3.18"
+indicatif = "0.16.2"
 
 [features]
 default = ["containers"]

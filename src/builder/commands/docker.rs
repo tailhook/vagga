@@ -10,6 +10,9 @@ use dkregistry::v2::Client as RegistryClient;
 use futures::stream::StreamExt;
 
 #[cfg(feature="containers")]
+use indicatif::{ProgressBar, ProgressStyle};
+
+#[cfg(feature="containers")]
 use tar::{Entry, EntryType};
 
 #[cfg(feature="containers")]
@@ -355,15 +358,39 @@ async fn download_blob(
                     let blob_tmp_path = layers_cache.join(&blob_tmp_file_name);
 
                     println!("Downloading docker layer: {}", &layer_digest);
-                    let mut blob_stream = client.get_blob_stream(image, layer_digest).await
+                    let blob_resp = client.get_blob_response(image, layer_digest).await
                         .map_err(|e| format!("Error getting docker blob response: {}", e))?;
+                    let blob_size = blob_resp.size();
+                    let mut blob_stream = blob_resp.stream();
                     let mut blob_file = tokio::fs::File::create(&blob_tmp_path).await
                         .map_err(|e| format!("Cannot create layer file: {}", e))?;
+
+                    let progress = if let Some(blob_size) = blob_size {
+                        ProgressBar::new(blob_size)
+                            .with_style(
+                                ProgressStyle::default_bar()
+                                    .template("{msg}: {percent}%[{bar:40}] {bytes}/{total_bytes} {bytes_per_sec} {eta}")
+                                    .progress_chars("=> ")
+                            )
+                    } else {
+                        ProgressBar::new_spinner()
+                            .with_style(
+                                ProgressStyle::default_bar()
+                                    .template("{msg}: [{spinner:40}] {bytes} {bytes_per_sec}")
+                                    .progress_chars("=> ")
+                            )
+                    };
+                    progress.set_message(short_digest.to_string());
+                    progress.set_draw_rate(5);
+
                     while let Some(chunk) = blob_stream.next().await {
                         let chunk = chunk.map_err(|e| format!("Error fetching layer chunk: {}", e))?;
                         blob_file.write_all(&chunk).await
                             .map_err(|e| format!("Cannot write blob file: {}", e))?;
+                        progress.inc(chunk.len() as u64);
                     }
+                    progress.finish_and_clear();
+
                     tokio::fs::rename(&blob_tmp_path, &blob_path).await
                         .map_err(|e| format!("Cannot rename docker blob: {}", e))?;
                 }
