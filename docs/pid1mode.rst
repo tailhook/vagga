@@ -20,8 +20,8 @@ The process with PID 1 differs from the other processes in the following ways:
 
 At a glance, first issue looks like the most annoying. But in practice
 the most inconvenient one is the last one. For development purposes it
-effectively means you can't stop process by sending ``SIGTERM`` or ``SIGINT``,
-if process have not installed a signal handler.
+effectively means you can't stop process by sending ``SIGTERM`` or ``SIGINT``
+if the process does not have a signal handler installed.
 
 At the end of the day, all above means most processes that were not explicitly
 designed to run as PID 1 (which are all applications except supervisors), do
