@@ -26,6 +26,7 @@ of empty container):
 * :step:`SubConfig`
 * :step:`Container`
 * :step:`Tar`
+* :step:`DockerImage`
 
 Ubuntu Commands
 ===============
@@ -312,6 +313,46 @@ config if you use :step:`SubConfig` or :step:`Container`)
     - !BuildDeps [curl]
     - !Sh echo "We can use wget and curl here"
     # Container built. Now, everything in BuildDeps(wget and curl) is removed from the container.
+
+
+Docker Commands
+===============
+
+.. step:: DockerImage
+
+   .. warning:: Following functionality is experimental and is actively developed.
+
+   Downloads and unpacks a docker image.
+
+   Have 2 flavors. A short one::
+
+     - !DockerImage elasticsearch:7.13.4
+
+   And a full one::
+
+     - !DockerImage
+       image: elasticsearch
+       tag: 7.13.4
+
+   Options:
+
+   registry
+     (default ``index.docker.io``) A registry hostname.
+
+   image
+     (required) An image name. If namespace is missing ``library`` namespace will be used.
+     So ``python`` and ``library/python`` values point to the same image.
+
+   tag
+     (default ``latest``) A tag of the image.
+
+   insecure
+     (optional) If ``true``, an insecure client will be used. Only ``localhost``
+     registry is considered insecure by default.
+     See also :opt:`docker-insecure-registries` setting.
+
+   path
+     (default ``\``) A path inside a container where the image should be unpacked.
 
 
 Generic Commands

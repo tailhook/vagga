@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::fs::{remove_dir_all, remove_file, symlink_metadata};
+use std::fs::remove_dir_all;
 use std::collections::HashMap;
 
 use crate::build_step::BuildStep;
@@ -12,7 +12,7 @@ use crate::container::mount::{
     unmount, mount_system_dirs, mount_proc, mount_run, unmount_system_dirs,
 };
 use crate::container::util::{clean_dir, write_container_signature};
-use crate::file_util::{Dir, copy, truncate_file};
+use crate::file_util::{Dir, copy, truncate_file, safe_remove};
 use crate::path_util::IterSelfAndParents;
 
 
@@ -198,19 +198,10 @@ fn remove_all_except(root: &Path, keep_rel_paths: &HashMap<&Path, bool>)
                 remove_all_except(path, keep_rel_paths)?;
             },
             None => {
-                let file_type = try_msg!(
-                    symlink_metadata(path),
-                    "Error querying file metadata: {path:?}: {err}", path=path
-                ).file_type();
-                if file_type.is_dir() {
-                    try_msg!(clean_dir(path, true),
-                        "Error cleaning dir {path:?}: {err}",
-                        path=path);
-                } else {
-                    try_msg!(remove_file(path),
-                        "Error removing file {path:?}: {err}",
-                        path=path);
-                }
+                try_msg!(
+                    safe_remove(path),
+                    "Cannot remove {path:?}: {err}", path=path
+                );
             },
         }
     }

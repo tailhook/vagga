@@ -319,5 +319,13 @@ not to do so.
    being built simultaneously. It makes little sense to enable it on
    a workstation.
 
+.. opt:: docker-insecure-registries
 
+   (default ``[localhost]``) A list of docker insecure registries. An insecure
+   registry works using only an unencrypted ``http`` protocol.
+   ``localhost`` is always considered as insecure.
 
+.. opt:: docker-registry-aliases
+
+   (default ``{docker.io: index.docker.io}``) A mapping of docker registry aliases.
+   Alias for ``docker.io`` is always added to the aliases mapping.

@@ -1,10 +1,11 @@
 use std::env;
-use std::collections::{BTreeMap, HashMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use quire::{parse_config, parse_string, Options};
 use quire::validate as V;
 
+use crate::builder::commands::docker::DEFAULT_REGISTRY_HOST;
 use crate::config::Settings;
 use crate::path_util::Expand;
 
@@ -33,6 +34,8 @@ struct SecureSettings {
     disable_auto_clean: Option<bool>,
     environ: BTreeMap<String, String>,
     propagate_environ: BTreeSet<String>,
+    docker_insecure_registries: HashSet<String>,
+    docker_registry_aliases: HashMap<String, String>,
 }
 
 pub fn secure_settings_validator<'a>(has_children: bool)
@@ -62,7 +65,10 @@ pub fn secure_settings_validator<'a>(has_children: bool)
         .member("disable_auto_clean", V::Scalar::new().optional())
         .member("environ", V::Mapping::new(
             V::Scalar::new(), V::Scalar::new()))
-        .member("propagate_environ", V::Sequence::new(V::Scalar::new()));
+        .member("propagate_environ", V::Sequence::new(V::Scalar::new()))
+        .member("docker_insecure_registries", V::Sequence::new(V::Scalar::new()))
+        .member("docker_registry_aliases", V::Mapping::new(
+            V::Scalar::new(), V::Scalar::new()));
     if has_children {
         s = s.member("site_settings", V::Mapping::new(
             V::Scalar::new(),
@@ -181,6 +187,12 @@ fn merge_settings(cfg: SecureSettings, project_root: &Path,
     for item in &cfg.propagate_environ {
         ext_settings.propagate_environ.insert(item.clone());
     }
+    for registry in &cfg.docker_insecure_registries {
+        int_settings.docker_insecure_registries.insert(registry.clone());
+    }
+    for (alias, registry) in &cfg.docker_registry_aliases {
+        int_settings.docker_registry_aliases.insert(alias.clone(), registry.clone());
+    }
     if let Some(cfg) = cfg.site_settings.get(project_root) {
         if let Some(ref dir) = cfg.storage_dir {
             ext_settings.storage_dir = Some(dir.clone());
@@ -273,6 +285,16 @@ pub fn read_settings(project_root: &Path)
         disable_auto_clean: false,
         environ: BTreeMap::new(),
         storage_subdir_from_env_var: None,
+        docker_insecure_registries: {
+            let mut registries = HashSet::new();
+            registries.insert("localhost".to_string());
+            registries
+        },
+        docker_registry_aliases: {
+            let mut aliases = HashMap::new();
+            aliases.insert("docker.io".to_string(), DEFAULT_REGISTRY_HOST.to_string());
+            aliases
+        },
     };
     let mut secure_files = vec!();
     if let Ok(home) = env::var("_VAGGA_HOME") {
