@@ -2,14 +2,14 @@
 ALPINE_VERSION=v3.15
 ALPINE_MIRROR=http://dl-cdn.alpinelinux.org/alpine/
 APK_TOOLS=apk-tools-static-2.12.7-r3.apk
-BUSYBOX=busybox-static-1.34.1-r3.apk
+BUSYBOX=busybox-static-1.34.1-r7.apk
 ALPINE_KEYS=alpine-keys-2.4-r1.apk
 
 ARCH=${1:-x86_64}
 
 SHA1SUMS_x86_64="\
 2fa49548020eb850e0a15df03471a07eba55fbc8  $APK_TOOLS
-83a302a36b2239669130d459b14619d066d37f22  $BUSYBOX
+071b94cdb3b6087453e8e5b2ef55ce581ff0dd46  $BUSYBOX
 7dba809ae84d5832473f9cbf3bc6522d341299ca  $ALPINE_KEYS"
 
 SHA1SUMS_armhf="\
